@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title DungeonDelversAssets
- * @dev V2.2: 更新了英雄和聖物的預設鑄造價格。
+ * @dev V2.3: 更新了英雄和聖物的預設鑄造價格。
  */
 contract DungeonDelversAssets is ERC1155, Ownable {
 
@@ -27,8 +27,8 @@ contract DungeonDelversAssets is ERC1155, Ownable {
     // --- 狀態變數 ---
     IERC20 public soulShardToken;
 
-    uint256 public heroMintPrice = 500 * 10**18; // 500 $SoulShard
-    uint256 public relicMintPrice = 1000 * 10**18; // 1000 $SoulShard
+    uint256 public heroMintPrice = 1900 * 10**18; // 1900 $SoulShard
+    uint256 public relicMintPrice = 9000 * 10**18; // 9000 $SoulShard
 
     // --- 事件 ---
     event MintPriceUpdated(uint256 newHeroPrice, uint256 newRelicPrice);
@@ -86,7 +86,6 @@ contract DungeonDelversAssets is ERC1155, Ownable {
     }
 
     // --- 擁有者管理功能 ---
-
     function setMintPrice(uint256 _newHeroPrice, uint256 _newRelicPrice) public onlyOwner {
         heroMintPrice = _newHeroPrice;
         relicMintPrice = _newRelicPrice;
