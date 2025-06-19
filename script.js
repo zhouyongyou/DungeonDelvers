@@ -9,6 +9,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const contractAddress = "YOUR_CONTRACT_ADDRESS_HERE"; // 部署後填入合約地址
     const contractABI = []; // 部署後填入合約的 ABI (Application Binary Interface)
 
+      // --- 網路設定 ---
+    // 目標網路為 BSC 正式網 (Chain ID: 56)
+    const targetNetwork = {
+        chainId: '0x38', // 56 的十六進制表示
+        chainName: 'BNB Smart Chain (BSC) Mainnet',
+        nativeCurrency: {
+            name: 'BNB',
+            symbol: 'BNB',
+            decimals: 18,
+        },
+        rpcUrls: ['https://bsc-dataseed.binance.org/'],
+        blockExplorerUrls: ['https://bscscan.com/'],
+    };
+  
     // --- 靜態資料定義 ---
     const rarityData = {
         labels: ['1 星 (普通)', '2 星 (非凡)', '3 星 (稀有)', '4 星 (史詩)', '5 星 (傳說)'],
@@ -52,6 +66,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const heroesContainer = document.getElementById('heroesContainer');
     const relicsContainer = document.getElementById('relicsContainer');
 
+      // --- **新增** 網路檢查與切換函式 ---
+    const checkAndSwitchNetwork = async () => {
+        try {
+            const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+            if (currentChainId !== targetNetwork.chainId) {
+                try {
+                    // 請求切換網路
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: targetNetwork.chainId }],
+                    });
+                } catch (switchError) {
+                    // 如果用戶錢包沒有該網路，則嘗試新增網路
+                    if (switchError.code === 4902) {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [targetNetwork],
+                        });
+                    } else {
+                        throw switchError;
+                    }
+                }
+            }
+            return true; // 表示網路正確或已成功切換
+        } catch (error) {
+            console.error("網路切換失敗:", error);
+            alert(`網路切換失敗，請手動將您的錢包網路切換至 ${targetNetwork.chainName}。`);
+            return false;
+        }
+    };
+  
     // --- 連接錢包 ---
     const connectWallet = async () => {
         if (typeof window.ethereum === 'undefined') {
@@ -59,7 +104,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
+            // **步驟 1**: 檢查並嘗試切換到目標網路
+            const isNetworkCorrect = await checkAndSwitchNetwork();
+            if (!isNetworkCorrect) return; // 如果網路不正確且切換失敗，則中止連接
+
+            // **步驟 2**: 請求用戶授權帳戶
             await window.ethereum.request({ method: 'eth_requestAccounts' });
+            
+            // **步驟 3**: 初始化 Ethers 和合約
             provider = new ethers.providers.Web3Provider(window.ethereum);
             signer = provider.getSigner();
             userAddress = await signer.getAddress();
@@ -70,6 +122,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             console.log("錢包已連接:", userAddress);
             await fetchUserAssets();
+            // 監聽帳戶或網路變化
+            window.ethereum.on('accountsChanged', () => window.location.reload());
+            window.ethereum.on('chainChanged', () => window.location.reload());
         } catch (error) {
             console.error("連接錢包失敗:", error);
             alert(`連接錢包出錯: ${error.message}`);
