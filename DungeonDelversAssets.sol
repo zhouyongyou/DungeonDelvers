@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title DungeonDelversAssets
- * @dev V2: 現在使用 $SoulShard (ERC20) 作為鑄造費用。
+ * @dev V2.2: 更新了英雄和聖物的預設鑄造價格。
  */
 contract DungeonDelversAssets is ERC1155, Ownable {
 
@@ -25,19 +25,20 @@ contract DungeonDelversAssets is ERC1155, Ownable {
     uint256 public constant LEGENDARY_RELIC = 15;
 
     // --- 狀態變數 ---
-    IERC20 public soulShardToken; // $SoulShard ERC20 代幣合約的接口
+    IERC20 public soulShardToken;
 
-    uint256 public heroMintPrice = 100 * 10**18; // 預設招募英雄價格為 100 $SoulShard
-    uint256 public relicMintPrice = 200 * 10**18; // 預設鑄造聖物價格為 200 $SoulShard
+    uint256 public heroMintPrice = 500 * 10**18; // 500 $SoulShard
+    uint256 public relicMintPrice = 1000 * 10**18; // 1000 $SoulShard
 
     // --- 事件 ---
     event MintPriceUpdated(uint256 newHeroPrice, uint256 newRelicPrice);
+    event TokensWithdrawn(address indexed to, uint256 amount);
 
     /**
      * @dev 建構子
      * @param _initialOwner 合約的擁有者
      * @param _uri NFT 元數據的基礎 URI
-     * @param _soulShardTokenAddress 部署後的 $SoulShard 代幣合約地址
+     * @param _soulShardTokenAddress 您在發射台上創建的 $SoulShard 代幣地址
      */
     constructor(
         address _initialOwner,
@@ -50,14 +51,10 @@ contract DungeonDelversAssets is ERC1155, Ownable {
 
     /**
      * @dev 玩家調用以鑄造一個隨機英雄。
-     * 現在會扣除玩家的 $SoulShard 代幣。
      */
     function mintHero() public {
-        // 從玩家錢包轉移相應數量的 $SoulShard 到本合約
-        // 前提：玩家必須先在前端為本合約授權 (approve) 足夠的 $SoulShard
         soulShardToken.transferFrom(msg.sender, address(this), heroMintPrice);
 
-        // 不安全的偽隨機邏輯 (僅供演示，生產環境建議使用 Chainlink VRF)
         uint256 randomNumber = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender, block.difficulty))) % 100;
         
         uint256 heroIdToMint;
@@ -100,14 +97,15 @@ contract DungeonDelversAssets is ERC1155, Ownable {
         _setURI(newuri);
     }
 
-    // 提款函數，讓合約擁有者可以取出玩家花費的 $SoulShard
-    function withdrawTokens(uint256 amount) public onlyOwner {
-        soulShardToken.transfer(owner(), amount);
+    function withdrawTokens(address _to, uint256 _amount) public onlyOwner {
+        uint256 balance = soulShardToken.balanceOf(address(this));
+        require(_amount <= balance, "Withdraw amount exceeds balance");
+        soulShardToken.transfer(_to, _amount);
+        emit TokensWithdrawn(_to, _amount);
     }
 
     // --- 唯讀功能 ---
     function uri(uint256 _id) public view override returns (string memory) {
-        // 可以根據 ID 返回不同的 URI，但目前我們先使用統一的基礎 URI
         return super.uri(_id);
     }
 }
