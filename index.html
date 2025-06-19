@@ -40,7 +40,7 @@
                 <h2 class="text-3xl font-bold text-center mb-6 text-[#2D2A4A]">遊戲指南 & 規則</h2>
                 <div class="bg-white/50 p-6 rounded-xl shadow-md mb-8">
                     <h3 class="text-2xl font-bold text-[#2D2A4A] mb-4">歡迎來到 Dungeon Delvers 的世界</h3>
-                    <p class="text-lg">這是一款奇幻風格的 NFT 遊戲。您將招募傳奇的英雄，藉由強大的聖物之力，深入被遺忘的地下城，尋找蘊含著世界本源能量的「魂晶」($SoulShard)，並在此過程中贏得榮耀與財富。準備好開始你的史詩冒險了嗎？</p>
+                    <p class="text-lg">這是一款奇幻風格的 NFT 遊戲。您將招募傳奇的英雄，藉由強大的聖物之力，深入被遺忘的地下城，尋找蘊含著世界本源能量的「魂晶」($SoulShard)，並在此過程中贏得榮耀與財富。準備好開始你的史詩 aventura嗎？</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
@@ -105,40 +105,22 @@
     </div>
 
     <!-- 
-      **最終修正**: 使用 `defer` 屬性。
-      這會非阻塞地載入腳本，並確保它們在 HTML 解析完畢後，嚴格按照順序執行。
-      這是最現代且最可靠的作法。
+      **V3 修正**: 更換 Ethers.js 的 CDN 來源，並使用 defer 確保載入順序。
+      Cloudflare 的 CDN 可能有更好的連線穩定性。
     -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
 ```
 
-### **除錯步驟**
+### **下一步**
 
-在您用上面的程式碼**完全覆蓋** `index.html` 檔案後，請嚴格按照以下步驟操作：
+請您再次嚴格按照之前的除錯步驟操作：
+1.  用上面的程式碼**完全覆蓋**您本地的 `index.html`。
+2.  **強制清除快取並重新整理** (`Ctrl` + `Shift` + `R` 或 `Cmd` + `Shift` + `R`)。
+3.  打開開發者工具並點擊「連接錢包」。
 
-1.  **儲存檔案**。
-
-2.  **開啟瀏覽器**，進入您的網頁。
-
-3.  **強制清除快取並重新整理**：
-    * 在 Windows/Linux 上，按 `Ctrl` + `Shift` + `R`。
-    * 在 Mac 上，按 `Cmd` + `Shift` + `R`。
-    * 這一步非常重要，能確保瀏覽器載入的是您最新的檔案，而不是舊的快取。
-
-4.  **打開開發者工具**：在頁面上按 `F12` 鍵 (或者右鍵 -> 檢查)。
-
-5.  **切換到「主控台 (Console)」分頁**。
-
-6.  現在，點擊「連接錢包」按鈕。
-
-請查看主控台中顯示的訊息。如果問題仍然是 `ethers is not defined`，請您**切換到開發者工具的「網路 (Network)」分頁**，然後再次強制重新整理頁面 (`Ctrl`+`Shift`+`R`)。在檔案列表中找到 `ethers-5.7.2.umd.min.js` 這一行，看看它的「狀態 (Status)」碼是什麼。
-
-* 如果是 `200` (綠色)，代表檔案載入成功。
-* 如果是 `404` 或其他紅色錯誤，代表檔案下載失敗。
-
-請將您看到的結果告訴我，這將是我們解決問題的最關鍵
+這次，由於我們更換了更可靠的 CDN 來源，您應該不會再看到 `net::ERR_NAME_NOT_RESOLVED` 的錯誤，並且 `ethers is not defined` 的問題也將隨之
