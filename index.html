@@ -4,8 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dungeon Delvers - 互動式網頁應用</title>
+    <!-- 引入函式庫 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+    
+    <!-- 引入字體與樣式 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -26,7 +30,9 @@
                 </div>
                 <!-- Navigation -->
                 <nav id="navigation" class="mt-4 flex flex-wrap justify-center space-x-2 md:space-x-6 text-sm md:text-base">
-                    <a class="nav-item active" data-target="dashboard">遊戲總覽</a>
+                    <!-- **變更**：新增遊戲指南，並將其設為預設頁面 -->
+                    <a class="nav-item active" data-target="guide">遊戲指南</a>
+                    <a class="nav-item" data-target="dashboard">我的總覽</a>
                     <a class="nav-item" data-target="forge">英雄酒館</a>
                     <a class="nav-item" data-target="barracks">我的隊伍</a>
                     <a class="nav-item" data-target="portal">地下城入口</a>
@@ -37,10 +43,11 @@
         <!-- Main Content -->
         <main id="main-content" class="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
 
-            <!-- Dashboard Section -->
-            <section id="dashboard" class="page-content">
+            <!-- **新增** Game Guide Section -->
+            <section id="guide" class="page-content">
+                <h2 class="text-3xl font-bold text-center mb-6 text-[#2D2A4A]">遊戲指南 & 規則</h2>
                 <div class="bg-white/50 p-6 rounded-xl shadow-md mb-8">
-                    <h2 class="text-3xl font-bold text-[#2D2A4A] mb-4">歡迎來到 Dungeon Delvers 的世界</h2>
+                    <h3 class="text-2xl font-bold text-[#2D2A4A] mb-4">歡迎來到 Dungeon Delvers 的世界</h3>
                     <p class="text-lg">這是一款奇幻風格的 NFT 遊戲。您將招募傳奇的英雄，藉由強大的聖物之力，深入被遺忘的地下城，尋找蘊含著世界本源能量的「魂晶」($SoulShard)，並在此過程中贏得榮耀與財富。準備好開始你的史詩冒險了嗎？</p>
                 </div>
 
@@ -59,6 +66,15 @@
                     </div>
                 </div>
             </section>
+            
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="page-content hidden">
+                 <h2 class="text-3xl font-bold text-center mb-6 text-[#2D2A4A]">我的總覽</h2>
+                 <div class="bg-white/50 p-6 rounded-xl shadow-md text-center">
+                    <p class="text-lg">請先連接錢包以查看您的個人數據。</p>
+                    <p class="text-gray-600 mt-4">(此處未來將顯示您的 $SoulShard 餘額、資產總覽等資訊)</p>
+                 </div>
+            </section>
 
             <!-- Forge Section -->
             <section id="forge" class="page-content hidden">
@@ -67,33 +83,33 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div class="card-bg p-6 rounded-xl shadow-lg flex flex-col items-center">
                         <h3 class="text-2xl font-bold mb-4">招募英雄</h3>
-                        <p class="text-center mb-6">花費 100 $SoulShard，你可能招募到傳說中的英雄，或是初出茅廬的新手。</p>
-                        <button class="btn-primary px-8 py-3 rounded-lg text-lg">支付 100 $SoulShard 招募</button>
+                        <p class="text-center mb-6">花費 $SoulShard，你可能招募到傳說中的英雄，或是初出茅廬的新手。</p>
+                        <button id="mintHeroBtn" class="btn-primary px-8 py-3 rounded-lg text-lg">招募</button>
                     </div>
                     <div class="card-bg p-6 rounded-xl shadow-lg flex flex-col items-center">
                         <h3 class="text-2xl font-bold mb-4">鑄造聖物</h3>
-                        <p class="text-center mb-6">花費 200 $SoulShard，喚醒沉睡的古代聖物，它將決定你隊伍的規模。</p>
-                        <button class="btn-primary px-8 py-3 rounded-lg text-lg">支付 200 $SoulShard 鑄造</button>
+                        <p class="text-center mb-6">花費 $SoulShard，喚醒沉睡的古代聖物，它將決定你隊伍的規模。</p>
+                        <button id="mintRelicBtn" class="btn-primary px-8 py-3 rounded-lg text-lg">鑄造</button>
                     </div>
                 </div>
             </section>
 
             <!-- Barracks Section -->
             <section id="barracks" class="page-content hidden">
-                <h2 class="text-3xl font-bold text-center mb-2 text-[#2D2A4A]">我的冒險隊伍</h2>
+                <h2 class="text-3xl font-bold text-center mb-2 text-[#2D2A4A]">我的隊伍</h2>
                 <p class="text-center text-lg mb-8">管理你的英雄與聖物，組建最強大的冒險隊伍，為探索地下城做好準備。</p>
                 
                 <div class="mb-8">
                     <h3 class="text-2xl font-bold mb-4 text-[#2D2A4A]">我的英雄 (Heroes)</h3>
                     <div id="heroesContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        <!-- Heroes will be dynamically inserted here -->
+                        <p class="col-span-full text-center text-gray-500">連接錢包後將顯示您的英雄...</p>
                     </div>
                 </div>
 
                 <div>
                     <h3 class="text-2xl font-bold mb-4 text-[#2D2A4A]">我的聖物 (Relics)</h3>
                     <div id="relicsContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        <!-- Relics will be dynamically inserted here -->
+                         <p class="col-span-full text-center text-gray-500">連接錢包後將顯示您的聖物...</p>
                     </div>
                 </div>
             </section>
