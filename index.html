@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dungeon Delvers - 互動式網頁應用</title>
-    
-    <!-- 樣式與字體保留在 <head> -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -34,13 +32,13 @@
             </div>
         </header>
 
-        <!-- Main Content (保持不變) -->
+        <!-- Main Content -->
         <main id="main-content" class="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
             <section id="guide" class="page-content">
                 <h2 class="text-3xl font-bold text-center mb-6 text-[#2D2A4A]">遊戲指南 & 規則</h2>
                 <div class="bg-white/50 p-6 rounded-xl shadow-md mb-8">
                     <h3 class="text-2xl font-bold text-[#2D2A4A] mb-4">歡迎來到 Dungeon Delvers 的世界</h3>
-                    <p class="text-lg">這是一款奇幻風格的 NFT 遊戲。您將招募傳奇的英雄，藉由強大的聖物之力，深入被遺忘的地下城，尋找蘊含著世界本源能量的「魂晶」($SoulShard)，並在此過程中贏得榮耀與財富。準備好開始你的史詩 aventura嗎？</p>
+                    <p class="text-lg">這是一款奇幻風格的 NFT 遊戲。您將招募傳奇的英雄，藉由強大的聖物之力，深入被遺忘的地下城，尋找蘊含著世界本源能量的「魂晶」($SoulShard)，並在此過程中贏得榮耀與財富。準備好開始你的史詩冒險了嗎？</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
@@ -76,7 +74,16 @@
                 </div>
             </section>
             <section id="barracks" class="page-content hidden">
-                <h2 class="text-3xl font-bold text-center mb-2 text-[#2D2A4A]">我的隊伍</h2>
+                <h2 class="text-3xl font-bold text-center mb-2 text-[#2D2A4A]">我的冒險隊伍</h2>
+                <p class="text-center text-lg mb-8">管理你的英雄與聖物，組建最強大的冒險隊伍，為探索地下城做好準備。</p>
+                
+                <!-- **新增**: 授權按鈕區塊 -->
+                <div class="text-center mb-6">
+                    <button id="approveNftsBtn" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                        (首次需執行) 授權 NFT 轉移權限給地下城
+                    </button>
+                    <p class="text-xs text-gray-500 mt-1">為了讓地下城合約能保管您的 NFT，您需要先執行一次性的授權。</p>
+                </div>
                 <div class="mb-8">
                     <h3 class="text-2xl font-bold mb-4 text-[#2D2A4A]">我的英雄 (Heroes)</h3>
                     <div id="heroesContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -92,22 +99,20 @@
             </section>
             <section id="portal" class="page-content hidden">
                 <h2 class="text-3xl font-bold text-center mb-2 text-[#2D2A4A]">地下城入口</h2>
-                <div class="card-bg p-6 rounded-xl shadow-lg mb-8">
+                <p class="text-center text-lg mb-8">集結你的隊伍，選擇目標地下城，開始尋找 $SoulShard 的旅程！</p>
+                <div id="stakingStatus" class="card-bg p-6 rounded-xl shadow-lg mb-8">
                     <h3 class="text-2xl font-bold mb-4 text-center">當前隊伍配置</h3>
                     <div id="currentParty" class="text-center">
                         <p class="text-lg">尚未組建隊伍。請前往「我的隊伍」頁面進行配置。</p>
                         <p class="text-xl font-bold text-[#C0A573] mt-2">總戰力: <span id="totalPower">0</span></p>
                     </div>
                 </div>
-                <div id="dungeonsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                <div id="dungeonsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
             </section>
         </main>
     </div>
 
-    <!-- 
-      **V3 修正**: 更換 Ethers.js 的 CDN 來源，並使用 defer 確保載入順序。
-      Cloudflare 的 CDN 可能有更好的連線穩定性。
-    -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
