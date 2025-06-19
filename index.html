@@ -3,19 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dungeon Delvers - 互動式網頁應用</title>
+    <title>Dungeon Delvers</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-
-    <!-- 網頁頁籤圖示 (Favicon) - 完整版 -->
+    <!-- Favicon and Meta Tags -->
     <link rel="icon" href="/assets/images/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" href="/assets/images/logo-192x192.png" sizes="192x192">
     <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
     <link rel="manifest" href="/manifest.json">
-    
-    <!-- 社群媒體分享預覽 (Open Graph Tags) - 完整版 -->
+    <!-- Open Graph Tags -->
     <meta property="og:title" content="Dungeon Delvers - 你的奇幻冒險由此開始" />
     <meta property="og:description" content="招募傳奇英雄，組建最強隊伍，深入被遺忘的地下城，尋找蘊含著世界本源能量的「魂晶」($SoulShard)！" />
     <meta property="og:type" content="website" />
@@ -24,8 +22,7 @@
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:site_name" content="Dungeon Delvers" />
-    
-    <!-- Twitter Card - 完整版 -->
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Dungeon Delvers - 你的奇幻冒險由此開始">
     <meta name="twitter:description" content="招募傳奇英雄，組建最強隊伍，深入被遺忘的地下城，尋找蘊含著世界本源能量的「魂晶」($SoulShard)！">
@@ -39,9 +36,12 @@
         <header class="bg-[#1F1D36] shadow-lg sticky top-0 z-50">
             <div class="container mx-auto px-4 py-3">
                 <div class="flex justify-between items-center">
-                    <div>
-                        <h1 class="text-2xl md:text-3xl font-bold text-white text-shadow-gold">Dungeon Delvers</h1>
-                        <p class="text-sm text-gray-300">你的奇幻冒險由此開始</p>
+                    <div class="flex items-center space-x-4">
+                        <img src="image/png" href="/assets/images/logo-512x512.png" alt="Dungeon Delvers Logo" class="h-12 w-12 rounded-full border-2 border-[#C0A573]">
+                        <div>
+                            <h1 class="text-2xl md:text-3xl font-bold text-white text-shadow-gold">Dungeon Delvers</h1>
+                            <p class="text-sm text-gray-300">你的奇幻冒險由此開始</p>
+                        </div>
                     </div>
                     <button id="connectWalletBtn" class="btn-primary px-4 py-2 rounded-lg text-sm md:text-base">連接錢包</button>
                 </div>
@@ -58,6 +58,9 @@
         <!-- Main Content -->
         <main id="main-content" class="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
             <section id="guide" class="page-content">
+                <div class="hero-banner mb-8 rounded-xl shadow-lg overflow-hidden">
+                    <img src="https://www.soulshard.fun/assets/images/cover-1200x400.png" alt="Dungeon Delvers Cover Art" class="w-full h-full object-cover">
+                </div>
                 <h2 class="text-3xl font-bold text-center mb-6 text-[#2D2A4A]">遊戲指南 & 規則</h2>
                 <div class="bg-white/50 p-6 rounded-xl shadow-md mb-8">
                     <h3 class="text-2xl font-bold text-[#2D2A4A] mb-4">歡迎來到 Dungeon Delvers 的世界</h3>
@@ -145,9 +148,23 @@
                 </div>
             </section>
         </main>
+        <!-- Footer -->
+        <footer class="bg-[#1F1D36] text-gray-300 py-6">
+            <div class="container mx-auto text-center">
+                <p class="font-serif text-lg mb-2">加入我們的社群</p>
+                <div class="flex justify-center space-x-6 mb-4">
+                    <a href="https://twitter.com/your-twitter-handle" target="_blank" class="hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.71v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84"></path></svg>
+                    </a>
+                    <a href="https://t.me/soulshard_BSC" target="_blank" class="hover:text-white transition-colors">
+                        <svg id="Livello_1" data-name="Livello 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 240 240"><defs><linearGradient id="linear-gradient" x1="120" y1="240" x2="120" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1d93d2"/><stop offset="1" stop-color="#38b0e3"/></linearGradient></defs><title>Telegram_logo</title><circle cx="120" cy="120" r="120" fill="url(#linear-gradient)"/><path d="M81.229,128.772l14.237,39.406s1.78,3.687,3.686,3.687,30.255-29.492,30.255-29.492l31.525-60.89L81.737,118.6Z" fill="#c8daea"/><path d="M100.106,138.878l-2.733,29.046s-1.144,8.9,7.754,0,17.415-15.763,17.415-15.763" fill="#a9c6d8"/><path d="M81.486,130.178,52.2,120.636s-3.5-1.42-2.373-4.64c.232-.664.7-1.229,2.1-2.2,6.489-4.523,120.106-45.36,120.106-45.36s3.208-1.081,5.1-.362a2.766,2.766,0,0,1,1.885,2.055,9.357,9.357,0,0,1,.254,2.585c-.009.752-.1,1.449-.169,2.542-.692,11.165-21.4,94.493-21.4,94.493s-1.239,4.876-5.678,5.043A8.13,8.13,0,0,1,146.1,172.5c-8.711-7.493-38.819-27.727-45.472-32.177a1.27,1.27,0,0,1-.546-.9c-.093-.469.417-1.05.417-1.05s52.426-46.6,53.821-51.492c.108-.379-.3-.566-.848-.4-3.482,1.281-63.844,39.4-70.506,43.607A3.21,3.21,0,0,1,81.486,130.178Z" fill="#fff"/></svg>
+                    </a>
+                </div>
+                <p class="text-xs">&copy; 2025 Dungeon Delvers. All Rights Reserved.</p>
+            </div>
+        </footer>
     </div>
 
-    <!-- 將所有腳本依正確順序放在 body 結尾，確保頁面快速載入 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
