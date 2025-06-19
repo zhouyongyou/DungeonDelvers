@@ -1,21 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- Ethers.js 和合約相關變數 ---
-    let provider;
-    let signer;
-    let userAddress;
-    // 三個核心合約的接口
-    let soulShardTokenContract;
-    let assetsContract;
-    let stakingPoolContract;
+    let provider, signer, userAddress;
+    let soulShardTokenContract, assetsContract, stakingPoolContract;
 
     // !!重要!!: 在您完成部署後，必須用真實數據替換這裡的內容
     const soulShardTokenAddress = "YOUR_SOULSHARD_TOKEN_ADDRESS";
     const assetsContractAddress = "YOUR_ASSETS_CONTRACT_ADDRESS";
     const stakingPoolAddress = "YOUR_STAKING_POOL_ADDRESS";
     
-    // ABI (Application Binary Interface) - 部署後填入
-    // 提示: 您可以從 Remix 或 Hardhat 的編譯輸出中找到 ABI
-    // 為了方便，這裡先填入最常用的幾個函數接口
+    // ABI - 部署後填入
     const soulShardTokenABI = [
         "function approve(address spender, uint256 amount) returns (bool)",
         "function balanceOf(address account) view returns (uint256)"
@@ -25,7 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
         "function relicMintPrice() view returns (uint256)",
         "function mintHero()",
         "function mintRelic()",
-        "function balanceOfBatch(address[] accounts, uint256[] ids) view returns (uint256[])"
+        "function balanceOfBatch(address[] accounts, uint256[] ids) view returns (uint256[])",
+        "function setApprovalForAll(address operator, bool approved)"
     ];
     const stakingPoolABI = [
         "function stake(uint256 relicId, uint256 relicCapacity, tuple(uint256, uint256)[] calldata heroes)",
@@ -60,18 +54,18 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     // --- 遊戲狀態 ---
-    let userHeroes = [];
-    let userRelics = [];
+    let userHeroes = [], userRelics = [];
     let currentParty = { relic: null, heroes: [], totalPower: 0 };
     
     // --- DOM 元素 ---
     const connectWalletBtn = document.getElementById('connectWalletBtn');
     const mintHeroBtn = document.getElementById('mintHeroBtn');
     const mintRelicBtn = document.getElementById('mintRelicBtn');
+    const approveNftsBtn = document.getElementById('approveNftsBtn');
+    const dungeonsContainer = document.getElementById('dungeonsContainer');
     const heroesContainer = document.getElementById('heroesContainer');
     const relicsContainer = document.getElementById('relicsContainer');
     const dashboardStatus = document.querySelector("#dashboard .bg-white\\/50");
-
 
     // --- 網路檢查與切換 (完整版) ---
     const checkAndSwitchNetwork = async () => {
@@ -85,15 +79,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         params: [{ chainId: targetNetwork.chainId }],
                     });
                 } catch (switchError) {
-                    // 如果用戶錢包沒有該網路，則嘗試新增網路 (錯誤碼 4902)
                     if (switchError.code === 4902) {
                         await window.ethereum.request({
                             method: 'wallet_addEthereumChain',
                             params: [targetNetwork],
                         });
-                    } else {
-                        throw switchError;
-                    }
+                    } else { throw switchError; }
                 }
             }
             return true;
@@ -106,10 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 連接錢包與初始化 ---
     const connectWallet = async () => {
-        if (typeof window.ethereum === 'undefined') {
-            alert('請安裝 MetaMask！');
-            return;
-        }
+        if (typeof window.ethereum === 'undefined') { alert('請安裝 MetaMask！'); return; }
         try {
             const isNetworkCorrect = await checkAndSwitchNetwork();
             if (!isNetworkCorrect) return;
@@ -128,7 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             await Promise.all([updateTokenBalance(), fetchUserAssets()]);
             
-            // 監聽帳戶或網路變化，自動重載頁面以刷新狀態
             window.ethereum.on('accountsChanged', () => window.location.reload());
             window.ethereum.on('chainChanged', () => window.location.reload());
         } catch (error) {
@@ -186,15 +173,93 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // --- 待完成的函式邏輯 (框架) ---
-    const mintRelic = async () => { /* 參照 mintHero 的模式，完成此函式 */ };
-    const stakeParty = async () => { /* 獲取隊伍數據，呼叫 stakingPoolContract.stake() */ };
-    const claimAllRewards = async () => { /* 呼叫 stakingPoolContract.claimRewards() */ };
-    const withdrawParty = async () => { /* 呼叫 stakingPoolContract.withdraw() */ };
-    const restAllStakedHeroes = async () => { /* 獲取價格, approve, 呼叫 restHeroes() */ };
+    // --- **新增**：鑄造聖物功能 ---
+    const mintRelic = async () => {
+        if (!assetsContract) { alert('請先連接錢包'); return; }
+        try {
+            // 1. 從合約獲取鑄造價格
+            const price = await assetsContract.relicMintPrice();
+            // 2. 請求使用者授權代幣
+            const success = await approveTokens(assetsContractAddress, price);
+            if (!success) return; // 如果授權失敗，則中止
+
+            // 3. 呼叫合約的 mintRelic 函式
+            const tx = await assetsContract.mintRelic();
+            alert("聖物鑄造交易已送出...請等待區塊鏈確認。");
+            await tx.wait();
+            alert("鑄造成功！您的新聖物已加入收藏。");
+            // 4. 成功後，更新代幣餘額和 NFT 列表
+            await Promise.all([updateTokenBalance(), fetchUserAssets()]);
+        } catch (error) {
+            console.error("鑄造聖物失敗:", error);
+            alert("鑄造聖物失敗，請查看主控台。");
+        }
+    };
+    
+    // --- **新增**: 授權 NFT 函式 ---
+    const approveAllNfts = async () => {
+        if (!assetsContract) { alert('請先連接錢包'); return; }
+        try {
+            // 請求使用者授權 StakingPool 合約可以轉移他所有的 NFT
+            const tx = await assetsContract.setApprovalForAll(stakingPoolAddress, true);
+            alert("正在請求 NFT 授權...請在錢包中確認。這是一次性操作。");
+            await tx.wait();
+            alert("NFT 授權成功！您現在可以開始遠征了。");
+        } catch (error) {
+            console.error("NFT 授權失敗:", error);
+            alert("NFT 授權失敗，請查看主控台。");
+        }
+    };
+    
+    // --- **新增**: 實現質押功能 (開始遠征) ---
+    const stakeParty = async () => {
+        if (!stakingPoolContract) { alert('請先連接錢包'); return; }
+        if (!currentParty.relic || currentParty.heroes.length === 0) {
+            alert("請先在「我的隊伍」頁面組建一個包含英雄和聖物的完整隊伍。");
+            return;
+        }
+
+        try {
+            // 1. 格式化英雄數據以符合合約要求
+            const heroesToStake = currentParty.heroes.map(h => ({
+                tokenId: h.tokenId,
+                power: h.power
+            }));
+
+            // 2. 呼叫 StakingPool 合約的 stake 函式
+            const tx = await stakingPoolContract.stake(
+                currentParty.relic.tokenId,
+                currentParty.relic.capacity,
+                heroesToStake
+            );
+            
+            alert("隊伍正在前往地下城...請等待區塊鏈確認。");
+            await tx.wait();
+            alert("隊伍已成功進入地下城！開始賺取獎勵。");
+
+            // 3. 成功後，重置前端狀態並更新數據
+            disbandParty(); // 清空當前隊伍選擇
+            await fetchUserAssets(); // 刷新擁有的 NFT 列表
+            // TODO: 更新質押狀態顯示
+            
+        } catch (error) {
+            console.error("開始遠征失敗:", error);
+            // 常見錯誤：使用者尚未授權 NFT
+            if (error.message.includes("is not approved")) {
+                 alert("遠征失敗！原因：您尚未授權 NFT 轉移權限。請先到「我的隊伍」頁面點擊授權按鈕。");
+            } else {
+                 alert("遠征失敗，請查看主控台獲取詳情。");
+            }
+        }
+    };
+
+    // --- 待完成的函式邏輯 ---
+    const claimAllRewards = async () => { /* ... */ };
+    const withdrawParty = async () => { /* ... */ };
+    const restAllStakedHeroes = async () => { /* ... */ };
 
     // --- 資料讀取與渲染 ---
-    const fetchUserAssets = async () => {
+        const fetchUserAssets = async () => {
         if (!assetsContract || !userAddress) return;
         heroesContainer.innerHTML = '<p class="col-span-full text-center text-gray-200">正在從區塊鏈讀取您的資產...</p>';
         relicsContainer.innerHTML = '';
@@ -284,15 +349,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateDungeons() {
-        const container = document.getElementById('dungeonsContainer');
-        container.innerHTML = dungeonsData.map(dungeon => {
+        dungeonsContainer.innerHTML = dungeonsData.map(dungeon => {
             const canEnter = currentParty.totalPower >= dungeon.requiredPower;
             return `
             <div class="card-bg p-4 rounded-xl ${!canEnter ? 'disabled-card' : ''}">
                 <h4 class="text-xl font-bold font-serif">${dungeon.name}</h4>
                 <p class="text-sm text-gray-300">要求戰力: ${dungeon.requiredPower}</p>
                 <p class="text-lg mt-2 text-[#C0A573]">獎勵: ${dungeon.reward} $SoulShard</p>
-                <button class="w-full mt-4 btn-primary py-2 rounded-lg ${!canEnter ? 'cursor-not-allowed opacity-50' : ''}" ${!canEnter ? 'disabled' : ''}>
+                <button 
+                    class="w-full mt-4 btn-primary py-2 rounded-lg stake-btn ${!canEnter ? 'cursor-not-allowed opacity-50' : ''}" 
+                    ${!canEnter ? 'disabled' : ''}
+                    data-dungeon-name="${dungeon.name}"
+                >
                     開始遠征
                 </button>
             </div>`;
@@ -393,6 +461,15 @@ document.addEventListener('DOMContentLoaded', () => {
         connectWalletBtn.addEventListener('click', connectWallet);
         mintHeroBtn.addEventListener('click', mintHero);
         mintRelicBtn.addEventListener('click', mintRelic);
+        approveNftsBtn.addEventListener('click', approveAllNfts); // **新增**
+        
+        // **新增**: 使用事件委派來處理動態生成的按鈕
+        dungeonsContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('stake-btn')) {
+                stakeParty();
+            }
+        });
+
         document.getElementById('barracks')?.addEventListener('click', handleAssetClick);
     }
 
