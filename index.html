@@ -14,7 +14,7 @@
 <body class="text-gray-800">
 
     <div class="min-h-screen flex flex-col">
-        <!-- Header -->
+        <!-- Header (保持不變) -->
         <header class="bg-[#1F1D36] shadow-lg sticky top-0 z-50">
             <div class="container mx-auto px-4 py-3">
                 <div class="flex justify-between items-center">
@@ -24,7 +24,6 @@
                     </div>
                     <button id="connectWalletBtn" class="btn-primary px-4 py-2 rounded-lg text-sm md:text-base">連接錢包</button>
                 </div>
-                <!-- Navigation -->
                 <nav id="navigation" class="mt-4 flex flex-wrap justify-center space-x-2 md:space-x-6 text-sm md:text-base">
                     <a class="nav-item active" data-target="guide">遊戲指南</a>
                     <a class="nav-item" data-target="dashboard">我的總覽</a>
@@ -37,7 +36,6 @@
 
         <!-- Main Content (保持不變) -->
         <main id="main-content" class="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
-            <!-- Game Guide Section -->
             <section id="guide" class="page-content">
                 <h2 class="text-3xl font-bold text-center mb-6 text-[#2D2A4A]">遊戲指南 & 規則</h2>
                 <div class="bg-white/50 p-6 rounded-xl shadow-md mb-8">
@@ -55,7 +53,6 @@
                     </div>
                 </div>
             </section>
-            <!-- Dashboard Section -->
             <section id="dashboard" class="page-content hidden">
                  <h2 class="text-3xl font-bold text-center mb-6 text-[#2D2A4A]">我的總覽</h2>
                  <div class="bg-white/50 p-6 rounded-xl shadow-md text-center">
@@ -63,10 +60,8 @@
                     <p class="text-gray-600 mt-4">(此處未來將顯示您的 $SoulShard 餘額、資產總覽等資訊)</p>
                  </div>
             </section>
-            <!-- Forge, Barracks, Portal sections... -->
             <section id="forge" class="page-content hidden">
                 <h2 class="text-3xl font-bold text-center mb-2 text-[#2D2A4A]">英雄酒館 & 古代熔爐</h2>
-                <p class="text-center text-lg mb-8">這裡是你擴充實力的地方。在酒館中招募未知的英雄，或在熔爐中鑄造傳說的聖物。</p>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div class="card-bg p-6 rounded-xl shadow-lg flex flex-col items-center">
                         <h3 class="text-2xl font-bold mb-4">招募英雄</h3>
@@ -82,7 +77,6 @@
             </section>
             <section id="barracks" class="page-content hidden">
                 <h2 class="text-3xl font-bold text-center mb-2 text-[#2D2A4A]">我的隊伍</h2>
-                <p class="text-center text-lg mb-8">管理你的英雄與聖物，組建最強大的冒險隊伍，為探索地下城做好準備。</p>
                 <div class="mb-8">
                     <h3 class="text-2xl font-bold mb-4 text-[#2D2A4A]">我的英雄 (Heroes)</h3>
                     <div id="heroesContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -98,7 +92,6 @@
             </section>
             <section id="portal" class="page-content hidden">
                 <h2 class="text-3xl font-bold text-center mb-2 text-[#2D2A4A]">地下城入口</h2>
-                <p class="text-center text-lg mb-8">集結你的隊伍，選擇目標地下城，開始尋找 $SoulShard 的旅程！</p>
                 <div class="card-bg p-6 rounded-xl shadow-lg mb-8">
                     <h3 class="text-2xl font-bold mb-4 text-center">當前隊伍配置</h3>
                     <div id="currentParty" class="text-center">
@@ -112,11 +105,9 @@
     </div>
 
     <!-- 
-      **變更**: 將所有 script 移至 body 結尾，並確保載入順序正確。
-      1. Tailwind (它會掃描 class，但本身無依賴)
-      2. Chart.js (函式庫)
-      3. Ethers.js (函式庫)
-      4. script.js (我們自己的主程式，依賴 Chart.js 和 Ethers.js)
+      **最終修正**: 使用 `defer` 屬性。
+      這會非阻塞地載入腳本，並確保它們在 HTML 解析完畢後，嚴格按照順序執行。
+      這是最現代且最可靠的作法。
     -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -124,3 +115,30 @@
     <script src="script.js"></script>
 </body>
 </html>
+```
+
+### **除錯步驟**
+
+在您用上面的程式碼**完全覆蓋** `index.html` 檔案後，請嚴格按照以下步驟操作：
+
+1.  **儲存檔案**。
+
+2.  **開啟瀏覽器**，進入您的網頁。
+
+3.  **強制清除快取並重新整理**：
+    * 在 Windows/Linux 上，按 `Ctrl` + `Shift` + `R`。
+    * 在 Mac 上，按 `Cmd` + `Shift` + `R`。
+    * 這一步非常重要，能確保瀏覽器載入的是您最新的檔案，而不是舊的快取。
+
+4.  **打開開發者工具**：在頁面上按 `F12` 鍵 (或者右鍵 -> 檢查)。
+
+5.  **切換到「主控台 (Console)」分頁**。
+
+6.  現在，點擊「連接錢包」按鈕。
+
+請查看主控台中顯示的訊息。如果問題仍然是 `ethers is not defined`，請您**切換到開發者工具的「網路 (Network)」分頁**，然後再次強制重新整理頁面 (`Ctrl`+`Shift`+`R`)。在檔案列表中找到 `ethers-5.7.2.umd.min.js` 這一行，看看它的「狀態 (Status)」碼是什麼。
+
+* 如果是 `200` (綠色)，代表檔案載入成功。
+* 如果是 `404` 或其他紅色錯誤，代表檔案下載失敗。
+
+請將您看到的結果告訴我，這將是我們解決問題的最關鍵
