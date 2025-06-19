@@ -2,62 +2,67 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Ethers.js 和合約相關變數 ---
     let provider;
     let signer;
-    let contract;
     let userAddress;
+    // 三個核心合約的接口
+    let soulShardTokenContract;
+    let assetsContract;
+    let stakingPoolContract;
 
-    // !!重要!!: 部署合約後，需要用真實數據替換這裡的內容
-    const contractAddress = "YOUR_CONTRACT_ADDRESS_HERE"; // 部署後填入合約地址
-    const contractABI = []; // 部署後填入合約的 ABI (Application Binary Interface)
+    // !!重要!!: 在您完成部署後，必須用真實數據替換這裡的內容
+    const soulShardTokenAddress = "YOUR_SOULSHARD_TOKEN_ADDRESS";
+    const assetsContractAddress = "YOUR_ASSETS_CONTRACT_ADDRESS";
+    const stakingPoolAddress = "YOUR_STAKING_POOL_ADDRESS";
+    
+    // ABI (Application Binary Interface) - 部署後填入
+    // 提示: 您可以從 Remix 或 Hardhat 的編譯輸出中找到 ABI
+    // 為了方便，這裡先填入最常用的幾個函數接口
+    const soulShardTokenABI = [
+        "function approve(address spender, uint256 amount) returns (bool)",
+        "function balanceOf(address account) view returns (uint256)"
+    ];
+    const assetsContractABI = [
+        "function heroMintPrice() view returns (uint256)",
+        "function relicMintPrice() view returns (uint256)",
+        "function mintHero()",
+        "function mintRelic()",
+        "function balanceOfBatch(address[] accounts, uint256[] ids) view returns (uint256[])"
+    ];
+    const stakingPoolABI = [
+        "function stake(uint256 relicId, uint256 relicCapacity, tuple(uint256, uint256)[] calldata heroes)",
+        "function withdraw()",
+        "function claimRewards()",
+        "function restHeroes()",
+        "function getStakerInfo(address user) view returns (tuple(uint256, uint256, tuple(uint256, uint256)[], uint256, uint256, uint256, uint256), uint256)"
+    ];
 
-      // --- 網路設定 ---
-    // 目標網路為 BSC 正式網 (Chain ID: 56)
+    // --- 網路設定 ---
     const targetNetwork = {
-        chainId: '0x38', // 56 的十六進制表示
+        chainId: '0x38', // 56 (BSC Mainnet)
         chainName: 'BNB Smart Chain (BSC) Mainnet',
-        nativeCurrency: {
-            name: 'BNB',
-            symbol: 'BNB',
-            decimals: 18,
-        },
+        nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
         rpcUrls: ['https://bsc-dataseed.binance.org/'],
         blockExplorerUrls: ['https://bscscan.com/'],
     };
-  
+    
     // --- 靜態資料定義 ---
     const rarityData = {
         labels: ['1 星 (普通)', '2 星 (非凡)', '3 星 (稀有)', '4 星 (史詩)', '5 星 (傳說)'],
         chances: [44, 35, 15, 5, 1],
         colors: ['#A9A9A9', '#6A8CAF', '#8B5CF6', '#D946EF', '#FBBF24'],
-        // 我們將從 IPFS 讀取真實數據，但先保留前端對應的資料結構
-        power: {
-            '1': {min: 15, max: 50}, '2': {min: 50, max: 100},
-            '3': {min: 100, max: 150}, '4': {min: 150, max: 200},
-            '5': {min: 200, max: 255}
-        },
+        power: { '1': {min: 15, max: 50}, '2': {min: 50, max: 100}, '3': {min: 100, max: 150}, '4': {min: 150, max: 200}, '5': {min: 200, max: 255} },
         capacity: {'1': 1, '2': 2, '3': 3, '4': 4, '5': 5}
     };
-    
     const dungeonsData = [
-        { name: '新手礦洞', requiredPower: 0, reward: 10 },
-        { name: '哥布林洞穴', requiredPower: 100, reward: 25 },
-        { name: '食人魔山谷', requiredPower: 250, reward: 60 },
-        { name: '蜘蛛巢穴', requiredPower: 500, reward: 120 },
-        { name: '石化蜥蜴沼澤', requiredPower: 800, reward: 200 },
-        { name: '巫妖墓穴', requiredPower: 1200, reward: 350 },
-        { name: '奇美拉之巢', requiredPower: 1800, reward: 550 },
-        { name: '惡魔前哨站', requiredPower: 2500, reward: 800 },
-        { name: '巨龍之巔', requiredPower: 3500, reward: 1200 },
+        { name: '新手礦洞', requiredPower: 0, reward: 10 }, { name: '哥布林洞穴', requiredPower: 100, reward: 25 }, { name: '食人魔山谷', requiredPower: 250, reward: 60 },
+        { name: '蜘蛛巢穴', requiredPower: 500, reward: 120 }, { name: '石化蜥蜴沼澤', requiredPower: 800, reward: 200 }, { name: '巫妖墓穴', requiredPower: 1200, reward: 350 },
+        { name: '奇美拉之巢', requiredPower: 1800, reward: 550 }, { name: '惡魔前哨站', requiredPower: 2500, reward: 800 }, { name: '巨龍之巔', requiredPower: 3500, reward: 1200 },
         { name: '混沌深淵', requiredPower: 5000, reward: 2000 },
     ];
 
-    // --- 遊戲狀態 (現在將由區塊鏈數據驅動) ---
-    let userHeroes = []; // 將從 fetchUserAssets() 填充
-    let userRelics = []; // 將從 fetchUserAssets() 填充
-    let currentParty = {
-        relic: null,
-        heroes: [],
-        totalPower: 0
-    };
+    // --- 遊戲狀態 ---
+    let userHeroes = [];
+    let userRelics = [];
+    let currentParty = { relic: null, heroes: [], totalPower: 0 };
     
     // --- DOM 元素 ---
     const connectWalletBtn = document.getElementById('connectWalletBtn');
@@ -65,20 +70,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const mintRelicBtn = document.getElementById('mintRelicBtn');
     const heroesContainer = document.getElementById('heroesContainer');
     const relicsContainer = document.getElementById('relicsContainer');
+    const dashboardStatus = document.querySelector("#dashboard .bg-white\\/50");
 
-      // --- **新增** 網路檢查與切換函式 ---
+
+    // --- 網路檢查與切換 (完整版) ---
     const checkAndSwitchNetwork = async () => {
+        if (!window.ethereum) return false;
         try {
             const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
             if (currentChainId !== targetNetwork.chainId) {
                 try {
-                    // 請求切換網路
                     await window.ethereum.request({
                         method: 'wallet_switchEthereumChain',
                         params: [{ chainId: targetNetwork.chainId }],
                     });
                 } catch (switchError) {
-                    // 如果用戶錢包沒有該網路，則嘗試新增網路
+                    // 如果用戶錢包沒有該網路，則嘗試新增網路 (錯誤碼 4902)
                     if (switchError.code === 4902) {
                         await window.ethereum.request({
                             method: 'wallet_addEthereumChain',
@@ -89,75 +96,123 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
-            return true; // 表示網路正確或已成功切換
+            return true;
         } catch (error) {
             console.error("網路切換失敗:", error);
             alert(`網路切換失敗，請手動將您的錢包網路切換至 ${targetNetwork.chainName}。`);
             return false;
         }
     };
-  
-    // --- 連接錢包 ---
+
+    // --- 連接錢包與初始化 ---
     const connectWallet = async () => {
         if (typeof window.ethereum === 'undefined') {
             alert('請安裝 MetaMask！');
             return;
         }
         try {
-            // **步驟 1**: 檢查並嘗試切換到目標網路
             const isNetworkCorrect = await checkAndSwitchNetwork();
-            if (!isNetworkCorrect) return; // 如果網路不正確且切換失敗，則中止連接
+            if (!isNetworkCorrect) return;
 
-            // **步驟 2**: 請求用戶授權帳戶
-            await window.ethereum.request({ method: 'eth_requestAccounts' });
-            
-            // **步驟 3**: 初始化 Ethers 和合約
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            userAddress = accounts[0];
             provider = new ethers.providers.Web3Provider(window.ethereum);
             signer = provider.getSigner();
-            userAddress = await signer.getAddress();
-            contract = new ethers.Contract(contractAddress, contractABI, signer);
+            
+            soulShardTokenContract = new ethers.Contract(soulShardTokenAddress, soulShardTokenABI, signer);
+            assetsContract = new ethers.Contract(assetsContractAddress, assetsContractABI, signer);
+            stakingPoolContract = new ethers.Contract(stakingPoolAddress, stakingPoolABI, signer);
 
             connectWalletBtn.textContent = `${userAddress.substring(0, 6)}...${userAddress.substring(userAddress.length - 4)}`;
             connectWalletBtn.disabled = true;
 
-            console.log("錢包已連接:", userAddress);
-            await fetchUserAssets();
-            // 監聽帳戶或網路變化
+            await Promise.all([updateTokenBalance(), fetchUserAssets()]);
+            
+            // 監聽帳戶或網路變化，自動重載頁面以刷新狀態
             window.ethereum.on('accountsChanged', () => window.location.reload());
             window.ethereum.on('chainChanged', () => window.location.reload());
         } catch (error) {
             console.error("連接錢包失敗:", error);
-            alert(`連接錢包出錯: ${error.message}`);
+            alert("連接失敗，可能是合約地址或 ABI 不正確，請檢查主控台。");
+        }
+    };
+
+    // --- 核心互動函式 ---
+    const updateTokenBalance = async () => {
+        if (!soulShardTokenContract || !userAddress) return;
+        try {
+            const balance = await soulShardTokenContract.balanceOf(userAddress);
+            const formattedBalance = parseFloat(ethers.utils.formatEther(balance)).toFixed(4);
+            dashboardStatus.innerHTML = `
+                <h3 class="text-2xl font-bold text-[#2D2A4A] mb-4">玩家狀態</h3>
+                <p class="text-lg">錢包地址: <span class="font-mono text-sm">${userAddress}</span></p>
+                <p class="text-lg mt-2">$SoulShard 餘額: <span class="font-bold text-yellow-600">${formattedBalance}</span></p>
+            `;
+        } catch(e) {
+            dashboardStatus.innerHTML = `<p class="text-red-500">無法讀取餘額，請確認合約地址與 ABI 是否正確。</p>`
         }
     };
     
-    // --- 與合約互動 ---
+    const approveTokens = async (spenderAddress, amount) => {
+        if (!soulShardTokenContract) return false;
+        try {
+            const tx = await soulShardTokenContract.approve(spenderAddress, amount);
+            alert(`正在請求授權...請在錢包中確認交易。`);
+            await tx.wait();
+            alert("授權成功！現在您可以進行下一步操作。");
+            return true;
+        } catch (error) {
+            console.error("授權失敗:", error);
+            alert("授權失敗！請查看主控台獲取詳情。");
+            return false;
+        }
+    };
+
+    const mintHero = async () => {
+        if (!assetsContract) { alert('請先連接錢包'); return; }
+        try {
+            const price = await assetsContract.heroMintPrice();
+            const success = await approveTokens(assetsContractAddress, price);
+            if (!success) return;
+
+            const tx = await assetsContract.mintHero();
+            alert("英雄招募交易已送出...請等待區塊鏈確認。");
+            await tx.wait();
+            alert("招募成功！您的新英雄已加入隊伍。");
+            await Promise.all([updateTokenBalance(), fetchUserAssets()]);
+        } catch (error) {
+            console.error("招募失敗:", error);
+            alert("招募失敗，請查看主控台。");
+        }
+    };
+    
+    // --- 待完成的函式邏輯 (框架) ---
+    const mintRelic = async () => { /* 參照 mintHero 的模式，完成此函式 */ };
+    const stakeParty = async () => { /* 獲取隊伍數據，呼叫 stakingPoolContract.stake() */ };
+    const claimAllRewards = async () => { /* 呼叫 stakingPoolContract.claimRewards() */ };
+    const withdrawParty = async () => { /* 呼叫 stakingPoolContract.withdraw() */ };
+    const restAllStakedHeroes = async () => { /* 獲取價格, approve, 呼叫 restHeroes() */ };
+
+    // --- 資料讀取與渲染 ---
     const fetchUserAssets = async () => {
-        if (!contract || !userAddress) return;
+        if (!assetsContract || !userAddress) return;
         heroesContainer.innerHTML = '<p class="col-span-full text-center text-gray-200">正在從區塊鏈讀取您的資產...</p>';
         relicsContainer.innerHTML = '';
-        
         try {
-            // !!注意!!: 這些 ID 應與您的 Solidity 合約中的常數匹配
             const heroTokenIds = [1, 2, 3, 4, 5]; 
             const relicTokenIds = [11, 12, 13, 14, 15];
             const allTokenIds = [...heroTokenIds, ...relicTokenIds];
             const userAddresses = Array(allTokenIds.length).fill(userAddress);
-            const balances = await contract.balanceOfBatch(userAddresses, allTokenIds);
-
+            const balances = await assetsContract.balanceOfBatch(userAddresses, allTokenIds);
             let fetchedHeroes = [];
             let fetchedRelics = [];
-
-            // TODO: 在真實應用中，我們需要為每個 tokenId 獲取其元數據 (metadata)
-            // 這裡我們先用假數據代替
             for (let i = 0; i < balances.length; i++) {
                 const balance = balances[i].toNumber();
                 if (balance > 0) {
                     const tokenId = allTokenIds[i];
                     for (let j = 0; j < balance; j++) {
-                        const uniqueId = `${tokenId}-${j}`; // 用於前端點擊選取
+                        const uniqueId = `${tokenId}-${j}`;
                         if (heroTokenIds.includes(tokenId)) {
-                            // 假設從元數據中讀取
                             const mockRarity = tokenId;
                             const powerRange = rarityData.power[mockRarity];
                             const power = Math.floor(Math.random() * (powerRange.max - powerRange.min + 1) + powerRange.min);
@@ -170,39 +225,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
-
             userHeroes = fetchedHeroes;
             userRelics = fetchedRelics;
-            
             renderHeroes();
             renderRelics();
             updatePartyUI();
-
         } catch (error) {
             console.error("讀取資產失敗:", error);
             heroesContainer.innerHTML = '<p class="col-span-full text-center text-red-400">讀取資產失敗。合約尚未部署或網路錯誤。</p>';
         }
     };
-
-    const mintHero = async () => {
-        if (!contract) {
-            alert('請先連接錢包！');
-            return;
-        }
-        try {
-            const price = ethers.utils.parseEther("0.01"); 
-            const tx = await contract.mintHero({ value: price });
-            alert('交易已送出！請在錢包中等待確認。');
-            await tx.wait();
-            alert('英雄招募成功！');
-            await fetchUserAssets();
-        } catch (error) {
-            console.error("招募英雄失敗:", error);
-            alert(`招募失敗: ${error.message}`);
-        }
-    };
-
-    // --- 原有的 UI 渲染與互動邏輯 ---
 
     function createChart(ctx, label, data) {
         new Chart(ctx, {
@@ -360,6 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         connectWalletBtn.addEventListener('click', connectWallet);
         mintHeroBtn.addEventListener('click', mintHero);
+        mintRelicBtn.addEventListener('click', mintRelic);
         document.getElementById('barracks')?.addEventListener('click', handleAssetClick);
     }
 
