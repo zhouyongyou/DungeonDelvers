@@ -75,7 +75,7 @@ Dungeon Delvers 的目標是成為區塊鏈上最宏大的奇幻冒險遊戲。�
 
 1.  複製此儲存庫
     ```sh
-    git clone [https://github.com/your-username/your-repo-name.git](https://github.com/your-username/your-repo-name.git)
+    git clone [https://github.com/zhouyongyou/DungeonDelvers.git](https://github.com/zhouyongyou/DungeonDelvers.git)
     ```
 2.  安裝 NPM 套件 (如果需要)
     ```sh
@@ -118,4 +118,4 @@ Dungeon Delvers 的目標是成為區塊鏈上最宏大的奇幻冒險遊戲。�
 
 ## 📧 聯繫我們
 
-專案連結: [https://github.com/your-username/your-repo-name](https://github.com/your-username/your-repo-name)
+專案連結: [https://github.com/zhouyongyou/DungeonDelvers](https://github.com/zhouyongyou/DungeonDelvers)
