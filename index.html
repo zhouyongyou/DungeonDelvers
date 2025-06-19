@@ -12,7 +12,7 @@
 <body class="text-gray-800">
 
     <div class="min-h-screen flex flex-col">
-        <!-- Header (保持不變) -->
+        <!-- Header -->
         <header class="bg-[#1F1D36] shadow-lg sticky top-0 z-50">
             <div class="container mx-auto px-4 py-3">
                 <div class="flex justify-between items-center">
@@ -60,6 +60,7 @@
             </section>
             <section id="forge" class="page-content hidden">
                 <h2 class="text-3xl font-bold text-center mb-2 text-[#2D2A4A]">英雄酒館 & 古代熔爐</h2>
+                <p class="text-center text-lg mb-8">這裡是你擴充實力的地方。在酒館中招募未知的英雄，或在熔爐中鑄造傳說的聖物。</p>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div class="card-bg p-6 rounded-xl shadow-lg flex flex-col items-center">
                         <h3 class="text-2xl font-bold mb-4">招募英雄</h3>
@@ -76,8 +77,6 @@
             <section id="barracks" class="page-content hidden">
                 <h2 class="text-3xl font-bold text-center mb-2 text-[#2D2A4A]">我的冒險隊伍</h2>
                 <p class="text-center text-lg mb-8">管理你的英雄與聖物，組建最強大的冒險隊伍，為探索地下城做好準備。</p>
-                
-                <!-- **新增**: 授權按鈕區塊 -->
                 <div class="text-center mb-6">
                     <button id="approveNftsBtn" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
                         (首次需執行) 授權 NFT 轉移權限給地下城
@@ -99,20 +98,33 @@
             </section>
             <section id="portal" class="page-content hidden">
                 <h2 class="text-3xl font-bold text-center mb-2 text-[#2D2A4A]">地下城入口</h2>
-                <p class="text-center text-lg mb-8">集結你的隊伍，選擇目標地下城，開始尋找 $SoulShard 的旅程！</p>
-                <div id="stakingStatus" class="card-bg p-6 rounded-xl shadow-lg mb-8">
-                    <h3 class="text-2xl font-bold mb-4 text-center">當前隊伍配置</h3>
-                    <div id="currentParty" class="text-center">
-                        <p class="text-lg">尚未組建隊伍。請前往「我的隊伍」頁面進行配置。</p>
-                        <p class="text-xl font-bold text-[#C0A573] mt-2">總戰力: <span id="totalPower">0</span></p>
+                <div id="staking-section">
+                    <!-- 狀態一：未質押時顯示 -->
+                    <div id="unstaked-view">
+                        <p class="text-center text-lg mb-8">集結你的隊伍，選擇目標地下城，開始尋找 $SoulShard 的旅程！</p>
+                        <div class="card-bg p-6 rounded-xl shadow-lg mb-8">
+                            <h3 class="text-2xl font-bold mb-4 text-center">當前隊伍配置</h3>
+                            <div id="currentParty" class="text-center">
+                                <p class="text-lg">尚未組建隊伍。請前往「我的隊伍」頁面進行配置。</p>
+                                <p class="text-xl font-bold text-[#C0A573] mt-2">總戰力: <span id="totalPower">0</span></p>
+                            </div>
+                        </div>
+                        <div id="dungeonsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        </div>
                     </div>
-                </div>
-                <div id="dungeonsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- 狀態二：已質押時顯示 -->
+                    <div id="staked-view" class="hidden">
+                        <p class="text-center text-lg mb-8">您的隊伍正在地下城深處奮戰！</p>
+                        <div id="staked-info-panel" class="card-bg p-6 rounded-xl shadow-lg mb-8 text-center">
+                            <!-- JS 將會填充這裡的內容 -->
+                        </div>
+                    </div>
                 </div>
             </section>
         </main>
     </div>
 
+    <!-- 將所有腳本依正確順序放在 body 結尾，確保頁面快速載入 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
