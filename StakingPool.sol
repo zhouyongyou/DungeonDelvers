@@ -9,39 +9,34 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 /**
  * @title StakingPool
- * @dev V2: 功能完整的質押合約。從自身的代幣餘額中分發獎勵。
+ * @dev V2.1: 新增 getRestCost 視圖函式，以便前端計算恢復疲勞的總費用。
  */
 contract StakingPool is ERC1155Holder, Ownable {
     using SafeMath for uint256;
 
-    IERC1155 public immutable dungeonAssets; // NFT 合約地址
-    IERC20 public immutable soulShardToken;   // $SoulShard 代幣合約地址
+    IERC1155 public immutable dungeonAssets;
+    IERC20 public immutable soulShardToken;
 
     // --- 遊戲核心參數 ---
-    uint256 public rewardsRate = 1 * 10**10; // 重要！每單位戰力每秒獎勵的 $SoulShard 數量 (18位精度)
-    uint256 public constant MAX_FATIGUE = 10000; // 疲勞度上限，放大100倍以便計算
-    uint256 public fatiguePerSecond = 1; // 每秒消耗的疲勞度 (放大100倍)
-    uint256 public restPricePerPoint = 1 * 10**16; // 恢復 1 點疲勞度 (放大100倍後) 的價格
+    uint256 public rewardsRate = 1 * 10**10; 
+    uint256 public constant MAX_FATIGUE = 10000; 
+    uint256 public fatiguePerSecond = 1; 
+    uint256 public restPricePerPoint = 1 * 10**16; 
 
-    // --- 資料結構 ---
-    struct HeroInfo {
-        uint256 tokenId;
-        uint256 power;
-    }
-
+    // --- 資料結構 (保持不變) ---
+    struct HeroInfo { uint256 tokenId; uint256 power; }
     struct StakerInfo {
         uint256 relicId;
         uint256 relicCapacity;
         HeroInfo[] heroes;
         uint256 totalPower;
-        uint256 lastUpdateTime; // 上次更新數據 (質押/領獎/休息) 的時間
-        uint256 rewards; // 已累積但未領取的獎勵
-        uint256 currentFatigue; // 當前疲勞度
+        uint256 lastUpdateTime;
+        uint256 rewards;
+        uint256 currentFatigue;
     }
-
     mapping(address => StakerInfo) public stakers;
 
-    // --- 事件 ---
+    // --- 事件 (保持不變) ---
     event Staked(address indexed user, uint256 totalPower);
     event Withdrawn(address indexed user);
     event RewardsClaimed(address indexed user, uint256 amount);
@@ -56,8 +51,7 @@ contract StakingPool is ERC1155Holder, Ownable {
         soulShardToken = IERC20(_soulShardTokenAddress);
     }
     
-    // --- 核心外部功能 (玩家調用) ---
-
+    // --- 核心外部功能 (保持不變) ---
     // 質押 NFT
     function stake(uint256 _relicId, uint256 _relicCapacity, HeroInfo[] calldata _heroes) external {
         StakerInfo storage staker = stakers[msg.sender];
@@ -143,7 +137,6 @@ contract StakingPool is ERC1155Holder, Ownable {
         emit HeroesRested(msg.sender, totalCost);
     }
 
-
     // --- 唯讀功能 ---
     function getStakerInfo(address _user) external view returns (StakerInfo memory, uint256 pending) {
         StakerInfo memory staker = stakers[_user];
@@ -162,6 +155,16 @@ contract StakingPool is ERC1155Holder, Ownable {
         uint256 newRewards = timeElapsed.mul(effectivePower).mul(rewardsRate);
         
         return staker.rewards.add(newRewards);
+    }
+
+    // --- **新增**: 獲取恢復疲勞的總費用 ---
+    function getRestCost(address _user) external view returns (uint256) {
+        StakerInfo memory staker = stakers[_user];
+        if (staker.currentFatigue >= MAX_FATIGUE) {
+            return 0;
+        }
+        uint256 fatigueToRestore = MAX_FATIGUE.sub(staker.currentFatigue);
+        return fatigueToRestore.mul(restPricePerPoint);
     }
 
     // --- 內部輔助功能 ---
