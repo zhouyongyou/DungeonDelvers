@@ -13,8 +13,34 @@
     <!-- Toastify.js (用於非阻塞式提示) -->
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
+    <!-- SweetAlert2 (用於精美的對話框) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <!-- Local Stylesheet -->
     <link rel="stylesheet" href="style.css">
+
+    <!-- **新增**: SweetAlert2 主題化樣式 -->
+    <style>
+        .swal2-popup {
+            background-color: #2D2A4A !important;
+            border: 1px solid #C0A573 !important;
+            border-radius: 1rem !important;
+        }
+        .swal2-title, .swal2-html-container {
+            color: #FDF6E3 !important;
+            font-family: 'Noto Serif TC', serif;
+        }
+        .swal2-html-container {
+             font-family: 'Noto Sans TC', sans-serif;
+        }
+        .swal2-confirm {
+             background-color: #C0A573 !important;
+             color: #2D2A4A !important;
+        }
+        .swal2-cancel {
+             background-color: #6c757d !important;
+        }
+    </style>
 
     <!-- Favicon and Meta Tags -->
     <link rel="icon" href="/assets/images/favicon.ico" sizes="any">
@@ -173,6 +199,7 @@
             </div>
         </footer>
     </div>
+    <!-- Scripts -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
