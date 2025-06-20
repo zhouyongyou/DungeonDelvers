@@ -1,4 +1,4 @@
-// 版本 V18: 整合 VRF V2.5 Wrapper 直接資金模型
+// 版本 V19: 整合 VRF V2.5 Wrapper 直接資金模型
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts@1.4.0/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts@1.4.0/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
 interface IPancakePair {
     function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
@@ -79,24 +80,30 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFV2PlusWrapperConsumerBase 
         uint256 requiredAmount = getSoulShardAmountForUSD(heroMintPriceUSD);
         require(_maxAmountIn >= requiredAmount, "Slippage Protection");
         soulShardToken.transferFrom(msg.sender, address(this), requiredAmount);
-        _requestRandomness(RequestType.Hero);
+        _makeRandomnessRequest(RequestType.Hero);
     }
     
     function requestNewRelic(uint256 _maxAmountIn) public {
         uint256 requiredAmount = getSoulShardAmountForUSD(relicMintPriceUSD);
         require(_maxAmountIn >= requiredAmount, "Slippage Protection");
         soulShardToken.transferFrom(msg.sender, address(this), requiredAmount);
-        _requestRandomness(RequestType.Relic);
+        _makeRandomnessRequest(RequestType.Relic);
     }
 
-    // --- 新的內部請求函式 ---
-    function _requestRandomness(RequestType _requestType) private {
-        // 呼叫 Wrapper 提供的內部請求函式，它會自動處理費用支付
-        uint256 requestId = _requestRandomness(
-            callbackGasLimit, 
-            requestConfirmations, 
-            numWords
+    function _makeRandomnessRequest(RequestType _requestType) private {
+        // 步驟 1: 使用 VRFV2PlusClient 建立 extraArgs 參數，明確指定使用原生代幣支付。
+        bytes memory extraArgs = VRFV2PlusClient._argsToBytes(
+            VRFV2PlusClient.ExtraArgsV1({nativePayment: true})
         );
+
+        // 步驟 2: 呼叫含有 4 個參數的正確函式版本。
+        (uint256 requestId, ) = requestRandomnessPayInNative(
+            callbackGasLimit,
+            requestConfirmations,
+            numWords,
+            extraArgs
+        );
+
         s_requests[requestId] = RequestStatus({ requester: msg.sender, requestType: _requestType });
         emit MintRequested(requestId, msg.sender, _requestType);
     }
