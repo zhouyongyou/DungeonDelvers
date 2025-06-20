@@ -19,7 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
         "function mintHero()",
         "function mintRelic()",
         "function balanceOfBatch(address[] accounts, uint256[] ids) view returns (uint256[])",
-        "function setApprovalForAll(address operator, bool approved)"
+        "function setApprovalForAll(address operator, bool approved)",
+        "function uri(uint256 id) view returns (string)"
     ];
     const stakingPoolABI = [
         "function stake(uint256 relicId, uint256 relicCapacity, tuple(uint256 tokenId, uint256 power)[] calldata heroes)",
@@ -44,8 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
         labels: ['1 星 (普通)', '2 星 (非凡)', '3 星 (稀有)', '4 星 (史詩)', '5 星 (傳說)'],
         chances: [44, 35, 15, 5, 1],
         colors: ['#A9A9A9', '#6A8CAF', '#8B5CF6', '#D946EF', '#FBBF24'],
-        power: { '1': {min: 15, max: 50}, '2': {min: 50, max: 100}, '3': {min: 100, max: 150}, '4': {min: 150, max: 200}, '5': {min: 200, max: 255} },
-        capacity: {'1': 1, '2': 2, '3': 3, '4': 4, '5': 5}
     };
     const dungeonsData = [
         { name: '新手礦洞', requiredPower: 0, reward: 10 }, { name: '哥布林洞穴', requiredPower: 100, reward: 25 }, { name: '食人魔山谷', requiredPower: 250, reward: 60 },
@@ -70,7 +69,90 @@ document.addEventListener('DOMContentLoaded', () => {
     const stakedInfoPanel = document.getElementById('staked-info-panel');
     const heroesContainer = document.getElementById('heroesContainer');
     const relicsContainer = document.getElementById('relicsContainer');
-    const dashboardStatus = document.querySelector("#dashboard .bg-white\\/50");
+    const dashboardStatus = document.getElementById('dashboard-status-panel');
+    const heroMintPriceText = document.getElementById('hero-mint-price-text');
+    const relicMintPriceText = document.getElementById('relic-mint-price-text');
+
+    // --- 通知與對話框函式 ---
+    const showToast = (text, type = 'info') => {
+        let backgroundColor;
+        switch (type) {
+            case 'success':
+                backgroundColor = 'linear-gradient(to right, #00b09b, #96c93d)';
+                break;
+            case 'error':
+                backgroundColor = 'linear-gradient(to right, #ff5f6d, #ffc371)';
+                break;
+            default: // info
+                backgroundColor = 'linear-gradient(to right, #4facfe, #00f2fe)';
+                break;
+        }
+        Toastify({
+            text: text,
+            duration: 5000,
+            close: true,
+            gravity: "top",
+            position: "right",
+            stopOnFocus: true,
+            style: {
+                background: backgroundColor,
+                "border-radius": "10px",
+            },
+        }).showToast();
+    };
+
+    const showConfirmationModal = (title, message) => {
+        return new Promise((resolve) => {
+            // 創建 Modal 結構
+            const modalOverlay = document.createElement('div');
+            modalOverlay.className = 'fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50';
+            
+            const modalContent = document.createElement('div');
+            modalContent.className = 'card-bg p-8 rounded-xl shadow-lg text-center max-w-sm w-full mx-4';
+
+            const modalTitle = document.createElement('h3');
+            modalTitle.className = 'text-2xl font-bold mb-4 font-serif';
+            modalTitle.textContent = title;
+
+            const modalMessage = document.createElement('p');
+            modalMessage.className = 'text-lg mb-6';
+            modalMessage.textContent = message;
+
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'flex justify-center gap-4';
+
+            const confirmButton = document.createElement('button');
+            confirmButton.className = 'btn-primary px-6 py-2 rounded-lg';
+            confirmButton.textContent = '確認';
+            
+            const cancelButton = document.createElement('button');
+            cancelButton.className = 'bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg';
+            cancelButton.textContent = '取消';
+
+            // 組裝 Modal
+            buttonContainer.appendChild(cancelButton);
+            buttonContainer.appendChild(confirmButton);
+            modalContent.appendChild(modalTitle);
+            modalContent.appendChild(modalMessage);
+            modalContent.appendChild(buttonContainer);
+            modalOverlay.appendChild(modalContent);
+            document.body.appendChild(modalOverlay);
+
+            // 事件處理
+            const closeModal = (result) => {
+                document.body.removeChild(modalOverlay);
+                resolve(result);
+            };
+
+            confirmButton.onclick = () => closeModal(true);
+            cancelButton.onclick = () => closeModal(false);
+            modalOverlay.onclick = (e) => {
+                if (e.target === modalOverlay) {
+                    closeModal(false);
+                }
+            };
+        });
+    };
 
     // --- 網路檢查與切換 ---
     const checkAndSwitchNetwork = async () => {
@@ -78,6 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
             if (currentChainId !== targetNetwork.chainId) {
+                showToast(`偵測到網路不符，正在嘗試切換至 ${targetNetwork.chainName}...`, 'info');
                 try {
                     await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: targetNetwork.chainId }] });
                 } catch (switchError) {
@@ -89,14 +172,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return true;
         } catch (error) {
             console.error("網路切換失敗:", error);
-            alert(`網路切換失敗，請手動將您的錢包網路切換至 ${targetNetwork.chainName}。`);
+            showToast(`網路切換失敗，請手動切換至 ${targetNetwork.chainName}。`, 'error');
             return false;
         }
     };
 
     // --- 連接錢包與初始化 ---
     const connectWallet = async () => {
-        if (typeof window.ethereum === 'undefined') { alert('請安裝 MetaMask！'); return; }
+        if (typeof window.ethereum === 'undefined') { showToast('請安裝 MetaMask！', 'error'); return; }
         try {
             const isNetworkCorrect = await checkAndSwitchNetwork();
             if (!isNetworkCorrect) return;
@@ -112,18 +195,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
             connectWalletBtn.textContent = `${userAddress.substring(0, 6)}...${userAddress.substring(userAddress.length - 4)}`;
             connectWalletBtn.disabled = true;
+            showToast('錢包連接成功！', 'success');
 
-            await Promise.all([updateTokenBalance(), fetchUserAssets(), updateStakingStatus()]);
+            await Promise.all([
+                updateTokenBalance(),
+                fetchUserAssets(),
+                updateStakingStatus(),
+                updateMintPricesUI()
+            ]);
             
             window.ethereum.on('accountsChanged', () => window.location.reload());
             window.ethereum.on('chainChanged', () => window.location.reload());
         } catch (error) {
             console.error("連接錢包失敗:", error);
-            alert("連接失敗，可能是合約地址或 ABI 不正確，請檢查主控台。");
+            showToast("連接失敗，請檢查主控台。可能合約地址或 ABI 不正確。", 'error');
         }
     };
 
-    // --- 質押與獎勵狀態更新 ---
+    // --- UI 更新函式 ---
+    const updateMintPricesUI = async () => {
+        if (!assetsContract) return;
+        try {
+            const heroPrice = await assetsContract.heroMintPrice();
+            const relicPrice = await assetsContract.relicMintPrice();
+            
+            heroMintPriceText.innerHTML = `花費 ${ethers.utils.formatEther(heroPrice)} $SoulShard，<br/>你可能招募到傳說中的英雄，或是初出茅廬的新手。`;
+            relicMintPriceText.innerHTML = `花費 ${ethers.utils.formatEther(relicPrice)} $SoulShard，<br/>它將決定你隊伍的規模。`;
+        } catch (e) {
+            console.error("讀取鑄造價格失敗:", e);
+            heroMintPriceText.textContent = "無法讀取價格";
+            relicMintPriceText.textContent = "無法讀取價格";
+        }
+    };
+
+    const updateTokenBalance = async () => {
+        if (!soulShardTokenContract || !userAddress) return;
+        try {
+            const balance = await soulShardTokenContract.balanceOf(userAddress);
+            const formattedBalance = parseFloat(ethers.utils.formatEther(balance)).toFixed(4);
+            dashboardStatus.innerHTML = `
+                <h3 class="text-2xl font-bold text-[#2D2A4A] mb-4">玩家狀態</h3>
+                <p class="text-lg">錢包地址: <span class="font-mono text-sm">${userAddress}</span></p>
+                <p class="text-lg mt-2">$SoulShard 餘額: <span class="font-bold text-yellow-600">${formattedBalance}</span></p>
+            `;
+        } catch(e) {
+            dashboardStatus.innerHTML = `<p class="text-red-500">無法讀取餘額，請確認代幣合約地址與 ABI 是否正確。</p>`;
+        }
+    };
+
     const updateStakingStatus = async () => {
         if (!stakingPoolContract || !userAddress) return;
         try {
@@ -154,157 +273,155 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("無法獲取質押狀態:", e);
         }
     };
-
-    const updateTokenBalance = async () => {
-        if (!soulShardTokenContract || !userAddress) return;
-        try {
-            const balance = await soulShardTokenContract.balanceOf(userAddress);
-            const formattedBalance = parseFloat(ethers.utils.formatEther(balance)).toFixed(4);
-            dashboardStatus.innerHTML = `
-                <h3 class="text-2xl font-bold text-[#2D2A4A] mb-4">玩家狀態</h3>
-                <p class="text-lg">錢包地址: <span class="font-mono text-sm">${userAddress}</span></p>
-                <p class="text-lg mt-2">$SoulShard 餘額: <span class="font-bold text-yellow-600">${formattedBalance}</span></p>
-            `;
-        } catch(e) {
-            dashboardStatus.innerHTML = `<p class="text-red-500">無法讀取餘額，請確認代幣合約地址與 ABI 是否正確。</p>`;
-        }
-    };
     
     // --- 核心互動函式 ---
     const approveTokens = async (spenderAddress, amount) => {
         if (!soulShardTokenContract) return false;
+        showToast('正在請求代幣授權...', 'info');
         try {
             const tx = await soulShardTokenContract.approve(spenderAddress, amount);
-            alert(`正在請求代幣授權...請在錢包中確認交易。`);
             await tx.wait();
-            alert("授權成功！現在您可以進行下一步操作。");
+            showToast('授權成功！', 'success');
             return true;
         } catch (error) {
             console.error("代幣授權失敗:", error);
-            alert("代幣授權失敗！請查看主控台獲取詳情。");
+            showToast('代幣授權失敗！詳情見主控台。', 'error');
             return false;
         }
     };
     
     const approveAllNfts = async () => {
-        if (!assetsContract) { alert('請先連接錢包'); return; }
+        if (!assetsContract) { showToast('請先連接錢包', 'error'); return; }
+        showToast("正在請求 NFT 授權...請在錢包中確認。", 'info');
         try {
             const tx = await assetsContract.setApprovalForAll(stakingPoolAddress, true);
-            alert("正在請求 NFT 授權...請在錢包中確認。這是一次性操作。");
             await tx.wait();
-            alert("NFT 授權成功！您現在可以開始遠征了。");
+            showToast("NFT 授權成功！您現在可以開始遠征了。", 'success');
         } catch (error) {
             console.error("NFT 授權失敗:", error);
-            alert("NFT 授權失敗，請查看主控台。");
+            showToast("NFT 授權失敗，詳情見主控台。", 'error');
         }
     };
 
     const mintHero = async () => {
-        if (!assetsContract) { alert('請先連接錢包'); return; }
+        if (!assetsContract) { showToast('請先連接錢包', 'error'); return; }
+        showToast('準備招募英雄...', 'info');
         try {
             const price = await assetsContract.heroMintPrice();
             const success = await approveTokens(assetsContractAddress, price);
             if (!success) return;
             const tx = await assetsContract.mintHero();
-            alert("英雄招募交易已送出...請等待區塊鏈確認。");
+            showToast('英雄招募交易已送出...請等待區塊鏈確認。', 'info');
             await tx.wait();
-            alert("招募成功！您的新英雄已加入隊伍。");
+            showToast('招募成功！您的新英雄已加入隊伍。', 'success');
             await Promise.all([updateTokenBalance(), fetchUserAssets()]);
         } catch (error) {
             console.error("招募失敗:", error);
-            alert("招募失敗，請查看主控台。");
+            showToast('招募失敗，詳情見主控台。', 'error');
         }
     };
     
     const mintRelic = async () => {
-        if (!assetsContract) { alert('請先連接錢包'); return; }
+        if (!assetsContract) { showToast('請先連接錢包', 'error'); return; }
+        showToast('準備鑄造聖物...', 'info');
         try {
             const price = await assetsContract.relicMintPrice();
             const success = await approveTokens(assetsContractAddress, price);
             if (!success) return;
             const tx = await assetsContract.mintRelic();
-            alert("聖物鑄造交易已送出...請等待區塊鏈確認。");
+            showToast("聖物鑄造交易已送出...請等待區塊鏈確認。", 'info');
             await tx.wait();
-            alert("鑄造成功！您的新聖物已加入收藏。");
+            showToast("鑄造成功！您的新聖物已加入收藏。", 'success');
             await Promise.all([updateTokenBalance(), fetchUserAssets()]);
         } catch (error) {
             console.error("鑄造聖物失敗:", error);
-            alert("鑄造聖物失敗，請查看主控台。");
+            showToast("鑄造聖物失敗，詳情見主控台。", 'error');
         }
     };
 
     const stakeParty = async () => {
-        if (!stakingPoolContract) { alert('請先連接錢包'); return; }
+        if (!stakingPoolContract) { showToast('請先連接錢包', 'error'); return; }
         if (!currentParty.relic || currentParty.heroes.length === 0) {
-            alert("請先在「我的隊伍」頁面組建一個包含英雄和聖物的完整隊伍。");
+            showToast("請先在「我的隊伍」頁面組建一個包含英雄和聖物的完整隊伍。", 'error');
             return;
         }
+        showToast("隊伍正在前往地下城...請等待區塊鏈確認。", 'info');
         try {
             const heroesToStake = currentParty.heroes.map(h => ({ tokenId: h.tokenId, power: h.power }));
             const tx = await stakingPoolContract.stake(currentParty.relic.tokenId, currentParty.relic.capacity, heroesToStake);
-            alert("隊伍正在前往地下城...請等待區塊鏈確認。");
             await tx.wait();
-            alert("隊伍已成功進入地下城！開始賺取獎勵。");
+            showToast("隊伍已成功進入地下城！開始賺取獎勵。", 'success');
             disbandParty();
             await Promise.all([fetchUserAssets(), updateStakingStatus()]);
         } catch (error) {
             console.error("開始遠征失敗:", error);
-            if (error.message.includes("is not approved")) {
-                 alert("遠征失敗！原因：您尚未授權 NFT 轉移權限。請先到「我的隊伍」頁面點擊授權按鈕。");
+            if (error.data?.message?.includes("is not approved")) {
+                 showToast("遠征失敗！原因：您尚未授權 NFT。請先點擊授權按鈕。", 'error');
             } else {
-                 alert("遠征失敗，請查看主控台獲取詳情。");
+                 showToast("遠征失敗，詳情見主控台。", 'error');
             }
         }
     };
 
     const claimAllRewards = async () => {
-        if (!stakingPoolContract) { alert('請先連接錢包'); return; }
+        if (!stakingPoolContract) { showToast('請先連接錢包', 'error'); return; }
+        showToast("正在領取獎勵...請等待交易確認。", 'info');
         try {
             const tx = await stakingPoolContract.claimRewards();
-            alert("正在領取獎勵...請等待交易確認。");
             await tx.wait();
-            alert("獎勵已成功領取！");
+            showToast("獎勵已成功領取！", 'success');
             await Promise.all([updateTokenBalance(), updateStakingStatus()]);
         } catch (error) {
             console.error("領取獎勵失敗:", error);
-            alert("領取獎勵失敗，請查看主控台。");
+            showToast("領取獎勵失敗，詳情見主控台。", 'error');
         }
     };
     
     const withdrawParty = async () => {
-        if (!stakingPoolContract) { alert('請先連接錢包'); return; }
-        if (!confirm("您確定要撤回您的隊伍嗎？所有未領取的獎勵將會一併發放。")) return;
+        if (!stakingPoolContract) { 
+            showToast('請先連接錢包', 'error'); 
+            return; 
+        }
+        
+        const confirmed = await showConfirmationModal('撤回隊伍', '您確定要撤回您的隊伍嗎？所有未領取的獎勵將會一併發放。');
+
+        if (!confirmed) {
+            showToast('操作已取消', 'info');
+            return;
+        }
+
+        showToast("正在撤回隊伍...請等待交易確認。", 'info');
         try {
             const tx = await stakingPoolContract.withdraw();
-            alert("正在撤回隊伍...請等待交易確認。");
             await tx.wait();
-            alert("隊伍已成功撤回！");
+            showToast("隊伍已成功撤回！", 'success');
             await Promise.all([updateTokenBalance(), fetchUserAssets(), updateStakingStatus()]);
         } catch (error) {
             console.error("撤回隊伍失敗:", error);
-            alert("撤回隊伍失敗，請查看主控台。");
+            showToast("撤回隊伍失敗，詳情見主控台。", 'error');
         }
     };
 
     const restAllStakedHeroes = async () => {
-        if (!stakingPoolContract) { alert('請先連接錢包'); return; }
+        if (!stakingPoolContract) { showToast('請先連接錢包', 'error'); return; }
+        
         try {
             const cost = await stakingPoolContract.getRestCost(userAddress);
             if (cost.isZero()) {
-                alert("您的隊伍精力充沛，無需休息！");
+                showToast("您的隊伍精力充沛，無需休息！", 'success');
                 return;
             }
+            showToast("正在為隊伍恢復疲勞...", 'info');
             const success = await approveTokens(stakingPoolAddress, cost);
             if (!success) return;
 
             const tx = await stakingPoolContract.restHeroes();
-            alert("正在為隊伍恢復疲勞...請等待交易確認。");
             await tx.wait();
-            alert("隊伍已完全恢復！");
+            showToast("隊伍已完全恢復！", 'success');
             await Promise.all([updateTokenBalance(), updateStakingStatus()]);
         } catch (error) {
             console.error("恢復疲勞失敗:", error);
-            alert("恢復疲勞失敗，請查看主控台。");
+            showToast("恢復疲勞失敗，詳情見主控台。", 'error');
         }
     };
 
@@ -314,32 +431,52 @@ document.addEventListener('DOMContentLoaded', () => {
         heroesContainer.innerHTML = '<p class="col-span-full text-center text-gray-500">正在讀取英雄...</p>';
         relicsContainer.innerHTML = '<p class="col-span-full text-center text-gray-500">正在讀取聖物...</p>';
         try {
-            const heroTokenIds = [1, 2, 3, 4, 5]; 
+            const heroTokenIds = [1, 2, 3, 4, 5];
             const relicTokenIds = [11, 12, 13, 14, 15];
             const allTokenIds = [...heroTokenIds, ...relicTokenIds];
             const userAddresses = Array(allTokenIds.length).fill(userAddress);
+            
             const balances = await assetsContract.balanceOfBatch(userAddresses, allTokenIds);
+            
             let fetchedHeroes = [];
             let fetchedRelics = [];
-            for (let i = 0; i < balances.length; i++) {
-                const balance = balances[i].toNumber();
-                if (balance > 0) {
+            
+            const metadataPromises = [];
+
+            for (let i = 0; i < allTokenIds.length; i++) {
+                if (balances[i].toNumber() > 0) {
                     const tokenId = allTokenIds[i];
-                    for (let j = 0; j < balance; j++) {
-                        const uniqueId = `${tokenId}-${j}`;
-                        if (heroTokenIds.includes(tokenId)) {
-                            const mockRarity = tokenId;
-                            const powerRange = rarityData.power[mockRarity];
-                            const power = Math.floor(Math.random() * (powerRange.max - powerRange.min + 1) + powerRange.min);
-                            fetchedHeroes.push({ id: uniqueId, tokenId, rarity: mockRarity, power });
-                        } else if (relicTokenIds.includes(tokenId)) {
-                            const mockRarity = tokenId - 10;
-                            const capacity = rarityData.capacity[mockRarity];
-                            fetchedRelics.push({ id: uniqueId, tokenId, rarity: mockRarity, capacity });
-                        }
+                    metadataPromises.push(
+                        assetsContract.uri(tokenId).then(uri => fetch(uri.replace("ipfs://", "https://ipfs.io/ipfs/")).then(res => res.json()).then(metadata => ({
+                            tokenId,
+                            balance: balances[i].toNumber(),
+                            metadata
+                        })))
+                    );
+                }
+            }
+            
+            const results = await Promise.all(metadataPromises);
+
+            for (const result of results) {
+                const { tokenId, balance, metadata } = result;
+                const powerAttr = metadata.attributes.find(attr => attr.trait_type === "Power");
+                const capacityAttr = metadata.attributes.find(attr => attr.trait_type === "Capacity");
+                
+                const power = powerAttr ? parseInt(powerAttr.value) : 0;
+                const capacity = capacityAttr ? parseInt(capacityAttr.value) : 0;
+                const rarity = heroTokenIds.includes(tokenId) ? tokenId : tokenId - 10;
+
+                for (let j = 0; j < balance; j++) {
+                    const uniqueId = `${tokenId}-${j}`; 
+                    if (heroTokenIds.includes(tokenId)) {
+                        fetchedHeroes.push({ id: uniqueId, tokenId, rarity, power });
+                    } else if (relicTokenIds.includes(tokenId)) {
+                        fetchedRelics.push({ id: uniqueId, tokenId, rarity, capacity });
                     }
                 }
             }
+            
             userHeroes = fetchedHeroes;
             userRelics = fetchedRelics;
             renderHeroes();
@@ -347,28 +484,11 @@ document.addEventListener('DOMContentLoaded', () => {
             updatePartyUI();
         } catch (error) {
             console.error("讀取資產失敗:", error);
+            showToast('讀取鏈上資產失敗，請檢查 API 或合約。', 'error');
             heroesContainer.innerHTML = '<p class="col-span-full text-center text-red-400">讀取資產失敗。</p>';
             relicsContainer.innerHTML = '<p class="col-span-full text-center text-red-400">讀取資產失敗。</p>';
         }
     };
-
-    function createChart(ctx, label, data) {
-        new Chart(ctx, { type: 'doughnut', data: { labels: data.labels, datasets: [{ label: label, data: data.chances, backgroundColor: data.colors, borderColor: '#FDF6E3', borderWidth: 2, hoverOffset: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#2D2A4A', font: { size: 14 } } } } } });
-    }
-
-    function setupNavigation() {
-        const navItems = document.querySelectorAll('.nav-item');
-        const pages = document.querySelectorAll('.page-content');
-        navItems.forEach(item => {
-            item.addEventListener('click', () => {
-                navItems.forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
-                pages.forEach(p => p.classList.add('hidden'));
-                document.getElementById(item.dataset.target).classList.remove('hidden');
-                window.scrollTo(0, 0);
-            });
-        });
-    }
 
     function renderStars(rarity) {
         let stars = '';
@@ -414,11 +534,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p class="text-lg">尚未組建隊伍。請前往「我的隊伍」頁面進行配置。</p>
                 <p class="text-xl font-bold text-[#C0A573] mt-2">總戰力: <span id="totalPower">0</span></p>`;
         } else {
-            let heroList = currentParty.heroes.map(h => `<p class="text-sm">英雄 #${h.id} (${h.power} MP)</p>`).join('');
+            let heroList = currentParty.heroes.map(h => `<p class="text-sm">英雄 #${h.id.split('-')[0]} (${h.power} MP)</p>`).join('');
             if (currentParty.heroes.length === 0) heroList = `<p class="text-sm text-gray-400">(尚無英雄)</p>`;
             container.innerHTML = `
                 <div>
-                    <p class="font-bold text-lg">聖物 #${currentParty.relic.id} (容量: ${currentParty.relic.capacity})</p>
+                    <p class="font-bold text-lg">聖物 #${currentParty.relic.id.split('-')[0]} (容量: ${currentParty.relic.capacity})</p>
                     <div class="mt-2">${heroList}</div>
                 </div>
                 <p class="text-xl font-bold text-[#C0A573] mt-4">總戰力: <span id="totalPower">${currentParty.totalPower}</span></p>
@@ -448,11 +568,11 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (currentParty.heroes.length < currentParty.relic.capacity) {
                 currentParty.heroes.push(hero);
             } else {
-                alert(`隊伍已滿！此聖物最多只能帶領 ${currentParty.relic.capacity} 位英雄。`);
+                showToast(`隊伍已滿！此聖物最多只能帶領 ${currentParty.relic.capacity} 位英雄。`, 'error');
                 return;
             }
         } else if (type === 'hero' && !currentParty.relic) {
-             alert('請先選擇一個聖物來組建隊伍！');
+             showToast('請先選擇一個聖物來組建隊伍！', 'error');
              return;
         }
         recalculatePower();
@@ -484,6 +604,24 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePartyUI();
     }
     
+    function createChart(ctx, label, data) {
+        new Chart(ctx, { type: 'doughnut', data: { labels: data.labels, datasets: [{ label: label, data: data.chances, backgroundColor: data.colors, borderColor: '#FDF6E3', borderWidth: 2, hoverOffset: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#2D2A4A', font: { size: 14 } } } } } });
+    }
+
+    function setupNavigation() {
+        const navItems = document.querySelectorAll('.nav-item');
+        const pages = document.querySelectorAll('.page-content');
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                navItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                pages.forEach(p => p.classList.add('hidden'));
+                document.getElementById(item.dataset.target).classList.remove('hidden');
+                window.scrollTo(0, 0);
+            });
+        });
+    }
+
     // --- 頁面初始化 ---
     function init() {
         const heroChartCtx = document.getElementById('heroChart')?.getContext('2d');
@@ -497,6 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setupNavigation();
         updateDungeons();
         updatePartyUI();
+        updateMintPricesUI();
 
         connectWalletBtn.addEventListener('click', connectWallet);
         approveNftsBtn.addEventListener('click', approveAllNfts);
