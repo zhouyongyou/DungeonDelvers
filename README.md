@@ -1,12 +1,10 @@
 # Dungeon Delvers (地下城探索者)
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
-[![Discord](https://img.shields.io/discord/8888888888888888.svg?label=Discord&logo=Discord&color=7289DA)](https://discord.gg/your-invite-link)
-[![Twitter Follow](https://img.shields.io/twitter/follow/your-twitter-handle?style=social)](https://twitter.com/your-twitter-handle)
 
 歡迎來到 Dungeon Delvers 的世界！這是一款基於區塊鏈的奇幻風格 NFT 遊戲，玩家可以招募英雄、組建隊伍，深入危險的地下城尋找蘊含著世界能量的「魂晶」($SoulShard)。
 
-**[➡️ 前往體驗互動式網頁應用](https://your-live-app-link.com) | [➡️ 閱讀我們的完整白皮書](https://your-website.com/whitepaper)**
+**[➡️ 前往體驗互動式網頁應用](https://www.soulshard.fun/) | [➡️ 閱讀我們的完整白皮書](https://www.soulshard.fun/)**
 
 ---
 
@@ -14,7 +12,7 @@
 
 - [關於專案](#-關於專案)
 - [核心機制](#️-核心機制)
-- [經濟模型 (V2.0)](#-經濟模型-v20)
+- [經濟模型 (V2.1)](#-經濟模型-v21)
 - [技術堆疊](#-技術堆疊)
 - [開始使用](#-開始使用)
 - [專案藍圖 (Roadmap)](#️-專案藍圖-roadmap)
@@ -45,7 +43,7 @@ Dungeon Delvers 的目標是成為區塊鏈上最宏大的奇幻冒險遊戲。�
 
 ---
 
-## 💰 經濟模型 (V2.0)
+## 💰 經濟模型 (V2.1)
 
 我們的經濟核心是建立一個可持續的產出與消耗閉環。
 
@@ -54,10 +52,9 @@ Dungeon Delvers 的目標是成為區塊鏈上最宏大的奇幻冒險遊戲。�
 
 ### **消耗 (Burning 🕳️)**
 1.  **資產擴展消耗:**
-    * 在「英雄酒館」消耗 1900 `$SoulShard` 招募新英雄。
-    * 在「古代熔爐」消耗 9000 `$SoulShard` 鑄造新聖物。
+    * 消耗動態調整數量的 $SoulShard 來招募新英雄或鑄造新聖物。價格由智能合約設定，確保與鏈上資訊同步，並致力於將新玩家的入場成本穩定在一個合理的法幣價值區間。
 2.  **持續性運營成本:**
-    * **[V2.0 核心]** 玩家必須消耗 `$SoulShard` 購買**「食物」**或**「治療藥水」**來恢復英雄的**疲勞度**，否則戰力會下降。這是保證代幣內在需求、抑制通膨的關鍵機制。
+    * **[V2.1 核心]** 玩家必須消耗 `$SoulShard` 購買**「食物」**或**「治療藥水」**來恢復英雄的**疲勞度**，否則戰力會下降。這是保證代幣內在需求、抑制通膨的關鍵機制。
 
 ---
 
@@ -87,7 +84,7 @@ Dungeon Delvers 的目標是成為區塊鏈上最宏大的奇幻冒險遊戲。�
 
 ## 🗺️ 專案藍圖 (Roadmap)
 
-**Q3 2025: 創世啟動 (V2.0 模型)**
+**Q3 2025: 創世啟動 (V2.1 模型)**
 * [x] 智能合約開發與審計 (包含疲勞度機制)
 * [x] 互動式網頁應用上線
 * [ ] 創世英雄與聖物 NFT 發售
