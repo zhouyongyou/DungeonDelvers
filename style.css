@@ -73,3 +73,24 @@ h1, h2, h3, .font-serif {
         height: 350px;
     }
 }
+
+.swal2-popup {
+    background-color: #2D2A4A !important;
+    border: 1px solid #C0A573 !important;
+    border-radius: 1rem !important;
+}
+.swal2-title, .swal2-html-container {
+    color: #FDF6E3 !important;
+    font-family: 'Noto Serif TC', serif;
+}
+.swal2-html-container {
+     font-family: 'Noto Sans TC', sans-serif;
+}
+.swal2-confirm {
+     background-color: #C0A573 !important;
+     color: #2D2A4A !important;
+     font-weight: 700;
+}
+.swal2-cancel {
+     background-color: #6c757d !important;
+}
