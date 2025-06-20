@@ -11,8 +11,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * @dev V2.1: 新增 getRestCost 視圖函式，以便前端計算恢復疲勞的總費用。
  */
 contract StakingPool is ERC1155Holder, Ownable {
-    using SafeMath for uint256;
-
     IERC1155 public immutable dungeonAssets;
     IERC20 public immutable soulShardToken;
 
