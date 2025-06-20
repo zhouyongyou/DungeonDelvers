@@ -1,20 +1,21 @@
-// 版本 V14:用回了引入的方式 也就是大約11-2改回引入方式左右
-
 // SPDX-License-Identifier: MIT
+
+// V16
+
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
-import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
 interface IPancakePair {
     function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
     function token0() external view returns (address);
 }
 
-contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
+contract DungeonDelversAssets is ERC1155, Ownable, VRFV2PlusWrapperConsumerBase {
     uint256 public constant COMMON_HERO = 1;
     uint256 public constant UNCOMMON_HERO = 2;
     uint256 public constant RARE_HERO = 3;
@@ -29,6 +30,7 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
     IERC20 public soulShardToken;
     IPancakePair public soulShardUsdPair;
     address public usdToken;
+    VRFCoordinatorV2Interface public vrfCoordinator;
     uint64 public subscriptionId;
     bytes32 public keyHash;
 
