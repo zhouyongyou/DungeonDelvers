@@ -68,6 +68,25 @@ interface IERC1155 is IERC165 {
     function safeBatchTransferFrom(address from, address to, uint256[] calldata ids, uint256[] calldata amounts, bytes calldata data) external;
 }
 
+// --- 從 @openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol 開始 ---
+interface IERC1155Receiver is IERC165 {
+    function onERC1155Received(
+        address operator,
+        address from,
+        uint256 id,
+        uint256 value,
+        bytes calldata data
+    ) external returns (bytes4);
+
+    function onERC1155BatchReceived(
+        address operator,
+        address from,
+        uint256[] calldata ids,
+        uint256[] calldata values,
+        bytes calldata data
+    ) external returns (bytes4);
+}
+
 // --- 從 @openzeppelin/contracts/utils/introspection/ERC165.sol 開始 ---
 abstract contract ERC165 is IERC165 {
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
@@ -102,10 +121,19 @@ contract ERC1155 is Context, ERC165, IERC1155 {
         return batchBalances;
     }
     function setApprovalForAll(address operator, bool approved) public virtual override {
-        _setApprovalForAll(_msgSender(), operator, approved);
+        _setApprovalForAll(operator, approved);
+    }
+    function _setApprovalForAll(address operator, bool approved) internal virtual {
+        require(operator != address(0), "ERC1155: set Approval for all operator cannot be 0x0"); // 檢查 operator 地址是否為零地址
+        _operatorApprovals[address(this)][operator] = approved; // 設置 operator 的批准狀態
     }
     function isApprovedForAll(address account, address operator) public view virtual override returns (bool) {
         return _operatorApprovals[account][operator];
+    }
+    function isContract(address account) internal view returns (bool) {
+        uint256 size;
+        assembly { size := extcodesize(account) }
+        return size > 0;
     }
     function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes memory data) public virtual override {
         require(from == _msgSender() || isApprovedForAll(from, _msgSender()), "ERC1155: caller is not owner nor approved");
@@ -125,6 +153,13 @@ contract ERC1155 is Context, ERC165, IERC1155 {
         }
         _balances[id][to] += amount;
         emit TransferSingle(operator, from, to, id, amount);
+        if (isContract(to)) {
+            try IERC1155Receiver(to).onERC1155Received(operator, from, id, amount, data) returns (bytes4 response) {
+                require(response == IERC1155Receiver.onERC1155Received.selector, "ERC1155: receiver rejected tokens");
+            } catch {
+                revert("ERC1155: transfer to non ERC1155Receiver implementer");
+            }
+        }
     }
     function _safeBatchTransferFrom(address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) internal virtual {
         require(ids.length == amounts.length, "ERC1155: ids and amounts length mismatch");
@@ -141,11 +176,18 @@ contract ERC1155 is Context, ERC165, IERC1155 {
             _balances[id][to] += amount;
         }
         emit TransferBatch(operator, from, to, ids, amounts);
+        if (isContract(to)) {
+            try IERC1155Receiver(to).onERC1155BatchReceived(operator, from, ids, amounts, data) returns (bytes4 response) {
+                require(response == IERC1155Receiver.onERC1155BatchReceived.selector, "ERC1155: receiver rejected tokens");
+            } catch {
+                revert("ERC1155: transfer to non ERC1155Receiver implementer");
+            }
+        }
     }
     function _setURI(string memory newuri) internal virtual {
         _uri = newuri;
     }
-    function _mint(address to, uint256 id, uint256 amount, bytes memory data) internal virtual {
+    function _mint(address to, uint256 id, uint256 amount, bytes memory /*data*/) internal virtual {
         require(to != address(0), "ERC1155: mint to the zero address");
         address operator = _msgSender();
         _balances[id][to] += amount;
@@ -183,7 +225,10 @@ abstract contract VRFConsumerBaseV2 is IERC165 {
     fulfillRandomWords(requestId, randomWords);
   }
   function supportsInterface(bytes4 interfaceId) public view virtual override(IERC165) returns (bool) {
-    return interfaceId == type(VRFConsumerBaseV2).interfaceId || super.supportsInterface(interfaceId);
+    if (interfaceId == type(VRFConsumerBaseV2).interfaceId) {
+      return true;
+    }
+    return false; // 默認不支援其他接口
   }
 }
 
@@ -214,7 +259,7 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
     uint256 public relicMintPriceUSD = 2 * 10**18;
     uint256 private s_tokenCounter;
 
-    VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
+    VRFCoordinatorV2Interface private _vrfCoordinator;
     uint32 private constant CALLBACK_GAS_LIMIT = 250000;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
@@ -249,9 +294,20 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
         soulShardToken = IERC20(_soulShardTokenAddress);
         usdToken = _usdTokenAddress;
         soulShardUsdPair = IPancakePair(_pairAddress);
-        i_vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinatorV2);
+        _vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinatorV2);
         subscriptionId = _subscriptionId;
         keyHash = _keyHash;
+    }
+
+    // 覆蓋 supportsInterface 函數來解決多重繼承中的衝突
+    function supportsInterface(bytes4 interfaceId) public pure override(ERC1155, VRFConsumerBaseV2) returns (bool) {
+        if (interfaceId == type(IERC1155).interfaceId) {
+            return true;  // 支援 ERC1155 接口
+        }
+        if (interfaceId == type(VRFConsumerBaseV2).interfaceId) {
+            return true;  // 支援 VRFConsumerBaseV2 接口
+        }
+        return false;  // 默認不支援
     }
 
     function getSoulShardAmountForUSD(uint256 _amountUSD) public view returns (uint256) {
@@ -260,33 +316,33 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
         (uint reserveSoulShard, uint reserveUSD) = (token0 == address(soulShardToken)) 
             ? (reserve0, reserve1) 
             : (reserve1, reserve0);
-        require(reserveSoulShard > 0 && reserveUSD > 0, "無效的儲備量");
+        require(reserveSoulShard > 0 && reserveUSD > 0, "Invalid Reserve Quantity");
         return ((_amountUSD * reserveSoulShard * 1000) / (reserveUSD * 997)) + 1;
     }
     
     function requestNewHero(uint256 _maxAmountIn) public {
         uint256 requiredAmount = getSoulShardAmountForUSD(heroMintPriceUSD);
-        require(_maxAmountIn >= requiredAmount, "滑價保護：價格已變動，所需代幣過多");
+        require(_maxAmountIn >= requiredAmount, "Slippage Protection: The price has changed, the required tokens are too much.");
         soulShardToken.transferFrom(msg.sender, address(this), requiredAmount);
         _requestRandomness(RequestType.Hero);
     }
     
     function requestNewRelic(uint256 _maxAmountIn) public {
         uint256 requiredAmount = getSoulShardAmountForUSD(relicMintPriceUSD);
-        require(_maxAmountIn >= requiredAmount, "滑價保護：價格已變動，所需代幣過多");
+        require(_maxAmountIn >= requiredAmount, "Slippage protection: The price has changed, the required tokens are too much.");
         soulShardToken.transferFrom(msg.sender, address(this), requiredAmount);
         _requestRandomness(RequestType.Relic);
     }
 
     function _requestRandomness(RequestType _requestType) private {
-        uint256 requestId = i_vrfCoordinator.requestRandomWords(i_keyHash, i_subscriptionId, REQUEST_CONFIRMATIONS, CALLBACK_GAS_LIMIT, NUM_WORDS);
+        uint256 requestId = _vrfCoordinator.requestRandomWords(keyHash, subscriptionId, REQUEST_CONFIRMATIONS, CALLBACK_GAS_LIMIT, NUM_WORDS);
         s_requests[requestId] = RequestStatus({ requester: msg.sender, requestType: _requestType });
         emit MintRequested(requestId, msg.sender, _requestType);
     }
 
     function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
         RequestStatus memory request = s_requests[_requestId];
-        require(request.requester != address(0), "請求不存在");
+        require(request.requester != address(0), "Request does not exist.");
         delete s_requests[_requestId]; 
         uint256 randomNumber = _randomWords[0];
         if (request.requestType == RequestType.Hero) {
@@ -342,7 +398,7 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
     }
     
     function setTokenAddresses(address _newSoulShardToken, address _newUsdToken) public onlyOwner {
-        require(_newSoulShardToken != address(0) && _newUsdToken != address(0), "地址不可為零");
+        require(_newSoulShardToken != address(0) && _newUsdToken != address(0), "Address cannot be zero.");
         soulShardToken = IERC20(_newSoulShardToken);
         usdToken = _newUsdToken;
         emit ConfigAddressUpdated("SoulShardToken", _newSoulShardToken);
@@ -362,7 +418,7 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
     
     function withdrawTokens(address _to) public onlyOwner {
         uint256 balance = soulShardToken.balanceOf(address(this));
-        require(balance > 0, "合約中無代幣可提取");
+        require(balance > 0, "No tokens available to withdraw from the contract.");
         soulShardToken.transfer(_to, balance);
     }
 
