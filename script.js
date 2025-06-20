@@ -1,11 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- 常數與設定 ---
     const SLIPPAGE_TOLERANCE_BPS = 50; // 滑價容忍度，單位是 BPS (萬分點)。50 BPS = 0.5%
 
     // --- Ethers.js 和合約相關變數 ---
     let provider, signer, userAddress;
     let soulShardTokenContract, assetsContract, stakingPoolContract;
 
-    // !!重要!!: 在您完成部署後，必須用真實數據替換這裡的內容
+    // !!重要!!: 在您完成部署後，必須用測試網或主網的真實數據替換這裡的內容
     const soulShardTokenAddress = "YOUR_SOULSHARD_TOKEN_ADDRESS";
     const assetsContractAddress = "YOUR_ASSETS_CONTRACT_ADDRESS";
     const stakingPoolAddress = "YOUR_STAKING_POOL_ADDRESS";
@@ -15,17 +16,23 @@ document.addEventListener('DOMContentLoaded', () => {
         "function approve(address spender, uint256 amount) returns (bool)",
         "function balanceOf(address account) view returns (uint256)"
     ];
+
     const assetsContractABI = [
+        // --- Events ---
+        "event MintFulfilled(uint256 indexed requestId, uint256 indexed tokenId, uint256 tokenType, uint256 powerOrCapacity)",
+        // --- View Functions ---
         "function getSoulShardAmountForUSD(uint256 amountUSD) view returns (uint256)",
-        "function requestNewHero(uint256 maxAmountIn)",
-        "function requestNewRelic(uint256 maxAmountIn)",
-        // ... 其他 ABI 保持不變
         "function heroMintPriceUSD() view returns (uint256)",
         "function relicMintPriceUSD() view returns (uint256)",
-        "function balanceOfBatch(address[] accounts, uint256[] ids) view returns (uint256[])",
-        "function setApprovalForAll(address operator, bool approved)",
-        "function uri(uint256 id) view returns (string)"
+        "function balanceOf(address account, uint256 id) view returns (uint256)",
+        "function uri(uint256 id) view returns (string)",
+        "function getTokenProperties(uint256 _tokenId) public view returns (uint256, uint256, uint256)",
+        // --- Write Functions ---
+        "function requestNewHero(uint256 maxAmountIn)",
+        "function requestNewRelic(uint256 maxAmountIn)",
+        "function setApprovalForAll(address operator, bool approved)"
     ];
+
     const stakingPoolABI = [
         "function stake(uint256 relicId, uint256 relicCapacity, tuple(uint256 tokenId, uint256 power)[] calldata heroes)",
         "function withdraw()",
@@ -35,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
         "function getRestCost(address user) view returns (uint256)"
     ];
 
-    // --- 網路設定 ---
+    // --- 網路設定 (預設為 BSC 主網，部署測試網時需修改) ---
     const targetNetwork = {
         chainId: '0x38', // 56 (BSC Mainnet)
         chainName: 'BNB Smart Chain (BSC) Mainnet',
@@ -43,6 +50,16 @@ document.addEventListener('DOMContentLoaded', () => {
         rpcUrls: ['https://bsc-dataseed.binance.org/'],
         blockExplorerUrls: ['https://bscscan.com/'],
     };
+    /*
+    // --- 範例：BSC 測試網設定 ---
+    const targetNetwork = {
+        chainId: '0x61', // 97
+        chainName: 'BNB Smart Chain Testnet',
+        nativeCurrency: { name: 'tBNB', symbol: 'tBNB', decimals: 18 },
+        rpcUrls: ['https://data-seed-prebsc-1-s1.binance.org:8545/'],
+        blockExplorerUrls: ['https://testnet.bscscan.com/'],
+    };
+    */
 
     // --- 靜態資料定義 ---
     const rarityData = {
@@ -60,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 遊戲狀態 ---
     let userHeroes = [], userRelics = [];
     let currentParty = { relic: null, heroes: [], totalPower: 0 };
+    let isListenerSetup = false;
 
     // --- DOM 元素 ---
     const connectWalletBtn = document.getElementById('connectWalletBtn');
@@ -81,28 +99,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const showToast = (text, type = 'info') => {
         let backgroundColor;
         switch (type) {
-            case 'success':
-                backgroundColor = 'linear-gradient(to right, #00b09b, #96c93d)';
-                break;
-            case 'error':
-                backgroundColor = 'linear-gradient(to right, #ff5f6d, #ffc371)';
-                break;
-            default: // info
-                backgroundColor = 'linear-gradient(to right, #4facfe, #00f2fe)';
-                break;
+            case 'success': backgroundColor = 'linear-gradient(to right, #00b09b, #96c93d)'; break;
+            case 'error': backgroundColor = 'linear-gradient(to right, #ff5f6d, #ffc371)'; break;
+            default: backgroundColor = 'linear-gradient(to right, #4facfe, #00f2fe)'; break;
         }
-        Toastify({
-            text: text,
-            duration: 5000,
-            close: true,
-            gravity: "top",
-            position: "right",
-            stopOnFocus: true,
-            style: {
-                background: backgroundColor,
-                "border-radius": "10px",
-            },
-        }).showToast();
+        Toastify({ text, duration: 5000, close: true, gravity: "top", position: "right", stopOnFocus: true, style: { background: backgroundColor, "border-radius": "10px" } }).showToast();
     };
 
     // --- 網路與錢包 ---
@@ -145,8 +146,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             connectWalletBtn.textContent = `${userAddress.substring(0, 6)}...${userAddress.substring(userAddress.length - 4)}`;
             connectWalletBtn.disabled = true;
-            showToast('錢包連接成功！', 'success');
+            showToast('錢包連接成功！正在讀取您的鏈上資產...', 'success');
 
+            // 執行所有初始化任務
             await Promise.all([
                 updateTokenBalance(),
                 fetchUserAssets(),
@@ -154,74 +156,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateMintPricesUI()
             ]);
             
+            listenToMintEvents();
+
             window.ethereum.on('accountsChanged', () => window.location.reload());
             window.ethereum.on('chainChanged', () => window.location.reload());
         } catch (error) {
-            console.error("連接錢包失敗:", error);
+            console.error("連接錢包或初始化失敗:", error);
             showToast("連接失敗，請檢查主控台。可能合約地址或 ABI 不正確。", 'error');
         }
     };
-
-    // --- UI 更新函式 ---
-    const updateMintPricesUI = async () => {
-        if (!assetsContract) return;
-        try {
-            const heroPrice = await assetsContract.heroMintPrice();
-            const relicPrice = await assetsContract.relicMintPrice();
-            
-            heroMintPriceText.innerHTML = `花費 ${ethers.utils.formatEther(heroPrice)} $SoulShard，<br/>你可能招募到傳說中的英雄，或是初出茅廬的新手。`;
-            relicMintPriceText.innerHTML = `花費 ${ethers.utils.formatEther(relicPrice)} $SoulShard，<br/>它將決定你隊伍的規模。`;
-        } catch (e) {
-            console.error("讀取鑄造價格失敗:", e);
-            heroMintPriceText.textContent = "無法讀取價格";
-            relicMintPriceText.textContent = "無法讀取價格";
-        }
-    };
-    const updateTokenBalance = async () => {
-        if (!soulShardTokenContract || !userAddress) return;
-        try {
-            const balance = await soulShardTokenContract.balanceOf(userAddress);
-            const formattedBalance = parseFloat(ethers.utils.formatEther(balance)).toFixed(4);
-            dashboardStatus.innerHTML = `
-                <h3 class="text-2xl font-bold text-[#2D2A4A] mb-4">玩家狀態</h3>
-                <p class="text-lg">錢包地址: <span class="font-mono text-sm">${userAddress}</span></p>
-                <p class="text-lg mt-2">$SoulShard 餘額: <span class="font-bold text-yellow-600">${formattedBalance}</span></p>
-            `;
-        } catch(e) {
-            dashboardStatus.innerHTML = `<p class="text-red-500">無法讀取餘額，請確認代幣合約地址與 ABI 是否正確。</p>`;
-        }
-    };
-    const updateStakingStatus = async () => {
-        if (!stakingPoolContract || !userAddress) return;
-        try {
-            const [stakerInfo, pending] = await stakingPoolContract.getStakerInfo(userAddress);
-            if (stakerInfo.totalPower.toNumber() > 0) {
-                unstakedView.classList.add('hidden');
-                stakedView.classList.remove('hidden');
-                
-                const pendingRewards = parseFloat(ethers.utils.formatEther(pending)).toFixed(4);
-                const fatiguePercentage = (stakerInfo.currentFatigue.toNumber() / 100).toFixed(2);
-
-                stakedInfoPanel.innerHTML = `
-                    <h3 class="text-2xl font-bold mb-4">遠征狀態</h3>
-                    <p class="text-lg">隊伍總戰力: <span class="font-bold text-yellow-400">${stakerInfo.totalPower.toString()}</span></p>
-                    <p class="text-lg mt-2">目前疲勞度: <span class="font-bold text-red-400">${fatiguePercentage} / 100.00</span></p>
-                    <p class="text-lg mt-2">待領取獎勵: <span class="font-bold text-green-400">${pendingRewards} $SoulShard</span></p>
-                    <div class="flex flex-col md:flex-row justify-center gap-4 mt-6">
-                        <button id="claimRewardsBtn" class="btn-primary flex-1">領取獎勵</button>
-                        <button id="restHeroesBtn" class="bg-green-600 text-white flex-1 py-2 rounded-lg hover:bg-green-700">恢復疲勞</button>
-                        <button id="withdrawPartyBtn" class="bg-red-600 text-white flex-1 py-2 rounded-lg hover:bg-red-700">撤回隊伍</button>
-                    </div>
-                `;
-            } else {
-                unstakedView.classList.remove('hidden');
-                stakedView.classList.add('hidden');
-            }
-        } catch (e) {
-            console.error("無法獲取質押狀態:", e);
-        }
-    };
     
+    // --- **新增**：監聽鑄造完成事件 ---
+    const listenToMintEvents = () => {
+        if (!assetsContract || !userAddress || isListenerSetup) return;
+        
+        // 篩選出只跟當前用戶相關的事件
+        const filter = assetsContract.filters.MintFulfilled(null, null, null, null);
+        
+        assetsContract.on(filter, (requestId, tokenId, tokenType, powerOrCapacity, event) => {
+            // 由於無法直接從事件中得知請求者是誰(未設為 indexed)，我們需要一個機制來確認
+            // 在實際應用中，可以通過 requestId 來確認，但為簡化，我們先假設事件觸發後刷新資產
+            // 更好的做法是在發起請求時保存 requestId，然後在這裡比對
+            console.log(`MintFulfilled Event Detected: TokenID ${tokenId.toString()}`);
+            showToast(`偵測到新的鑄造！正在為您更新資產列表...`, 'success');
+            // 延遲一點執行，確保區塊鏈狀態一致
+            setTimeout(() => {
+                fetchUserAssets();
+                updateTokenBalance();
+            }, 2000);
+        });
+
+        isListenerSetup = true;
+        console.log("事件監聽器已啟動。");
+    };
+
     // --- 核心互動函式 ---
     const approveTokens = async (spenderAddress, amount) => {
         if (!soulShardTokenContract) return false;
@@ -250,9 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // **新增**: 一個輔助函式，用於計算帶有滑價的最高支付額
     const calculateMaxAmountIn = (amount) => {
-        // 使用 BigNumber 進行精確計算
         const bnAmount = ethers.BigNumber.from(amount);
         const slippage = bnAmount.mul(SLIPPAGE_TOLERANCE_BPS).div(10000);
         return bnAmount.add(slippage);
@@ -262,26 +228,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!assetsContract) { showToast('請先連接錢包', 'error'); return; }
         showToast('準備招募英雄...', 'info');
         try {
-            // 1. 從合約獲取以美元計價的基礎價格
             const heroPriceUSD = await assetsContract.heroMintPriceUSD();
-            // 2. 根據基礎價格，計算出當前需要多少 $SoulShard
             const requiredAmount = await assetsContract.getSoulShardAmountForUSD(heroPriceUSD);
-            
-            // 3. **新增**: 計算用戶願意支付的最高數量 (加入滑價)
             const maxAmountIn = calculateMaxAmountIn(requiredAmount);
 
-            // 4. 請求用戶授權這個最高數量
             const success = await approveTokens(assetsContractAddress, maxAmountIn);
             if (!success) return;
 
-            // 5. 呼叫合約的 requestNewHero，並傳入最高數量
             const tx = await assetsContract.requestNewHero(maxAmountIn);
 
-            showToast('英雄招募請求已送出...請等待隨機數回傳。', 'info');
+            showToast('英雄招募請求已送出...請耐心等待鏈上隨機數回傳，成功後資產將自動刷新。', 'info');
             await tx.wait();
-            showToast('交易確認！正在等待鑄造完成...', 'success');
-            // 注意：這裡交易成功只代表請求成功，真正的 NFT 鑄造會在之後的異步回調中完成
-            // 為了好的體驗，前端需要監聽 MintFulfilled 事件來通知用戶鑄造完成並刷新資產列表
+            showToast('請求已確認！鑄造程序正在後台進行中...', 'success');
         } catch (error) {
             console.error("招募失敗:", error);
             const errorMessage = error.reason || '招募失敗，詳情見主控台。';
@@ -302,9 +260,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const tx = await assetsContract.requestNewRelic(maxAmountIn);
             
-            showToast('聖物鑄造請求已送出...請等待隨機數回傳。', 'info');
+            showToast('聖物鑄造請求已送出...請耐心等待鏈上隨機數回傳，成功後資產將自動刷新。', 'info');
             await tx.wait();
-            showToast('交易確認！正在等待鑄造完成...', 'success');
+            showToast('請求已確認！鑄造程序正在後台進行中...', 'success');
         } catch (error) {
             console.error("鑄造聖物失敗:", error);
             const errorMessage = error.reason || '鑄造聖物失敗，詳情見主控台。';
@@ -312,31 +270,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- UI 更新函式 ---
-    const updateMintPricesUI = async () => {
-        if (!assetsContract) return;
-        try {
-            // 現在我們顯示美元價格，並動態計算所需的代幣數量
-            const heroPriceUSD = await assetsContract.heroMintPriceUSD();
-            const requiredHeroAmount = await assetsContract.getSoulShardAmountForUSD(heroPriceUSD);
-            
-            const relicPriceUSD = await assetsContract.relicMintPriceUSD();
-            const requiredRelicAmount = await assetsContract.getSoulShardAmountForUSD(relicPriceUSD);
-
-            const formattedHeroPriceUSD = ethers.utils.formatUnits(heroPriceUSD, 8);
-
-            heroMintPriceText.innerHTML = `價格: ~${parseFloat(ethers.utils.formatEther(requiredHeroAmount)).toFixed(2)} $SoulShard <span class="text-sm text-gray-400">($${formattedHeroPriceUSD})</span><br/>你可能招募到傳說中的英雄。`;
-
-            const formattedRelicPriceUSD = ethers.utils.formatUnits(relicPriceUSD, 8);
-            relicMintPriceText.innerHTML = `價格: ~${parseFloat(ethers.utils.formatEther(requiredRelicAmount)).toFixed(2)} $SoulShard <span class="text-sm text-gray-400">($${formattedRelicPriceUSD})</span><br/>它將決定你隊伍的規模。`;
-
-        } catch (e) {
-            console.error("讀取鑄造價格失敗:", e);
-            heroMintPriceText.textContent = "無法讀取價格";
-            relicMintPriceText.textContent = "無法讀取價格";
-        }
-    };
-    
     const stakeParty = async () => {
         if (!stakingPoolContract) { showToast('請先連接錢包', 'error'); return; }
         if (!currentParty.relic || currentParty.heroes.length === 0) {
@@ -375,43 +308,21 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     const withdrawParty = async () => {
-        if (!stakingPoolContract) { 
-            showToast('請先連接錢包', 'error'); 
-            return; 
-        }
-        
-        const result = await Swal.fire({
-            title: '撤回隊伍',
-            text: "您確定要撤回您的隊伍嗎？所有未領取的獎勵將會一併發放。",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: '確認撤回',
-            cancelButtonText: '取消',
-        });
-
+        if (!stakingPoolContract) { showToast('請先連接錢包', 'error'); return; }
+        const result = await Swal.fire({ title: '撤回隊伍', text: "您確定要撤回您的隊伍嗎？所有未領取的獎勵將會一併發放。", icon: 'warning', showCancelButton: true, confirmButtonText: '確認撤回', cancelButtonText: '取消' });
         if (result.isConfirmed) {
             showToast("正在撤回隊伍...請等待交易確認。", 'info');
             try {
                 const tx = await stakingPoolContract.withdraw();
                 await tx.wait();
                 showToast("隊伍已成功撤回！", 'success');
-                Swal.fire({
-                    title: '成功!',
-                    text: '您的隊伍已安全返回。',
-                    icon: 'success',
-                });
+                Swal.fire({ title: '成功!', text: '您的隊伍已安全返回。', icon: 'success' });
                 await Promise.all([updateTokenBalance(), fetchUserAssets(), updateStakingStatus()]);
             } catch (error) {
                 console.error("撤回隊伍失敗:", error);
                 showToast("撤回隊伍失敗，詳情見主控台。", 'error');
-                Swal.fire({
-                    title: '錯誤!',
-                    text: '撤回隊伍時發生錯誤，請查看主控台了解詳情。',
-                    icon: 'error',
-                });
+                Swal.fire({ title: '錯誤!', text: '撤回隊伍時發生錯誤，請查看主控台了解詳情。', icon: 'error' });
             }
-        } else {
-            showToast('操作已取消', 'info');
         }
     };
 
@@ -420,10 +331,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const cost = await stakingPoolContract.getRestCost(userAddress);
             if (cost.isZero()) {
-                showToast("您的隊伍精力充沛，無需休息！", 'success');
-                return;
+                showToast("您的隊伍精力充沛，無需休息！", 'success'); return;
             }
-            showToast("正在為隊伍恢復疲勞...", 'info');
+            showToast(`正在為隊伍恢復疲勞，預計花費 ${parseFloat(ethers.utils.formatEther(cost)).toFixed(4)} $SoulShard...`, 'info');
             const success = await approveTokens(stakingPoolAddress, cost);
             if (!success) return;
 
@@ -437,66 +347,128 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- 資料讀取與渲染 ---
+    // --- UI 與資料渲染 ---
+    const updateMintPricesUI = async () => {
+        if (!assetsContract) return;
+        try {
+            const heroPriceUSD = await assetsContract.heroMintPriceUSD();
+            const requiredHeroAmount = await assetsContract.getSoulShardAmountForUSD(heroPriceUSD);
+            const formattedHeroPriceUSD = ethers.utils.formatUnits(heroPriceUSD, 18); // 假設 USD 是 18 位小數
+            heroMintPriceText.innerHTML = `價格: ~${parseFloat(ethers.utils.formatEther(requiredHeroAmount)).toFixed(2)} $SoulShard <span class="text-sm text-gray-400">($${parseFloat(formattedHeroPriceUSD).toFixed(2)})</span><br/>你可能招募到傳說中的英雄。`;
+            
+            const relicPriceUSD = await assetsContract.relicMintPriceUSD();
+            const requiredRelicAmount = await assetsContract.getSoulShardAmountForUSD(relicPriceUSD);
+            const formattedRelicPriceUSD = ethers.utils.formatUnits(relicPriceUSD, 18); // 假設 USD 是 18 位小數
+            relicMintPriceText.innerHTML = `價格: ~${parseFloat(ethers.utils.formatEther(requiredRelicAmount)).toFixed(2)} $SoulShard <span class="text-sm text-gray-400">($${parseFloat(formattedRelicPriceUSD).toFixed(2)})</span><br/>它將決定你隊伍的規模。`;
+        } catch (e) {
+            console.error("讀取鑄造價格失敗:", e);
+            heroMintPriceText.textContent = "無法讀取價格";
+            relicMintPriceText.textContent = "無法讀取價格";
+        }
+    };
+
+    const updateTokenBalance = async () => {
+        if (!soulShardTokenContract || !userAddress) return;
+        try {
+            const balance = await soulShardTokenContract.balanceOf(userAddress);
+            const formattedBalance = parseFloat(ethers.utils.formatEther(balance)).toFixed(4);
+            dashboardStatus.innerHTML = `<h3 class="text-2xl font-bold text-[#2D2A4A] mb-4">玩家狀態</h3> <p class="text-lg">錢包地址: <span class="font-mono text-sm">${userAddress}</span></p> <p class="text-lg mt-2">$SoulShard 餘額: <span class="font-bold text-yellow-600">${formattedBalance}</span></p>`;
+        } catch(e) {
+            dashboardStatus.innerHTML = `<p class="text-red-500">無法讀取餘額，請確認代幣合約地址與 ABI 是否正確。</p>`;
+        }
+    };
+
+    const updateStakingStatus = async () => {
+        if (!stakingPoolContract || !userAddress) return;
+        try {
+            const [stakerInfo, pending] = await stakingPoolContract.getStakerInfo(userAddress);
+            if (stakerInfo.totalPower.toNumber() > 0) {
+                unstakedView.classList.add('hidden');
+                stakedView.classList.remove('hidden');
+                
+                const pendingRewards = parseFloat(ethers.utils.formatEther(pending)).toFixed(4);
+                const fatiguePercentage = (stakerInfo.currentFatigue / 100).toFixed(2); // 假設 MAX_FATIGUE 是 10000
+
+                stakedInfoPanel.innerHTML = `
+                    <h3 class="text-2xl font-bold mb-4">遠征狀態</h3>
+                    <p class="text-lg">隊伍總戰力: <span class="font-bold text-yellow-400">${stakerInfo.totalPower.toString()}</span></p>
+                    <p class="text-lg mt-2">目前疲勞度: <span class="font-bold text-red-400">${fatiguePercentage} / 100.00</span></p>
+                    <p class="text-lg mt-2">待領取獎勵: <span class="font-bold text-green-400">${pendingRewards} $SoulShard</span></p>
+                    <div class="flex flex-col md:flex-row justify-center gap-4 mt-6">
+                        <button id="claimRewardsBtn" class="btn-primary flex-1">領取獎勵</button>
+                        <button id="restHeroesBtn" class="bg-green-600 text-white flex-1 py-2 rounded-lg hover:bg-green-700">恢復疲勞</button>
+                        <button id="withdrawPartyBtn" class="bg-red-600 text-white flex-1 py-2 rounded-lg hover:bg-red-700">撤回隊伍</button>
+                    </div>
+                `;
+            } else {
+                unstakedView.classList.remove('hidden');
+                stakedView.classList.add('hidden');
+            }
+        } catch (e) {
+            console.error("無法獲取質押狀態:", e);
+        }
+    };
+    
+    // --- **重構**：讀取用戶獨特的 NFT 資產 ---
     const fetchUserAssets = async () => {
         if (!assetsContract || !userAddress) return;
-        heroesContainer.innerHTML = '<p class="col-span-full text-center text-gray-500">正在讀取英雄...</p>';
-        relicsContainer.innerHTML = '<p class="col-span-full text-center text-gray-500">正在讀取聖物...</p>';
+        heroesContainer.innerHTML = '<p class="col-span-full text-center text-gray-500">正在從區塊鏈讀取您的英雄數據...</p>';
+        relicsContainer.innerHTML = '<p class="col-span-full text-center text-gray-500">正在從區塊鏈讀取您的聖物數據...</p>';
+
         try {
-            const heroTokenIds = [1, 2, 3, 4, 5];
-            const relicTokenIds = [11, 12, 13, 14, 15];
-            const allTokenIds = [...heroTokenIds, ...relicTokenIds];
-            const userAddresses = Array(allTokenIds.length).fill(userAddress);
-            
-            const balances = await assetsContract.balanceOfBatch(userAddresses, allTokenIds);
-            
+            // 由於合約的限制，我們無法直接查詢某個地址的所有 token
+            // 最好的方法是查詢歷史事件，找出所有為該用戶鑄造的 token
+            // 注意：這個查詢可能在某些 RPC 節點上較慢
+            const mintFilter = assetsContract.filters.MintFulfilled(null, null, null, null);
+            const mintEvents = await assetsContract.queryFilter(mintFilter);
+
             let fetchedHeroes = [];
             let fetchedRelics = [];
             
-            const metadataPromises = [];
-
-            for (let i = 0; i < allTokenIds.length; i++) {
-                if (balances[i].toNumber() > 0) {
-                    const tokenId = allTokenIds[i];
-                    metadataPromises.push(
-                        assetsContract.uri(tokenId).then(uri => fetch(uri.replace("ipfs://", "https://ipfs.io/ipfs/")).then(res => res.json()).then(metadata => ({
-                            tokenId,
-                            balance: balances[i].toNumber(),
-                            metadata
-                        })))
-                    );
+            // 為了不重複查詢，我們先過濾出與當前用戶相關的事件
+            // 在理想情況下，MintFulfilled 事件的 requester 應該是 indexed，可以直接篩選
+            // 目前我們只能在前端手動過濾
+            const relevantEvents = [];
+            const requestPromises = mintEvents.map(event => assetsContract.s_requests(event.args.requestId));
+            const requests = await Promise.all(requestPromises);
+            
+            for(let i = 0; i < mintEvents.length; i++) {
+                if (requests[i].requester.toLowerCase() === userAddress.toLowerCase()) {
+                    relevantEvents.push(mintEvents[i]);
                 }
             }
             
-            const results = await Promise.all(metadataPromises);
-
-            for (const result of results) {
-                const { tokenId, balance, metadata } = result;
-                const powerAttr = metadata.attributes.find(attr => attr.trait_type === "Power");
-                const capacityAttr = metadata.attributes.find(attr => attr.trait_type === "Capacity");
+            // 檢查用戶是否仍然持有這些 NFT
+            for (const event of relevantEvents) {
+                const { tokenId, tokenType, powerOrCapacity } = event.args;
                 
-                const power = powerAttr ? parseInt(powerAttr.value) : 0;
-                const capacity = capacityAttr ? parseInt(capacityAttr.value) : 0;
-                const rarity = heroTokenIds.includes(tokenId) ? tokenId : tokenId - 10;
-
-                for (let j = 0; j < balance; j++) {
-                    const uniqueId = `${tokenId}-${j}`; 
-                    if (heroTokenIds.includes(tokenId)) {
-                        fetchedHeroes.push({ id: uniqueId, tokenId, rarity, power });
-                    } else if (relicTokenIds.includes(tokenId)) {
-                        fetchedRelics.push({ id: uniqueId, tokenId, rarity, capacity });
+                const balance = await assetsContract.balanceOf(userAddress, tokenId);
+                if (balance.toNumber() > 0) {
+                    const type = tokenType.toNumber();
+                    if (type >= 1 && type <= 5) { // 英雄
+                        fetchedHeroes.push({
+                            tokenId: tokenId.toNumber(),
+                            rarity: type,
+                            power: powerOrCapacity.toNumber(),
+                        });
+                    } else if (type >= 11 && type <= 15) { // 聖物
+                        fetchedRelics.push({
+                            tokenId: tokenId.toNumber(),
+                            rarity: type - 10,
+                            capacity: powerOrCapacity.toNumber(),
+                        });
                     }
                 }
             }
-            
+
             userHeroes = fetchedHeroes;
             userRelics = fetchedRelics;
             renderHeroes();
             renderRelics();
             updatePartyUI();
         } catch (error) {
-            console.error("讀取資產失敗:", error);
-            showToast('讀取鏈上資產失敗，請檢查 API 或合約。', 'error');
+            console.error("讀取鏈上資產失敗:", error);
+            showToast('讀取鏈上資產失敗，請檢查合約地址或 RPC。', 'error');
             heroesContainer.innerHTML = '<p class="col-span-full text-center text-red-400">讀取資產失敗。</p>';
             relicsContainer.innerHTML = '<p class="col-span-full text-center text-red-400">讀取資產失敗。</p>';
         }
@@ -504,22 +476,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- 輔助函式 ---
     function renderStars(rarity) {
-        let stars = '';
-        for(let i = 0; i < 5; i++) stars += `<span class="star">${i < rarity ? '★' : '☆'}</span>`;
-        return stars;
+        return Array(5).fill(0).map((_, i) => `<span class="star">${i < rarity ? '★' : '☆'}</span>`).join('');
     }
     function renderHeroes() {
         heroesContainer.innerHTML = userHeroes.length > 0 ? userHeroes.map(hero => `
-            <div class="card-bg p-3 rounded-lg text-center cursor-pointer hover:scale-105 transition-transform" data-id="${hero.id}" data-type="hero">
-                <p class="font-bold text-sm">英雄 (ID: ${hero.tokenId})</p>
+            <div class="card-bg p-3 rounded-lg text-center cursor-pointer hover:scale-105 transition-transform" data-id="${hero.tokenId}" data-type="hero">
+                <p class="font-bold text-sm">英雄 #${hero.tokenId}</p>
                 ${renderStars(hero.rarity)}
                 <p class="text-lg font-bold mt-1 text-[#C0A573]">${hero.power} MP</p>
             </div>`).join('') : '<p class="col-span-full text-center text-gray-500">您還沒有任何英雄。</p>';
     }
     function renderRelics() {
         relicsContainer.innerHTML = userRelics.length > 0 ? userRelics.map(relic => `
-            <div class="card-bg p-3 rounded-lg text-center cursor-pointer hover:scale-105 transition-transform" data-id="${relic.id}" data-type="relic">
-                 <p class="font-bold text-sm">聖物 (ID: ${relic.tokenId})</p>
+            <div class="card-bg p-3 rounded-lg text-center cursor-pointer hover:scale-105 transition-transform" data-id="${relic.tokenId}" data-type="relic">
+                 <p class="font-bold text-sm">聖物 #${relic.tokenId}</p>
                 ${renderStars(relic.rarity)}
                 <p class="text-sm mt-1">容量: ${relic.capacity}</p>
             </div>`).join('') : '<p class="col-span-full text-center text-gray-500">您還沒有任何聖物。</p>';
@@ -539,15 +509,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function updatePartyUI() {
         const container = document.getElementById('currentParty');
         if (!currentParty.relic) {
-             container.innerHTML = `
-                <p class="text-lg">尚未組建隊伍。請前往「我的隊伍」頁面進行配置。</p>
-                <p class="text-xl font-bold text-[#C0A573] mt-2">總戰力: <span id="totalPower">0</span></p>`;
+             container.innerHTML = `<p class="text-lg">尚未組建隊伍。請前往「我的隊伍」頁面進行配置。</p> <p class="text-xl font-bold text-[#C0A573] mt-2">總戰力: <span id="totalPower">0</span></p>`;
         } else {
-            let heroList = currentParty.heroes.map(h => `<p class="text-sm">英雄 #${h.id.split('-')[0]} (${h.power} MP)</p>`).join('');
+            let heroList = currentParty.heroes.map(h => `<p class="text-sm">英雄 #${h.tokenId} (${h.power} MP)</p>`).join('');
             if (currentParty.heroes.length === 0) heroList = `<p class="text-sm text-gray-400">(尚無英雄)</p>`;
             container.innerHTML = `
                 <div>
-                    <p class="font-bold text-lg">聖物 #${currentParty.relic.id.split('-')[0]} (容量: ${currentParty.relic.capacity})</p>
+                    <p class="font-bold text-lg">聖物 #${currentParty.relic.tokenId} (容量: ${currentParty.relic.capacity})</p>
                     <div class="mt-2">${heroList}</div>
                 </div>
                 <p class="text-xl font-bold text-[#C0A573] mt-4">總戰力: <span id="totalPower">${currentParty.totalPower}</span></p>
@@ -560,17 +528,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleAssetClick(e) {
         const card = e.target.closest('[data-id]');
         if (!card) return;
-        const { id, type } = card.dataset;
+        const id = parseInt(card.dataset.id);
+        const type = card.dataset.type;
+
         if (type === 'relic') {
-            if (currentParty.relic && currentParty.relic.id === id) {
+            if (currentParty.relic && currentParty.relic.tokenId === id) {
                 disbandParty();
             } else {
                 disbandParty();
-                currentParty.relic = userRelics.find(r => r.id === id);
+                currentParty.relic = userRelics.find(r => r.tokenId === id);
             }
         } else if (type === 'hero' && currentParty.relic) {
-            const hero = userHeroes.find(h => h.id === id);
-            const heroIndex = currentParty.heroes.findIndex(h => h.id === id);
+            const hero = userHeroes.find(h => h.tokenId === id);
+            const heroIndex = currentParty.heroes.findIndex(h => h.tokenId === id);
             if (heroIndex > -1) {
                 currentParty.heroes.splice(heroIndex, 1);
             } else if (currentParty.heroes.length < currentParty.relic.capacity) {
@@ -593,11 +563,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateSelectionUI() {
         document.querySelectorAll('#barracks [data-id]').forEach(el => el.classList.remove('ring-4', 'ring-yellow-400'));
         if (currentParty.relic) {
-            const relicCard = document.querySelector(`#barracks [data-id="${currentParty.relic.id}"]`);
+            const relicCard = document.querySelector(`#barracks [data-id="${currentParty.relic.tokenId}"]`);
             if (relicCard) relicCard.classList.add('ring-4', 'ring-yellow-400');
         }
         currentParty.heroes.forEach(h => {
-             const heroCard = document.querySelector(`#barracks [data-id="${h.id}"]`);
+             const heroCard = document.querySelector(`#barracks [data-id="${h.tokenId}"]`);
              if (heroCard) heroCard.classList.add('ring-4', 'ring-yellow-400');
         });
     }
@@ -629,7 +599,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function init() {
         const heroChartCtx = document.getElementById('heroChart')?.getContext('2d');
         const relicChartCtx = document.getElementById('relicChart')?.getContext('2d');
-
         if (heroChartCtx && relicChartCtx) {
             createChart(heroChartCtx, '英雄掉落機率', rarityData);
             createChart(relicChartCtx, '聖物掉落機率', rarityData);
@@ -638,8 +607,8 @@ document.addEventListener('DOMContentLoaded', () => {
         setupNavigation();
         updateDungeons();
         updatePartyUI();
-        updateMintPricesUI();
 
+        // --- Event Listeners ---
         connectWalletBtn.addEventListener('click', connectWallet);
         approveNftsBtn.addEventListener('click', approveAllNfts);
         mintHeroBtn.addEventListener('click', mintHero);
