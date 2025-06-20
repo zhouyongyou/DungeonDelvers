@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// 版本 V12: 修正了多重繼承中的 supportsInterface 衝突，此版本為最終生產級扁平化版本。
+// 版本 V12: 修正了扁平化過程中所有繼承函式的實作，此版本為最終生產級扁平化版本。
 pragma solidity ^0.8.20;
 
 // --- 從 @openzeppelin/contracts/utils/Context.sol 開始 ---
@@ -110,11 +110,6 @@ contract ERC1155 is Context, ERC165, IERC1155 {
     function setApprovalForAll(address operator, bool approved) public virtual override {
         _setApprovalForAll(_msgSender(), operator, approved);
     }
-    function _setApprovalForAll(address owner, address operator, bool approved) internal virtual {
-        require(owner != operator, "ERC1155: setting approval status for self");
-        _operatorApprovals[owner][operator] = approved;
-    emit ApprovalForAll(owner, operator, approved);
-    }
     function isApprovedForAll(address account, address operator) public view virtual override returns (bool) {
         return _operatorApprovals[account][operator];
     }
@@ -193,6 +188,11 @@ contract ERC1155 is Context, ERC165, IERC1155 {
             _balances[id][from] = fromBalance - amount;
         }
         emit TransferSingle(operator, from, address(0), id, amount);
+    }
+    function _setApprovalForAll(address owner, address operator, bool approved) internal virtual {
+        require(owner != operator, "ERC1155: setting approval status for self");
+        _operatorApprovals[owner][operator] = approved;
+        emit ApprovalForAll(owner, operator, approved);
     }
     function _doSafeTransferAcceptanceCheck(address operator, address from, address to, uint256 id, uint256 amount, bytes memory data) internal {
         if (to.code.length > 0) {
@@ -273,7 +273,7 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
     uint256 public relicMintPriceUSD = 2 * 10**18;
     uint256 private s_tokenCounter;
 
-    VRFCoordinatorV2Interface private _vrfCoordinator;
+//  VRFCoordinatorV2Interface private _vrfCoordinator;
     uint32 private constant CALLBACK_GAS_LIMIT = 250000;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
@@ -308,12 +308,27 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
         soulShardToken = IERC20(_soulShardTokenAddress);
         usdToken = _usdTokenAddress;
         soulShardUsdPair = IPancakePair(_pairAddress);
-        _vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinatorV2);
+//      _vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinatorV2);
         subscriptionId = _subscriptionId;
         keyHash = _keyHash;
     }
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, VRFConsumerBaseV2) returns (bool) {
+    // function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, VRFConsumerBaseV2) returns (bool) {
+    //     return super.supportsInterface(interfaceId);
+    // }
+
+    function supportsInterface(bytes4 interfaceId) public view override(ERC1155, VRFConsumerBaseV2) returns (bool) {
+        // 檢查 ERC1155 的接口 ID
+        if (interfaceId == type(IERC1155).interfaceId) {
+            return true;
+        }
+
+        // 檢查 VRFConsumerBaseV2 的接口 ID
+        if (interfaceId == type(VRFConsumerBaseV2).interfaceId) {
+            return true;
+        }
+
+        // 默認返回 false，如果沒有匹配的接口 ID
         return super.supportsInterface(interfaceId);
     }
 
@@ -342,7 +357,8 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
     }
 
     function _requestRandomness(RequestType _requestType) private {
-        uint256 requestId = _vrfCoordinator.requestRandomWords(keyHash, subscriptionId, REQUEST_CONFIRMATIONS, CALLBACK_GAS_LIMIT, NUM_WORDS);
+//      uint256 requestId = _vrfCoordinator.requestRandomWords(keyHash, subscriptionId, REQUEST_CONFIRMATIONS, CALLBACK_GAS_LIMIT, NUM_WORDS);
+        uint256 requestId = vrfCoordinator.requestRandomWords(keyHash, subscriptionId, REQUEST_CONFIRMATIONS, CALLBACK_GAS_LIMIT, NUM_WORDS);
         s_requests[requestId] = RequestStatus({ requester: msg.sender, requestType: _requestType });
         emit MintRequested(requestId, msg.sender, _requestType);
     }
