@@ -7,6 +7,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 
+/**
+ * @dev 這是與 PancakeSwap V2 流動性池 (Pair) 合約互動所需的標準介面。
+ */
 interface IPancakePair {
     function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
     function token0() external view returns (address);
@@ -17,6 +20,8 @@ interface IPancakePair {
  * @dev V7.0: 加入了滑價保護機制，讓用戶可以傳入願意支付的最高代幣數量，防止交易失敗或超額支付。
  * - requestNewHero 和 requestNewRelic 函式新增了 maxAmountIn 參數。
  * - 在執行轉帳前，會驗證實際所需數量是否超過用戶的限制。
+ * - 價格錨定於與穩定幣組成的流動性池。
+ * - 保留 Chainlink VRF V2 以確保鑄造的公平性與安全性。
  */
 contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
     // --- Token ID 常數 ---
@@ -98,10 +103,7 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
         return ((_amountUSD * reserveSoulShard * 1000) / (reserveUSD1 * 997)) + 1;
     }
     
-    // --- **修改**: 外部函式加入滑價保護 ---
-    /**
-     * @param _maxAmountIn 用戶願意支付的最高 $SoulShard 數量，以防止滑價。
-     */
+    // --- 外部函式 (請求鑄造) ---
     function requestNewHero(uint256 _maxAmountIn) public {
         uint256 requiredAmount = getSoulShardAmountForUSD(heroMintPriceUSD);
         require(_maxAmountIn >= requiredAmount, "滑價保護：價格已變動，所需代幣過多");
@@ -118,17 +120,8 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
 
     // --- 內部核心邏輯 ---
     function _requestRandomness(RequestType _requestType) private {
-        uint256 requestId = i_vrfCoordinator.requestRandomWords(
-            i_keyHash,
-            i_subscriptionId,
-            REQUEST_CONFIRMATIONS,
-            CALLBACK_GAS_LIMIT,
-            NUM_WORDS
-        );
-        s_requests[requestId] = RequestStatus({
-            requester: msg.sender,
-            requestType: _requestType
-        });
+        uint256 requestId = i_vrfCoordinator.requestRandomWords(i_keyHash, i_subscriptionId, REQUEST_CONFIRMATIONS, CALLBACK_GAS_LIMIT, NUM_WORDS);
+        s_requests[requestId] = RequestStatus({ requester: msg.sender, requestType: _requestType });
         emit MintRequested(requestId, msg.sender, _requestType);
     }
 
@@ -136,9 +129,7 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
         RequestStatus memory request = s_requests[_requestId];
         require(request.requester != address(0), "請求不存在");
         delete s_requests[_requestId]; 
-
         uint256 randomNumber = _randomWords[0];
-
         if (request.requestType == RequestType.Hero) {
             _generateAndMintHero(request.requester, randomNumber, _requestId);
         } else {
@@ -149,56 +140,34 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
     function _generateAndMintHero(address _to, uint256 _randomNumber, uint256 _requestId) private {
         uint256 rarityRoll = _randomNumber % 100;
         uint256 powerRoll = _randomNumber >> 8; 
-        
         uint256 tokenTypeToMint;
         uint256 power;
-
-        if (rarityRoll < 44) { 
-            tokenTypeToMint = COMMON_HERO;
-            power = 15 + (powerRoll % 36); // 15-50
-        } else if (rarityRoll < 79) { 
-            tokenTypeToMint = UNCOMMON_HERO;
-            power = 50 + (powerRoll % 51); // 50-100
-        } else if (rarityRoll < 94) { 
-            tokenTypeToMint = RARE_HERO;
-            power = 100 + (powerRoll % 51); // 100-150
-        } else if (rarityRoll < 99) { 
-            tokenTypeToMint = EPIC_HERO;
-            power = 150 + (powerRoll % 51); // 150-200
-        } else { 
-            tokenTypeToMint = LEGENDARY_HERO;
-            power = 200 + (powerRoll % 56); // 200-255
-        }
-        
+        if (rarityRoll < 44) { tokenTypeToMint = COMMON_HERO; power = 15 + (powerRoll % 36); } 
+        else if (rarityRoll < 79) { tokenTypeToMint = UNCOMMON_HERO; power = 50 + (powerRoll % 51); } 
+        else if (rarityRoll < 94) { tokenTypeToMint = RARE_HERO; power = 100 + (powerRoll % 51); } 
+        else if (rarityRoll < 99) { tokenTypeToMint = EPIC_HERO; power = 150 + (powerRoll % 51); } 
+        else { tokenTypeToMint = LEGENDARY_HERO; power = 200 + (powerRoll % 56); }
         s_tokenCounter++;
         uint256 newTokenId = s_tokenCounter;
-        
         nftPower[newTokenId] = power;
         nftType[newTokenId] = tokenTypeToMint;
-        
         _mint(_to, newTokenId, 1, "");
-        
         emit MintFulfilled(_requestId, newTokenId, tokenTypeToMint, power);
     }
 
     function _generateAndMintRelic(address _to, uint256 _randomNumber, uint256 _requestId) private {
         uint256 rarityRoll = _randomNumber % 100;
-
         uint256 tokenTypeToMint;
         uint256 capacity;
-
         if (rarityRoll < 44) { tokenTypeToMint = COMMON_RELIC; capacity = 1; }
         else if (rarityRoll < 79) { tokenTypeToMint = UNCOMMON_RELIC; capacity = 2; }
         else if (rarityRoll < 94) { tokenTypeToMint = RARE_RELIC; capacity = 3; }
         else if (rarityRoll < 99) { tokenTypeToMint = EPIC_RELIC; capacity = 4; }
         else { tokenTypeToMint = LEGENDARY_RELIC; capacity = 5; }
-        
         s_tokenCounter++;
         uint256 newTokenId = s_tokenCounter;
-        
         nftCapacity[newTokenId] = capacity;
         nftType[newTokenId] = tokenTypeToMint;
-
         _mint(_to, newTokenId, 1, "");
         emit MintFulfilled(_requestId, newTokenId, tokenTypeToMint, capacity);
     }
