@@ -1,14 +1,11 @@
+// 版本 V18: 整合 VRF V2.5 Wrapper 直接資金模型
 // SPDX-License-Identifier: MIT
-
-// V16
-
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
-import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts@1.4.0/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
 
 interface IPancakePair {
     function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
@@ -30,17 +27,16 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFV2PlusWrapperConsumerBase 
     IERC20 public soulShardToken;
     IPancakePair public soulShardUsdPair;
     address public usdToken;
-    VRFCoordinatorV2Interface public vrfCoordinator;
-    uint64 public subscriptionId;
-    bytes32 public keyHash;
-
     uint256 public heroMintPriceUSD = 2 * 10**18;
     uint256 public relicMintPriceUSD = 2 * 10**18;
     uint256 private s_tokenCounter;
 
-    uint32 private constant CALLBACK_GAS_LIMIT = 250000;
-    uint16 private constant REQUEST_CONFIRMATIONS = 3;
-    uint32 private constant NUM_WORDS = 1;
+    // --- VRF V2.5 Wrapper 狀態變數 (來自 DirectFundingConsumer 範本) ---
+    address private immutable i_linkAddress;
+    bytes32 public keyHash; // Key Hash 在 Wrapper 模型中依然需要
+    uint32 public callbackGasLimit = 250000; // 
+    uint16 public requestConfirmations = 3; // 
+    uint32 public numWords = 1; // 您的邏輯只需要一個隨機數 
 
     enum RequestType { Hero, Relic }
     struct RequestStatus { address requester; RequestType requestType; }
@@ -50,7 +46,7 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFV2PlusWrapperConsumerBase 
     mapping(uint256 => uint256) public nftType;
 
     event ConfigAddressUpdated(string indexed name, address indexed newAddress);
-    event VrfConfigUpdated(uint64 newSubscriptionId, bytes32 newKeyHash);
+    event VrfConfigUpdated(bytes32 newKeyHash, uint32 newCallbackGasLimit);
     event MintPriceUpdated(uint256 newHeroPriceUSD, uint256 newRelicPriceUSD);
     event MintRequested(uint256 indexed requestId, address indexed requester, RequestType requestType);
     event MintFulfilled(uint256 indexed requestId, uint256 indexed tokenId, uint256 tokenType, uint256 powerOrCapacity);
@@ -61,55 +57,53 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFV2PlusWrapperConsumerBase 
         address _soulShardTokenAddress,
         address _usdTokenAddress,
         address _pairAddress,
-        address _vrfCoordinatorV2,
-        uint64 _subscriptionId,
+        address _wrapperAddress,
+        address _linkAddress,
         bytes32 _keyHash
     ) 
     ERC1155(_uri) 
     Ownable(_initialOwner) 
-    VRFConsumerBaseV2(_vrfCoordinatorV2) 
+    VRFV2PlusWrapperConsumerBase(_wrapperAddress) 
     {
         soulShardToken = IERC20(_soulShardTokenAddress);
         usdToken = _usdTokenAddress;
         soulShardUsdPair = IPancakePair(_pairAddress);
-        vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinatorV2);
-        subscriptionId = _subscriptionId;
+        i_linkAddress = _linkAddress;
         keyHash = _keyHash;
     }
-
-    function getSoulShardAmountForUSD(uint256 _amountUSD) public view returns (uint256) {
-        (uint reserve0, uint reserve1, ) = soulShardUsdPair.getReserves();
-        address token0 = soulShardUsdPair.token0();
-        (uint reserveSoulShard, uint reserveUSD) = (token0 == address(soulShardToken)) 
-            ? (reserve0, reserve1) 
-            : (reserve1, reserve0);
-        require(reserveSoulShard > 0 && reserveUSD > 0, "Invalid Reserve Quantity");
-        return ((_amountUSD * reserveSoulShard * 1000) / (reserveUSD * 997)) + 1;
-    }
+    
+    // --- 接收原生代幣的函式 (來自 DirectFundingConsumer 範本) ---
+    receive() external payable {}
     
     function requestNewHero(uint256 _maxAmountIn) public {
         uint256 requiredAmount = getSoulShardAmountForUSD(heroMintPriceUSD);
-        require(_maxAmountIn >= requiredAmount, "Slippage Protection: The price has changed, the required tokens are too much.");
+        require(_maxAmountIn >= requiredAmount, "Slippage Protection");
         soulShardToken.transferFrom(msg.sender, address(this), requiredAmount);
         _requestRandomness(RequestType.Hero);
     }
     
     function requestNewRelic(uint256 _maxAmountIn) public {
         uint256 requiredAmount = getSoulShardAmountForUSD(relicMintPriceUSD);
-        require(_maxAmountIn >= requiredAmount, "Slippage protection: The price has changed, the required tokens are too much.");
+        require(_maxAmountIn >= requiredAmount, "Slippage Protection");
         soulShardToken.transferFrom(msg.sender, address(this), requiredAmount);
         _requestRandomness(RequestType.Relic);
     }
 
+    // --- 新的內部請求函式 ---
     function _requestRandomness(RequestType _requestType) private {
-        uint256 requestId = vrfCoordinator.requestRandomWords(keyHash, subscriptionId, REQUEST_CONFIRMATIONS, CALLBACK_GAS_LIMIT, NUM_WORDS);
+        // 呼叫 Wrapper 提供的內部請求函式，它會自動處理費用支付
+        uint256 requestId = _requestRandomness(
+            callbackGasLimit, 
+            requestConfirmations, 
+            numWords
+        );
         s_requests[requestId] = RequestStatus({ requester: msg.sender, requestType: _requestType });
         emit MintRequested(requestId, msg.sender, _requestType);
     }
 
     function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
         RequestStatus memory request = s_requests[_requestId];
-        require(request.requester != address(0), "Request does not exist.");
+        require(request.requester != address(0), "Request not found");
         delete s_requests[_requestId]; 
         uint256 randomNumber = _randomWords[0];
         if (request.requestType == RequestType.Hero) {
@@ -117,6 +111,14 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFV2PlusWrapperConsumerBase 
         } else {
             _generateAndMintRelic(request.requester, randomNumber, _requestId);
         }
+    }
+
+    // --- 提款函式 (來自 DirectFundingConsumer 範本，建議保留) ---
+    function withdrawNativeFunding() public onlyOwner {
+        uint256 amount = address(this).balance;
+        require(amount > 0, "No balance to withdraw");
+        (bool success, ) = owner().call{value: amount}("");
+        require(success, "Withdraw failed");
     }
 
     function _generateAndMintHero(address _to, uint256 _randomNumber, uint256 _requestId) private {
@@ -129,7 +131,7 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFV2PlusWrapperConsumerBase 
         else if (rarityRoll < 94) { tokenTypeToMint = RARE_HERO; power = 100 + (powerRoll % 51); } 
         else if (rarityRoll < 99) { tokenTypeToMint = EPIC_HERO; power = 150 + (powerRoll % 51); } 
         else { tokenTypeToMint = LEGENDARY_HERO; power = 200 + (powerRoll % 56); }
-        s_tokenCounter++;
+        unchecked { s_tokenCounter++; }
         uint256 newTokenId = s_tokenCounter;
         nftPower[newTokenId] = power;
         nftType[newTokenId] = tokenTypeToMint;
@@ -146,12 +148,22 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFV2PlusWrapperConsumerBase 
         else if (rarityRoll < 94) { tokenTypeToMint = RARE_RELIC; capacity = 3; } 
         else if (rarityRoll < 99) { tokenTypeToMint = EPIC_RELIC; capacity = 4; } 
         else { tokenTypeToMint = LEGENDARY_RELIC; capacity = 5; }
-        s_tokenCounter++;
+        unchecked { s_tokenCounter++; }
         uint256 newTokenId = s_tokenCounter;
         nftCapacity[newTokenId] = capacity;
         nftType[newTokenId] = tokenTypeToMint;
         _mint(_to, newTokenId, 1, "");
         emit MintFulfilled(_requestId, newTokenId, tokenTypeToMint, capacity);
+    }
+
+    function getSoulShardAmountForUSD(uint256 _amountUSD) public view returns (uint256) {
+        (uint reserve0, uint reserve1, ) = soulShardUsdPair.getReserves();
+        address token0 = soulShardUsdPair.token0();
+        (uint reserveSoulShard, uint reserveUSD) = (token0 == address(soulShardToken)) 
+            ? (reserve0, reserve1) 
+            : (reserve1, reserve0);
+        require(reserveSoulShard > 0 && reserveUSD > 0, "Invalid Reserve Quantity");
+        return ((_amountUSD * reserveSoulShard * 10000) / (reserveUSD * 9975)) + 1;
     }
 
     function setMintPriceUSD(uint256 _newHeroPriceUSD, uint256 _newRelicPriceUSD) public onlyOwner {
@@ -177,13 +189,15 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFV2PlusWrapperConsumerBase 
         emit ConfigAddressUpdated("PairAddress", _newPairAddress);
     }
 
-    function setVrfConfig(uint64 _newSubscriptionId, bytes32 _newKeyHash) public onlyOwner {
-        subscriptionId = _newSubscriptionId;
+    // Setter 函式也需要適配新模型
+    function setVrfParams(bytes32 _newKeyHash, uint32 _newCallbackGasLimit) public onlyOwner {
         keyHash = _newKeyHash;
-        emit VrfConfigUpdated(_newSubscriptionId, _newKeyHash);
+        callbackGasLimit = _newCallbackGasLimit;
+        emit VrfConfigUpdated(_newKeyHash, _newCallbackGasLimit);
     }
     
     function withdrawTokens(address _to) public onlyOwner {
+        require(_to != address(0), "Cannot withdraw to zero address");
         uint256 balance = soulShardToken.balanceOf(address(this));
         require(balance > 0, "No tokens available to withdraw from the contract.");
         soulShardToken.transfer(_to, balance);
