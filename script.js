@@ -8,28 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const assetsContractAddress = "YOUR_ASSETS_CONTRACT_ADDRESS";
     const stakingPoolAddress = "YOUR_STAKING_POOL_ADDRESS";
 
-    // ABI (Application Binary Interface) - 部署後從 Remix 或 Hardhat 填入
-    const soulShardTokenABI = [
-        "function approve(address spender, uint256 amount) returns (bool)",
-        "function balanceOf(address account) view returns (uint256)"
-    ];
-    const assetsContractABI = [
-        "function heroMintPrice() view returns (uint256)",
-        "function relicMintPrice() view returns (uint256)",
-        "function mintHero()",
-        "function mintRelic()",
-        "function balanceOfBatch(address[] accounts, uint256[] ids) view returns (uint256[])",
-        "function setApprovalForAll(address operator, bool approved)",
-        "function uri(uint256 id) view returns (string)"
-    ];
-    const stakingPoolABI = [
-        "function stake(uint256 relicId, uint256 relicCapacity, tuple(uint256 tokenId, uint256 power)[] calldata heroes)",
-        "function withdraw()",
-        "function claimRewards()",
-        "function restHeroes()",
-        "function getStakerInfo(address user) view returns (tuple(uint256 relicId, uint256 relicCapacity, tuple(uint256 tokenId, uint256 power)[] heroes, uint256 totalPower, uint256 lastUpdateTime, uint256 rewards, uint256 currentFatigue) staker, uint256 pending)",
-        "function getRestCost(address user) view returns (uint256)"
-    ];
+    // ABI
+    const soulShardTokenABI = [];
+    const assetsContractABI = [];
+    const stakingPoolABI = [];
 
     // --- 網路設定 ---
     const targetNetwork = {
@@ -73,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const heroMintPriceText = document.getElementById('hero-mint-price-text');
     const relicMintPriceText = document.getElementById('relic-mint-price-text');
 
-    // --- 通知與對話框函式 ---
+    // --- 通知函式 ---
     const showToast = (text, type = 'info') => {
         let backgroundColor;
         switch (type) {
@@ -101,60 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }).showToast();
     };
 
-    const showConfirmationModal = (title, message) => {
-        return new Promise((resolve) => {
-            // 創建 Modal 結構
-            const modalOverlay = document.createElement('div');
-            modalOverlay.className = 'fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50';
-            
-            const modalContent = document.createElement('div');
-            modalContent.className = 'card-bg p-8 rounded-xl shadow-lg text-center max-w-sm w-full mx-4';
-
-            const modalTitle = document.createElement('h3');
-            modalTitle.className = 'text-2xl font-bold mb-4 font-serif';
-            modalTitle.textContent = title;
-
-            const modalMessage = document.createElement('p');
-            modalMessage.className = 'text-lg mb-6';
-            modalMessage.textContent = message;
-
-            const buttonContainer = document.createElement('div');
-            buttonContainer.className = 'flex justify-center gap-4';
-
-            const confirmButton = document.createElement('button');
-            confirmButton.className = 'btn-primary px-6 py-2 rounded-lg';
-            confirmButton.textContent = '確認';
-            
-            const cancelButton = document.createElement('button');
-            cancelButton.className = 'bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg';
-            cancelButton.textContent = '取消';
-
-            // 組裝 Modal
-            buttonContainer.appendChild(cancelButton);
-            buttonContainer.appendChild(confirmButton);
-            modalContent.appendChild(modalTitle);
-            modalContent.appendChild(modalMessage);
-            modalContent.appendChild(buttonContainer);
-            modalOverlay.appendChild(modalContent);
-            document.body.appendChild(modalOverlay);
-
-            // 事件處理
-            const closeModal = (result) => {
-                document.body.removeChild(modalOverlay);
-                resolve(result);
-            };
-
-            confirmButton.onclick = () => closeModal(true);
-            cancelButton.onclick = () => closeModal(false);
-            modalOverlay.onclick = (e) => {
-                if (e.target === modalOverlay) {
-                    closeModal(false);
-                }
-            };
-        });
-    };
-
-    // --- 網路檢查與切換 ---
+    // --- 網路與錢包 ---
     const checkAndSwitchNetwork = async () => {
         if (!window.ethereum) return false;
         try {
@@ -177,7 +106,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- 連接錢包與初始化 ---
     const connectWallet = async () => {
         if (typeof window.ethereum === 'undefined') { showToast('請安裝 MetaMask！', 'error'); return; }
         try {
@@ -383,22 +311,38 @@ document.addEventListener('DOMContentLoaded', () => {
             return; 
         }
         
-        const confirmed = await showConfirmationModal('撤回隊伍', '您確定要撤回您的隊伍嗎？所有未領取的獎勵將會一併發放。');
+        const result = await Swal.fire({
+            title: '撤回隊伍',
+            text: "您確定要撤回您的隊伍嗎？所有未領取的獎勵將會一併發放。",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: '確認撤回',
+            cancelButtonText: '取消',
+        });
 
-        if (!confirmed) {
+        if (result.isConfirmed) {
+            showToast("正在撤回隊伍...請等待交易確認。", 'info');
+            try {
+                const tx = await stakingPoolContract.withdraw();
+                await tx.wait();
+                showToast("隊伍已成功撤回！", 'success');
+                Swal.fire({
+                    title: '成功!',
+                    text: '您的隊伍已安全返回。',
+                    icon: 'success',
+                });
+                await Promise.all([updateTokenBalance(), fetchUserAssets(), updateStakingStatus()]);
+            } catch (error) {
+                console.error("撤回隊伍失敗:", error);
+                showToast("撤回隊伍失敗，詳情見主控台。", 'error');
+                Swal.fire({
+                    title: '錯誤!',
+                    text: '撤回隊伍時發生錯誤，請查看主控台了解詳情。',
+                    icon: 'error',
+                });
+            }
+        } else {
             showToast('操作已取消', 'info');
-            return;
-        }
-
-        showToast("正在撤回隊伍...請等待交易確認。", 'info');
-        try {
-            const tx = await stakingPoolContract.withdraw();
-            await tx.wait();
-            showToast("隊伍已成功撤回！", 'success');
-            await Promise.all([updateTokenBalance(), fetchUserAssets(), updateStakingStatus()]);
-        } catch (error) {
-            console.error("撤回隊伍失敗:", error);
-            showToast("撤回隊伍失敗，詳情見主控台。", 'error');
         }
     };
 
@@ -490,6 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // --- 輔助函式 ---
     function renderStars(rarity) {
         let stars = '';
         for(let i = 0; i < 5; i++) stars += `<span class="star">${i < rarity ? '★' : '☆'}</span>`;
