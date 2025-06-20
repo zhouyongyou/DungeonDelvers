@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-
+// 版本 V12: 修正了多重繼承中的 supportsInterface 衝突，此版本為最終生產級扁平化版本。
 pragma solidity ^0.8.20;
 
 // --- 從 @openzeppelin/contracts/utils/Context.sol 開始 ---
@@ -70,21 +70,8 @@ interface IERC1155 is IERC165 {
 
 // --- 從 @openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol 開始 ---
 interface IERC1155Receiver is IERC165 {
-    function onERC1155Received(
-        address operator,
-        address from,
-        uint256 id,
-        uint256 value,
-        bytes calldata data
-    ) external returns (bytes4);
-
-    function onERC1155BatchReceived(
-        address operator,
-        address from,
-        uint256[] calldata ids,
-        uint256[] calldata values,
-        bytes calldata data
-    ) external returns (bytes4);
+    function onERC1155Received(address operator, address from, uint256 id, uint256 value, bytes calldata data) external returns (bytes4);
+    function onERC1155BatchReceived(address operator, address from, uint256[] calldata ids, uint256[] calldata values, bytes calldata data) external returns (bytes4);
 }
 
 // --- 從 @openzeppelin/contracts/utils/introspection/ERC165.sol 開始 ---
@@ -121,11 +108,12 @@ contract ERC1155 is Context, ERC165, IERC1155 {
         return batchBalances;
     }
     function setApprovalForAll(address operator, bool approved) public virtual override {
-        _setApprovalForAll(operator, approved);
+        _setApprovalForAll(_msgSender(), operator, approved);
     }
-    function _setApprovalForAll(address operator, bool approved) internal virtual {
-        require(operator != address(0), "ERC1155: set Approval for all operator cannot be 0x0"); // 檢查 operator 地址是否為零地址
-        _operatorApprovals[address(this)][operator] = approved; // 設置 operator 的批准狀態
+    function _setApprovalForAll(address owner, address operator, bool approved) internal virtual {
+        require(owner != operator, "ERC1155: setting approval status for self");
+        _operatorApprovals[owner][operator] = approved;
+    emit ApprovalForAll(owner, operator, approved);
     }
     function isApprovedForAll(address account, address operator) public view virtual override returns (bool) {
         return _operatorApprovals[account][operator];
@@ -153,6 +141,7 @@ contract ERC1155 is Context, ERC165, IERC1155 {
         }
         _balances[id][to] += amount;
         emit TransferSingle(operator, from, to, id, amount);
+        _doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
         if (isContract(to)) {
             try IERC1155Receiver(to).onERC1155Received(operator, from, id, amount, data) returns (bytes4 response) {
                 require(response == IERC1155Receiver.onERC1155Received.selector, "ERC1155: receiver rejected tokens");
@@ -176,6 +165,7 @@ contract ERC1155 is Context, ERC165, IERC1155 {
             _balances[id][to] += amount;
         }
         emit TransferBatch(operator, from, to, ids, amounts);
+        _doSafeBatchTransferAcceptanceCheck(operator, from, to, ids, amounts, data);
         if (isContract(to)) {
             try IERC1155Receiver(to).onERC1155BatchReceived(operator, from, ids, amounts, data) returns (bytes4 response) {
                 require(response == IERC1155Receiver.onERC1155BatchReceived.selector, "ERC1155: receiver rejected tokens");
@@ -187,11 +177,12 @@ contract ERC1155 is Context, ERC165, IERC1155 {
     function _setURI(string memory newuri) internal virtual {
         _uri = newuri;
     }
-    function _mint(address to, uint256 id, uint256 amount, bytes memory /*data*/) internal virtual {
+    function _mint(address to, uint256 id, uint256 amount, bytes memory data) internal virtual {
         require(to != address(0), "ERC1155: mint to the zero address");
         address operator = _msgSender();
         _balances[id][to] += amount;
         emit TransferSingle(operator, address(0), to, id, amount);
+        _doSafeTransferAcceptanceCheck(operator, address(0), to, id, amount, data);
     }
     function _burn(address from, uint256 id, uint256 amount) internal virtual {
         require(from != address(0), "ERC1155: burn from the zero address");
@@ -202,6 +193,32 @@ contract ERC1155 is Context, ERC165, IERC1155 {
             _balances[id][from] = fromBalance - amount;
         }
         emit TransferSingle(operator, from, address(0), id, amount);
+    }
+    function _doSafeTransferAcceptanceCheck(address operator, address from, address to, uint256 id, uint256 amount, bytes memory data) internal {
+        if (to.code.length > 0) {
+            try IERC1155Receiver(to).onERC1155Received(operator, from, id, amount, data) returns (bytes4 response) {
+                if (response != IERC1155Receiver.onERC1155Received.selector) {
+                    revert("ERC1155: ERC1155Receiver rejected tokens");
+                }
+            } catch Error(string memory reason) {
+                revert(reason);
+            } catch {
+                revert("ERC1155: transfer to non-ERC1155Receiver implementer");
+            }
+        }
+    }
+    function _doSafeBatchTransferAcceptanceCheck(address operator, address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) internal {
+        if (to.code.length > 0) {
+            try IERC1155Receiver(to).onERC1155BatchReceived(operator, from, ids, amounts, data) returns (bytes4 response) {
+                if (response != IERC1155Receiver.onERC1155BatchReceived.selector) {
+                    revert("ERC1155: ERC1155Receiver rejected tokens");
+                }
+            } catch Error(string memory reason) {
+                revert(reason);
+            } catch {
+                revert("ERC1155: transfer to non-ERC1155Receiver implementer");
+            }
+        }
     }
 }
 
@@ -225,10 +242,7 @@ abstract contract VRFConsumerBaseV2 is IERC165 {
     fulfillRandomWords(requestId, randomWords);
   }
   function supportsInterface(bytes4 interfaceId) public view virtual override(IERC165) returns (bool) {
-    if (interfaceId == type(VRFConsumerBaseV2).interfaceId) {
-      return true;
-    }
-    return false; // 默認不支援其他接口
+    return interfaceId == type(VRFConsumerBaseV2).interfaceId || super.supportsInterface(interfaceId);
   }
 }
 
@@ -299,15 +313,8 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
         keyHash = _keyHash;
     }
 
-    // 覆蓋 supportsInterface 函數來解決多重繼承中的衝突
-    function supportsInterface(bytes4 interfaceId) public pure override(ERC1155, VRFConsumerBaseV2) returns (bool) {
-        if (interfaceId == type(IERC1155).interfaceId) {
-            return true;  // 支援 ERC1155 接口
-        }
-        if (interfaceId == type(VRFConsumerBaseV2).interfaceId) {
-            return true;  // 支援 VRFConsumerBaseV2 接口
-        }
-        return false;  // 默認不支援
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, VRFConsumerBaseV2) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 
     function getSoulShardAmountForUSD(uint256 _amountUSD) public view returns (uint256) {
