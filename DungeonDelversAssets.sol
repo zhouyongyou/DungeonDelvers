@@ -1,58 +1,224 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
-import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+// --- 從 @openzeppelin/contracts/utils/Context.sol 開始 ---
+abstract contract Context {
+    function _msgSender() internal view virtual returns (address) {
+        return msg.sender;
+    }
+}
 
-/**
- * @dev 與 PancakeSwap V2 流動性池 (Pair) 合約互動所需的標準介面。
- */
+// --- 從 @openzeppelin/contracts/access/Ownable.sol 開始 ---
+abstract contract Ownable is Context {
+    address private _owner;
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    constructor(address initialOwner) {
+        _transferOwnership(initialOwner);
+    }
+    function owner() public view virtual returns (address) {
+        return _owner;
+    }
+    modifier onlyOwner() {
+        require(owner() == _msgSender(), "Ownable: caller is not the owner");
+        _;
+    }
+    function renounceOwnership() public virtual onlyOwner {
+        _transferOwnership(address(0));
+    }
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        _transferOwnership(newOwner);
+    }
+    function _transferOwnership(address newOwner) internal virtual {
+        address oldOwner = _owner;
+        _owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+}
+
+// --- 從 @openzeppelin/contracts/token/ERC20/IERC20.sol 開始 ---
+interface IERC20 {
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+    function totalSupply() external view returns (uint256);
+    function balanceOf(address account) external view returns (uint256);
+    function transfer(address to, uint256 amount) external returns (bool);
+    function allowance(address owner, address spender) external view returns (uint256);
+    function approve(address spender, uint256 amount) external returns (bool);
+    function transferFrom(address from, address to, uint256 amount) external returns (bool);
+}
+
+// --- 從 @openzeppelin/contracts/utils/introspection/IERC165.sol 開始 ---
+interface IERC165 {
+    function supportsInterface(bytes4 interfaceId) external view returns (bool);
+}
+
+// --- 從 @openzeppelin/contracts/token/ERC1155/IERC1155.sol 開始 ---
+interface IERC1155 is IERC165 {
+    event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value);
+    event TransferBatch(address indexed operator, address indexed from, address indexed to, uint256[] ids, uint256[] values);
+    event ApprovalForAll(address indexed account, address indexed operator, bool approved);
+    event URI(string value, uint256 indexed id);
+    function balanceOf(address account, uint256 id) external view returns (uint256);
+    function balanceOfBatch(address[] calldata accounts, uint256[] calldata ids) external view returns (uint256[] memory);
+    function setApprovalForAll(address operator, bool approved) external;
+    function isApprovedForAll(address account, address operator) external view returns (bool);
+    function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes calldata data) external;
+    function safeBatchTransferFrom(address from, address to, uint256[] calldata ids, uint256[] calldata amounts, bytes calldata data) external;
+}
+
+// --- 從 @openzeppelin/contracts/utils/introspection/ERC165.sol 開始 ---
+abstract contract ERC165 is IERC165 {
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return interfaceId == type(IERC165).interfaceId;
+    }
+}
+
+// --- 從 @openzeppelin/contracts/token/ERC1155/ERC1155.sol 開始 ---
+contract ERC1155 is Context, ERC165, IERC1155 {
+    mapping(uint256 => mapping(address => uint256)) private _balances;
+    mapping(address => mapping(address => bool)) private _operatorApprovals;
+    string private _uri;
+    constructor(string memory uri_) {
+        _setURI(uri_);
+    }
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
+        return interfaceId == type(IERC1155).interfaceId || super.supportsInterface(interfaceId);
+    }
+    function uri(uint256) public view virtual returns (string memory) {
+        return _uri;
+    }
+    function balanceOf(address account, uint256 id) public view virtual override returns (uint256) {
+        require(account != address(0), "ERC1155: address zero is not a valid owner");
+        return _balances[id][account];
+    }
+    function balanceOfBatch(address[] memory accounts, uint256[] memory ids) public view virtual override returns (uint256[] memory) {
+        require(accounts.length == ids.length, "ERC1155: accounts and ids length mismatch");
+        uint256[] memory batchBalances = new uint256[](accounts.length);
+        for (uint256 i = 0; i < accounts.length; ++i) {
+            batchBalances[i] = balanceOf(accounts[i], ids[i]);
+        }
+        return batchBalances;
+    }
+    function setApprovalForAll(address operator, bool approved) public virtual override {
+        _setApprovalForAll(_msgSender(), operator, approved);
+    }
+    function isApprovedForAll(address account, address operator) public view virtual override returns (bool) {
+        return _operatorApprovals[account][operator];
+    }
+    function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes memory data) public virtual override {
+        require(from == _msgSender() || isApprovedForAll(from, _msgSender()), "ERC1155: caller is not owner nor approved");
+        _safeTransferFrom(from, to, id, amount, data);
+    }
+    function safeBatchTransferFrom(address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) public virtual override {
+        require(from == _msgSender() || isApprovedForAll(from, _msgSender()), "ERC1155: caller is not owner nor approved");
+        _safeBatchTransferFrom(from, to, ids, amounts, data);
+    }
+    function _safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes memory data) internal virtual {
+        require(to != address(0), "ERC1155: transfer to the zero address");
+        address operator = _msgSender();
+        uint256 fromBalance = _balances[id][from];
+        require(fromBalance >= amount, "ERC1155: insufficient balance for transfer");
+        unchecked {
+            _balances[id][from] = fromBalance - amount;
+        }
+        _balances[id][to] += amount;
+        emit TransferSingle(operator, from, to, id, amount);
+    }
+    function _safeBatchTransferFrom(address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) internal virtual {
+        require(ids.length == amounts.length, "ERC1155: ids and amounts length mismatch");
+        require(to != address(0), "ERC1155: transfer to the zero address");
+        address operator = _msgSender();
+        for (uint256 i = 0; i < ids.length; ++i) {
+            uint256 id = ids[i];
+            uint256 amount = amounts[i];
+            uint256 fromBalance = _balances[id][from];
+            require(fromBalance >= amount, "ERC1155: insufficient balance for transfer");
+            unchecked {
+                _balances[id][from] = fromBalance - amount;
+            }
+            _balances[id][to] += amount;
+        }
+        emit TransferBatch(operator, from, to, ids, amounts);
+    }
+    function _setURI(string memory newuri) internal virtual {
+        _uri = newuri;
+    }
+    function _mint(address to, uint256 id, uint256 amount, bytes memory data) internal virtual {
+        require(to != address(0), "ERC1155: mint to the zero address");
+        address operator = _msgSender();
+        _balances[id][to] += amount;
+        emit TransferSingle(operator, address(0), to, id, amount);
+    }
+    function _burn(address from, uint256 id, uint256 amount) internal virtual {
+        require(from != address(0), "ERC1155: burn from the zero address");
+        address operator = _msgSender();
+        uint256 fromBalance = _balances[id][from];
+        require(fromBalance >= amount, "ERC1155: insufficient balance for burn");
+        unchecked {
+            _balances[id][from] = fromBalance - amount;
+        }
+        emit TransferSingle(operator, from, address(0), id, amount);
+    }
+}
+
+// --- 從 @chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol 開始 ---
+interface VRFCoordinatorV2Interface {
+  function requestRandomWords(bytes32 keyHash, uint64 subId, uint16 requestConfirmations, uint32 callbackGasLimit, uint32 numWords) external returns (uint256 requestId);
+}
+
+// --- 從 @chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol 開始 ---
+abstract contract VRFConsumerBaseV2 is IERC165 {
+  error OnlyCoordinatorCanFulfill(address have, address want);
+  VRFCoordinatorV2Interface internal vrfCoordinator;
+  constructor(address vrfCoordinatorV2) {
+    vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorV2);
+  }
+  function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal virtual;
+  function rawFulfillRandomWords(uint256 requestId, uint256[] memory randomWords) external {
+    if (msg.sender != address(vrfCoordinator)) {
+      revert OnlyCoordinatorCanFulfill(msg.sender, address(vrfCoordinator));
+    }
+    fulfillRandomWords(requestId, randomWords);
+  }
+  function supportsInterface(bytes4 interfaceId) public view virtual override(IERC165) returns (bool) {
+    return interfaceId == type(VRFConsumerBaseV2).interfaceId || super.supportsInterface(interfaceId);
+  }
+}
+
 interface IPancakePair {
     function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
     function token0() external view returns (address);
 }
 
-/**
- * @title DungeonDelversAssets (完全可配置最終版)
- * @dev V10.0: 為所有核心外部合約地址增加了 setter 函式，提供最大程度的部署後靈活性。
- * - 擁有者可以更新遊戲代幣、穩定幣、流動性池和 VRF 的相關配置。
- */
 contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
-    // --- Token ID 常數 ---
     uint256 public constant COMMON_HERO = 1;
     uint256 public constant UNCOMMON_HERO = 2;
     uint256 public constant RARE_HERO = 3;
     uint256 public constant EPIC_HERO = 4;
     uint256 public constant LEGENDARY_HERO = 5;
-
     uint256 public constant COMMON_RELIC = 11;
     uint256 public constant UNCOMMON_RELIC = 12;
     uint256 public constant RARE_RELIC = 13;
     uint256 public constant EPIC_RELIC = 14;
     uint256 public constant LEGENDARY_RELIC = 15;
 
-    // --- 核心地址變數 (均為可編輯) ---
     IERC20 public soulShardToken;
     IPancakePair public soulShardUsdPair;
     address public usdToken;
-    VRFCoordinatorV2Interface public vrfCoordinator;
     uint64 public subscriptionId;
     bytes32 public keyHash;
 
-    // --- 其他狀態變數 ---
     uint256 public heroMintPriceUSD = 2 * 10**18;
     uint256 public relicMintPriceUSD = 2 * 10**18;
     uint256 private s_tokenCounter;
 
-    // --- Chainlink VRF V2 常數 ---
+    VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
     uint32 private constant CALLBACK_GAS_LIMIT = 250000;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
 
-    // --- 儲存請求與 NFT 屬性 ---
     enum RequestType { Hero, Relic }
     struct RequestStatus { address requester; RequestType requestType; }
     mapping(uint256 => RequestStatus) public s_requests;
@@ -60,23 +226,12 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
     mapping(uint256 => uint256) public nftCapacity;
     mapping(uint256 => uint256) public nftType;
 
-    // --- 事件 ---
     event ConfigAddressUpdated(string indexed name, address indexed newAddress);
     event VrfConfigUpdated(uint64 newSubscriptionId, bytes32 newKeyHash);
     event MintPriceUpdated(uint256 newHeroPriceUSD, uint256 newRelicPriceUSD);
     event MintRequested(uint256 indexed requestId, address indexed requester, RequestType requestType);
     event MintFulfilled(uint256 indexed requestId, uint256 indexed tokenId, uint256 tokenType, uint256 powerOrCapacity);
 
-    /**
-     * @param _initialOwner 您的錢包地址
-     * @param _uri 您的元數據 API 基礎路徑
-     * @param _soulShardTokenAddress 您在測試網部署的 $SoulShard 代幣地址
-     * @param _usd1TokenAddress 穩定幣地址 (測試網建議使用 BUSD: 0xed24fc36d89ae25a8b962599625ea7970c25283c)
-     * @param _pairAddress 您在測試網 PancakeSwap 上建立的 $SoulShard/BUSD 流動性池地址
-     * @param _vrfCoordinatorV2 測試網的 Chainlink VRF Coordinator 地址
-     * @param _subscriptionId 您為測試網建立的 VRF 訂閱 ID
-     * @param _keyHash 測試網 VRF 對應的 Key Hash
-     */
     constructor(
         address _initialOwner,
         string memory _uri,
@@ -94,12 +249,11 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
         soulShardToken = IERC20(_soulShardTokenAddress);
         usdToken = _usdTokenAddress;
         soulShardUsdPair = IPancakePair(_pairAddress);
-        vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinatorV2);
+        i_vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinatorV2);
         subscriptionId = _subscriptionId;
         keyHash = _keyHash;
     }
 
-    // --- 動態定價核心邏輯 ---
     function getSoulShardAmountForUSD(uint256 _amountUSD) public view returns (uint256) {
         (uint reserve0, uint reserve1, ) = soulShardUsdPair.getReserves();
         address token0 = soulShardUsdPair.token0();
@@ -110,7 +264,6 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
         return ((_amountUSD * reserveSoulShard * 1000) / (reserveUSD * 997)) + 1;
     }
     
-    // --- 外部函式 (請求鑄造) ---
     function requestNewHero(uint256 _maxAmountIn) public {
         uint256 requiredAmount = getSoulShardAmountForUSD(heroMintPriceUSD);
         require(_maxAmountIn >= requiredAmount, "滑價保護：價格已變動，所需代幣過多");
@@ -125,9 +278,8 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
         _requestRandomness(RequestType.Relic);
     }
 
-    // --- 內部核心邏輯 ---
     function _requestRandomness(RequestType _requestType) private {
-        uint256 requestId = vrfCoordinator.requestRandomWords(keyHash, subscriptionId, REQUEST_CONFIRMATIONS, CALLBACK_GAS_LIMIT, NUM_WORDS);
+        uint256 requestId = i_vrfCoordinator.requestRandomWords(i_keyHash, i_subscriptionId, REQUEST_CONFIRMATIONS, CALLBACK_GAS_LIMIT, NUM_WORDS);
         s_requests[requestId] = RequestStatus({ requester: msg.sender, requestType: _requestType });
         emit MintRequested(requestId, msg.sender, _requestType);
     }
@@ -179,7 +331,6 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
         emit MintFulfilled(_requestId, newTokenId, tokenTypeToMint, capacity);
     }
 
-    // --- 擴充: 擁有者管理與配置更新功能 ---
     function setMintPriceUSD(uint256 _newHeroPriceUSD, uint256 _newRelicPriceUSD) public onlyOwner {
         heroMintPriceUSD = _newHeroPriceUSD;
         relicMintPriceUSD = _newRelicPriceUSD;
@@ -190,11 +341,6 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
         _setURI(newuri);
     }
     
-    /**
-     * @dev 更新核心代幣地址。請極度謹慎使用。
-     * @param _newSoulShardToken 新的 $SoulShard 代幣地址
-     * @param _newUsdToken 新的穩定幣地址
-     */
     function setTokenAddresses(address _newSoulShardToken, address _newUsdToken) public onlyOwner {
         require(_newSoulShardToken != address(0) && _newUsdToken != address(0), "地址不可為零");
         soulShardToken = IERC20(_newSoulShardToken);
