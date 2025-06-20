@@ -67,7 +67,7 @@ contract StakingPool is ERC1155Holder, Ownable {
 
         for (uint i = 0; i < _heroes.length; i++) {
             staker.heroes.push(_heroes[i]);
-            totalPower = totalPower.add(_heroes[i].power);
+            totalPower = totalPower + _heroes[i].power;
             heroIds[i] = _heroes[i].tokenId;
             amounts[i] = 1;
         }
