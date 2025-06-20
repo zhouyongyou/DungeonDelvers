@@ -8,10 +8,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const assetsContractAddress = "YOUR_ASSETS_CONTRACT_ADDRESS";
     const stakingPoolAddress = "YOUR_STAKING_POOL_ADDRESS";
 
-    // ABI
-    const soulShardTokenABI = [];
-    const assetsContractABI = [];
-    const stakingPoolABI = [];
+    // ABI (Application Binary Interface)
+    const soulShardTokenABI = [
+        "function approve(address spender, uint256 amount) returns (bool)",
+        "function balanceOf(address account) view returns (uint256)"
+    ];
+    const assetsContractABI = [
+        "function heroMintPrice() view returns (uint256)",
+        "function relicMintPrice() view returns (uint256)",
+        "function mintHero()",
+        "function mintRelic()",
+        "function balanceOfBatch(address[] accounts, uint256[] ids) view returns (uint256[])",
+        "function setApprovalForAll(address operator, bool approved)",
+        "function uri(uint256 id) view returns (string)"
+    ];
+    const stakingPoolABI = [
+        "function stake(uint256 relicId, uint256 relicCapacity, tuple(uint256 tokenId, uint256 power)[] calldata heroes)",
+        "function withdraw()",
+        "function claimRewards()",
+        "function restHeroes()",
+        "function getStakerInfo(address user) view returns (tuple(uint256 relicId, uint256 relicCapacity, tuple(uint256 tokenId, uint256 power)[] heroes, uint256 totalPower, uint256 lastUpdateTime, uint256 rewards, uint256 currentFatigue) staker, uint256 pending)",
+        "function getRestCost(address user) view returns (uint256)"
+    ];
 
     // --- 網路設定 ---
     const targetNetwork = {
@@ -155,7 +173,6 @@ document.addEventListener('DOMContentLoaded', () => {
             relicMintPriceText.textContent = "無法讀取價格";
         }
     };
-
     const updateTokenBalance = async () => {
         if (!soulShardTokenContract || !userAddress) return;
         try {
@@ -170,7 +187,6 @@ document.addEventListener('DOMContentLoaded', () => {
             dashboardStatus.innerHTML = `<p class="text-red-500">無法讀取餘額，請確認代幣合約地址與 ABI 是否正確。</p>`;
         }
     };
-
     const updateStakingStatus = async () => {
         if (!stakingPoolContract || !userAddress) return;
         try {
@@ -217,7 +233,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return false;
         }
     };
-    
     const approveAllNfts = async () => {
         if (!assetsContract) { showToast('請先連接錢包', 'error'); return; }
         showToast("正在請求 NFT 授權...請在錢包中確認。", 'info');
@@ -230,7 +245,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast("NFT 授權失敗，詳情見主控台。", 'error');
         }
     };
-
     const mintHero = async () => {
         if (!assetsContract) { showToast('請先連接錢包', 'error'); return; }
         showToast('準備招募英雄...', 'info');
@@ -248,7 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('招募失敗，詳情見主控台。', 'error');
         }
     };
-    
     const mintRelic = async () => {
         if (!assetsContract) { showToast('請先連接錢包', 'error'); return; }
         showToast('準備鑄造聖物...', 'info');
@@ -266,7 +279,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast("鑄造聖物失敗，詳情見主控台。", 'error');
         }
     };
-
     const stakeParty = async () => {
         if (!stakingPoolContract) { showToast('請先連接錢包', 'error'); return; }
         if (!currentParty.relic || currentParty.heroes.length === 0) {
@@ -290,7 +302,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     };
-
     const claimAllRewards = async () => {
         if (!stakingPoolContract) { showToast('請先連接錢包', 'error'); return; }
         showToast("正在領取獎勵...請等待交易確認。", 'info');
@@ -348,7 +359,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const restAllStakedHeroes = async () => {
         if (!stakingPoolContract) { showToast('請先連接錢包', 'error'); return; }
-        
         try {
             const cost = await stakingPoolContract.getRestCost(userAddress);
             if (cost.isZero()) {
@@ -433,14 +443,13 @@ document.addEventListener('DOMContentLoaded', () => {
             relicsContainer.innerHTML = '<p class="col-span-full text-center text-red-400">讀取資產失敗。</p>';
         }
     };
-
+    
     // --- 輔助函式 ---
     function renderStars(rarity) {
         let stars = '';
         for(let i = 0; i < 5; i++) stars += `<span class="star">${i < rarity ? '★' : '☆'}</span>`;
         return stars;
     }
-
     function renderHeroes() {
         heroesContainer.innerHTML = userHeroes.length > 0 ? userHeroes.map(hero => `
             <div class="card-bg p-3 rounded-lg text-center cursor-pointer hover:scale-105 transition-transform" data-id="${hero.id}" data-type="hero">
@@ -449,7 +458,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p class="text-lg font-bold mt-1 text-[#C0A573]">${hero.power} MP</p>
             </div>`).join('') : '<p class="col-span-full text-center text-gray-500">您還沒有任何英雄。</p>';
     }
-    
     function renderRelics() {
         relicsContainer.innerHTML = userRelics.length > 0 ? userRelics.map(relic => `
             <div class="card-bg p-3 rounded-lg text-center cursor-pointer hover:scale-105 transition-transform" data-id="${relic.id}" data-type="relic">
@@ -458,7 +466,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p class="text-sm mt-1">容量: ${relic.capacity}</p>
             </div>`).join('') : '<p class="col-span-full text-center text-gray-500">您還沒有任何聖物。</p>';
     }
-
     function updateDungeons() {
         dungeonsContainer.innerHTML = dungeonsData.map(dungeon => {
             const canEnter = currentParty.totalPower >= dungeon.requiredPower;
@@ -471,7 +478,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
         }).join('');
     }
-
     function updatePartyUI() {
         const container = document.getElementById('currentParty');
         if (!currentParty.relic) {
@@ -493,7 +499,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         updateDungeons();
     }
-
     function handleAssetClick(e) {
         const card = e.target.closest('[data-id]');
         if (!card) return;
@@ -524,11 +529,9 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSelectionUI();
         updatePartyUI();
     }
-
     function recalculatePower() {
         currentParty.totalPower = currentParty.heroes.reduce((sum, h) => sum + h.power, 0);
     }
-
     function updateSelectionUI() {
         document.querySelectorAll('#barracks [data-id]').forEach(el => el.classList.remove('ring-4', 'ring-yellow-400'));
         if (currentParty.relic) {
@@ -540,7 +543,6 @@ document.addEventListener('DOMContentLoaded', () => {
              if (heroCard) heroCard.classList.add('ring-4', 'ring-yellow-400');
         });
     }
-
     function disbandParty() {
         currentParty.relic = null;
         currentParty.heroes = [];
@@ -548,11 +550,9 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSelectionUI();
         updatePartyUI();
     }
-    
     function createChart(ctx, label, data) {
         new Chart(ctx, { type: 'doughnut', data: { labels: data.labels, datasets: [{ label: label, data: data.chances, backgroundColor: data.colors, borderColor: '#FDF6E3', borderWidth: 2, hoverOffset: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#2D2A4A', font: { size: 14 } } } } } });
     }
-
     function setupNavigation() {
         const navItems = document.querySelectorAll('.nav-item');
         const pages = document.querySelectorAll('.page-content');
