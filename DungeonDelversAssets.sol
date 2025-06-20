@@ -34,7 +34,7 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
     uint256 public constant EPIC_RELIC = 14;
     uint256 public constant LEGENDARY_RELIC = 15;
 
-    // --- 所有核心地址變數 ---
+    // --- 核心地址變數 (均為可編輯) ---
     IERC20 public soulShardToken;
     IPancakePair public soulShardUsdPair;
     address public usdToken;
@@ -179,7 +179,7 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
         emit MintFulfilled(_requestId, newTokenId, tokenTypeToMint, capacity);
     }
 
-    // --- 擁有者與唯讀功能 ---
+    // --- 擴充: 擁有者管理與配置更新功能 ---
     function setMintPriceUSD(uint256 _newHeroPriceUSD, uint256 _newRelicPriceUSD) public onlyOwner {
         heroMintPriceUSD = _newHeroPriceUSD;
         relicMintPriceUSD = _newRelicPriceUSD;
