@@ -4,24 +4,19 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-// 引入 Chainlink VRF V2 合約
 import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 
-/**
- * @dev 這是與 PancakeSwap V2 流動性池 (Pair) 合約互動所需的標準介面。
- * 現在它被直接定義在這個檔案中，無需外部引用。
- */
 interface IPancakePair {
     function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
     function token0() external view returns (address);
 }
 
 /**
- * @title DungeonDelversAssets (穩定幣定價+VRF最終版)
- * @dev V6.0: 將 IPancakePair 介面扁平化整合到單一檔案中，方便部署與管理。
- * - 價格錨定於與穩定幣組成的流動性池，確保價格穩定。
- * - 保留 Chainlink VRF V2 以確保鑄造的公平性與安全性。
+ * @title DungeonDelversAssets (滑價保護最終版)
+ * @dev V7.0: 加入了滑價保護機制，讓用戶可以傳入願意支付的最高代幣數量，防止交易失敗或超額支付。
+ * - requestNewHero 和 requestNewRelic 函式新增了 maxAmountIn 參數。
+ * - 在執行轉帳前，會驗證實際所需數量是否超過用戶的限制。
  */
 contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
     // --- Token ID 常數 ---
@@ -41,32 +36,24 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
     IERC20 public immutable soulShardToken;
     IPancakePair public immutable soulShardUsd1Pair; // $SoulShard/USD1 流動性池合約
     address public immutable usd1Token;              // USD1 穩定幣的合約地址
-
     uint256 public heroMintPriceUSD = 2 * 10**18;   // 英雄鑄造價格: 2 USD (假設 USD1 有 18 位小數)
     uint256 public relicMintPriceUSD = 2 * 10**18;  // 聖物鑄造價格: 2 USD (假設 USD1 有 18 位小數)
     uint256 private s_tokenCounter;
-
-    // --- Chainlink VRF V2 相關變數 ---
     VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
     uint64 private immutable i_subscriptionId;
     bytes32 private immutable i_keyHash;
     uint32 private constant CALLBACK_GAS_LIMIT = 250000;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
-
-    // --- 儲存請求與 NFT 屬性 ---
     enum RequestType { Hero, Relic }
     struct RequestStatus { address requester; RequestType requestType; }
     mapping(uint256 => RequestStatus) public s_requests;
     mapping(uint256 => uint256) public nftPower;
     mapping(uint256 => uint256) public nftCapacity;
     mapping(uint256 => uint256) public nftType;
-
-    // --- 事件 ---
     event MintPriceUpdated(uint256 newHeroPriceUSD, uint256 newRelicPriceUSD);
     event MintRequested(uint256 indexed requestId, address indexed requester, RequestType requestType);
     event MintFulfilled(uint256 indexed requestId, uint256 indexed tokenId, uint256 tokenType, uint256 powerOrCapacity);
-
 
     /**
      * @param _initialOwner 您的錢包地址
@@ -104,25 +91,27 @@ contract DungeonDelversAssets is ERC1155, Ownable, VRFConsumerBaseV2 {
     function getSoulShardAmountForUSD(uint256 _amountUSD) public view returns (uint256) {
         (uint reserve0, uint reserve1, ) = soulShardUsd1Pair.getReserves();
         address token0 = soulShardUsd1Pair.token0();
-
         (uint reserveSoulShard, uint reserveUSD1) = (token0 == address(soulShardToken)) 
             ? (reserve0, reserve1) 
             : (reserve1, reserve0);
-        
         require(reserveSoulShard > 0 && reserveUSD1 > 0, "無效的儲備量");
-
         return ((_amountUSD * reserveSoulShard * 1000) / (reserveUSD1 * 997)) + 1;
     }
     
-    // --- 外部函式 (請求鑄造) ---
-    function requestNewHero() public {
+    // --- **修改**: 外部函式加入滑價保護 ---
+    /**
+     * @param _maxAmountIn 用戶願意支付的最高 $SoulShard 數量，以防止滑價。
+     */
+    function requestNewHero(uint256 _maxAmountIn) public {
         uint256 requiredAmount = getSoulShardAmountForUSD(heroMintPriceUSD);
+        require(_maxAmountIn >= requiredAmount, "滑價保護：價格已變動，所需代幣過多");
         soulShardToken.transferFrom(msg.sender, address(this), requiredAmount);
         _requestRandomness(RequestType.Hero);
     }
     
-    function requestNewRelic() public {
+    function requestNewRelic(uint256 _maxAmountIn) public {
         uint256 requiredAmount = getSoulShardAmountForUSD(relicMintPriceUSD);
+        require(_maxAmountIn >= requiredAmount, "滑價保護：價格已變動，所需代幣過多");
         soulShardToken.transferFrom(msg.sender, address(this), requiredAmount);
         _requestRandomness(RequestType.Relic);
     }
