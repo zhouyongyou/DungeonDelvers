@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const SLIPPAGE_TOLERANCE_BPS = 50; // 滑價容忍度，單位是 BPS (萬分點)。50 BPS = 0.5%
+
     // --- Ethers.js 和合約相關變數 ---
     let provider, signer, userAddress;
     let soulShardTokenContract, assetsContract, stakingPoolContract;
@@ -14,10 +16,12 @@ document.addEventListener('DOMContentLoaded', () => {
         "function balanceOf(address account) view returns (uint256)"
     ];
     const assetsContractABI = [
-        "function heroMintPrice() view returns (uint256)",
-        "function relicMintPrice() view returns (uint256)",
-        "function mintHero()",
-        "function mintRelic()",
+        "function getSoulShardAmountForUSD(uint256 amountUSD) view returns (uint256)",
+        "function requestNewHero(uint256 maxAmountIn)",
+        "function requestNewRelic(uint256 maxAmountIn)",
+        // ... 其他 ABI 保持不變
+        "function heroMintPriceUSD() view returns (uint256)",
+        "function relicMintPriceUSD() view returns (uint256)",
         "function balanceOfBatch(address[] accounts, uint256[] ids) view returns (uint256[])",
         "function setApprovalForAll(address operator, bool approved)",
         "function uri(uint256 id) view returns (string)"
@@ -245,40 +249,94 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast("NFT 授權失敗，詳情見主控台。", 'error');
         }
     };
+
+    // **新增**: 一個輔助函式，用於計算帶有滑價的最高支付額
+    const calculateMaxAmountIn = (amount) => {
+        // 使用 BigNumber 進行精確計算
+        const bnAmount = ethers.BigNumber.from(amount);
+        const slippage = bnAmount.mul(SLIPPAGE_TOLERANCE_BPS).div(10000);
+        return bnAmount.add(slippage);
+    };
+
     const mintHero = async () => {
         if (!assetsContract) { showToast('請先連接錢包', 'error'); return; }
         showToast('準備招募英雄...', 'info');
         try {
-            const price = await assetsContract.heroMintPrice();
-            const success = await approveTokens(assetsContractAddress, price);
+            // 1. 從合約獲取以美元計價的基礎價格
+            const heroPriceUSD = await assetsContract.heroMintPriceUSD();
+            // 2. 根據基礎價格，計算出當前需要多少 $SoulShard
+            const requiredAmount = await assetsContract.getSoulShardAmountForUSD(heroPriceUSD);
+            
+            // 3. **新增**: 計算用戶願意支付的最高數量 (加入滑價)
+            const maxAmountIn = calculateMaxAmountIn(requiredAmount);
+
+            // 4. 請求用戶授權這個最高數量
+            const success = await approveTokens(assetsContractAddress, maxAmountIn);
             if (!success) return;
-            const tx = await assetsContract.mintHero();
-            showToast('英雄招募交易已送出...請等待區塊鏈確認。', 'info');
+
+            // 5. 呼叫合約的 requestNewHero，並傳入最高數量
+            const tx = await assetsContract.requestNewHero(maxAmountIn);
+
+            showToast('英雄招募請求已送出...請等待隨機數回傳。', 'info');
             await tx.wait();
-            showToast('招募成功！您的新英雄已加入隊伍。', 'success');
-            await Promise.all([updateTokenBalance(), fetchUserAssets()]);
+            showToast('交易確認！正在等待鑄造完成...', 'success');
+            // 注意：這裡交易成功只代表請求成功，真正的 NFT 鑄造會在之後的異步回調中完成
+            // 為了好的體驗，前端需要監聽 MintFulfilled 事件來通知用戶鑄造完成並刷新資產列表
         } catch (error) {
             console.error("招募失敗:", error);
-            showToast('招募失敗，詳情見主控台。', 'error');
+            const errorMessage = error.reason || '招募失敗，詳情見主控台。';
+            showToast(errorMessage, 'error');
         }
     };
+    
     const mintRelic = async () => {
         if (!assetsContract) { showToast('請先連接錢包', 'error'); return; }
         showToast('準備鑄造聖物...', 'info');
         try {
-            const price = await assetsContract.relicMintPrice();
-            const success = await approveTokens(assetsContractAddress, price);
+            const relicPriceUSD = await assetsContract.relicMintPriceUSD();
+            const requiredAmount = await assetsContract.getSoulShardAmountForUSD(relicPriceUSD);
+            const maxAmountIn = calculateMaxAmountIn(requiredAmount);
+
+            const success = await approveTokens(assetsContractAddress, maxAmountIn);
             if (!success) return;
-            const tx = await assetsContract.mintRelic();
-            showToast("聖物鑄造交易已送出...請等待區塊鏈確認。", 'info');
+
+            const tx = await assetsContract.requestNewRelic(maxAmountIn);
+            
+            showToast('聖物鑄造請求已送出...請等待隨機數回傳。', 'info');
             await tx.wait();
-            showToast("鑄造成功！您的新聖物已加入收藏。", 'success');
-            await Promise.all([updateTokenBalance(), fetchUserAssets()]);
+            showToast('交易確認！正在等待鑄造完成...', 'success');
         } catch (error) {
             console.error("鑄造聖物失敗:", error);
-            showToast("鑄造聖物失敗，詳情見主控台。", 'error');
+            const errorMessage = error.reason || '鑄造聖物失敗，詳情見主控台。';
+            showToast(errorMessage, 'error');
         }
     };
+
+    // --- UI 更新函式 ---
+    const updateMintPricesUI = async () => {
+        if (!assetsContract) return;
+        try {
+            // 現在我們顯示美元價格，並動態計算所需的代幣數量
+            const heroPriceUSD = await assetsContract.heroMintPriceUSD();
+            const requiredHeroAmount = await assetsContract.getSoulShardAmountForUSD(heroPriceUSD);
+            
+            const relicPriceUSD = await assetsContract.relicMintPriceUSD();
+            const requiredRelicAmount = await assetsContract.getSoulShardAmountForUSD(relicPriceUSD);
+
+            const formattedHeroPriceUSD = ethers.utils.formatUnits(heroPriceUSD, 8);
+
+            heroMintPriceText.innerHTML = `價格: ~${parseFloat(ethers.utils.formatEther(requiredHeroAmount)).toFixed(2)} $SoulShard <span class="text-sm text-gray-400">($${formattedHeroPriceUSD})</span><br/>你可能招募到傳說中的英雄。`;
+
+            const formattedRelicPriceUSD = ethers.utils.formatUnits(relicPriceUSD, 8);
+            relicMintPriceText.innerHTML = `價格: ~${parseFloat(ethers.utils.formatEther(requiredRelicAmount)).toFixed(2)} $SoulShard <span class="text-sm text-gray-400">($${formattedRelicPriceUSD})</span><br/>它將決定你隊伍的規模。`;
+
+        } catch (e) {
+            console.error("讀取鑄造價格失敗:", e);
+            heroMintPriceText.textContent = "無法讀取價格";
+            relicMintPriceText.textContent = "無法讀取價格";
+        }
+    };
+    
     const stakeParty = async () => {
         if (!stakingPoolContract) { showToast('請先連接錢包', 'error'); return; }
         if (!currentParty.relic || currentParty.heroes.length === 0) {
