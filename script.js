@@ -519,8 +519,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p><b>擁有者:</b> <span class="font-mono text-xs">${result.owner}</span></p>
                 <p><b>總戰力:</b> ${result.props.totalPower.toString()}</p>
                 <p><b>總容量:</b> ${result.props.totalCapacity.toString()}</p>
-                <p><b>英雄列表 (ID):</b> ${props.heroIds.join(', ') || '無'}</p>
-                <p><b>聖物列表 (ID):</b> ${props.relicIds.join(', ') || '無'}</p>
+                <p><b>英雄列表 (ID):</b> ${result.props.heroIds.join(', ') || '無'}</p>
+                <p><b>聖物列表 (ID):</b> ${result.props.relicIds.join(', ') || '無'}</p>
             `;
         } catch (e) {
             partyQueryResultEl.innerHTML = `<p class="text-red-500">查詢失敗: 可能是 ID 不存在或發生錯誤。</p>`;
