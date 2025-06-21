@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * 環境設定 (Environment Configuration)
      * =================================================================
      */
-    const CURRENT_ENV = 'testnet'; // 'mainnet' 或 'testnet'
+    const CURRENT_ENV = 'mainnet'; // 'mainnet' 或 'testnet'
 
     const CONFIG = {
         mainnet: {
