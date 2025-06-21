@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-// --- VRF v2.5 Wrapper Imports (Corrected Path) ---
-import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts@1.4.0/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
-import {VRFV2PlusClient} from "@chainlink/contracts@1.4.0/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
-
+// --- VRF v2.5 Wrapper Imports (Official Pattern) ---
+import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
 // ##################################################################
 // #                           HERO契約                           #
@@ -17,11 +16,10 @@ import {VRFV2PlusClient} from "@chainlink/contracts@1.4.0/src/v0.8/vrf/dev/libra
 
 /**
  * @title Hero
- * @dev V3.4 - 英雄 NFT 合約 (ERC721)，修正VRF建構函式與請求函式參數
+ * @dev V4.0 Final - 英雄 NFT 合約，完全遵循 Chainlink 官方 v2.5 直接資金範例
  */
 contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard {
-    // --- VRF 相關變數 (v2.5 Wrapper) ---
-    bytes32 private s_keyHash;
+    // --- VRF 相關變數 ---
     uint32 private s_callbackGasLimit = 250000;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
@@ -44,7 +42,6 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
     // --- 經濟模型 ---
     IERC20 public soulShardToken;
     uint256 public mintFee = 10 * 10**18;
-    uint256 public vrfFeeInWei = 0.01 ether;
 
     // --- 事件 ---
     event HeroRequested(uint256 indexed requestId, address indexed requester);
@@ -52,30 +49,31 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
 
     constructor(
         address _vrfWrapper,
-        bytes32 _keyHash,
         address _soulShardTokenAddress
     ) 
         ERC721("Dungeon Delvers Hero", "DDH") 
         Ownable(msg.sender) 
-        // --- *** 修正 ***: Wrapper 的建構函式只需要一個參數 ---
         VRFV2PlusWrapperConsumerBase(_vrfWrapper) 
     {
-        s_keyHash = _keyHash;
         soulShardToken = IERC20(_soulShardTokenAddress);
     }
     
     receive() external payable {}
 
     function requestNewHero() external payable nonReentrant returns (uint256 requestId) {
-        require(msg.value == vrfFeeInWei, "Incorrect VRF fee provided");
         require(soulShardToken.transferFrom(msg.sender, address(this), mintFee), "Token transfer failed");
 
-        // --- *** 修正 ***: requestRandomness 需要4個參數，且回傳一個元組 (tuple) ---
-        (requestId, ) = requestRandomness(
-            s_keyHash,
+        // --- *** 最終修正 ***: 完全遵循官方範例的請求模式 ---
+        bytes memory extraArgs = VRFV2PlusClient._argsToBytes(
+            VRFV2PlusClient.ExtraArgsV1({nativePayment: true}) // 明確指定使用原生代幣支付
+        );
+        
+        // 呼叫父合約提供的內部輔助函式
+        (requestId, ) = requestRandomnessPayInNative(
             s_callbackGasLimit,
             REQUEST_CONFIRMATIONS,
-            NUM_WORDS
+            NUM_WORDS,
+            extraArgs
         );
 
         s_requests[requestId] = RequestStatus({requester: msg.sender, fulfilled: false});
@@ -88,9 +86,7 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
         require(!request.fulfilled, "Request already fulfilled");
 
         request.fulfilled = true;
-        uint256 randomNumber = _randomWords[0];
-        
-        _generateAndMintHero(request.requester, _requestId, randomNumber);
+        _generateAndMintHero(request.requester, _requestId, _randomWords[0]);
     }
     
     function _generateAndMintHero(address _to, uint256 _requestId, uint256 _randomNumber) private {
@@ -112,17 +108,11 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
     }
 
     function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) { return super.tokenURI(tokenId); }
-
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage) returns (bool) {
-        return super.supportsInterface(interfaceId);
-    }
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage) returns (bool) { return super.supportsInterface(interfaceId); }
 
     // --- 管理功能 ---
     function setTokenURI(uint256 tokenId, string memory _tokenURI) public onlyOwner { _setTokenURI(tokenId, _tokenURI); }
-    function setFees(uint256 _newMintFee, uint256 _newVrfFee) public onlyOwner {
-        mintFee = _newMintFee;
-        vrfFeeInWei = _newVrfFee;
-    }
+    function setMintFee(uint256 _newMintFee) public onlyOwner { mintFee = _newMintFee; }
     function withdrawSoulShard() public onlyOwner {
         uint256 balance = soulShardToken.balanceOf(address(this));
         require(balance > 0, "No SoulShard to withdraw");
@@ -132,8 +122,6 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
         (bool success, ) = owner().call{value: address(this).balance}("");
         require(success, "Withdraw failed");
     }
-    
-    // --- 查詢功能 ---
     function getHeroProperties(uint256 _tokenId) public view returns (HeroProperties memory) { return heroProperties[_tokenId]; }
 }
 
