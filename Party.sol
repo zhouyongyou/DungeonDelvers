@@ -109,8 +109,8 @@ contract Party is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
      */
     function disbandParty(uint256 _partyId) external nonReentrant {
         require(ownerOf(_partyId) == msg.sender, "You are not the owner of this party");
-        // 未來可加入限制：如果隊伍在 DungeonCore 中處於質押/遠征狀態，則不允許解散
-        // require(IDungeonCore(dungeonCoreAddress).isPartyStaked(_partyId) == false, "Party is currently on an expedition");
+        // 限制：如果隊伍在 DungeonCore 中處於質押/遠征狀態，則不允許解散
+        require(IDungeonCore(dungeonCoreAddress).isPartyStaked(_partyId) == false, "Party is currently on an expedition");
 
         PartyComposition storage party = partyCompositions[_partyId];
 
