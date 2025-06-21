@@ -7,8 +7,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // --- VRF v2.5 Wrapper Imports (Official Pattern) ---
-import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts@1.4.0/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
-import {VRFV2PlusClient} from "@chainlink/contracts@1.4.0/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
 // --- *** 新增 ***: 價格錨定所需的 PancakeSwap 交易對介面 ---
 interface IPancakePair {
@@ -44,7 +44,7 @@ contract Relic is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBas
     IERC20 public immutable soulShardToken;
     IPancakePair public immutable pancakePair; // $SoulShard / $USD 交易對
     address public immutable usdToken;
-    uint256 public mintPriceUSD = 5 * 10**18; // 鑄造價格錨定 $5 USD
+    uint256 public mintPriceUSD = 2 * 10**18; // 鑄造價格錨定 $2 USD
 
     // --- 事件 ---
     event RelicRequested(uint256 indexed requestId, address indexed requester);
