@@ -26,16 +26,15 @@ interface IDungeonCore {
 
 
 /**
- * @title Party (V2)
- * @dev 隊伍 NFT 合約，新增與 DungeonCore 連動的鎖定機制。
- * 1. 禁止解散已鎖定的隊伍。
- * 2. 禁止轉移已鎖定的隊伍。
+ * @title Party (V2.1)
+ * @dev 隊伍 NFT 合約，修正並實作了與 DungeonCore 連動的鎖定機制。
+ * - 使用正確的 _transfer 掛鉤來禁止轉移已鎖定的隊伍。
  */
 contract Party is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     // --- 合約地址 ---
     IHero public immutable heroContract;
     IRelic public immutable relicContract;
-    IDungeonCore public dungeonCoreContract; // 改為可變動的地址，並使用介面
+    IDungeonCore public dungeonCoreContract;
 
     // --- 隊伍屬性 ---
     struct PartyComposition {
@@ -100,12 +99,11 @@ contract Party is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice 解散一支隊伍，【已加入鎖定檢查】
+     * @notice 解散一支隊伍
      */
     function disbandParty(uint256 _partyId) external nonReentrant {
         require(ownerOf(_partyId) == msg.sender, "You are not the owner of this party");
         
-        // 【修改】啟用並更新此檢查，確保隊伍未被鎖定
         require(address(dungeonCoreContract) != address(0), "DungeonCore address not set");
         require(!dungeonCoreContract.isPartyLocked(_partyId), "Party is locked (on cooldown or has provisions)");
 
@@ -124,16 +122,17 @@ contract Party is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     }
     
     /**
-     * @notice 【新增】覆寫 ERC721 的內部掛鉤函式，以禁止已鎖定隊伍的轉移
+     * @notice 【修正】覆寫 ERC721 的 _transfer 函式，以禁止已鎖定隊伍的轉移
      */
-    function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal virtual override {
-        super._beforeTokenTransfer(from, to, tokenId);
-
-        // 只有在真的發生轉移時才檢查 (忽略鑄造和銷毀)
+    function _transfer(address from, address to, uint256 tokenId) internal virtual override {
+        // 僅在真實的轉移 (非鑄造/銷毀) 時，才執行鎖定檢查
         if (from != address(0) && to != address(0)) {
             require(address(dungeonCoreContract) != address(0), "DungeonCore address not set");
             require(!dungeonCoreContract.isPartyLocked(tokenId), "Party is locked and cannot be transferred");
         }
+        
+        // 呼叫父合約的原始函式以完成轉移
+        super._transfer(from, to, tokenId);
     }
 
     // --- ERC721URIStorage 必須的函式 ---
