@@ -26,9 +26,9 @@ interface IDungeonCore {
 
 
 /**
- * @title Party (V2.1)
- * @dev 隊伍 NFT 合約，修正並實作了與 DungeonCore 連動的鎖定機制。
- * - 使用正確的 _transfer 掛鉤來禁止轉移已鎖定的隊伍。
+ * @title Party (V3.0 Final)
+ * @dev 隊伍 NFT 合約，最終修正版。
+ * - 覆寫外部公開的 transferFrom 和 safeTransferFrom 函式來實現鎖定。
  */
 contract Party is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     // --- 合約地址 ---
@@ -57,8 +57,21 @@ contract Party is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice 組建一支新隊伍
+     * @notice 【最終修正】覆寫 transferFrom 來加入鎖定檢查
      */
+    function transferFrom(address from, address to, uint256 tokenId) public override(ERC721) {
+        _requireNotLocked(tokenId);
+        super.transferFrom(from, to, tokenId);
+    }
+
+    /**
+     * @notice 【最終修正】覆寫 safeTransferFrom 來加入鎖定檢查
+     */
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public override(ERC721) {
+        _requireNotLocked(tokenId);
+        super.safeTransferFrom(from, to, tokenId, data);
+    }
+    
     function createParty(uint256[] calldata _heroIds, uint256[] calldata _relicIds) external nonReentrant returns (uint256 partyId) {
         require(_relicIds.length > 0, "Party must have at least one relic");
         require(_relicIds.length <= 5, "Party cannot have more than 5 relics");
@@ -98,14 +111,9 @@ contract Party is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         emit PartyCreated(partyId, msg.sender, _heroIds, _relicIds);
     }
 
-    /**
-     * @notice 解散一支隊伍
-     */
     function disbandParty(uint256 _partyId) external nonReentrant {
         require(ownerOf(_partyId) == msg.sender, "You are not the owner of this party");
-        
-        require(address(dungeonCoreContract) != address(0), "DungeonCore address not set");
-        require(!dungeonCoreContract.isPartyLocked(_partyId), "Party is locked (on cooldown or has provisions)");
+        _requireNotLocked(_partyId);
 
         PartyComposition storage party = partyCompositions[_partyId];
 
@@ -121,18 +129,10 @@ contract Party is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         emit PartyDisbanded(_partyId, msg.sender);
     }
     
-    /**
-     * @notice 【修正】覆寫 ERC721 的 _transfer 函式，以禁止已鎖定隊伍的轉移
-     */
-    function _transfer(address from, address to, uint256 tokenId) internal virtual override {
-        // 僅在真實的轉移 (非鑄造/銷毀) 時，才執行鎖定檢查
-        if (from != address(0) && to != address(0)) {
-            require(address(dungeonCoreContract) != address(0), "DungeonCore address not set");
-            require(!dungeonCoreContract.isPartyLocked(tokenId), "Party is locked and cannot be transferred");
+    function _requireNotLocked(uint256 _partyId) internal view {
+        if (address(dungeonCoreContract) != address(0)) {
+            require(!dungeonCoreContract.isPartyLocked(_partyId), "Party is locked (on cooldown or has provisions)");
         }
-        
-        // 呼叫父合約的原始函式以完成轉移
-        super._transfer(from, to, tokenId);
     }
 
     // --- ERC721URIStorage 必須的函式 ---
