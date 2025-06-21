@@ -16,11 +16,6 @@ interface IPancakePair {
     function token0() external view returns (address);
 }
 
-
-// ##################################################################
-// #                           HERO契約                           #
-// ##################################################################
-
 /**
  * @title Hero
  * @dev V5.0 Final - 英雄 NFT 合約，還原U本位定價經濟模型
