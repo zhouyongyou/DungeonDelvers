@@ -20,7 +20,7 @@ interface IParty {
 }
 
 /**
- * @title DungeonCore (V5.0 Final)
+ * @title DungeonCore (V11.0 Final)
  * @dev 最終優化版遊戲核心邏輯合約。
  */
 contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
