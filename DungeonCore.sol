@@ -20,9 +20,8 @@ interface IParty {
 }
 
 /**
- * @title DungeonCore (V3.0 Final)
- * @dev 最終版遊戲核心邏輯合約。
- * - 新增兩階段獎勵提取機制 (claim + withdraw)。
+ * @title DungeonCore (V5.0 Final)
+ * @dev 最終優化版遊戲核心邏輯合約。
  */
 contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
     // --- 合約地址 ---
@@ -38,9 +37,14 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
     uint256 public constant TAX_PERIOD = 24 hours;
     uint256 public constant MAX_TAX_RATE = 30;
     uint256 public constant TAX_DECREASE_RATE = 10;
-
-    // --- 【新增】玩家的可提取餘額 ---
-    mapping(address => uint256) public withdrawableBalances;
+    
+    // --- 玩家狀態 ---
+    struct PlayerInfo {
+        uint256 withdrawableBalance;
+        uint256 lastWithdrawTimestamp;
+        bool isFirstWithdraw;
+    }
+    mapping(address => PlayerInfo) public playerInfo;
 
     // --- 地下城設定 ---
     struct Dungeon {
@@ -57,8 +61,6 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
         uint256 provisionsRemaining;
         uint256 cooldownEndsAt;
         uint256 unclaimedRewards;
-        uint256 lastClaimTimestamp;
-        bool isFirstClaim;
     }
     mapping(uint256 => PartyStatus) public partyStatuses;
 
@@ -78,8 +80,8 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
     event ProvisionsBought(uint256 indexed partyId, uint256 amount, uint256 cost);
     event ExpeditionRequested(uint256 indexed requestId, uint256 indexed partyId, uint256 indexed dungeonId);
     event ExpeditionFulfilled(uint256 indexed requestId, uint256 indexed partyId, bool success, uint256 reward);
-    event RewardsClaimed(uint256 indexed partyId, address indexed user, uint256 amount, uint256 taxAmount); // 修改為 RewardsBanked
-    event TokensWithdrawn(address indexed user, uint256 amount); // 【新增】提現事件
+    event RewardsBanked(address indexed user, uint256 indexed partyId, uint256 amount);
+    event TokensWithdrawn(address indexed user, uint256 amount, uint256 taxAmount);
     event DungeonUpdated(uint256 indexed dungeonId, uint256 requiredPower, uint256 rewardAmountUSD, uint8 baseSuccessRate);
     event GlobalRewardMultiplierUpdated(uint256 newMultiplier);
 
@@ -89,7 +91,7 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
         address _soulShardTokenAddress,
         address _usdTokenAddress,
         address _pairAddress
-    )
+    ) 
         Ownable(msg.sender)
         VRFV2PlusWrapperConsumerBase(_vrfWrapper) 
     {
@@ -105,7 +107,8 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
     // --- 核心功能 ---
 
     function buyProvisions(uint256 _partyId, uint256 _amount) external nonReentrant {
-        require(partyContract.ownerOf(_partyId) == msg.sender, "Not party owner");
+        address user = partyContract.ownerOf(_partyId);
+        require(user == msg.sender, "Not party owner");
         require(_amount > 0, "Amount must be greater than 0");
 
         uint256 totalCostUSD = provisionPriceUSD * _amount;
@@ -113,11 +116,13 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
         
         soulShardToken.transferFrom(msg.sender, address(this), requiredSoulShard);
 
-        PartyStatus storage status = partyStatuses[_partyId];
-        if(status.lastClaimTimestamp == 0) {
-            status.isFirstClaim = true; // 首次購買儲備時，設定為首次提領
+        // 【修正】只在玩家從未進行任何操作時，才將其標記為首次提領
+        PlayerInfo storage player = playerInfo[user];
+        if (player.lastWithdrawTimestamp == 0 && player.withdrawableBalance == 0) {
+            player.isFirstWithdraw = true;
         }
-        status.provisionsRemaining += _amount;
+
+        partyStatuses[_partyId].provisionsRemaining += _amount;
         emit ProvisionsBought(_partyId, _amount, requiredSoulShard);
     }
 
@@ -154,9 +159,8 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
 
         uint256 partyId = request.partyId;
         uint256 dungeonId = request.dungeonId;
-        PartyStatus storage status = partyStatuses[partyId];
         
-        status.cooldownEndsAt = block.timestamp + COOLDOWN_PERIOD;
+        partyStatuses[partyId].cooldownEndsAt = block.timestamp + COOLDOWN_PERIOD;
 
         bool success = (_randomWords[0] % 100) < dungeons[dungeonId].baseSuccessRate;
         
@@ -164,86 +168,72 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
         if (success) {
             uint256 finalRewardUSD = (dungeons[dungeonId].rewardAmountUSD * globalRewardMultiplier) / 1000;
             reward = getSoulShardAmountForUSD(finalRewardUSD);
-            status.unclaimedRewards += reward;
+            partyStatuses[partyId].unclaimedRewards += reward;
         }
 
         emit ExpeditionFulfilled(_requestId, partyId, success, reward);
     }
 
-    /**
-     * @notice 【修改】結算獎勵至玩家的可提取餘額 (步驟1)
-     */
     function claimRewards(uint256 _partyId) external nonReentrant {
         address user = partyContract.ownerOf(_partyId);
         require(user == msg.sender, "Not party owner");
         
-        PartyStatus storage status = partyStatuses[_partyId];
-        uint256 amountToClaim = status.unclaimedRewards;
-        require(amountToClaim > 0, "No rewards to claim");
+        uint256 amountToBank = partyStatuses[_partyId].unclaimedRewards;
+        require(amountToBank > 0, "No rewards to claim");
 
-        uint256 taxAmount = 0;
-        if (!status.isFirstClaim) {
-            uint256 taxRate = getDynamicTaxRate(_partyId);
-            taxAmount = (amountToClaim * taxRate) / 100;
-        }
+        partyStatuses[_partyId].unclaimedRewards = 0;
+        playerInfo[user].withdrawableBalance += amountToBank;
 
-        uint256 finalAmount = amountToClaim - taxAmount;
-        
-        // 【修改】將獎勵存入玩家的個人金庫
-        if (finalAmount > 0) {
-            withdrawableBalances[user] += finalAmount;
-        }
-        
-        // 更新狀態
-        status.unclaimedRewards = 0;
-        status.lastClaimTimestamp = block.timestamp;
-        status.isFirstClaim = false;
-
-        emit RewardsClaimed(user, _partyId, finalAmount, taxAmount);
+        emit RewardsBanked(user, _partyId, amountToBank);
     }
 
-    /**
-     * @notice 【新增】從個人金庫提取代幣至錢包 (步驟2)
-     */
     function withdraw(uint256 _amount) external nonReentrant {
-        uint256 userBalance = withdrawableBalances[msg.sender];
-        require(userBalance >= _amount, "Insufficient withdrawable balance");
+        PlayerInfo storage player = playerInfo[msg.sender];
+        require(player.withdrawableBalance >= _amount, "Insufficient withdrawable balance");
         require(_amount > 0, "Withdraw amount must be greater than zero");
 
-        withdrawableBalances[msg.sender] = userBalance - _amount;
-        
-        soulShardToken.transfer(msg.sender, _amount);
+        uint256 taxRate = 0;
+        if (!player.isFirstWithdraw) {
+            uint256 timeSinceLast = block.timestamp - player.lastWithdrawTimestamp;
+            if (timeSinceLast < TAX_PERIOD * 3) {
+                uint256 periodsPassed = timeSinceLast / TAX_PERIOD;
+                taxRate = MAX_TAX_RATE - (periodsPassed * TAX_DECREASE_RATE);
+            }
+        }
 
-        emit TokensWithdrawn(msg.sender, _amount);
+        uint256 taxAmount = (_amount * taxRate) / 100;
+        uint256 finalAmount = _amount - taxAmount;
+
+        player.withdrawableBalance -= _amount;
+        player.lastWithdrawTimestamp = block.timestamp;
+        player.isFirstWithdraw = false;
+        
+        if (finalAmount > 0) {
+            soulShardToken.transfer(msg.sender, finalAmount);
+        }
+
+        emit TokensWithdrawn(msg.sender, finalAmount, taxAmount);
     }
     
     // --- 內部函式 ---
-
     function _initializeDungeons() private {
         // ID, requiredPower, rewardAmountUSD (18位小數), baseSuccessRate
-        dungeons[1] = Dungeon(300, 5.62 * 1e18, 89, true);    // 曦光星
-        dungeons[2] = Dungeon(600, 11.9 * 1e18, 83, true);   // 落羽星
-        dungeons[3] = Dungeon(900, 18.4 * 1e18, 77, true);   // 浮岚星
-        dungeons[4] = Dungeon(1200, 28.8 * 1e18, 69, true);  // 玄岩星
-        dungeons[5] = Dungeon(1500, 39.2 * 1e18, 63, true);  // 炎澜星
-        dungeons[6] = Dungeon(1800, 51.6 * 1e18, 57, true);  // 霜锋星
-        dungeons[7] = Dungeon(2100, 79.2 * 1e18, 52, true);  // 噬影星
-        dungeons[8] = Dungeon(2400, 102.6 * 1e18, 52, true); // 寂冥星
-        dungeons[9] = Dungeon(2700, 129.8 * 1e18, 50, true); // 裂空星
-        dungeons[10] = Dungeon(3000, 162.2 * 1e18, 50, true);// 终宙星
+        dungeons[1] = Dungeon(300, 29.30 * 1e18, 89, true);    // 新手礦洞
+        dungeons[2] = Dungeon(600, 62.00 * 1e18, 83, true);    // 哥布林洞穴
+        dungeons[3] = Dungeon(900, 96.00 * 1e18, 77, true);    // 食人魔山谷
+        dungeons[4] = Dungeon(1200, 151.00 * 1e18, 69, true);  // 蜘蛛巢穴
+        dungeons[5] = Dungeon(1500, 205.00 * 1e18, 63, true);  // 石化蜥蜴沼澤
+        dungeons[6] = Dungeon(1800, 271.00 * 1e18, 57, true);  // 巫妖墓穴
+        dungeons[7] = Dungeon(2100, 418.00 * 1e18, 52, true);  // 奇美拉之巢
+        dungeons[8] = Dungeon(2400, 539.00 * 1e18, 52, true);  // 惡魔前哨站
+        dungeons[9] = Dungeon(2700, 685.00 * 1e18, 50, true);  // 巨龍之巔
+        dungeons[10] = Dungeon(3000, 850.00 * 1e18, 50, true); // 混沌深淵
     }
 
     // --- 查詢功能 ---
-
-    function getDynamicTaxRate(uint256 _partyId) public view returns (uint256) {
+    function isPartyLocked(uint256 _partyId) external view returns (bool) {
         PartyStatus storage status = partyStatuses[_partyId];
-        if (status.isFirstClaim || status.lastClaimTimestamp == 0) { return 0; }
-        
-        uint256 timeSinceLastClaim = block.timestamp - status.lastClaimTimestamp;
-        if (timeSinceLastClaim >= TAX_PERIOD * 3) { return 0; }
-        
-        uint256 periodsPassed = timeSinceLastClaim / TAX_PERIOD;
-        return MAX_TAX_RATE - (periodsPassed * TAX_DECREASE_RATE);
+        return block.timestamp < status.cooldownEndsAt || status.provisionsRemaining > 0;
     }
     
     function getSoulShardAmountForUSD(uint256 _amountUSD) public view returns (uint256) {
@@ -256,13 +246,7 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
         return ((_amountUSD * reserveSoulShard * 10000) / (reserveUSD * 9975)) + 1;
     }
 
-    function isPartyLocked(uint256 _partyId) external view returns (bool) {
-        PartyStatus storage status = partyStatuses[_partyId];
-        return block.timestamp < status.cooldownEndsAt || status.provisionsRemaining > 0;
-    }
-
     // --- 管理功能 ---
-
     function updateDungeon(uint256 _dungeonId, uint256 _requiredPower, uint256 _rewardAmountUSD, uint8 _successRate) public onlyOwner {
         require(_dungeonId > 0 && _dungeonId <= NUM_DUNGEONS, "Invalid dungeon ID");
         require(_successRate <= 100, "Success rate cannot exceed 100");
