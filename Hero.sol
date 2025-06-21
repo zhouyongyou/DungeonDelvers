@@ -6,19 +6,17 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-// --- VRF v2.5 Wrapper Imports (Official Pattern) ---
 import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
-// --- *** 新增 ***: 價格錨定所需的 PancakeSwap 交易對介面 ---
 interface IPancakePair {
     function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
     function token0() external view returns (address);
 }
 
 /**
- * @title Hero
- * @dev V5.0 Final - 英雄 NFT 合約，還原U本位定價經濟模型
+ * @title Hero (V6)
+ * @dev 英雄 NFT 合約，戰力生成公式已完全對齊「飛船模型」。
  */
 contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard {
     // --- VRF 相關變數 ---
@@ -32,7 +30,7 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
 
     // --- 英雄屬性 ---
     struct HeroProperties {
-        uint8 rarity; uint256 power; }
+    uint8 rarity; uint256 power; }
     mapping(uint256 => HeroProperties) public heroProperties;
     uint256 private s_tokenCounter;
 
@@ -40,7 +38,7 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
     IERC20 public immutable soulShardToken;
     IPancakePair public immutable pancakePair; // $SoulShard / $USD 交易對
     address public immutable usdToken;
-    uint256 public mintPriceUSD = 2 * 10**18; // 鑄造價格錨定 $2 USD
+    uint256 public mintPriceUSD = 2 * 10**18;
 
     // --- 事件 ---
     event HeroRequested(uint256 indexed requestId, address indexed requester);
@@ -64,7 +62,6 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
     receive() external payable {}
 
     function requestNewHero() external payable nonReentrant returns (uint256 requestId) {
-        // --- *** 修改 ***: 根據U本位價格計算所需代幣 ---
         uint256 requiredSoulShard = getSoulShardAmountForUSD(mintPriceUSD);
         require(soulShardToken.transferFrom(msg.sender, address(this), requiredSoulShard), "Token transfer failed");
 
@@ -85,8 +82,7 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
 
     function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
         RequestStatus storage request = s_requests[_requestId];
-        require(request.requester != address(0), "Request not found");
-        require(!request.fulfilled, "Request already fulfilled");
+        require(request.requester != address(0) && !request.fulfilled, "Request invalid or fulfilled");
         request.fulfilled = true;
         _generateAndMintHero(request.requester, _requestId, _randomWords[0]);
     }
@@ -95,13 +91,19 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
         uint8 rarity;
         uint256 power;
         uint256 rarityRoll = _randomNumber % 100;
-        uint256 powerRoll = (_randomNumber >> 8) % 100;
+        uint256 powerRoll = (_randomNumber >> 8) % 100; // A random value between 0 and 99
 
-        if (rarityRoll < 44) { rarity = 1; power = 15 + powerRoll / 4;
-        } else if (rarityRoll < 79) { rarity = 2; power = 50 + powerRoll / 2;
-        } else if (rarityRoll < 94) { rarity = 3; power = 100 + powerRoll;
-        } else if (rarityRoll < 99) { rarity = 4; power = 200 + powerRoll * 2;
-        } else { rarity = 5; power = 400 + powerRoll * 3; }
+        if (rarityRoll < 44) { // 1-star (15-50)
+            rarity = 1; power = 15 + (powerRoll * 35) / 99;
+        } else if (rarityRoll < 79) { // 2-star (50-100)
+            rarity = 2; power = 50 + (powerRoll * 50) / 99;
+        } else if (rarityRoll < 94) { // 3-star (100-150)
+            rarity = 3; power = 100 + (powerRoll * 50) / 99;
+        } else if (rarityRoll < 99) { // 4-star (150-200)
+            rarity = 4; power = 150 + (powerRoll * 50) / 99;
+        } else { // 5-star (200-255)
+            rarity = 5; power = 200 + (powerRoll * 55) / 99;
+        }
 
         uint256 newTokenId = ++s_tokenCounter;
         heroProperties[newTokenId] = HeroProperties({rarity: rarity, power: power});
@@ -109,7 +111,6 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
         emit HeroMinted(_requestId, newTokenId, rarity, power);
     }
     
-    // --- *** 新增 ***: U本位價格計算函式 ---
     function getSoulShardAmountForUSD(uint256 _amountUSD) public view returns (uint256) {
         (uint reserve0, uint reserve1, ) = pancakePair.getReserves();
         address token0 = pancakePair.token0();
