@@ -32,17 +32,12 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
     uint32 private constant NUM_WORDS = 1;
 
     // --- 請求狀態 ---
-    struct RequestStatus {
-        address requester;
-        bool fulfilled;
-    }
+    struct RequestStatus { address requester; bool fulfilled; }
     mapping(uint256 => RequestStatus) public s_requests;
 
     // --- 英雄屬性 ---
     struct HeroProperties {
-        uint8 rarity; // 1-5 星
-        uint256 power;
-    }
+        uint8 rarity; uint256 power; }
     mapping(uint256 => HeroProperties) public heroProperties;
     uint256 private s_tokenCounter;
 
@@ -50,7 +45,7 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
     IERC20 public immutable soulShardToken;
     IPancakePair public immutable pancakePair; // $SoulShard / $USD 交易對
     address public immutable usdToken;
-    uint256 public mintPriceUSD = 5 * 10**18; // 鑄造價格錨定 $5 USD
+    uint256 public mintPriceUSD = 2 * 10**18; // 鑄造價格錨定 $2 USD
 
     // --- 事件 ---
     event HeroRequested(uint256 indexed requestId, address indexed requester);
@@ -97,7 +92,6 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
         RequestStatus storage request = s_requests[_requestId];
         require(request.requester != address(0), "Request not found");
         require(!request.fulfilled, "Request already fulfilled");
-
         request.fulfilled = true;
         _generateAndMintHero(request.requester, _requestId, _randomWords[0]);
     }
@@ -128,7 +122,6 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
             ? (reserve0, reserve1) 
             : (reserve1, reserve0);
         require(reserveSoulShard > 0 && reserveUSD > 0, "Invalid reserves");
-        // 滑價保護: 要求多支付 0.25% 以確保交易成功
         return ((_amountUSD * reserveSoulShard * 1000) / (reserveUSD * 9975) / 10) + 1;
     }
 
