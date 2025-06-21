@@ -16,11 +16,6 @@ interface IPancakePair {
     function token0() external view returns (address);
 }
 
-
-// ##################################################################
-// #                           RELIC契約                          #
-// ##################################################################
-
 /**
  * @title Relic
  * @dev V5.0 Final - 聖物 NFT 合約，還原U本位定價經濟模型
