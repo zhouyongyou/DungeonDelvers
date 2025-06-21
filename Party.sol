@@ -26,9 +26,9 @@ interface IDungeonCore {
 
 
 /**
- * @title Party (V3.0 Final)
+ * @title Party (V4.0 Final)
  * @dev 隊伍 NFT 合約，最終修正版。
- * - 覆寫外部公開的 transferFrom 和 safeTransferFrom 函式來實現鎖定。
+ * - 使用 virtual override 解決編譯器錯誤。
  */
 contract Party is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     // --- 合約地址 ---
@@ -55,23 +55,18 @@ contract Party is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         heroContract = IHero(_heroAddress);
         relicContract = IRelic(_relicAddress);
     }
-
-    /**
-     * @notice 【最終修正】覆寫 transferFrom 來加入鎖定檢查
-     */
-    function transferFrom(address from, address to, uint256 tokenId) public override(ERC721) {
-        _requireNotLocked(tokenId);
-        super.transferFrom(from, to, tokenId);
-    }
-
-    /**
-     * @notice 【最終修正】覆寫 safeTransferFrom 來加入鎖定檢查
-     */
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public override(ERC721) {
-        _requireNotLocked(tokenId);
-        super.safeTransferFrom(from, to, tokenId, data);
-    }
     
+    // --- 【最終修正】覆寫轉移函式來加入鎖定檢查 ---
+    
+    function _update(address to, uint256 tokenId, address auth) internal virtual override returns (address) {
+        address from = _ownerOf(tokenId);
+        // 僅在真實的轉移 (非鑄造/銷毀) 時，才執行鎖定檢查
+        if (from != address(0) && to != address(0)) {
+            _requireNotLocked(tokenId);
+        }
+        return super._update(to, tokenId, auth);
+    }
+
     function createParty(uint256[] calldata _heroIds, uint256[] calldata _relicIds) external nonReentrant returns (uint256 partyId) {
         require(_relicIds.length > 0, "Party must have at least one relic");
         require(_relicIds.length <= 5, "Party cannot have more than 5 relics");
@@ -131,7 +126,7 @@ contract Party is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     
     function _requireNotLocked(uint256 _partyId) internal view {
         if (address(dungeonCoreContract) != address(0)) {
-            require(!dungeonCoreContract.isPartyLocked(_partyId), "Party is locked (on cooldown or has provisions)");
+            require(!dungeonCoreContract.isPartyLocked(_partyId), "Party is locked");
         }
     }
 
