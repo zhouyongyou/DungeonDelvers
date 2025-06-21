@@ -24,6 +24,9 @@ interface IRelic {
     function transferFrom(address from, address to, uint256 tokenId) external;
 }
 
+interface IDungeonCore {
+    function isPartyLocked(uint256 _partyId) external view returns (bool);
+}
 
 /**
  * @title Party
@@ -103,6 +106,16 @@ contract Party is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         emit PartyCreated(partyId, msg.sender, _heroIds, _relicIds);
     }
 
+    // function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize) internal override {
+    //     super._beforeTokenTransfer(from, to, tokenId, batchSize);
+
+    //     // 只有在真的發生轉移時才檢查 (忽略鑄造和銷毀)
+    //     if (from != address(0) && to != address(0)) {
+    //         IDungeonCore core = IDungeonCore(dungeonCoreAddress);
+    //         require(!core.isPartyLocked(tokenId), "Party is locked and cannot be transferred");
+    //     }
+    // }
+
     /**
      * @notice 解散一支隊伍
      * @param _partyId 要解散的隊伍 NFT ID
@@ -110,7 +123,9 @@ contract Party is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     function disbandParty(uint256 _partyId) external nonReentrant {
         require(ownerOf(_partyId) == msg.sender, "You are not the owner of this party");
         // 限制：如果隊伍在 DungeonCore 中處於質押/遠征狀態，則不允許解散
-        require(IDungeonCore(dungeonCoreAddress).isPartyStaked(_partyId) == false, "Party is currently on an expedition");
+        // require(IDungeonCore(dungeonCoreAddress).isPartyStaked(_partyId) == false, "Party is currently on an expedition");
+        IDungeonCore core = IDungeonCore(dungeonCoreAddress);
+        require(!core.isPartyLocked(_partyId), "Party is locked (on cooldown or has provisions)");
 
         PartyComposition storage party = partyCompositions[_partyId];
 
