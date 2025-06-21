@@ -10,13 +10,20 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
+// --- *** 新增 ***: 價格錨定所需的 PancakeSwap 交易對介面 ---
+interface IPancakePair {
+    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
+    function token0() external view returns (address);
+}
+
+
 // ##################################################################
 // #                           HERO契約                           #
 // ##################################################################
 
 /**
  * @title Hero
- * @dev V4.0 Final - 英雄 NFT 合約，完全遵循 Chainlink 官方 v2.5 直接資金範例
+ * @dev V5.0 Final - 英雄 NFT 合約，還原U本位定價經濟模型
  */
 contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard {
     // --- VRF 相關變數 ---
@@ -39,9 +46,11 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
     mapping(uint256 => HeroProperties) public heroProperties;
     uint256 private s_tokenCounter;
 
-    // --- 經濟模型 ---
-    IERC20 public soulShardToken;
-    uint256 public mintFee = 10 * 10**18;
+    // --- 經濟模型 (U本位) ---
+    IERC20 public immutable soulShardToken;
+    IPancakePair public immutable pancakePair; // $SoulShard / $USD 交易對
+    address public immutable usdToken;
+    uint256 public mintPriceUSD = 5 * 10**18; // 鑄造價格錨定 $5 USD
 
     // --- 事件 ---
     event HeroRequested(uint256 indexed requestId, address indexed requester);
@@ -49,26 +58,30 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
 
     constructor(
         address _vrfWrapper,
-        address _soulShardTokenAddress
+        address _soulShardTokenAddress,
+        address _usdTokenAddress,
+        address _pairAddress
     ) 
         ERC721("Dungeon Delvers Hero", "DDH") 
         Ownable(msg.sender) 
         VRFV2PlusWrapperConsumerBase(_vrfWrapper) 
     {
         soulShardToken = IERC20(_soulShardTokenAddress);
+        pancakePair = IPancakePair(_pairAddress);
+        usdToken = _usdTokenAddress;
     }
     
     receive() external payable {}
 
     function requestNewHero() external payable nonReentrant returns (uint256 requestId) {
-        require(soulShardToken.transferFrom(msg.sender, address(this), mintFee), "Token transfer failed");
+        // --- *** 修改 ***: 根據U本位價格計算所需代幣 ---
+        uint256 requiredSoulShard = getSoulShardAmountForUSD(mintPriceUSD);
+        require(soulShardToken.transferFrom(msg.sender, address(this), requiredSoulShard), "Token transfer failed");
 
-        // --- *** 最終修正 ***: 完全遵循官方範例的請求模式 ---
         bytes memory extraArgs = VRFV2PlusClient._argsToBytes(
-            VRFV2PlusClient.ExtraArgsV1({nativePayment: true}) // 明確指定使用原生代幣支付
+            VRFV2PlusClient.ExtraArgsV1({nativePayment: true})
         );
         
-        // 呼叫父合約提供的內部輔助函式
         (requestId, ) = requestRandomnessPayInNative(
             s_callbackGasLimit,
             REQUEST_CONFIRMATIONS,
@@ -106,13 +119,25 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
         _safeMint(_to, newTokenId);
         emit HeroMinted(_requestId, newTokenId, rarity, power);
     }
+    
+    // --- *** 新增 ***: U本位價格計算函式 ---
+    function getSoulShardAmountForUSD(uint256 _amountUSD) public view returns (uint256) {
+        (uint reserve0, uint reserve1, ) = pancakePair.getReserves();
+        address token0 = pancakePair.token0();
+        (uint reserveSoulShard, uint reserveUSD) = (token0 == address(soulShardToken)) 
+            ? (reserve0, reserve1) 
+            : (reserve1, reserve0);
+        require(reserveSoulShard > 0 && reserveUSD > 0, "Invalid reserves");
+        // 滑價保護: 要求多支付 0.25% 以確保交易成功
+        return ((_amountUSD * reserveSoulShard * 1000) / (reserveUSD * 9975) / 10) + 1;
+    }
 
     function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) { return super.tokenURI(tokenId); }
     function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage) returns (bool) { return super.supportsInterface(interfaceId); }
 
     // --- 管理功能 ---
     function setTokenURI(uint256 tokenId, string memory _tokenURI) public onlyOwner { _setTokenURI(tokenId, _tokenURI); }
-    function setMintFee(uint256 _newMintFee) public onlyOwner { mintFee = _newMintFee; }
+    function setMintPriceUSD(uint256 _newMintPriceUSD) public onlyOwner { mintPriceUSD = _newMintPriceUSD; }
     function withdrawSoulShard() public onlyOwner {
         uint256 balance = soulShardToken.balanceOf(address(this));
         require(balance > 0, "No SoulShard to withdraw");
@@ -124,4 +149,3 @@ contract Hero is ERC721, ERC721URIStorage, Ownable, VRFV2PlusWrapperConsumerBase
     }
     function getHeroProperties(uint256 _tokenId) public view returns (HeroProperties memory) { return heroProperties[_tokenId]; }
 }
-
