@@ -102,28 +102,45 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { console.error("更新餘額失敗:", e); }
     };
     
+    // 這是一個新的、更高效的 fetchAndRenderNfts 函式
+    // 它可以直接替換掉 script.js 中的舊版本
     const fetchAndRenderNfts = async (type) => {
         const contract = type === 'hero' ? heroContract : relicContract;
         const container = type === 'hero' ? heroesContainer : relicsContainer;
-        
+
+        // 檢查合約和用戶地址是否存在
+        if (!contract || !userAddress) {
+            container.innerHTML = `<p class="col-span-full text-center text-gray-500">請先連接錢包。</p>`;
+            return;
+        }
+
+        container.innerHTML = '<p class="col-span-full text-center">正在高效查詢您的資產...</p>';
+
         try {
-            const ownedNfts = [];
-            const maxTokenId = 200;
-            const promises = Array.from({ length: maxTokenId }, (_, i) => i + 1).map(id =>
-                contract.ownerOf(id).then(owner => {
-                    if (owner.toLowerCase() === userAddress.toLowerCase()) {
-                        return (type === 'hero' ? contract.getHeroProperties(id) : contract.getRelicProperties(id))
-                            .then(props => ({ id, ...props }));
-                    }
-                    return null;
-                }).catch(() => null)
-            );
-            const results = await Promise.all(promises);
-            ownedNfts.push(...results.filter(Boolean));
+            // 1. 創建一個事件過濾器，目標是 Transfer 事件，接收者是當前用戶
+            const filter = contract.filters.Transfer(null, userAddress);
+
+            // 2. 向 RPC 節點一次性查詢所有符合條件的事件日誌
+            // '0x1' 代表從創世區塊開始查詢
+            const logs = await contract.queryFilter(filter, '0x1', 'latest');
+
+            // 3. 從日誌中解析出 Token ID
+            const tokenIds = logs.map(log => log.args.tokenId.toNumber());
+
+            // 4. 並行查詢所有這些 NFT 的詳細屬性
+            const promises = tokenIds.map(id => {
+                return (type === 'hero' ? contract.getHeroProperties(id) : contract.getRelicProperties(id))
+                    .then(props => ({ id, ...props }));
+            });
+
+            const ownedNfts = await Promise.all(promises);
+
+            // 5. 渲染結果 (這部分與舊版相同)
             renderNfts(ownedNfts, type);
+
         } catch (e) {
             console.error(`獲取 ${type} 失敗:`, e);
-            container.innerHTML = `<p class="col-span-full text-center text-red-500">加載失敗。</p>`;
+            container.innerHTML = `<p class="col-span-full text-center text-red-500">加載資產失敗。可能是 RPC 節點繁忙，請稍後再試。</p>`;
         }
     };
 
