@@ -1,12 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    /**
-     * =================================================================
-     * 環境設定 (Environment Configuration)
-     * =================================================================
-     */
+    // =================================================================
+    // 環境設定 & RPC 管理器
+    // =================================================================
     const CURRENT_ENV = 'testnet'; // 'mainnet' 或 'testnet'
-
     const CONFIG = {
         mainnet: {
             network: { chainId: '0x38', chainName: 'BSC Mainnet' },
@@ -31,14 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     };
-
     const AppConfig = CONFIG[CURRENT_ENV];
-
-    /**
-     * =================================================================
-     * RPC 管理器 (RpcManager)
-     * =================================================================
-     */
     class RpcManager {
         constructor(rpcEndpoints) {
             this.rpcEndpoints = rpcEndpoints;
@@ -88,7 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     }
-
     const rpcManager = new RpcManager(AppConfig.rpcEndpoints);
 
     // --- 全局變數 & ABIs ---
@@ -96,8 +85,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let soulShardTokenContract, heroContract, relicContract, partyContract, dungeonCoreContract;
     const { SOUL_SHARD_TOKEN_ADDRESS, HERO_ADDRESS, RELIC_ADDRESS, PARTY_ADDRESS, DUNGEON_CORE_ADDRESS } = AppConfig.contracts;
     
-    // 註：為了簡潔，使用 Set 來確保 ABI 定義不重複
-    const ERC721_ABI_PARTIAL = ["function ownerOf(uint256 tokenId) view returns (address)", "function tokenURI(uint256 tokenId) view returns (string)", "function setTokenURI(uint256 tokenId, string memory _tokenURI)","event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"];
+    // *** 修改: ABI 中不再需要手動設定 URI 的函式 ***
+    const ERC721_ABI_PARTIAL = ["function ownerOf(uint256 tokenId) view returns (address)", "function tokenURI(uint256 tokenId) view returns (string)", "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"];
     const HERO_ABI = [...new Set([...ERC721_ABI_PARTIAL, "function requestNewHero() returns (uint256)", "function getHeroProperties(uint256 tokenId) view returns (tuple(uint8 rarity, uint256 power))", "function setApprovalForAll(address operator, bool approved)", "function isApprovedForAll(address owner, address operator) view returns (bool)", "event HeroMinted(uint256 indexed requestId, uint256 indexed tokenId, uint8 rarity, uint256 power)", "function mintPriceUSD() view returns (uint256)", "function getSoulShardAmountForUSD(uint256) view returns (uint256)"])];
     const RELIC_ABI = [...new Set([...ERC721_ABI_PARTIAL, "function requestNewRelic() returns (uint256)", "function getRelicProperties(uint256 tokenId) view returns (tuple(uint8 rarity, uint8 capacity))", "function setApprovalForAll(address operator, bool approved)", "function isApprovedForAll(address owner, address operator) view returns (bool)", "event RelicMinted(uint256 indexed requestId, uint256 indexed tokenId, uint8 rarity, uint8 capacity)", "function mintPriceUSD() view returns (uint256)", "function getSoulShardAmountForUSD(uint256) view returns (uint256)"])];
     const PARTY_ABI = [...new Set([...ERC721_ABI_PARTIAL, "function createParty(uint256[] calldata heroIds, uint256[] calldata relicIds) returns (uint256)", "function disbandParty(uint256 partyId)", "function getPartyComposition(uint256 partyId) view returns (tuple(uint256[] heroIds, uint256[] relicIds, uint256 totalPower, uint256 totalCapacity))", "event PartyCreated(uint256 indexed partyId, address indexed owner, uint256[] heroIds, uint256[] relicIds)"])];
@@ -112,7 +101,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const showToast = (text, type = 'info') => Toastify({ text, duration: 5000, gravity: "top", position: "right", style: { background: type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8', borderRadius: '10px' } }).showToast();
     
-    // --- UI 更新函式 ---
+    // --- 核心連接 & 載入函式 ---
+    const connectWallet = async () => {
+        if (typeof window.ethereum === 'undefined') return showToast('請安裝 MetaMask！', 'error');
+        try {
+            if (await window.ethereum.request({ method: 'eth_chainId' }) !== AppConfig.network.chainId) {
+                 await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: AppConfig.network.chainId }] });
+            }
+            [userAddress] = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            signer = provider.getSigner();
+            
+            soulShardTokenContract = new ethers.Contract(SOUL_SHARD_TOKEN_ADDRESS, ERC20_ABI, signer);
+            heroContract = new ethers.Contract(HERO_ADDRESS, HERO_ABI, signer);
+            relicContract = new ethers.Contract(RELIC_ADDRESS, RELIC_ABI, signer);
+            partyContract = new ethers.Contract(PARTY_ADDRESS, PARTY_ABI, signer);
+            dungeonCoreContract = new ethers.Contract(DUNGEON_CORE_ADDRESS, DUNGEON_CORE_ABI, signer);
+
+            connectWalletBtn.textContent = `${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+            userAddressEl.textContent = userAddress;
+            showToast('錢包連接成功！', 'success');
+            
+            listenForEvents();
+            await loadAllData();
+            window.ethereum.on('accountsChanged', () => window.location.reload());
+            window.ethereum.on('chainChanged', () => window.location.reload());
+        } catch (e) {
+            console.error("連接錢包失敗:", e);
+            showToast(e.message.includes('user rejected') ? '您拒絕了連接請求' : '連接錢包失敗', 'error');
+        }
+    };
+    
+    const initialLoad = async () => {
+        await Promise.all([ renderDungeons(), updateMintPrices() ]);
+    };
+
+    const loadAllData = async () => {
+        if (!userAddress) return;
+        const spinner = `<div class="col-span-full text-center"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div></div>`;
+        heroesContainer.innerHTML = spinner;
+        relicsContainer.innerHTML = spinner;
+        partiesContainer.innerHTML = spinner;
+        await Promise.all([
+            updateBalances(), updateMintPrices(),
+            fetchAndRenderNfts('hero'), fetchAndRenderNfts('relic'),
+            fetchAndRenderParties()
+        ]);
+    };
+    
+        // --- UI 更新函式 ---
     function updateRpcStatusUI(status) {
         if (rpcStatusContainer) {
             const statusColor = status.isHealthy ? 'text-green-400' : status.isHealthy === false ? 'text-red-400' : 'text-yellow-400';
@@ -145,54 +182,6 @@ document.addEventListener('DOMContentLoaded', () => {
         relicHtml += '</div>';
         partyCompositionEl.innerHTML = relicHtml + heroHtml;
     }
-    
-    // --- 核心連接 & 載入函式 ---
-    const connectWallet = async () => {
-        if (typeof window.ethereum === 'undefined') return showToast('請安裝 MetaMask！', 'error');
-        try {
-            if (await window.ethereum.request({ method: 'eth_chainId' }) !== AppConfig.network.chainId) {
-                 await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: AppConfig.network.chainId }] });
-            }
-            [userAddress] = await window.ethereum.request({ method: 'eth_requestAccounts' });
-            provider = new ethers.providers.Web3Provider(window.ethereum);
-            signer = provider.getSigner();
-            
-            soulShardTokenContract = new ethers.Contract(SOUL_SHARD_TOKEN_ADDRESS, ERC20_ABI, signer);
-            heroContract = new ethers.Contract(HERO_ADDRESS, HERO_ABI, signer);
-            relicContract = new ethers.Contract(RELIC_ADDRESS, RELIC_ABI, signer);
-            partyContract = new ethers.Contract(PARTY_ADDRESS, PARTY_ABI, signer);
-            dungeonCoreContract = new ethers.Contract(DUNGEON_CORE_ADDRESS, DUNGEON_CORE_ABI, signer);
-
-            connectWalletBtn.textContent = `${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
-            userAddressEl.textContent = userAddress;
-            showToast('錢包連接成功！', 'success');
-            listenForEvents();
-            await loadAllData();
-            window.ethereum.on('accountsChanged', () => window.location.reload());
-            window.ethereum.on('chainChanged', () => window.location.reload());
-        } catch (e) {
-            console.error("連接錢包失敗:", e);
-            showToast(e.message.includes('user rejected') ? '您拒絕了連接請求' : '連接錢包失敗', 'error');
-        }
-    };
-    
-    const initialLoad = async () => {
-        await Promise.all([ renderDungeons(), updateMintPrices() ]);
-    };
-
-    const loadAllData = async () => {
-        if (!userAddress) return;
-        const spinner = `<div class="col-span-full text-center"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div></div>`;
-        heroesContainer.innerHTML = spinner;
-        relicsContainer.innerHTML = spinner;
-        partiesContainer.innerHTML = spinner;
-        await Promise.all([
-            updateBalances(), updateMintPrices(),
-            fetchAndRenderNfts('hero'), fetchAndRenderNfts('relic'),
-            fetchAndRenderParties()
-        ]);
-    };
-    
     // --- 數據獲取與渲染 (Fetch & Render) ---
     async function fetchAndRenderNfts(type) {
         const contractAddress = type === 'hero' ? HERO_ADDRESS : RELIC_ADDRESS;
