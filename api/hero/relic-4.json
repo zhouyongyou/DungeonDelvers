@@ -1,0 +1,17 @@
+{
+  "name": "Floating Arcane Core",
+  "description": "An ornate, floating golden artifact composed of multiple rotating rings with glowing arcane gems, leaving trails of magical energy in the air.",
+  "image": "ipfs://bafybeiasz7kuz2hsvck7yg2uedhpcu6ifckuvqv2gyjc23wmchvr2gh4ri/images/relic/relic-4.png",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "Epic"
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Capacity",
+      "value": 4,
+      "max_value": 5
+    }
+  ]
+}
