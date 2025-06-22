@@ -1,0 +1,19 @@
+// ======================================================
+// 檔案：Test_SoulShard.sol
+// 功能：用於測試網的模擬代幣，在主網將被官方代幣取代。
+// 狀態：最終版。
+// ======================================================
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract Test_SoulShard is ERC20, Ownable {
+    // 註：名稱為 "Test SoulShard"，符號為 "TSOUL"，以便在測試網上清晰地區分。
+    constructor() ERC20("Test SoulShard", "TSOUL") Ownable(msg.sender) {
+        // 初始鑄造 10 億個代幣給合約部署者，用於測試。
+        _mint(msg.sender, 1000000000 * 10**decimals());
+    }
+}
