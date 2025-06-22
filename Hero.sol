@@ -15,8 +15,9 @@ interface IPancakePair {
 }
 
 contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard {
-    // *** 修改點 1: 重新命名變數以避免衝突 ***
+
     string private _baseURIStorage;
+
     uint32 private s_callbackGasLimit = 250000;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
@@ -51,13 +52,9 @@ contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard 
         usdToken = _usdTokenAddress;
     }
     
-    // *** 修改點 2: 覆寫 OpenZeppelin 的標準函式 ***
     function _baseURI() internal view override returns (string memory) {
         return _baseURIStorage;
     }
-
-    // *** 修改點 3: tokenURI 函式不再需要覆寫，直接使用父合約的即可，因為父合約會自動呼叫我們覆寫的 _baseURI() ***
-    // (已刪除 tokenURI 的覆寫)
 
     function setBaseURI(string memory newBaseURI) public onlyOwner {
         _baseURIStorage = newBaseURI;
