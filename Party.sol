@@ -2,11 +2,9 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-
-// --- 介面宣告 ---
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 interface IHero {
     function ownerOf(uint256 tokenId) external view returns (address);
@@ -24,19 +22,14 @@ interface IDungeonCore {
     function isPartyLocked(uint256 _partyId) external view returns (bool);
 }
 
+contract Party is ERC721, Ownable, ReentrancyGuard {
+    using Strings for uint256;
 
-/**
- * @title Party (V4.0 Final)
- * @dev 隊伍 NFT 合約，最終修正版。
- * - 使用 virtual override 解決編譯器錯誤。
- */
-contract Party is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
-    // --- 合約地址 ---
+    string private _baseURI;
     IHero public immutable heroContract;
     IRelic public immutable relicContract;
     IDungeonCore public dungeonCoreContract;
 
-    // --- 隊伍屬性 ---
     struct PartyComposition {
         uint256[] heroIds;
         uint256[] relicIds;
@@ -46,7 +39,6 @@ contract Party is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     mapping(uint256 => PartyComposition) public partyCompositions;
     uint256 private s_tokenCounter;
 
-    // --- 事件 ---
     event PartyCreated(uint256 indexed partyId, address indexed owner, uint256[] heroIds, uint256[] relicIds);
     event PartyDisbanded(uint256 indexed partyId, address indexed owner);
     event DungeonCoreAddressUpdated(address indexed newAddress);
@@ -56,15 +48,18 @@ contract Party is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         relicContract = IRelic(_relicAddress);
     }
     
-    // --- 【最終修正】覆寫轉移函式來加入鎖定檢查 ---
-    
     function _update(address to, uint256 tokenId, address auth) internal virtual override returns (address) {
         address from = _ownerOf(tokenId);
-        // 僅在真實的轉移 (非鑄造/銷毀) 時，才執行鎖定檢查
         if (from != address(0) && to != address(0)) {
             _requireNotLocked(tokenId);
         }
         return super._update(to, tokenId, auth);
+    }
+
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        require(_exists(tokenId), "ERC721: URI query for nonexistent token");
+        string memory baseURI = _baseURI;
+        return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
     }
 
     function createParty(uint256[] calldata _heroIds, uint256[] calldata _relicIds) external nonReentrant returns (uint256 partyId) {
@@ -80,7 +75,7 @@ contract Party is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
             totalCapacity += capacity;
         }
 
-        require(_heroIds.length <= totalCapacity, "Too many heroes for this party's capacity");
+        require(_heroIds.length <= totalCapacity, "Too many heroes for party capacity");
         for (uint i = 0; i < _heroIds.length; i++) {
             require(heroContract.ownerOf(_heroIds[i]) == msg.sender, "You do not own all heroes");
             (, uint256 power) = heroContract.getHeroProperties(_heroIds[i]);
@@ -130,18 +125,15 @@ contract Party is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         }
     }
 
-    // --- ERC721URIStorage 必須的函式 ---
-    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) { return super.tokenURI(tokenId); }
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage) returns (bool) { return super.supportsInterface(interfaceId); }
+    function setBaseURI(string memory baseURI) public onlyOwner {
+        _baseURI = baseURI;
+    }
 
-    // --- 管理功能 ---
     function setDungeonCoreAddress(address _newAddress) public onlyOwner {
         dungeonCoreContract = IDungeonCore(_newAddress);
         emit DungeonCoreAddressUpdated(_newAddress);
     }
-    function setTokenURI(uint256 tokenId, string memory _tokenURI) public onlyOwner { _setTokenURI(tokenId, _tokenURI); }
     
-    // --- 查詢功能 ---
     function getPartyComposition(uint256 _partyId) external view returns (PartyComposition memory) {
         return partyCompositions[_partyId];
     }
