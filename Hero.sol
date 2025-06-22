@@ -2,11 +2,10 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-// import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Strings.sol"; // 引入字串工具
+import "@openzeppelin/contracts/utils/Strings.sol";
 import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
@@ -15,17 +14,10 @@ interface IPancakePair {
     function token0() external view returns (address);
 }
 
-/**
- * @title Hero (V7 - Dynamic URI)
- * @dev 英雄 NFT 合約，採用動態 URI 生成機制，實現元數據自動化。
- */
 contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard {
     using Strings for uint256;
 
-    // --- 元數據相關 (Metadata) ---
     string private _baseURI;
-
-    // --- VRF 相關變數 ---
     uint32 private s_callbackGasLimit = 250000;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
@@ -37,7 +29,6 @@ contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard 
     mapping(uint256 => HeroProperties) public heroProperties;
     uint256 private s_tokenCounter;
 
-    // --- 經濟模型 ---
     IERC20 public immutable soulShardToken;
     IPancakePair public immutable pancakePair;
     address public immutable usdToken;
@@ -61,15 +52,12 @@ contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard 
         usdToken = _usdTokenAddress;
     }
     
-    // *** 核心修改: 重寫 tokenURI 函式 ***
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+        require(_exists(tokenId), "ERC721: URI query for nonexistent token");
         string memory baseURI = _baseURI;
-        // 自動組合出 URL，例如: "https://api.mygame.com/hero/101"
         return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
     }
 
-    // --- 管理功能 (Management) ---
     function setBaseURI(string memory baseURI) public onlyOwner {
         _baseURI = baseURI;
     }
@@ -79,18 +67,8 @@ contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard 
     function requestNewHero() external payable nonReentrant returns (uint256 requestId) {
         uint256 requiredSoulShard = getSoulShardAmountForUSD(mintPriceUSD);
         require(soulShardToken.transferFrom(msg.sender, address(this), requiredSoulShard), "Token transfer failed");
-
-        bytes memory extraArgs = VRFV2PlusClient._argsToBytes(
-            VRFV2PlusClient.ExtraArgsV1({nativePayment: true})
-        );
-        
-        (requestId, ) = requestRandomnessPayInNative(
-            s_callbackGasLimit,
-            REQUEST_CONFIRMATIONS,
-            NUM_WORDS,
-            extraArgs
-        );
-
+        bytes memory extraArgs = VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: true}));
+        (requestId, ) = requestRandomnessPayInNative(s_callbackGasLimit, REQUEST_CONFIRMATIONS, NUM_WORDS, extraArgs);
         s_requests[requestId] = RequestStatus({requester: msg.sender, fulfilled: false});
         emit HeroRequested(requestId, msg.sender);
     }
@@ -124,8 +102,7 @@ contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard 
         (uint reserve0, uint reserve1, ) = pancakePair.getReserves();
         address token0 = pancakePair.token0();
         (uint reserveSoulShard, uint reserveUSD) = (token0 == address(soulShardToken)) 
-            ? (reserve0, reserve1) 
-            : (reserve1, reserve0);
+            ? (reserve0, reserve1) : (reserve1, reserve0);
         require(reserveSoulShard > 0 && reserveUSD > 0, "Invalid reserves");
         return ((_amountUSD * reserveSoulShard * 1000) / (reserveUSD * 9975) / 10) + 1;
     }
