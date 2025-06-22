@@ -23,7 +23,6 @@ interface IDungeonCore {
 }
 
 contract Party is ERC721, Ownable, ReentrancyGuard {
-    // *** 修改點 1: 重新命名變數以避免衝突 ***
     string private _baseURIStorage;
     IHero public immutable heroContract;
     IRelic public immutable relicContract;
@@ -55,33 +54,36 @@ contract Party is ERC721, Ownable, ReentrancyGuard {
         return super._update(to, tokenId, auth);
     }
 
+    function _baseURI() internal view override returns (string memory) {
+        return _baseURIStorage;
+    }
+
+    function setBaseURI(string memory newBaseURI) public onlyOwner {
+        _baseURIStorage = newBaseURI;
+    }
+
     function createParty(uint256[] calldata _heroIds, uint256[] calldata _relicIds) external nonReentrant returns (uint256 partyId) {
         require(_relicIds.length > 0, "Party must have at least one relic");
         require(_relicIds.length <= 5, "Party cannot have more than 5 relics");
-
         uint256 totalPower = 0;
         uint256 totalCapacity = 0;
-
         for (uint i = 0; i < _relicIds.length; i++) {
             require(relicContract.ownerOf(_relicIds[i]) == msg.sender, "You do not own all relics");
             (, uint8 capacity) = relicContract.getRelicProperties(_relicIds[i]);
             totalCapacity += capacity;
         }
-
         require(_heroIds.length <= totalCapacity, "Too many heroes for party capacity");
         for (uint i = 0; i < _heroIds.length; i++) {
             require(heroContract.ownerOf(_heroIds[i]) == msg.sender, "You do not own all heroes");
             (, uint256 power) = heroContract.getHeroProperties(_heroIds[i]);
             totalPower += power;
         }
-
         for (uint i = 0; i < _relicIds.length; i++) {
             relicContract.transferFrom(msg.sender, address(this), _relicIds[i]);
         }
         for (uint i = 0; i < _heroIds.length; i++) {
             heroContract.transferFrom(msg.sender, address(this), _heroIds[i]);
         }
-        
         partyId = ++s_tokenCounter;
         partyCompositions[partyId] = PartyComposition({
             heroIds: _heroIds,
@@ -89,7 +91,6 @@ contract Party is ERC721, Ownable, ReentrancyGuard {
             totalPower: totalPower,
             totalCapacity: totalCapacity
         });
-
         _safeMint(msg.sender, partyId);
         emit PartyCreated(partyId, msg.sender, _heroIds, _relicIds);
     }
@@ -97,16 +98,13 @@ contract Party is ERC721, Ownable, ReentrancyGuard {
     function disbandParty(uint256 _partyId) external nonReentrant {
         require(ownerOf(_partyId) == msg.sender, "You are not the owner of this party");
         _requireNotLocked(_partyId);
-
         PartyComposition storage party = partyCompositions[_partyId];
-
         for (uint i = 0; i < party.relicIds.length; i++) {
             relicContract.transferFrom(address(this), msg.sender, party.relicIds[i]);
         }
         for (uint i = 0; i < party.heroIds.length; i++) {
             heroContract.transferFrom(address(this), msg.sender, party.heroIds[i]);
         }
-
         delete partyCompositions[_partyId];
         _burn(_partyId);
         emit PartyDisbanded(_partyId, msg.sender);
@@ -116,18 +114,6 @@ contract Party is ERC721, Ownable, ReentrancyGuard {
         if (address(dungeonCoreContract) != address(0)) {
             require(!dungeonCoreContract.isPartyLocked(_partyId), "Party is locked");
         }
-    }
-
-    // *** 修改點 2: 覆寫 OpenZeppelin 的標準函式 ***
-    function _baseURI() internal view override returns (string memory) {
-        return _baseURIStorage;
-    }
-
-    // *** 修改點 3: tokenURI 函式不再需要覆寫，直接使用父合約的即可，因為父合約會自動呼叫我們覆寫的 _baseURI() ***
-    // (已刪除 tokenURI 的覆寫)
-
-    function setBaseURI(string memory newBaseURI) public onlyOwner {
-        _baseURIStorage = newBaseURI;
     }
 
     function setDungeonCoreAddress(address _newAddress) public onlyOwner {
