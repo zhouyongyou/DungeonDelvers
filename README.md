@@ -6,7 +6,7 @@
 
 歡迎來到 Dungeon Delvers 的全新紀元！這是一款基於區塊鏈的奇幻風格 NFT 遊戲，玩家可以招募英雄、鑄造聖物、組建獨一無二的冒險隊伍，深入充滿挑戰的地下城，尋找傳說中的「魂晶」($SoulShard)。
 
-**[➡️ 前往體驗 DApp](https://www.soulshard.fun/) | [➡️ 閱讀我們的白皮書 (GitBook)](https://your-gitbook-link.com)**
+**[➡️ 前往體驗 DApp](https://www.soulshard.fun/) | [➡️ 閱讀我們的白皮書 (GitBook)](https://soulshard.gitbook.io/dungeon-delvers/)**
 
 ---
 
@@ -83,22 +83,6 @@ Dungeon Delvers 的目標是成為一個可持續、由社群驅動的 Web3 遊�
 * **前端**: HTML5, Tailwind CSS, Vanilla JavaScript
 * **Web3 連接**: Ethers.js
 * **數據索引 (推薦)**: TheGraph
-
----
-
-## 🚀 開始使用
-
-1.  **Clone the repo**
-    ```sh
-    git clone [https://github.com/zhouyongyou/DungeonDelvers.git](https://github.com/zhouyongyou/DungeonDelvers.git)
-    ```
-2.  **安裝依賴** (如果前端專案有 package.json)
-    ```sh
-    npm install
-    ```
-3.  **配置合約地址**
-    打開 `script.js` 文件，並將頂部的合約地址常量替換為您自己部署的地址。
-4.  **在瀏覽器中打開 `index.html`**
 
 ---
 
