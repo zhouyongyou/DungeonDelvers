@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
 import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
@@ -15,9 +14,8 @@ interface IPancakePair {
 }
 
 contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard {
-    using Strings for uint256;
-
-    string private _baseURI;
+    // *** 修改點 1: 重新命名變數以避免衝突 ***
+    string private _baseURIStorage;
     uint32 private s_callbackGasLimit = 250000;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
@@ -52,14 +50,16 @@ contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard 
         usdToken = _usdTokenAddress;
     }
     
-    function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        require(_exists(tokenId), "ERC721: URI query for nonexistent token");
-        string memory baseURI = _baseURI;
-        return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
+    // *** 修改點 2: 覆寫 OpenZeppelin 的標準函式 ***
+    function _baseURI() internal view override returns (string memory) {
+        return _baseURIStorage;
     }
 
-    function setBaseURI(string memory baseURI) public onlyOwner {
-        _baseURI = baseURI;
+    // *** 修改點 3: tokenURI 函式不再需要覆寫，直接使用父合約的即可，因為父合約會自動呼叫我們覆寫的 _baseURI() ***
+    // (已刪除 tokenURI 的覆寫)
+
+    function setBaseURI(string memory newBaseURI) public onlyOwner {
+        _baseURIStorage = newBaseURI;
     }
     
     receive() external payable {}
