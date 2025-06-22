@@ -19,18 +19,12 @@ interface IParty {
     function getPartyComposition(uint256 _partyId) external view returns (uint256[] memory heroIds, uint256[] memory relicIds, uint256 totalPower, uint256 totalCapacity);
 }
 
-/**
- * @title DungeonCore (V11.0 Final)
- * @dev 最終優化版遊戲核心邏輯合約。
- */
 contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
-    // --- 合約地址 ---
     IParty public immutable partyContract;
     IERC20 public immutable soulShardToken;
     IPancakePair public immutable pancakePair;
     address public immutable usdToken;
 
-    // --- 經濟參數 ---
     uint256 public provisionPriceUSD = 5 * 1e18;
     uint256 public globalRewardMultiplier = 1000;
     uint256 public constant COOLDOWN_PERIOD = 24 hours;
@@ -38,7 +32,6 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
     uint256 public constant MAX_TAX_RATE = 30;
     uint256 public constant TAX_DECREASE_RATE = 10;
     
-    // --- 玩家狀態 ---
     struct PlayerInfo {
         uint256 withdrawableBalance;
         uint256 lastWithdrawTimestamp;
@@ -46,7 +39,6 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
     }
     mapping(address => PlayerInfo) public playerInfo;
 
-    // --- 地下城設定 ---
     struct Dungeon {
         uint256 requiredPower;
         uint256 rewardAmountUSD;
@@ -56,7 +48,6 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
     mapping(uint256 => Dungeon) public dungeons;
     uint256 public constant NUM_DUNGEONS = 10;
 
-    // --- 隊伍狀態 ---
     struct PartyStatus {
         uint256 provisionsRemaining;
         uint256 cooldownEndsAt;
@@ -64,7 +55,6 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
     }
     mapping(uint256 => PartyStatus) public partyStatuses;
 
-    // --- VRF 相關 ---
     struct ExpeditionRequest {
         address requester;
         uint256 partyId;
@@ -76,7 +66,6 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
 
-    // --- 事件 ---
     event ProvisionsBought(uint256 indexed partyId, uint256 amount, uint256 cost);
     event ExpeditionRequested(uint256 indexed requestId, uint256 indexed partyId, uint256 indexed dungeonId);
     event ExpeditionFulfilled(uint256 indexed requestId, uint256 indexed partyId, bool success, uint256 reward);
@@ -104,19 +93,16 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
     
     receive() external payable {}
 
-    // --- 核心功能 ---
-
     function buyProvisions(uint256 _partyId, uint256 _amount) external nonReentrant {
         address user = partyContract.ownerOf(_partyId);
         require(user == msg.sender, "Not party owner");
-        require(_amount > 0, "Amount must be greater than 0");
+        require(_amount > 0, "Amount must be > 0");
 
         uint256 totalCostUSD = provisionPriceUSD * _amount;
         uint256 requiredSoulShard = getSoulShardAmountForUSD(totalCostUSD);
         
         soulShardToken.transferFrom(msg.sender, address(this), requiredSoulShard);
 
-        // 【修正】只在玩家從未進行任何操作時，才將其標記為首次提領
         PlayerInfo storage player = playerInfo[user];
         if (player.lastWithdrawTimestamp == 0 && player.withdrawableBalance == 0) {
             player.isFirstWithdraw = true;
@@ -128,14 +114,14 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
 
     function requestExpedition(uint256 _partyId, uint256 _dungeonId) external nonReentrant returns (uint256 requestId) {
         require(partyContract.ownerOf(_partyId) == msg.sender, "Not party owner");
-        require(dungeons[_dungeonId].isInitialized, "Dungeon does not exist");
+        require(dungeons[_dungeonId].isInitialized, "Dungeon DNE");
         
         PartyStatus storage status = partyStatuses[_partyId];
-        require(status.provisionsRemaining > 0, "No provisions remaining");
-        require(block.timestamp >= status.cooldownEndsAt, "Party is on cooldown");
+        require(status.provisionsRemaining > 0, "No provisions");
+        require(block.timestamp >= status.cooldownEndsAt, "Party on cooldown");
 
         (, , uint256 totalPower, ) = partyContract.getPartyComposition(_partyId);
-        require(totalPower >= dungeons[_dungeonId].requiredPower, "Party power too low for this dungeon");
+        require(totalPower >= dungeons[_dungeonId].requiredPower, "Power too low");
 
         status.provisionsRemaining--;
         
@@ -154,7 +140,7 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
 
     function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
         ExpeditionRequest storage request = s_requests[_requestId];
-        require(request.requester != address(0) && !request.fulfilled, "Request invalid or fulfilled");
+        require(request.requester != address(0) && !request.fulfilled, "Request invalid/fulfilled");
         request.fulfilled = true;
 
         uint256 partyId = request.partyId;
@@ -189,15 +175,15 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
 
     function withdraw(uint256 _amount) external nonReentrant {
         PlayerInfo storage player = playerInfo[msg.sender];
-        require(player.withdrawableBalance >= _amount, "Insufficient withdrawable balance");
-        require(_amount > 0, "Withdraw amount must be greater than zero");
+        require(player.withdrawableBalance >= _amount, "Insufficient balance");
+        require(_amount > 0, "Amount must be > 0");
 
         uint256 taxRate = 0;
         if (!player.isFirstWithdraw) {
             uint256 timeSinceLast = block.timestamp - player.lastWithdrawTimestamp;
             if (timeSinceLast < TAX_PERIOD * 3) {
                 uint256 periodsPassed = timeSinceLast / TAX_PERIOD;
-                taxRate = MAX_TAX_RATE - (periodsPassed * TAX_DECREASE_RATE);
+                taxRate = MAX_TAX_RATE > (periodsPassed * TAX_DECREASE_RATE) ? MAX_TAX_RATE - (periodsPassed * TAX_DECREASE_RATE) : 0;
             }
         }
 
@@ -215,9 +201,7 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
         emit TokensWithdrawn(msg.sender, finalAmount, taxAmount);
     }
     
-    // --- 內部函式 ---
     function _initializeDungeons() private {
-        // ID, requiredPower, rewardAmountUSD (18位小數), baseSuccessRate
         dungeons[1] = Dungeon(300, 29.30 * 1e18, 89, true);    // 新手礦洞
         dungeons[2] = Dungeon(600, 62.00 * 1e18, 83, true);    // 哥布林洞穴
         dungeons[3] = Dungeon(900, 96.00 * 1e18, 77, true);    // 食人魔山谷
@@ -230,7 +214,6 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
         dungeons[10] = Dungeon(3000, 850.00 * 1e18, 50, true); // 混沌深淵
     }
 
-    // --- 查詢功能 ---
     function isPartyLocked(uint256 _partyId) external view returns (bool) {
         PartyStatus storage status = partyStatuses[_partyId];
         return block.timestamp < status.cooldownEndsAt || status.provisionsRemaining > 0;
@@ -240,16 +223,14 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
         (uint reserve0, uint reserve1, ) = pancakePair.getReserves();
         address token0 = pancakePair.token0();
         (uint reserveSoulShard, uint reserveUSD) = (token0 == address(soulShardToken)) 
-            ? (reserve0, reserve1) 
-            : (reserve1, reserve0);
+            ? (reserve0, reserve1) : (reserve1, reserve0);
         require(reserveSoulShard > 0 && reserveUSD > 0, "Invalid reserves");
         return ((_amountUSD * reserveSoulShard * 10000) / (reserveUSD * 9975)) + 1;
     }
 
-    // --- 管理功能 ---
     function updateDungeon(uint256 _dungeonId, uint256 _requiredPower, uint256 _rewardAmountUSD, uint8 _successRate) public onlyOwner {
         require(_dungeonId > 0 && _dungeonId <= NUM_DUNGEONS, "Invalid dungeon ID");
-        require(_successRate <= 100, "Success rate cannot exceed 100");
+        require(_successRate <= 100, "Success rate > 100");
         dungeons[_dungeonId] = Dungeon(_requiredPower, _rewardAmountUSD, _successRate, true);
         emit DungeonUpdated(_dungeonId, _requiredPower, _rewardAmountUSD, _successRate);
     }
