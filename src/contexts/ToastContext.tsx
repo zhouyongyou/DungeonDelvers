@@ -17,30 +17,18 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const showToast = useCallback((text: string, type: ToastType = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, text, type }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 5000);
+    setTimeout(() => { setToasts(prev => prev.filter(t => t.id !== id)); }, 5000);
   }, []);
-
   const toastColors: Record<ToastType, string> = {
     success: 'linear-gradient(to right, #00b09b, #96c93d)',
     error: 'linear-gradient(to right, #ff5f6d, #ffc371)',
     info: 'linear-gradient(to right, #00c6ff, #0072ff)',
   };
-
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
       <div className="fixed top-4 right-4 z-[100] w-full max-w-sm space-y-2">
-        {toasts.map(toast => (
-          <div
-            key={toast.id}
-            className="px-6 py-3 rounded-lg text-white text-base shadow-lg animate-slide-in-right"
-            style={{ background: toastColors[toast.type] }}
-          >
-            {toast.text}
-          </div>
-        ))}
+        {toasts.map(toast => ( <div key={toast.id} className="px-6 py-3 rounded-lg text-white text-base shadow-lg animate-slide-in-right" style={{ background: toastColors[toast.type] }}>{toast.text}</div> ))}
       </div>
     </ToastContext.Provider>
   );

@@ -15,13 +15,10 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const [theme, setThemeState] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) || 'system');
     const effectiveTheme = useMemo(() => {
         if (theme === 'system') return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-
         return theme;
     }, [theme]);
-
     useEffect(() => {
         const root = window.document.documentElement;
-        
         root.classList.remove('light', 'dark');
         root.classList.add(effectiveTheme);
         localStorage.setItem('theme', theme);

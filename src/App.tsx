@@ -9,13 +9,13 @@ import { MintPage } from './pages/MintPage';
 import { ExplorerPage } from './pages/ExplorerPage';
 import { MyAssetsPage } from './pages/MyAssetsPage';
 import { DungeonPage } from './pages/DungeonPage';
-import { AdminPage } from './pages/AdminPage'; // <-- 新增
+import { AdminPage } from './pages/AdminPage';
 
-export type Page = 'dashboard' | 'mint' | 'party' | 'dungeon' | 'explorer' | 'admin'; // <-- 新增 'admin'
+export type Page = 'dashboard' | 'mint' | 'party' | 'dungeon' | 'explorer' | 'admin';
 
 const PageContent: React.FC<{ activePage: Page; setActivePage: (page: Page) => void }> = ({ activePage, setActivePage }) => {
     const { isConnected } = useAccount();
-    const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon'];
+    const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'admin'];
     if (!isConnected && pageRequiresWallet.includes(activePage)) {
         return (<div className="mt-10"><EmptyState message="要使用此功能，請先連接您的錢包。" /></div>);
     }
@@ -25,7 +25,7 @@ const PageContent: React.FC<{ activePage: Page; setActivePage: (page: Page) => v
         case 'explorer': return <ExplorerPage />;
         case 'party': return <MyAssetsPage setActivePage={setActivePage} />;
         case 'dungeon': return <DungeonPage />;
-        case 'admin': return <AdminPage />; // <-- 新增
+        case 'admin': return <AdminPage />;
         default: return <DashboardPage />;
     }
 }

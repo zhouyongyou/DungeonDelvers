@@ -40,19 +40,8 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
 
-  const navItems: { key: Page; label: string }[] = [
-    { key: 'dashboard', label: '儀表板' },
-    { key: 'mint', label: '鑄造' },
-    { key: 'party', label: '我的資產' },
-    { key: 'dungeon', label: '地下城' },
-    { key: 'explorer', label: '數據查詢' },
-    { key: 'admin', label: '管理後台' },
-  ];
-  
-  const handleConnectClick = () => {
-    if (isConnected) disconnect();
-    else connect({ connector: injected() });
-  };
+  const navItems: { key: Page; label: string }[] = [ { key: 'dashboard', label: '儀表板' }, { key: 'mint', label: '鑄造' }, { key: 'party', label: '我的資產' }, { key: 'dungeon', label: '地下城' }, { key: 'explorer', label: '數據查詢' }, { key: 'admin', label: '管理後台' }, ];
+  const handleConnectClick = () => { if (isConnected) disconnect(); else connect({ connector: injected() }); };
 
   return (
     <header className="bg-[#1F1D36] shadow-lg sticky top-0 z-50">

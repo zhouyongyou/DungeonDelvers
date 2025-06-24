@@ -6,37 +6,19 @@ import { ActionButton } from '../ui/ActionButton';
 export const Footer: React.FC = () => {
   const { chain } = useAccount();
   const client = useClient();
-  const { chains, switchChain, isPending } = useSwitchChain();
-
+  const { switchChain, isPending } = useSwitchChain();
   const rpcUrl = client?.chain.rpcUrls.default.http[0] ?? 'N/A';
-  
-  const handleSwitchNetwork = () => {
-    if (!switchChain) return;
-    const targetChainId = chain?.id === bsc.id ? bscTestnet.id : bsc.id;
-    switchChain({ chainId: targetChainId });
-  };
-  
+  const handleSwitchNetwork = () => { if (!switchChain) return; const targetChainId = chain?.id === bsc.id ? bscTestnet.id : bsc.id; switchChain({ chainId: targetChainId }); };
+
   return (
     <footer className="bg-[#1F1D36] text-gray-300 mt-auto">
       <div className="bg-gray-800 text-white text-xs">
         <div className="container mx-auto px-4 py-1 flex justify-between items-center text-xs">
-          <span>
-            網路: <span className={`font-bold ${chain?.nativeCurrency.name === 'BNB' ? 'text-yellow-400' : 'text-green-400'}`}>
-              {chain?.name ?? '未連接'}
-            </span>
-          </span>
-          {/* 【細節還原】顯示當前節點 URL */}
-          <span className="hidden md:inline-block truncate">
-            當前節點: {rpcUrl}
-          </span>
-          <span>狀態: <span className="text-green-400">●</span> 正常</span>
-          {/* 【細節還原】新增網路切換按鈕 */}
-          <ActionButton onClick={handleSwitchNetwork} isLoading={isPending} className="px-2 py-0.5 h-5 text-xs rounded-md !bg-sky-600 hover:!bg-sky-700">
-            切換網路
-          </ActionButton>
+          <span>網路: <span className={`font-bold ${chain?.nativeCurrency.name === 'BNB' ? 'text-yellow-400' : 'text-green-400'}`}>{chain?.name ?? '未連接'}</span></span>
+          <span className="hidden md:inline-block truncate">當前節點: {rpcUrl}</span>
+          <ActionButton onClick={handleSwitchNetwork} isLoading={isPending} className="px-2 py-0.5 h-5 text-xs rounded-md !bg-sky-600 hover:!bg-sky-700">切換網路</ActionButton>
         </div>
       </div>
-
       <div className="container mx-auto text-center py-4">
         <div className="flex justify-center items-center gap-4 mb-4">
           <a href="https://twitter.com/your-twitter-handle" target="_blank" rel="noreferrer" className="flex items-center justify-center w-8 h-8 bg-[#1DA1F2] rounded-full transition-transform hover:scale-110" aria-label="Twitter"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.71v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84"></path></svg></a>

@@ -3,17 +3,13 @@ import { useWatchContractEvent } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import { getContract } from '../config/contracts';
 import { useAppToast } from './useAppToast';
-import { useExpeditionResult } from '../contexts/ExpeditionContext'; // <-- 【新】引入 Hook
+import { useExpeditionResult } from '../contexts/ExpeditionContext';
 
 export const useContractEvents = () => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
-    const { showExpeditionResult } = useExpeditionResult(); // <-- 【新】獲取彈窗函式
+    const { showExpeditionResult } = useExpeditionResult();
     const queryClient = useQueryClient();
-    
-    if (!address || !chainId) {
-        return;
-    }
     
     const heroContract = getContract(chainId, 'hero');
     const relicContract = getContract(chainId, 'relic');
@@ -76,7 +72,6 @@ export const useContractEvents = () => {
         enabled: !!address && !!chainId && !!partyContract,
     });
 
-    // 監聽遠征完成事件
     useWatchContractEvent({
         ...dungeonCoreContract,
         eventName: 'ExpeditionFulfilled',
@@ -89,10 +84,9 @@ export const useContractEvents = () => {
                 queryClient.invalidateQueries({ queryKey: ['playerInfo', address, chainId] });
             }
         },
-        enabled: !!dungeonCoreContract,
+        enabled: !!address && !!chainId && !!dungeonCoreContract,
     });
 
-    // 監聽獎勵領取事件
     useWatchContractEvent({
         ...dungeonCoreContract,
         eventName: 'RewardsBanked',
@@ -101,10 +95,9 @@ export const useContractEvents = () => {
                 handleEvent(`隊伍 #${logs[0].args.partyId?.toString()} 的獎勵已領取！`);
             }
         },
-        enabled: !!dungeonCoreContract,
+        enabled: !!address && !!chainId && !!dungeonCoreContract,
     });
 
-    // 監聽金庫提領事件
     useWatchContractEvent({
         ...dungeonCoreContract,
         eventName: 'TokensWithdrawn',
@@ -113,6 +106,6 @@ export const useContractEvents = () => {
                 handleEvent(`金庫提領成功！`);
             }
         },
-        enabled: !!dungeonCoreContract,
+        enabled: !!address && !!chainId && !!dungeonCoreContract,
     });
 };
