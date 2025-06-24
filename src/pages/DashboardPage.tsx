@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAccount, useBalance, useReadContract, useWriteContract } from 'wagmi';
 import { formatEther } from 'viem';
 import { useAppToast } from '../hooks/useAppToast';
@@ -16,7 +16,7 @@ export const DashboardPage: React.FC = () => {
   const { data: tokenBalance, isLoading: isLoadingTokenBalance } = useBalance({
     address,
     token: soulShardContract?.address,
-    query: { enabled: !!address && !!soulShardContract },
+    query: { enabled: !!address && !!soulShardContract, queryKey: ['balance', address, chainId] },
   });
 
   const { data: playerInfo, isLoading: isLoadingPlayerInfo } = useReadContract({
@@ -24,7 +24,7 @@ export const DashboardPage: React.FC = () => {
     abi: dungeonCoreContract?.abi,
     functionName: 'playerInfo',
     args: [address!],
-    query: { enabled: !!address && !!dungeonCoreContract },
+    query: { enabled: !!address && !!dungeonCoreContract, queryKey: ['playerInfo', address, chainId] },
   });
   
   const withdrawableBalance = playerInfo?.[0] ?? 0n;
@@ -38,11 +38,7 @@ export const DashboardPage: React.FC = () => {
 
   const handleWithdraw = () => {
     if (withdrawableBalance > 0n && dungeonCoreContract) {
-      writeContract({
-        ...dungeonCoreContract,
-        functionName: 'withdraw',
-        args: [withdrawableBalance],
-      });
+      writeContract({ ...dungeonCoreContract, functionName: 'withdraw', args: [withdrawableBalance] });
     } else {
       showToast('沒有可提領的餘額', 'info');
     }

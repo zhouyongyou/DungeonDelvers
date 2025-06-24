@@ -1,22 +1,19 @@
-import React, { createContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useState, useCallback, useContext, ReactNode } from 'react';
 
 type ToastType = 'success' | 'error' | 'info';
-
-interface Toast {
-  id: number;
-  text: string;
-  type: ToastType;
-}
-
-interface ToastContextValue {
-  showToast: (text: string, type?: ToastType) => void;
-}
+interface Toast { id: number; text: string; type: ToastType; }
+interface ToastContextValue { showToast: (text: string, type?: ToastType) => void; }
 
 export const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
+export const useAppToast = () => {
+    const context = useContext(ToastContext);
+    if (context === undefined) throw new Error('useAppToast must be used within a ToastProvider');
+    return context.showToast;
+};
+
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
-
   const showToast = useCallback((text: string, type: ToastType = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, text, type }]);

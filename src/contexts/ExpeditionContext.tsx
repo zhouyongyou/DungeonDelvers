@@ -1,14 +1,12 @@
 import React, { createContext, useState, useCallback, useContext, ReactNode } from 'react';
-import { Modal } from '../components/ui/Modal'; // 我們將複用現有的 Modal 組件
 import { formatEther } from 'viem';
+import { Modal } from '../components/ui/Modal';
 
-// 定義戰報結果的資料結構
 interface ExpeditionResult {
     success: boolean;
     reward: bigint;
 }
 
-// 定義 Context 提供的值
 interface ExpeditionContextValue {
     showExpeditionResult: (result: ExpeditionResult) => void;
 }
@@ -37,13 +35,15 @@ export const ExpeditionProvider: React.FC<{ children: ReactNode }> = ({ children
     return (
         <ExpeditionContext.Provider value={{ showExpeditionResult }}>
             {children}
+            {/* 【修正】確保在 result 存在時，渲染 Modal 組件 */}
             {result && (
                 <Modal
                     isOpen={!!result}
                     onClose={handleClose}
                     onConfirm={handleClose}
                     title={result.success ? "遠征成功！" : "遠征失敗"}
-                    confirmText="太棒了！"
+                    confirmText={result.success ? "太棒了！" : "返回"}
+                    isConfirming={false} // 戰報彈窗不需要確認中狀態
                 >
                     <div className="text-center">
                         <img 
@@ -52,16 +52,19 @@ export const ExpeditionProvider: React.FC<{ children: ReactNode }> = ({ children
                                 : `https://placehold.co/150x150/9ca3af/4b5563?text=⚔️` // 失敗的斷劍圖示
                             }
                             alt={result.success ? "勝利" : "失敗"}
-                            className="mx-auto mb-4 rounded-full"
+                            className="mx-auto mb-4 rounded-full border-4 border-yellow-600/50"
                         />
-                        <p className="text-lg mb-2">
+                        <h3 className={`text-3xl font-bold font-serif mb-2 ${result.success ? 'text-yellow-600' : 'text-gray-600 dark:text-gray-400'}`}>
+                            {result.success ? "遠征成功！" : "遠征失敗"}
+                        </h3>
+                        <p className="text-lg mb-2 text-gray-700 dark:text-gray-300">
                             {result.success 
                                 ? "你的隊伍滿載而歸！"
                                 : "你的隊伍遭遇了強敵，但勇氣可嘉！"
                             }
                         </p>
                         {result.success && (
-                            <p className="font-bold text-green-600">
+                            <p className="font-bold text-green-600 text-xl">
                                 獲得獎勵: {parseFloat(formatEther(result.reward)).toFixed(4)} $SoulShard
                             </p>
                         )}

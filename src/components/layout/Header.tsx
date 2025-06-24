@@ -3,7 +3,7 @@ import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { ActionButton } from '../ui/ActionButton';
 import type { Page } from '../../App';
-import { useTheme } from '../../contexts/ThemeContext'; // <-- 【新】引入 Hook
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface HeaderProps {
   activePage: Page;
@@ -14,7 +14,7 @@ const ThemeToggleButton: React.FC = () => {
     const { theme, setTheme, effectiveTheme } = useTheme();
 
     const toggleTheme = () => {
-        const themes: Theme[] = ['light', 'dark', 'system'];
+        const themes: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system'];
         const currentIndex = themes.indexOf(theme);
         const nextTheme = themes[(currentIndex + 1) % themes.length];
         setTheme(nextTheme);
@@ -35,7 +35,7 @@ const ThemeToggleButton: React.FC = () => {
     );
 };
 
-export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) => void }> = ({ /*...*/ }) => {
+export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) => void }> = ({ activePage, setActivePage }) => {
   const { address, isConnected, isConnecting } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
@@ -46,7 +46,7 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
     { key: 'party', label: '我的資產' },
     { key: 'dungeon', label: '地下城' },
     { key: 'explorer', label: '數據查詢' },
-    { key: 'admin', label: '管理後台' }, // <-- 新增
+    { key: 'admin', label: '管理後台' },
   ];
   
   const handleConnectClick = () => {
@@ -56,17 +56,16 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
 
   return (
     <header className="bg-[#1F1D36] shadow-lg sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-3">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <img src="https://www.soulshard.fun/assets/images/logo-192x192.png" alt="Dungeon Delvers Logo" className="h-12 w-12 rounded-full border-2 border-[#C0A573]"/>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white text-shadow-gold">Dungeon Delvers</h1>
-              <p className="text-sm text-gray-300">你的奇幻冒險由此開始</p>
+        <div className="container mx-auto px-4 py-3">
+            <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-4">
+                    <img src="https://www.soulshard.fun/assets/images/logo-192x192.png" alt="Dungeon Delvers Logo" className="h-12 w-12 rounded-full border-2 border-[#C0A573]"/>
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold text-white text-shadow-gold">Dungeon Delvers</h1>
+                        <p className="text-sm text-gray-300 dark:text-gray-400">你的奇幻冒險由此開始</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    {/* 【新】加入主題切換按鈕 */}
                     <ThemeToggleButton />
                     <ActionButton onClick={handleConnectClick} isLoading={isConnecting} disabled={isConnecting} className="px-4 py-2 rounded-full text-sm md:text-base w-36">
                       {isConnected && address ? `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : '連接錢包'}
@@ -74,7 +73,16 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
                 </div>
             </div>
             <nav className="mt-4 flex flex-wrap justify-center gap-2 text-sm">
-              {navItems.map(item => (<a key={item.key} href={`#${item.key}`} className={`nav-item ${activePage === item.key ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage(item.key); }}>{item.label}</a>))}
+              {navItems.map(item => (
+                  <a 
+                     key={item.key} 
+                     href={`#${item.key}`} 
+                     className={`nav-item ${activePage === item.key ? 'active' : ''}`} 
+                     onClick={(e) => { e.preventDefault(); setActivePage(item.key); }}
+                  >
+                    {item.label}
+                  </a>
+              ))}
             </nav>
         </div>
     </header>

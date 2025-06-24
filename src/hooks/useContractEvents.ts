@@ -11,6 +11,10 @@ export const useContractEvents = () => {
     const { showExpeditionResult } = useExpeditionResult(); // <-- 【新】獲取彈窗函式
     const queryClient = useQueryClient();
     
+    if (!address || !chainId) {
+        return;
+    }
+    
     const heroContract = getContract(chainId, 'hero');
     const relicContract = getContract(chainId, 'relic');
     const partyContract = getContract(chainId, 'party');
@@ -74,26 +78,33 @@ export const useContractEvents = () => {
 
     // 監聽遠征完成事件
     useWatchContractEvent({
-        ...getContract(chainId, 'dungeonCore'),
+        ...dungeonCoreContract,
         eventName: 'ExpeditionFulfilled',
         onLogs: (logs: any) => {
             if (isUserRelated(logs[0], 'requester')) {
-                const { success, reward } = logs[0].args;
-                
-                // 【新】呼叫函式來顯示戰報彈窗，而不是 Toast
+                const { partyId, success, reward } = logs[0].args;
                 showExpeditionResult({ success, reward });
-
-                // 在彈窗的同時，仍然可以顯示一個簡單的 Toast 作為即時通知
-                const message = `隊伍 #${logs[0].args.partyId.toString()} 遠征已完成！`;
+                const message = `隊伍 #${partyId.toString()} 遠征已完成！`;
                 showToast(message, 'info');
-
-                // 刷新相關數據
                 queryClient.invalidateQueries({ queryKey: ['playerInfo', address, chainId] });
             }
         },
-        enabled: !!address && !!chainId && !!getContract(chainId, 'dungeonCore'),
+        enabled: !!dungeonCoreContract,
     });
 
+    // 監聽獎勵領取事件
+    useWatchContractEvent({
+        ...dungeonCoreContract,
+        eventName: 'RewardsBanked',
+        onLogs: (logs: any) => {
+            if (isUserRelated(logs[0], 'user')) {
+                handleEvent(`隊伍 #${logs[0].args.partyId?.toString()} 的獎勵已領取！`);
+            }
+        },
+        enabled: !!dungeonCoreContract,
+    });
+
+    // 監聽金庫提領事件
     useWatchContractEvent({
         ...dungeonCoreContract,
         eventName: 'TokensWithdrawn',
@@ -102,6 +113,6 @@ export const useContractEvents = () => {
                 handleEvent(`金庫提領成功！`);
             }
         },
-        enabled: !!address && !!chainId && !!dungeonCoreContract,
+        enabled: !!dungeonCoreContract,
     });
 };

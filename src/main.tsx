@@ -6,7 +6,7 @@ import './assets/index.css';
 import { wagmiConfig } from './wagmi';
 import { ToastProvider } from './contexts/ToastContext';
 import { ExpeditionProvider } from './contexts/ExpeditionContext';
-import { ThemeProvider } from './contexts/ThemeContext'; // <-- 【新】引入 Provider
+import { ThemeProvider } from './contexts/ThemeContext';
 import App from './App';
 
 const queryClient = new QueryClient();
@@ -16,7 +16,6 @@ const root = ReactDOM.createRoot(rootElement);
 
 root.render(
   <React.StrictMode>
-    {/* 【新】用 ThemeProvider 包裹所有內容 */}
     <ThemeProvider>
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
