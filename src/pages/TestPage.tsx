@@ -1,6 +1,6 @@
 import React from 'react';
 
-export const TestPage: React.FC = () => {
+const TestPage: React.FC = () => {
   return (
     <div className="w-full h-96 flex flex-col justify-center items-center bg-blue-200 border-4 border-dashed border-blue-500 rounded-2xl">
       <h1 className="text-5xl font-bold text-red-600">
@@ -15,3 +15,5 @@ export const TestPage: React.FC = () => {
     </div>
   );
 };
+
+export default TestPage;

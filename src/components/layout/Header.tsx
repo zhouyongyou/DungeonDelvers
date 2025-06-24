@@ -4,6 +4,7 @@ import { injected } from 'wagmi/connectors';
 import { ActionButton } from '../ui/ActionButton';
 import type { Page } from '../../App';
 import { useTheme } from '../../contexts/ThemeContext';
+import logoUrl from '/assets/images/logo-192x192.png'; // <--- 【第1步】在這裡新增 import
 
 interface HeaderProps {
   activePage: Page;
@@ -48,7 +49,7 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
         <div className="container mx-auto px-4 py-3">
             <div className="flex justify-between items-center">
                 <div className="flex items-center space-x-4">
-                    <img src="https://www.soulshard.fun/assets/images/logo-192x192.png" alt="Dungeon Delvers Logo" className="h-12 w-12 rounded-full border-2 border-[#C0A573]"/>
+                    <img src={logoUrl} alt="Dungeon Delvers Logo" className="h-12 w-12 rounded-full border-2 border-[#C0A573]"/>
                     <div>
                         <h1 className="text-2xl md:text-3xl font-bold text-white text-shadow-gold">Dungeon Delvers</h1>
                         <p className="text-sm text-gray-300 dark:text-gray-400">你的奇幻冒險由此開始</p>

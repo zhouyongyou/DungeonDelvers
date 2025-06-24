@@ -9,7 +9,7 @@ import { ActionButton } from '../components/ui/ActionButton';
 import { SkeletonCard } from '../components/ui/SkeletonCard';
 import type { PartyNft, AnyNft } from '../types/nft';
 
-export const DungeonPage: React.FC = () => {
+const DungeonPage: React.FC = () => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
     const dungeonCoreContract = getContract(chainId, 'dungeonCore');
@@ -136,3 +136,5 @@ export const DungeonPage: React.FC = () => {
         </section>
     );
 };
+
+export default DungeonPage;

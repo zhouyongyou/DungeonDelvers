@@ -84,7 +84,7 @@ const QuerySection: React.FC<{ type: NftType }> = ({ type }) => {
   );
 };
 
-export const ExplorerPage: React.FC = () => {
+const ExplorerPage: React.FC = () => {
   return (
     <section>
       <h2 className="text-3xl font-bold text-center mb-6 text-[#2D2A4A] font-serif">數據查詢</h2>
@@ -96,3 +96,5 @@ export const ExplorerPage: React.FC = () => {
     </section>
   );
 };
+
+export default ExplorerPage;

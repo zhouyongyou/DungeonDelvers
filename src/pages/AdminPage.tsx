@@ -20,7 +20,7 @@ const InputGroup: React.FC<{ label: string; children: React.ReactNode }> = ({ la
     </div>
 );
 
-export const AdminPage: React.FC = () => {
+const AdminPage: React.FC = () => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
     const { writeContract, isPending } = useWriteContract({
@@ -112,3 +112,5 @@ export const AdminPage: React.FC = () => {
         </section>
     );
 };
+
+export default AdminPage;

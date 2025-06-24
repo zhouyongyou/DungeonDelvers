@@ -6,7 +6,7 @@ import { getContract } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 
-export const DashboardPage: React.FC = () => {
+const DashboardPage: React.FC = () => {
   const { address, chainId } = useAccount();
   const { showToast } = useAppToast();
 
@@ -122,3 +122,5 @@ export const DashboardPage: React.FC = () => {
     </section>
   );
 };
+
+export default DashboardPage;

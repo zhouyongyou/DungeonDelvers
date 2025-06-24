@@ -18,7 +18,7 @@ export const useTheme = () => {
     return context;
 };
 
-export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [theme, setThemeState] = useState<Theme>(() => {
         // 從 localStorage 讀取用戶上次的選擇，若無則預設為 'system'
         return (localStorage.getItem('theme') as Theme) || 'system';
@@ -54,3 +54,5 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         </ThemeContext.Provider>
     );
 };
+
+export default ThemeProvider;

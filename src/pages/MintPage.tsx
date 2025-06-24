@@ -155,7 +155,7 @@ const MintCard: React.FC<{ type: 'hero' | 'relic' }> = ({ type }) => {
     );
 };
 
-export const MintPage: React.FC = () => {
+const MintPage: React.FC = () => {
     return (
         <section>
             <h2 className="page-title">鑄造工坊</h2>
@@ -166,3 +166,5 @@ export const MintPage: React.FC = () => {
         </section>
     );
 };
+
+export default MintPage;

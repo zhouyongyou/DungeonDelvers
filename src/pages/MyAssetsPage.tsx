@@ -1,9 +1,3 @@
-// =======================================================================
-// 檔案: src/pages/MyAssetsPage.tsx (【更新】)
-// 說明: 1. 新增了資產統計功能 (總數量、總戰力)。
-//       2. 新增了按稀有度 (星級) 篩選 NFT 的功能。
-//       3. 使用 useMemo 優化篩選和計算邏輯，提升效能。
-// =======================================================================
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
@@ -57,7 +51,7 @@ const NftGrid: React.FC<{
 // 主頁面組件
 // -----------------------------------------------------------------------
 
-export const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setActivePage }) => {
+const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setActivePage }) => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
     
@@ -74,7 +68,6 @@ export const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = (
         enabled: !!address && !!chainId,
     });
 
-    // 【新功能】使用 useMemo 高效計算統計數據和篩選後的列表
     const heroStats = useMemo(() => {
         if (!nfts?.heroes) return { count: 0, totalPower: 0 };
         return {
@@ -120,9 +113,17 @@ export const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = (
     const handleSelect = (id: bigint, type: NftType) => {
         if (type === 'hero' || type === 'relic') {
             setSelection(prev => {
-                const newSet = new Set(prev[`${type}s`]);
-                newSet.has(id) ? newSet.delete(id) : newSet.add(id);
-                return { ...prev, [`${type}s`]: newSet };
+                // 根據 type 正確地決定要操作的 state key ('heroes' 或 'relics')
+                const key = type === 'hero' ? 'heroes' : 'relics';
+                const newSet = new Set(prev[key]);
+                
+                if (newSet.has(id)) {
+                    newSet.delete(id);
+                } else {
+                    newSet.add(id);
+                }
+                
+                return { ...prev, [key]: newSet };
             });
         }
     };
@@ -160,7 +161,6 @@ export const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = (
                     {/* 英雄區塊 */}
                     <div>
                         <h3 className="section-title">我的英雄</h3>
-                        {/* 【新功能】統計和篩選器 */}
                         <div className="card-bg p-4 rounded-xl mb-4">
                             <div className="flex justify-around text-center mb-4">
                                 <div><p className="text-sm text-gray-500">總數量</p><p className="text-xl font-bold">{heroStats.count}</p></div>
@@ -212,3 +212,5 @@ export const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = (
         </section>
     );
 };
+
+export default MyAssetsPage;
