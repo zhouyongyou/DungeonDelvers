@@ -4,7 +4,8 @@ import { injected } from 'wagmi/connectors';
 import { ActionButton } from '../ui/ActionButton';
 import type { Page } from '../../App';
 import { useTheme } from '../../contexts/ThemeContext';
-import logoUrl from '/assets/images/logo-192x192.png'; // <--- 【第1步】在這裡新增 import
+import logoUrl from '/assets/images/logo-192x192.png';
+import { DEVELOPER_ADDRESS } from '../../config/constants';
 
 interface HeaderProps {
   activePage: Page;
@@ -41,7 +42,20 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
 
-  const navItems: { key: Page; label: string }[] = [ { key: 'dashboard', label: '儀表板' }, { key: 'mint', label: '鑄造' }, { key: 'party', label: '我的資產' }, { key: 'dungeon', label: '地下城' }, { key: 'explorer', label: '數據查詢' }, { key: 'admin', label: '管理後台' }, ];
+  const isDeveloper = isConnected && address?.toLowerCase() === DEVELOPER_ADDRESS.toLowerCase();
+  const navItems: { key: Page; label: string }[] = [
+      { key: 'dashboard', label: '儀表板' },
+      { key: 'mint', label: '鑄造' },
+      { key: 'party', label: '我的資產' },
+      { key: 'dungeon', label: '地下城' },
+      { key: 'explorer', label: '數據查詢' },
+  ];
+
+  // 如果是開發者，才在導覽列陣列中加入 'admin' 選項
+  if (isDeveloper) {
+      navItems.push({ key: 'admin', label: '管理後台' });
+  }
+  
   const handleConnectClick = () => { if (isConnected) disconnect(); else connect({ connector: injected() }); };
 
   return (
@@ -62,18 +76,18 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
                     </ActionButton>
                 </div>
             </div>
-            <nav className="mt-4 flex flex-wrap justify-center gap-2 text-sm">
-              {navItems.map(item => (
-                  <a 
-                     key={item.key} 
-                     href={`#${item.key}`} 
-                     className={`nav-item ${activePage === item.key ? 'active' : ''}`} 
-                     onClick={(e) => { e.preventDefault(); setActivePage(item.key); }}
-                  >
-                    {item.label}
-                  </a>
-              ))}
-            </nav>
+        <nav className="mt-4 flex flex-wrap justify-center gap-2 text-sm">
+          {navItems.map(item => (
+              <a 
+                 key={item.key} 
+                 href={`#${item.key}`} 
+                 className={`nav-item ${activePage === item.key ? 'active' : ''}`} 
+                 onClick={(e) => { e.preventDefault(); setActivePage(item.key); }}
+              >
+                {item.label}
+              </a>
+          ))}
+        </nav>
         </div>
     </header>
   );
