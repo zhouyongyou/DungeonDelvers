@@ -1,6 +1,6 @@
 # Table of contents
 
-* [Dungeon Delvers 白皮書 v1.0](README.md)
+* [Dungeon Delvers 白皮書 v2.0](README.md)
 * [1. 專案概覽 (Project Overview)](01-project-overview.md)
 * [2. 核心遊戲機制 (Core Gameplay)](02-core-gameplay.md)
 * [3. 經濟模型 (Tokenomics)](03-tokenomics.md)

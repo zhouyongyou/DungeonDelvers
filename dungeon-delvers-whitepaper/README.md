@@ -1,8 +1,8 @@
-# Dungeon Delvers 白皮書 v1.0
+# Dungeon Delvers 白皮書 v2.0
 
 <figure><img src=".gitbook/assets/logo-192x192.png" alt=""><figcaption></figcaption></figure>
 
-最後更新時間: 2025年6月22日
+_最後更新時間: 2025年6月25日_
 
 #### 歡迎來到 Dungeon Delvers 的新紀元
 
