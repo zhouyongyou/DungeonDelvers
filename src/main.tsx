@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './assets/index.css';
 import { wagmiConfig } from './wagmi';
 import { ToastProvider } from './contexts/ToastContext';
+import { ExpeditionProvider } from './contexts/ExpeditionContext';
+import { ThemeProvider } from './contexts/ThemeContext'; // <-- 【新】引入 Provider
 import App from './App';
 
 const queryClient = new QueryClient();
@@ -14,12 +16,17 @@ const root = ReactDOM.createRoot(rootElement);
 
 root.render(
   <React.StrictMode>
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <App />
-        </ToastProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    {/* 【新】用 ThemeProvider 包裹所有內容 */}
+    <ThemeProvider>
+      <WagmiProvider config={wagmiConfig}>
+        <QueryClientProvider client={queryClient}>
+          <ToastProvider>
+            <ExpeditionProvider>
+              <App />
+            </ExpeditionProvider>
+          </ToastProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </ThemeProvider>
   </React.StrictMode>
 );

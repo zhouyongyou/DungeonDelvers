@@ -16,29 +16,45 @@ const testnetContractAddresses = {
   dungeonCore: '0x696089304e287414995A1E5158A59C14980C34eE',
 };
 
-const mainnetContractAddresses = { /* ... 您的主網地址 ... */ };
+const mainnetContractAddresses = {
+  soulShardToken: 'YOUR_MAINNET_SOUL_SHARD_TOKEN_ADDRESS',
+  hero: 'YOUR_MAINNET_HERO_ADDRESS',
+  relic: 'YOUR_MAINNET_RELIC_ADDRESS',
+  party: 'YOUR_MAINNET_PARTY_ADDRESS',
+  dungeonCore: 'YOUR_MAINNET_DUNGEON_CORE_ADDRESS',
+};
 
 type ContractName = keyof typeof testnetContractAddresses;
 
-const getContractAddress = (chainId: number, name: ContractName): Address | undefined => {
+const getContractAddress = (chainId: number | undefined, name: ContractName): Address | undefined => {
+  if (!chainId) return undefined;
   const addresses = chainId === bsc.id ? mainnetContractAddresses : testnetContractAddresses;
   return addresses[name] as Address;
 };
 
-const getContractAbi = (name: ContractName) => { /* ... */ return { hero: heroABI, /*...*/ }[name]; };
+const getContractAbi = (name: ContractName) => {
+  const abis = {
+    soulShardToken: soulShardTokenABI,
+    hero: heroABI,
+    relic: relicABI,
+    party: partyABI,
+    dungeonCore: dungeonCoreABI,
+  };
+  return abis[name];
+}
 
-export const getContract = (chainId: number, name: ContractName) => {
-  // 【修正】現在我們在 useContractEvents 中已經確保 chainId 存在了。
-  // 但保留這個警告是一個好習慣。
+export const getContract = (chainId: number | undefined, name: ContractName) => {
+  if (!chainId) {
+    // console.warn(`ChainId is undefined, cannot get contract for '${name}'`);
+    return null;
+  }
   const address = getContractAddress(chainId, name);
   const abi = getContractAbi(name);
 
   if (!address || !abi) {
     console.warn(`Contract '${name}' not found for chainId '${chainId}'`);
-    // 明確回傳 null，讓呼叫方可以做檢查
     return null;
   }
   
   return { address, abi };
 };
-

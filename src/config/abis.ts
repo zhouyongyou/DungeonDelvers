@@ -1191,7 +1191,12 @@ export const heroABI = [
 	{
 		"stateMutability": "payable",
 		"type": "receive"
-	}
+	},
+  { "type": "function", "name": "adminMint", "inputs": [ { "name": "_to", "type": "address", "internalType": "address" }, { "name": "_rarity", "type": "uint8", "internalType": "uint8" }, { "name": "_power", "type": "uint256", "internalType": "uint256" } ], "outputs": [], "stateMutability": "nonpayable" },
+  { "type": "event", "name": "AdminHeroMinted", "inputs": [ { "name": "to", "type": "address", "indexed": true, "internalType": "address" }, { "name": "tokenId", "type": "uint256", "indexed": true, "internalType": "uint256" }, { "name": "rarity", "type": "uint8", "indexed": false, "internalType": "uint8" }, { "name": "power", "type": "uint256", "indexed": false, "internalType": "uint256" } ], "anonymous": false },
+  { "type": "function", "name": "setMintPriceUSD", "inputs": [ { "name": "_newMintPriceUSD", "type": "uint256" } ], "outputs": [], "stateMutability": "nonpayable" },
+  { "type": "function", "name": "adminMint", "inputs": [ { "name": "_to", "type": "address" }, { "name": "_rarity", "type": "uint8" }, { "name": "_power", "type": "uint256" } ], "outputs": [], "stateMutability": "nonpayable" },
+  { "type": "event", "name": "AdminHeroMinted", "inputs": [ { "name": "to", "type": "address", "indexed": true }, { "name": "tokenId", "type": "uint256", "indexed": true }, { "name": "rarity", "type": "uint8", "indexed": false }, { "name": "power", "type": "uint256", "indexed": false } ], "anonymous": false }
 ] as const;
 
 export const relicABI = [
@@ -2042,7 +2047,7 @@ export const relicABI = [
 	},
 	{
 		"inputs": [],
-		"name": "withdrawNative",
+		"name": "withdrawNativeFunding",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -2057,7 +2062,13 @@ export const relicABI = [
 	{
 		"stateMutability": "payable",
 		"type": "receive"
-	}
+	},
+  { "type": "function", "name": "adminMint", "inputs": [ { "name": "_to", "type": "address", "internalType": "address" }, { "name": "_rarity", "type": "uint8", "internalType": "uint8" }, { "name": "_capacity", "type": "uint8", "internalType": "uint8" } ], "outputs": [], "stateMutability": "nonpayable" },
+  { "type": "event", "name": "AdminRelicMinted", "inputs": [ { "name": "to", "type": "address", "indexed": true, "internalType": "address" }, { "name": "tokenId", "type": "uint256", "indexed": true, "internalType": "uint256" }, { "name": "rarity", "type": "uint8", "indexed": false, "internalType": "uint8" }, { "name": "capacity", "type": "uint8", "indexed": false, "internalType": "uint8" } ], "anonymous": false },
+  { "type": "function", "name": "setMintPriceUSD", "inputs": [ { "name": "_newMintPriceUSD", "type": "uint256" } ], "outputs": [], "stateMutability": "nonpayable" },
+  { "type": "function", "name": "adminMint", "inputs": [ { "name": "_to", "type": "address" }, { "name": "_rarity", "type": "uint8" }, { "name": "_capacity", "type": "uint8" } ], "outputs": [], "stateMutability": "nonpayable" },
+  { "type": "event", "name": "AdminRelicMinted", "inputs": [ { "name": "to", "type": "address", "indexed": true }, { "name": "tokenId", "type": "uint256", "indexed": true }, { "name": "rarity", "type": "uint8", "indexed": false }, { "name": "capacity", "type": "uint8", "indexed": false } ], "anonymous": false },
+  { "type": "function", "name": "setBaseURI", "inputs": [ { "name": "newBaseURI", "type": "string" } ], "outputs": [], "stateMutability": "nonpayable" }
 ] as const;
 
 export const partyABI = [
@@ -3616,5 +3627,18 @@ export const dungeonCoreABI = [
 	{
 		"stateMutability": "payable",
 		"type": "receive"
-	}
+	},
+  { "type": "function", "name": "requestExpedition", "inputs": [ { "name": "_partyId", "type": "uint256", "internalType": "uint256" }, { "name": "_dungeonId", "type": "uint256", "internalType": "uint256" } ], "outputs": [ { "name": "requestId", "type": "uint256", "internalType": "uint256" } ], "stateMutability": "payable" }, // <--- 更新為 payable
+  { "type": "function", "name": "explorationFee", "inputs": [], "outputs": [ { "name": "", "type": "uint256", "internalType": "uint256" } ], "stateMutability": "view" },
+  { "type": "function", "name": "setExplorationFee", "inputs": [ { "name": "_newFee", "type": "uint256", "internalType": "uint256" } ], "outputs": [], "stateMutability": "nonpayable" },
+  { "type": "function", "name": "withdrawNative", "inputs": [], "outputs": [], "stateMutability": "nonpayable" },
+  { "type": "function", "name": "requestExpedition", "inputs": [ { "name": "_partyId", "type": "uint256" }, { "name": "_dungeonId", type: 'uint256' } ], "outputs": [ { "name": "requestId", type: 'uint256' } ], "stateMutability": "payable" },
+  { "type": "function", "name": "explorationFee", "inputs": [], "outputs": [ { "name": "", "type": "uint256" } ], "stateMutability": "view" },
+  { "type": "function", "name": "setExplorationFee", "inputs": [ { "name": "_newFee", "type": "uint256" } ], "outputs": [], "stateMutability": "nonpayable" },
+  { "type": "function", "name": "provisionPriceUSD", "inputs": [], "outputs": [ { "name": "", "type": "uint256" } ], "stateMutability": "view" },
+  { "type": "function", "name": "setProvisionPriceUSD", "inputs": [ { "name": "_newPrice", "type": "uint256" } ], "outputs": [], "stateMutability": "nonpayable" },
+  { "type": "function", "name": "globalRewardMultiplier", "inputs": [], "outputs": [ { "name": "", "type": "uint256" } ], "stateMutability": "view" },
+  { "type": "function", "name": "setGlobalRewardMultiplier", "inputs": [ { "name": "_newMultiplier", "type": "uint256" } ], "outputs": [], "stateMutability": "nonpayable" },
+  { "type": "function", "name": "updateDungeon", "inputs": [ { "name": "_dungeonId", "type": "uint256" }, { "name": "_requiredPower", "type": "uint256" }, { "name": "_rewardAmountUSD", "type": "uint256" }, { "name": "_successRate", "type": "uint8" } ], "outputs": [], "stateMutability": "nonpayable" },
+  { "type": "function", "name": "withdrawTaxedTokens", "inputs": [], "outputs": [], "stateMutability": "nonpayable" }
 ] as const;

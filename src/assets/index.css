@@ -6,15 +6,26 @@
   body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* 【更新】淺色模式用溫暖的米色，深色模式用深邃的藍黑色 */
     @apply bg-gradient-to-b from-[#fdf6e3] to-[#f7f0e0] font-sans;
+    @apply dark:bg-gradient-to-b dark:from-[#0d1a2e] dark:to-[#111827];
   }
 }
 
 @layer components {
-  .card-bg { @apply bg-white/60 backdrop-blur-lg border border-black/10 rounded-xl shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-1; }
+  /* 【更新】為所有自訂組件增加 dark: 前綴的樣式 */
+  .card-bg {
+    @apply bg-white/60 backdrop-blur-lg border border-black/10;
+    @apply dark:bg-gray-800/60 dark:border-white/10;
+  }
   .btn-primary { @apply bg-gradient-to-tr from-violet-500 to-indigo-500 text-white shadow-lg shadow-indigo-500/40 transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/60 hover:-translate-y-px disabled:bg-gray-400 disabled:shadow-none disabled:cursor-not-allowed active:scale-95; }
-  .nav-item { @apply px-4 py-2 rounded-full cursor-pointer transition-colors duration-300 hover:bg-white/10 text-gray-200; }
   .nav-item.active { @apply bg-white/20 font-semibold text-white; }
-  .page-title { @apply text-4xl font-bold text-center mb-8 text-[#2D2A4A] font-serif tracking-wide; }
-  .section-title { @apply text-2xl font-bold mb-4 text-[#2D2A4A]; }
+  .page-title {
+      @apply text-4xl font-bold text-center mb-8 text-[#2D2A4A] font-serif tracking-wide;
+      @apply dark:text-gray-200;
+  }
+  .section-title {
+      @apply text-2xl font-bold mb-4 text-[#2D2A4A];
+      @apply dark:text-gray-300;
+  }
 }

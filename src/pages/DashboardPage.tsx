@@ -48,6 +48,34 @@ export const DashboardPage: React.FC = () => {
     }
   };
   
+  const { data: playerInfo, isLoading: isLoadingPlayerInfo } = useReadContract({ /* ... */ });
+  const [currentTax, setCurrentTax] = useState<number>(0);
+
+  // 【細節還原】使用 useEffect 來計算並更新當前稅率
+  useEffect(() => {
+    if (playerInfo) {
+      const [, lastWithdrawTimestamp, isFirstWithdraw] = playerInfo;
+      if (isFirstWithdraw) {
+        setCurrentTax(0);
+        return;
+      }
+      
+      const TAX_PERIOD = 24 * 3600; // 24 小時
+      const MAX_TAX_RATE = 30;
+      const TAX_DECREASE_RATE = 10;
+      
+      const now = Math.floor(Date.now() / 1000);
+      const timeSinceLast = now - Number(lastWithdrawTimestamp);
+      
+      let taxRate = 0;
+      if (timeSinceLast < TAX_PERIOD * 3) {
+        const periodsPassed = Math.floor(timeSinceLast / TAX_PERIOD);
+        taxRate = Math.max(0, MAX_TAX_RATE - (periodsPassed * TAX_DECREASE_RATE));
+      }
+      setCurrentTax(taxRate);
+    }
+  }, [playerInfo]);
+  
   const isLoading = isLoadingTokenBalance || isLoadingPlayerInfo;
 
   return (
@@ -73,6 +101,8 @@ export const DashboardPage: React.FC = () => {
             </span>
              $SoulShard
           </div>
+          {/* 【細節還原】顯示當前稅率 */}
+          <p className="text-xs text-gray-500 mt-1">當前稅率: {currentTax}%</p>
           <div className="mt-2">
             <ActionButton 
               onClick={handleWithdraw} 

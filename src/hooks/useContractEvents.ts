@@ -3,10 +3,12 @@ import { useWatchContractEvent } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import { getContract } from '../config/contracts';
 import { useAppToast } from './useAppToast';
+import { useExpeditionResult } from '../contexts/ExpeditionContext'; // <-- 【新】引入 Hook
 
 export const useContractEvents = () => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
+    const { showExpeditionResult } = useExpeditionResult(); // <-- 【新】獲取彈窗函式
     const queryClient = useQueryClient();
     
     const heroContract = getContract(chainId, 'hero');
@@ -70,29 +72,26 @@ export const useContractEvents = () => {
         enabled: !!address && !!chainId && !!partyContract,
     });
 
+    // 監聽遠征完成事件
     useWatchContractEvent({
-        ...dungeonCoreContract,
+        ...getContract(chainId, 'dungeonCore'),
         eventName: 'ExpeditionFulfilled',
         onLogs: (logs: any) => {
             if (isUserRelated(logs[0], 'requester')) {
-                const { partyId, success } = logs[0].args;
-                const message = `隊伍 #${partyId.toString()} 遠征完成！結果: ${success ? '成功' : '失敗'}`;
-                handleEvent(message, success ? 'success' : 'error');
-                if (success) showToast(`獎勵已存入您的金庫。`, 'info');
-            }
-        },
-        enabled: !!address && !!chainId && !!dungeonCoreContract,
-    });
+                const { success, reward } = logs[0].args;
+                
+                // 【新】呼叫函式來顯示戰報彈窗，而不是 Toast
+                showExpeditionResult({ success, reward });
 
-    useWatchContractEvent({
-        ...dungeonCoreContract,
-        eventName: 'RewardsBanked',
-        onLogs: (logs: any) => {
-            if (isUserRelated(logs[0], 'user')) {
-                handleEvent(`隊伍 #${logs[0].args.partyId?.toString()} 的獎勵已領取！`);
+                // 在彈窗的同時，仍然可以顯示一個簡單的 Toast 作為即時通知
+                const message = `隊伍 #${logs[0].args.partyId.toString()} 遠征已完成！`;
+                showToast(message, 'info');
+
+                // 刷新相關數據
+                queryClient.invalidateQueries({ queryKey: ['playerInfo', address, chainId] });
             }
         },
-        enabled: !!address && !!chainId && !!dungeonCoreContract,
+        enabled: !!address && !!chainId && !!getContract(chainId, 'dungeonCore'),
     });
 
     useWatchContractEvent({

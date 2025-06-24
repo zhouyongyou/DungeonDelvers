@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class', // <--- 【新】啟用 class 策略  
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",

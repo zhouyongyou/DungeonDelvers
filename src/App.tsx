@@ -9,8 +9,9 @@ import { MintPage } from './pages/MintPage';
 import { ExplorerPage } from './pages/ExplorerPage';
 import { MyAssetsPage } from './pages/MyAssetsPage';
 import { DungeonPage } from './pages/DungeonPage';
+import { AdminPage } from './pages/AdminPage'; // <-- 新增
 
-export type Page = 'dashboard' | 'mint' | 'party' | 'dungeon' | 'explorer';
+export type Page = 'dashboard' | 'mint' | 'party' | 'dungeon' | 'explorer' | 'admin'; // <-- 新增 'admin'
 
 const PageContent: React.FC<{ activePage: Page; setActivePage: (page: Page) => void }> = ({ activePage, setActivePage }) => {
     const { isConnected } = useAccount();
@@ -24,6 +25,7 @@ const PageContent: React.FC<{ activePage: Page; setActivePage: (page: Page) => v
         case 'explorer': return <ExplorerPage />;
         case 'party': return <MyAssetsPage setActivePage={setActivePage} />;
         case 'dungeon': return <DungeonPage />;
+        case 'admin': return <AdminPage />; // <-- 新增
         default: return <DashboardPage />;
     }
 }
