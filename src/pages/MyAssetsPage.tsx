@@ -193,7 +193,7 @@ export const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = (
                         </div>
                         <div className="mt-4 flex flex-col gap-2">
                            <ActionButton onClick={() => setModal({ isOpen: true, type: 'create' })} className="w-full py-2 rounded-lg" isLoading={isPending} disabled={isPending}>創建隊伍</ActionButton>
-                           <p className="text-xs text-center text-gray-500 mt-1">首次創建需授權NFT (戰力需 > 300)</p>
+                           <p className="text-gray-500 mt-1">首次創建需授權NFT (戰力需 {'>'} 300)</p>
                         </div>
                     </div>
                 </div>

@@ -48,7 +48,6 @@ export const DashboardPage: React.FC = () => {
     }
   };
   
-  const { data: playerInfo, isLoading: isLoadingPlayerInfo } = useReadContract({ /* ... */ });
   const [currentTax, setCurrentTax] = useState<number>(0);
 
   // 【細節還原】使用 useEffect 來計算並更新當前稅率
