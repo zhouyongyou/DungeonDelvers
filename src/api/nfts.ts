@@ -1,4 +1,4 @@
-import { createPublicClient, http, type Address, type Abi } from 'viem';
+import { createPublicClient, http, type Address } from 'viem';
 import { bsc, bscTestnet } from 'viem/chains';
 import { getContract } from '../config/contracts';
 import type { NftType, AnyNft, HeroNft, RelicNft, PartyNft } from '../types/nft';
