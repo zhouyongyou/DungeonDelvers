@@ -13,17 +13,29 @@ export const useTheme = () => {
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [theme, setThemeState] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) || 'system');
+    
     const effectiveTheme = useMemo(() => {
-        if (theme === 'system') return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        if (theme === 'system') {
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
         return theme;
     }, [theme]);
+
     useEffect(() => {
         const root = window.document.documentElement;
         root.classList.remove('light', 'dark');
         root.classList.add(effectiveTheme);
         localStorage.setItem('theme', theme);
     }, [theme, effectiveTheme]);
-    const setTheme = (newTheme: Theme) => { setThemeState(newTheme); };
-    const value = { theme, setTheme, effectiveTheme };
+
+    const setTheme = useCallback((newTheme: Theme) => {
+        setThemeState(newTheme);
+    }, []);
+
+    const value = useMemo(() => ({
+        theme, 
+        setTheme, 
+        effectiveTheme
+    }), [theme, setTheme, effectiveTheme]);
     return (<ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>);
 };

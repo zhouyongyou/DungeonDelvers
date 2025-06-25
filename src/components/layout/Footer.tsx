@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount, useClient } from 'wagmi';
 import { bsc, bscTestnet } from 'wagmi/chains';
+import { getBlockNumber } from '@wagmi/core';
+import { wagmiConfig } from '../../wagmi';
 import fourLogoUrl from '/assets/images/FOUR-logo4.png';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 
-// 頁腳組件
 export const Footer: React.FC = () => {
-  // --- RPC 狀態監測邏輯 ---
   const { chain } = useAccount();
   const client = useClient();
 
@@ -17,15 +17,18 @@ export const Footer: React.FC = () => {
 
   useEffect(() => {
     const checkRpcHealth = async () => {
-      if (!client?.transport) {
-        setRpcStatus({ isHealthy: null, endpoint: '錢包未連接' });
+      if (!client) {
+      setRpcStatus({ isHealthy: null, endpoint: '錢包未連接' });
         return;
       }
-      
+      const currentChainId = client.chain.id;
       const rpcUrl = client.transport.url || '未知端點';
-
+      if (currentChainId !== bsc.id && currentChainId !== bscTestnet.id) {
+          setRpcStatus({ isHealthy: false, endpoint: '不支援的網路' });
+          return;
+      }
       try {
-        await client.getBlockNumber();
+        await getBlockNumber(wagmiConfig, { chainId: currentChainId });
         setRpcStatus({ isHealthy: true, endpoint: rpcUrl });
       } catch (error) {
         console.error("RPC health check failed:", error);
@@ -36,7 +39,7 @@ export const Footer: React.FC = () => {
     checkRpcHealth();
     const intervalId = setInterval(checkRpcHealth, 15000);
     return () => clearInterval(intervalId);
-  }, [client]);
+  }, [client]); // 5. useEffect 的依賴項只需要 client
 
   const getStatusIndicator = () => {
     if (rpcStatus.isHealthy === true) return { color: 'text-green-400', text: '正常' };

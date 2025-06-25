@@ -15,7 +15,7 @@ const AdminSection: React.FC<{ title: string; children: ReactNode }> = ({ title,
 
 const InputGroup: React.FC<{ label: string; children: ReactNode }> = ({ label, children }) => (
     <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</label>
         <div className="flex gap-2 items-center">{children}</div>
     </div>
 );
@@ -47,7 +47,7 @@ const AdminPage: React.FC = () => {
     const [multiplier, setMultiplier] = useState('');
     
     if (isLoadingOwner) return <div className="flex justify-center mt-10"><LoadingSpinner /></div>;
-    if (!address || !heroOwner || address.toLowerCase() !== heroOwner.toLowerCase()) {
+    if (!address || typeof heroOwner !== 'string' || address.toLowerCase() !== heroOwner.toLowerCase()) {
         return <div className="text-center p-8 card-bg">您不是合約擁有者，無法訪問此頁面。</div>;
     }
     
@@ -60,7 +60,7 @@ const AdminPage: React.FC = () => {
     const handleSetRelicUri = () => { if(relicContract && uris.relic) writeContract({ ...relicContract, functionName: 'setBaseURI', args: [uris.relic] })};
     const handleUpdateDungeon = () => { if(dungeonCoreContract && dungeonSettings.id && dungeonSettings.power && dungeonSettings.reward && dungeonSettings.rate) writeContract({ ...dungeonCoreContract, functionName: 'updateDungeon', args: [BigInt(dungeonSettings.id), BigInt(dungeonSettings.power), parseEther(dungeonSettings.reward), Number(dungeonSettings.rate)] })};
     const handleSetMultiplier = () => { if(dungeonCoreContract && multiplier) writeContract({ ...dungeonCoreContract, functionName: 'setGlobalRewardMultiplier', args: [BigInt(multiplier)] })};
-    const handleWithdrawBNB = () => { if(dungeonCoreContract) writeContract({ ...dungeonCoreContract, functionName: 'withdrawNative' })};
+    const handleWithdrawBNB = () => { if(dungeonCoreContract) writeContract({ ...dungeonCoreContract, functionName: 'withdrawNativeFunding' })};
     const handleWithdrawTax = () => { if(dungeonCoreContract) writeContract({ ...dungeonCoreContract, functionName: 'withdrawTaxedTokens' })};
 
     return (

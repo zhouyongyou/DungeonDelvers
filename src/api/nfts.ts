@@ -37,14 +37,14 @@ async function fetchNftsByType(owner: Address, chainId: number, type: NftType): 
         functionName: 'ownerOf',
         args: [tokenId],
     }));
-    const ownerResults = await publicClient.multicall({ contracts: ownerCalls });
+    const ownerResults = await publicClient.multicall({ contracts: ownerCalls, allowFailure: true });
 
     const ownedTokenIds = uniqueTokenIds.filter(
         (_, i) => ownerResults[i].status === 'success' && (ownerResults[i].result as Address).toLowerCase() === owner.toLowerCase()
     );
     if (ownedTokenIds.length === 0) return [];
     
-    // 【修正】為 multicall 的參數提供更精確的型別，以解決 'multicall' boolean 問題
+    // 為 multicall 的參數提供更精確的型別，以解決 'multicall' boolean 問題
     const propsCalls = ownedTokenIds.flatMap(tokenId => {
         const calls: any[] = [{ ...contract, functionName: 'tokenURI', args: [tokenId] }];
         if (type === 'hero') calls.push({ ...contract, functionName: 'getHeroProperties', args: [tokenId] });

@@ -7,8 +7,16 @@ import { getContract } from '../config/contracts';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { SkeletonCard } from '../components/ui/SkeletonCard';
-import type { Page } from '../App';
 import type { AnyNft, PartyNft } from '../types/nft';
+
+// 定義地城資料的型別
+interface Dungeon {
+    id: number;
+    requiredPower: bigint;
+    rewardAmountUSD: bigint;
+    baseSuccessRate: number;
+    isInitialized: boolean;
+}
 
 const DungeonPage: React.FC = () => {
     const { address, chainId } = useAccount();
@@ -30,7 +38,8 @@ const DungeonPage: React.FC = () => {
         queryKey: ['ownedNfts', address, chainId, 'partiesOnly'],
         queryFn: async () => {
             if (!address || !chainId) return [];
-            return (await fetchAllOwnedNfts(address, chainId)).parties;
+            const result = await fetchAllOwnedNfts(address, chainId);
+            return result.parties;
         },
         enabled: !!address && !!chainId,
     });
@@ -44,16 +53,44 @@ const DungeonPage: React.FC = () => {
         })),
         query: { enabled: !!dungeonCoreContract }
     });
-    const dungeons = useMemo(() => dungeonsData?.map((d, i) => ({ ...(d.result as any), id: i + 1 })).filter(d => d.isInitialized) ?? [], [dungeonsData]);
+
+    const dungeons: Dungeon[] = useMemo(() => {
+        if (!dungeonsData) return [];
+        
+        return dungeonsData.map((d, i) => {
+            // 確保資料成功回傳且為陣列格式
+            if (d.status !== 'success' || !Array.isArray(d.result)) {
+                return null;
+            }
+            
+            // 根據 ABI 的順序解構元組 (tuple)
+            const [requiredPower, rewardAmountUSD, baseSuccessRate, isInitialized] = d.result;
+            
+            // 過濾掉未初始化的地城
+            if (!isInitialized) return null;
+
+            return {
+                id: i + 1,
+                requiredPower,
+                rewardAmountUSD,
+                baseSuccessRate,
+                isInitialized,
+            };
+        }).filter((d): d is Dungeon => d !== null); // 過濾掉 null 的項目並給予正確的型別
+    }, [dungeonsData]);
+    
     const { writeContractAsync } = useWriteContract({
       mutation: {
         onSuccess: (_hash, vars) => showToast(`${(vars.functionName as string) === 'requestExpedition' ? '遠征' : '領取獎勵'}請求已送出`, 'success'),
         onError: (err) => showToast(err.message.split('\n')[0], 'error')
       }
     });
+
     const handleDispatch = async (dungeonId: number) => {
         if (!selectedPartyId) return showToast('請先選擇一個隊伍', 'error');
-        if (typeof explorationFee === 'undefined') return showToast('無法讀取探索費用，請稍後再試', 'error');
+        if (typeof explorationFee !== 'bigint') {
+            return showToast('無法讀取探索費用，請稍後再試', 'error');
+        }
         if (!dungeonCoreContract) return;
         
         setActionState({ type: 'dispatch', id: dungeonId.toString(), isLoading: true });
@@ -65,7 +102,7 @@ const DungeonPage: React.FC = () => {
                 ...dungeonCoreContract, 
                 functionName: 'requestExpedition', 
                 args: [BigInt(selectedPartyId), BigInt(dungeonId)],
-                value: typeof explorationFee === 'bigint' ? explorationFee : 0n
+                value: explorationFee
             });
         } catch (e: any) {
              // 錯誤已在 writeContractAsync 中處理
@@ -73,6 +110,7 @@ const DungeonPage: React.FC = () => {
             setActionState(null);
         }
     };
+
     const handleClaimRewards = async () => {
         if (!selectedPartyId) return showToast('請選擇隊伍以領取獎勵', 'error');
         if (!dungeonCoreContract) return;
@@ -85,15 +123,17 @@ const DungeonPage: React.FC = () => {
             setActionState(null);
         }
     };
+
     const getDungeonName = (id: number) => ["", "新手礦洞", "哥布林洞穴", "食人魔山谷", "蜘蛛巢穴", "石化蜥蜴沼澤", "巫妖墓穴", "奇美拉之巢", "惡魔前哨站", "巨龍之巔", "混沌深淵"][id] || "未知地城";
+    
     return (
         <section>
             <h2 className="page-title">地下城入口</h2>
             <div className="mb-8 card-bg p-4 flex flex-col md:flex-row gap-4 items-center">
                 <div className="w-full">
                     <h3 className="section-title">選擇隊伍</h3>
-                    <select value={selectedPartyId} onChange={e => setSelectedPartyId(e.target.value)} className="w-full p-2 border rounded-lg bg-white/80 h-10">
-                        <option value="">{isLoadingParties ? '正在加載您的隊伍...' : '請選擇一個隊伍'}</option>
+                    <select value={selectedPartyId} onChange={e => setSelectedPartyId(e.target.value)} className="w-full p-2 border rounded-lg bg-white/80 dark:bg-gray-700 h-10">
+                        <option value="">{isLoadingParties ? '正在加載您的隊伍...' : (ownedParties && ownedParties.length > 0 ? '請選擇一個隊伍' : '您還沒有創建任何隊伍')}</option>
                         {ownedParties?.map((p: AnyNft) => (
                             <option key={(p as PartyNft).id.toString()} value={(p as PartyNft).id.toString()}>
                                 {p.name || `隊伍 #${p.id.toString()}`} (戰力: {(p as PartyNft).totalPower.toString()})
