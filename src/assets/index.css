@@ -6,13 +6,15 @@
   body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    @apply bg-gradient-to-b from-[#fdf6e3] to-[#f7f0e0] font-sans;
+    /* 淺色模式使用米色漸層，深色模式則使用深紫色漸層，確保主題一致性 */
+    @apply bg-gradient-to-b from-[#fdf6e3] to-[#f7f0e0] font-sans dark:bg-gradient-to-b dark:from-[#2D2A4A] dark:to-[#1F1D36];
   }
 }
 
 @layer components {
   .card-bg {
-    @apply bg-white/60 backdrop-blur-lg border border-black/10;
+    /* 深色模式下，卡片背景改為帶透明度的黑色，邊框也調整為淺色 */
+    @apply bg-white/60 backdrop-blur-lg border border-black/10 dark:bg-black/20 dark:border-white/10;
   }
   .btn-primary {
     @apply bg-gradient-to-tr from-violet-500 to-indigo-500 text-white shadow-lg shadow-indigo-500/40 transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/60 hover:-translate-y-px disabled:bg-gray-400 disabled:shadow-none disabled:cursor-not-allowed active:scale-95;
@@ -24,9 +26,11 @@
       @apply bg-white/20 font-semibold text-white;
   }
   .page-title {
-      @apply text-4xl font-bold text-center mb-8 text-[#2D2A4A] font-serif tracking-wide;
+      /* 深色模式下，頁面標題改為淺灰色以提高可讀性 */
+      @apply text-4xl font-bold text-center mb-8 text-[#2D2A4A] dark:text-gray-200 font-serif tracking-wide;
   }
   .section-title {
-      @apply text-2xl font-bold mb-4 text-[#2D2A4A];
+      /* 深色模式下，區塊標題改為淺灰色 */
+      @apply text-2xl font-bold mb-4 text-[#2D2A4A] dark:text-gray-300;
   }
 }
