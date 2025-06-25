@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, type ReactNode } from 'react';
 import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
 import { useAppToast } from '../hooks/useAppToast';
@@ -11,10 +11,6 @@ import { Modal } from '../components/ui/Modal';
 import { ActionButton } from '../components/ui/ActionButton';
 import type { Page } from '../App';
 import type { AnyNft, NftType, HeroNft, RelicNft } from '../types/nft';
-
-// -----------------------------------------------------------------------
-// Helper Components (可以考慮將它們移到自己的檔案中)
-// -----------------------------------------------------------------------
 
 // 篩選器組件
 const NftFilter: React.FC<{
@@ -47,10 +43,6 @@ const NftGrid: React.FC<{
     return (<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">{nfts.map(nft => <NftCard key={nft.id.toString()} nft={nft} onSelect={onSelect} isSelected={selection?.has(nft.id)} onDisband={onDisband}/>)}</div>);
 };
 
-// -----------------------------------------------------------------------
-// 主頁面組件
-// -----------------------------------------------------------------------
-
 const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setActivePage }) => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
@@ -64,7 +56,10 @@ const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAc
     // 數據獲取
     const { data: nfts, isLoading: isLoadingNfts } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
-        queryFn: () => fetchAllOwnedNfts(address!, chainId!),
+        queryFn: () => {
+             if (!address || !chainId) return { heroes: [], relics: [], parties: [] };
+             return fetchAllOwnedNfts(address, chainId);
+        },
         enabled: !!address && !!chainId,
     });
 
@@ -100,12 +95,21 @@ const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAc
     const heroContract = getContract(chainId, 'hero');
     const relicContract = getContract(chainId, 'relic');
 
-    // 檢查授權狀態
-    const { data: isHeroApproved } = useReadContract({ ...(heroContract || {}), functionName: 'isApprovedForAll', args: [address!, partyContract?.address!], query: { enabled: !!address && !!partyContract && !!heroContract && !!relicContract} });
-    const { data: isRelicApproved } = useReadContract({ ...(relicContract || {}), functionName: 'isApprovedForAll', args: [address!, partyContract?.address!], query: { enabled: !!address && !!partyContract && !!heroContract && !!relicContract} });
+    const { data: isHeroApproved } = useReadContract({ 
+        ...heroContract, 
+        functionName: 'isApprovedForAll', 
+        args: [address!, partyContract?.address!], 
+        query: { enabled: !!address && !!partyContract && !!heroContract } 
+    });
+    const { data: isRelicApproved } = useReadContract({ 
+        ...relicContract, 
+        functionName: 'isApprovedForAll', 
+        args: [address!, partyContract?.address!], 
+        query: { enabled: !!address && !!partyContract && !!relicContract } 
+    });
     const { writeContractAsync, isPending } = useWriteContract({
       mutation: {
-        onSuccess: (hash, vars) => showToast(`${vars.functionName === 'createParty' ? '創建隊伍' : '解散隊伍'}請求已送出`, 'success'),
+        onSuccess: (_hash, vars) => showToast(`${(vars.functionName as string) === 'createParty' ? '創建隊伍' : '解散隊伍'}請求已送出`, 'success'),
         onError: (err) => showToast(err.message.split('\n')[0], 'error')
       }
     });
@@ -113,7 +117,6 @@ const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAc
     const handleSelect = (id: bigint, type: NftType) => {
         if (type === 'hero' || type === 'relic') {
             setSelection(prev => {
-                // 根據 type 正確地決定要操作的 state key ('heroes' 或 'relics')
                 const key = type === 'hero' ? 'heroes' : 'relics';
                 const newSet = new Set(prev[key]);
                 
@@ -134,9 +137,13 @@ const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAc
         if (!partyContract) return;
 
         try {
-            if (!isHeroApproved) await writeContractAsync({ ...heroContract, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
-            if (!isRelicApproved) await writeContractAsync({ ...relicContract, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
-            await writeContractAsync({ ...partyContract, functionName: 'createParty', args: [Array.from(selection.heroes), Array.from(selection.relics)] });
+            if (!isHeroApproved) {
+                if(heroContract && partyContract) await writeContractAsync({ ...heroContract, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
+            }
+            if (!isRelicApproved) {
+                 if(relicContract && partyContract) await writeContractAsync({ ...relicContract, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
+            }
+            if (partyContract) await writeContractAsync({ ...partyContract, functionName: 'createParty', args: [Array.from(selection.heroes), Array.from(selection.relics)] });
             setSelection({ heroes: new Set(), relics: new Set() });
             setModal({ isOpen: false, type: 'create' });
         } catch (e: any) { console.error(e) }

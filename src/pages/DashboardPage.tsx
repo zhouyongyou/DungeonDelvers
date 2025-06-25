@@ -16,8 +16,6 @@ const DashboardPage: React.FC = () => {
   const { data: tokenBalance, isLoading: isLoadingTokenBalance } = useBalance({
     address,
     token: soulShardContract?.address,
-    // 【修正】新版 useBalance 不接受 query 參數
-    // query: { enabled: !!address && !!soulShardContract },
   });
 
   const { data, isLoading: isLoadingPlayerInfo } = useReadContract({
@@ -27,7 +25,6 @@ const DashboardPage: React.FC = () => {
     query: { enabled: !!address && !!dungeonCoreContract },
   });
   
-  // 【修正】更安全地解構資料，避免 `data` 為 undefined 時出錯
   const playerInfo = Array.isArray(data) ? data : [0n, 0n, true];
   const [withdrawableBalance, lastWithdrawTimestamp, isFirstWithdraw] = playerInfo;
 

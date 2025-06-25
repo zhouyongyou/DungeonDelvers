@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, type ReactNode } from 'react';
 import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { parseEther, type Address } from 'viem';
 import { useAppToast } from '../hooks/useAppToast';
@@ -6,14 +6,14 @@ import { getContract } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 
-const AdminSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+const AdminSection: React.FC<{ title: string; children: ReactNode }> = ({ title, children }) => (
     <div className="card-bg p-6 rounded-xl shadow-inner bg-black/5">
         <h3 className="section-title border-b pb-2 mb-4">{title}</h3>
         <div className="space-y-4">{children}</div>
     </div>
 );
 
-const InputGroup: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+const InputGroup: React.FC<{ label: string; children: ReactNode }> = ({ label, children }) => (
     <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
         <div className="flex gap-2 items-center">{children}</div>
@@ -47,9 +47,10 @@ const AdminPage: React.FC = () => {
     const [multiplier, setMultiplier] = useState('');
     
     if (isLoadingOwner) return <div className="flex justify-center mt-10"><LoadingSpinner /></div>;
-    // 【修正】更安全的擁有者檢查，確保 address 和 heroOwner 都存在
-    if (!address || !heroOwner || address.toLowerCase() !== heroOwner.toLowerCase()) return <div className="text-center p-8 card-bg">您不是合約擁有者，無法訪問此頁面。</div>;
-
+    if (!address || !heroOwner || address.toLowerCase() !== heroOwner.toLowerCase()) {
+        return <div className="text-center p-8 card-bg">您不是合約擁有者，無法訪問此頁面。</div>;
+    }
+    
     const handleAdminMintHero = () => { if(heroContract && mintHeroArgs.to) writeContract({ ...heroContract, functionName: 'adminMint', args: [mintHeroArgs.to as Address, Number(mintHeroArgs.rarity), BigInt(mintHeroArgs.power)] })};
     const handleAdminMintRelic = () => { if(relicContract && mintRelicArgs.to) writeContract({ ...relicContract, functionName: 'adminMint', args: [mintRelicArgs.to as Address, Number(mintRelicArgs.rarity), Number(mintRelicArgs.capacity)] })};
     const handleSetHeroPrice = () => { if(heroContract && prices.hero) writeContract({ ...heroContract, functionName: 'setMintPriceUSD', args: [parseEther(prices.hero)] })};

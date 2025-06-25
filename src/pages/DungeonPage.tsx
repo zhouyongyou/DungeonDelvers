@@ -7,7 +7,8 @@ import { getContract } from '../config/contracts';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { SkeletonCard } from '../components/ui/SkeletonCard';
-import type { PartyNft, AnyNft } from '../types/nft';
+import type { Page } from '../App';
+import type { AnyNft, PartyNft } from '../types/nft';
 
 const DungeonPage: React.FC = () => {
     const { address, chainId } = useAccount();
@@ -27,7 +28,10 @@ const DungeonPage: React.FC = () => {
     // 獲取玩家擁有的隊伍
     const { data: ownedParties, isLoading: isLoadingParties } = useQuery({
         queryKey: ['ownedNfts', address, chainId, 'partiesOnly'],
-        queryFn: async () => (await fetchAllOwnedNfts(address!, chainId!)).parties,
+        queryFn: async () => {
+            if (!address || !chainId) return [];
+            return (await fetchAllOwnedNfts(address, chainId)).parties;
+        },
         enabled: !!address && !!chainId,
     });
     
@@ -43,7 +47,7 @@ const DungeonPage: React.FC = () => {
     const dungeons = useMemo(() => dungeonsData?.map((d, i) => ({ ...(d.result as any), id: i + 1 })).filter(d => d.isInitialized) ?? [], [dungeonsData]);
     const { writeContractAsync } = useWriteContract({
       mutation: {
-        onSuccess: (hash, vars) => showToast(`${vars.functionName === 'requestExpedition' ? '遠征' : '領取獎勵'}請求已送出`, 'success'),
+        onSuccess: (_hash, vars) => showToast(`${(vars.functionName as string) === 'requestExpedition' ? '遠征' : '領取獎勵'}請求已送出`, 'success'),
         onError: (err) => showToast(err.message.split('\n')[0], 'error')
       }
     });
