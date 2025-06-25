@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import type { AnyNft, NftType, HeroNft, RelicNft, PartyNft } from '../../types/nft';
+import type { AnyNft, NftType } from '../../types/nft';
 
 interface NftCardProps {
   nft: AnyNft;

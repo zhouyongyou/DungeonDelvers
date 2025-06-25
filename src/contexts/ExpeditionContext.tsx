@@ -1,4 +1,4 @@
-import React, { createContext, useState, useCallback, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useCallback, useContext, type ReactNode } from 'react';
 import { formatEther } from 'viem';
 import { Modal } from '../components/ui/Modal';
 

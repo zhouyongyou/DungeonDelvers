@@ -7,11 +7,6 @@ import { useTheme } from '../../contexts/ThemeContext';
 import logoUrl from '/assets/images/logo-192x192.png';
 import { DEVELOPER_ADDRESS } from '../../config/constants';
 
-interface HeaderProps {
-  activePage: Page;
-  setActivePage: (page: Page) => void;
-}
-
 const ThemeToggleButton: React.FC = () => {
     const { theme, setTheme, effectiveTheme } = useTheme();
 

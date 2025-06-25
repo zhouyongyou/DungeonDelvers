@@ -16,18 +16,20 @@ const DashboardPage: React.FC = () => {
   const { data: tokenBalance, isLoading: isLoadingTokenBalance } = useBalance({
     address,
     token: soulShardContract?.address,
-    query: { enabled: !!address && !!soulShardContract, queryKey: ['balance', address, chainId] },
+    // 【修正】新版 useBalance 不接受 query 參數
+    // query: { enabled: !!address && !!soulShardContract },
   });
 
-  const { data: playerInfo, isLoading: isLoadingPlayerInfo } = useReadContract({
-    address: dungeonCoreContract?.address,
-    abi: dungeonCoreContract?.abi,
+  const { data, isLoading: isLoadingPlayerInfo } = useReadContract({
+    ...dungeonCoreContract,
     functionName: 'playerInfo',
     args: [address!],
-    query: { enabled: !!address && !!dungeonCoreContract, queryKey: ['playerInfo', address, chainId] },
+    query: { enabled: !!address && !!dungeonCoreContract },
   });
   
-  const withdrawableBalance = playerInfo?.[0] ?? 0n;
+  // 【修正】更安全地解構資料，避免 `data` 為 undefined 時出錯
+  const playerInfo = Array.isArray(data) ? data : [0n, 0n, true];
+  const [withdrawableBalance, lastWithdrawTimestamp, isFirstWithdraw] = playerInfo;
 
   const { writeContract, isPending: isWithdrawing } = useWriteContract({
     mutation: {
@@ -46,30 +48,26 @@ const DashboardPage: React.FC = () => {
   
   const [currentTax, setCurrentTax] = useState<number>(0);
 
-  // 【細節還原】使用 useEffect 來計算並更新當前稅率
   useEffect(() => {
-    if (playerInfo) {
-      const [, lastWithdrawTimestamp, isFirstWithdraw] = playerInfo;
-      if (isFirstWithdraw) {
-        setCurrentTax(0);
-        return;
-      }
-      
-      const TAX_PERIOD = 24 * 3600; // 24 小時
-      const MAX_TAX_RATE = 30;
-      const TAX_DECREASE_RATE = 10;
-      
-      const now = Math.floor(Date.now() / 1000);
-      const timeSinceLast = now - Number(lastWithdrawTimestamp);
-      
-      let taxRate = 0;
-      if (timeSinceLast < TAX_PERIOD * 3) {
-        const periodsPassed = Math.floor(timeSinceLast / TAX_PERIOD);
-        taxRate = Math.max(0, MAX_TAX_RATE - (periodsPassed * TAX_DECREASE_RATE));
-      }
-      setCurrentTax(taxRate);
+    if (isFirstWithdraw) {
+      setCurrentTax(0);
+      return;
     }
-  }, [playerInfo]);
+    
+    const TAX_PERIOD = 24 * 3600; 
+    const MAX_TAX_RATE = 30;
+    const TAX_DECREASE_RATE = 10;
+    
+    const now = Math.floor(Date.now() / 1000);
+    const timeSinceLast = now - Number(lastWithdrawTimestamp);
+    
+    let taxRate = 0;
+    if (timeSinceLast < TAX_PERIOD * 3) {
+      const periodsPassed = Math.floor(timeSinceLast / TAX_PERIOD);
+      taxRate = Math.max(0, MAX_TAX_RATE - (periodsPassed * TAX_DECREASE_RATE));
+    }
+    setCurrentTax(taxRate);
+  }, [playerInfo, isFirstWithdraw, lastWithdrawTimestamp]);
   
   const isLoading = isLoadingTokenBalance || isLoadingPlayerInfo;
 
@@ -96,7 +94,6 @@ const DashboardPage: React.FC = () => {
             </span>
              $SoulShard
           </div>
-          {/* 【細節還原】顯示當前稅率 */}
           <p className="text-xs text-gray-500 mt-1">當前稅率: {currentTax}%</p>
           <div className="mt-2">
             <ActionButton 
@@ -112,7 +109,6 @@ const DashboardPage: React.FC = () => {
       </div>
       <div className="mt-8">
         <h3 className="section-title text-center">交易市場</h3>
-        {/* 【細節還原】使用您在舊版中設定的 OKX 市場連結 */}
         <div className="card-bg p-6 rounded-xl grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
           <a href="https://web3.okx.com/zh-hans/nft" target="_blank" rel="noreferrer" className="btn-primary py-3 rounded-lg">交易英雄</a>
           <a href="https://web3.okx.com/zh-hans/nft" target="_blank" rel="noreferrer" className="btn-primary py-3 rounded-lg">交易聖物</a>
