@@ -6,15 +6,22 @@
   body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* 淺色模式使用米色漸層，深色模式則使用深紫色漸層，確保主題一致性 */
-    @apply bg-gradient-to-b from-[#fdf6e3] to-[#f7f0e0] font-sans dark:bg-gradient-to-b dark:from-[#2D2A4A] dark:to-[#1F1D36];
+    /* 淺色模式使用米色漸層，深色模式則使用深紫色漸層 */
+    /* 新增：為 body 設定基礎文字顏色，並在深色模式下切換為淺灰色，確保所有文字預設可見 */
+    @apply bg-gradient-to-b from-[#fdf6e3] to-[#f7f0e0] font-sans text-gray-800 dark:bg-gradient-to-b dark:from-[#2D2A4A] dark:to-[#1F1D36] dark:text-gray-300;
+  }
+
+  /* 新增：為表單元素（輸入框、下拉選單）設定深色模式樣式，確保可讀性 */
+  input, select, textarea {
+    @apply dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400;
   }
 }
 
 @layer components {
   .card-bg {
     /* 深色模式下，卡片背景改為帶透明度的黑色，邊框也調整為淺色 */
-    @apply bg-white/60 backdrop-blur-lg border border-black/10 dark:bg-black/20 dark:border-white/10;
+    /* 新增：確保卡片內的文字在深色模式下有好的對比 */
+    @apply bg-white/60 backdrop-blur-lg border border-black/10 dark:bg-black/20 dark:border-white/10 dark:text-gray-300;
   }
   .btn-primary {
     @apply bg-gradient-to-tr from-violet-500 to-indigo-500 text-white shadow-lg shadow-indigo-500/40 transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/60 hover:-translate-y-px disabled:bg-gray-400 disabled:shadow-none disabled:cursor-not-allowed active:scale-95;
