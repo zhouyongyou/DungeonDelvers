@@ -1,10 +1,5 @@
-// 檔案: DungeonCore.sol (【更新】)
-// 說明: 1. 將 requestExpedition 函式修改為 payable，使其可以接收 BNB。
-//       2. 新增探索費用 (explorationFee) 的邏輯。
-//       3. 新增 withdrawNative 函式，讓擁有者可以提出合約中的 BNB。
-// =======================================================================
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -34,9 +29,7 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
     uint256 public constant TAX_PERIOD = 24 hours;
     uint256 public constant MAX_TAX_RATE = 30;
     uint256 public constant TAX_DECREASE_RATE = 10;
-    // 【新功能】設定探索費用，例如 0.0015 BNB
-    uint256 public explorationFee = 0.0015 ether;
-
+    
     struct PlayerInfo {
         uint256 withdrawableBalance;
         uint256 lastWithdrawTimestamp;
@@ -117,17 +110,7 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
         emit ProvisionsBought(_partyId, _amount, requiredSoulShard);
     }
 
-    /**
-     * @notice 【更新】將此函式改為 payable，並增加費用檢查
-     */
-    function requestExpedition(uint256 _partyId, uint256 _dungeonId) 
-        external 
-        payable // <--- 【更新】
-        nonReentrant 
-        returns (uint256 requestId) 
-    {
-        // 【新功能】檢查是否支付了足夠的探索費用
-        require(msg.value >= explorationFee, "BNB fee not met");
+    function requestExpedition(uint256 _partyId, uint256 _dungeonId) external nonReentrant returns (uint256 requestId) {
         require(partyContract.ownerOf(_partyId) == msg.sender, "Not party owner");
         require(dungeons[_dungeonId].isInitialized, "Dungeon DNE");
         
@@ -151,13 +134,6 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
         });
 
         emit ExpeditionRequested(requestId, _partyId, _dungeonId);
-    }
-
-    /**
-     * @notice 【新功能】允許合約擁有者設定新的探索費用
-     */
-    function setExplorationFee(uint256 _newFee) public onlyOwner {
-        explorationFee = _newFee;
     }
 
     function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
@@ -265,11 +241,7 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
     function setProvisionPriceUSD(uint256 _newPrice) public onlyOwner {
         provisionPriceUSD = _newPrice;
     }
-
-    /**
-     * @notice 【新功能】允許合約擁有者提出合約中所有 BNB (包括探索費用和 VRF 的餘額)
-     * 注意：原有的 withdrawNativeFunding 已被此函式取代，功能更清晰
-     */
+    
     function withdrawNativeFunding() public onlyOwner {
         (bool success, ) = owner().call{value: address(this).balance}("");
         require(success, "Native withdraw failed");

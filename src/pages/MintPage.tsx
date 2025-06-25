@@ -32,23 +32,24 @@ const useMintLogic = (type: NftToMint, quantity: number) => {
     const { data: singleUnitPrice, isLoading: isLoadingPrice } = useReadContract({
         ...contractConfig,
         functionName: 'getSoulShardAmountForUSD',
-        args: [mintPriceUSD || BigInt(2 * 1e18)], // 如果價格尚未載入，使用預設值
-        query: { enabled: !!mintPriceUSD },
+        args: [mintPriceUSD || 0n], 
+        query: { enabled: !!contractConfig && typeof mintPriceUSD === 'bigint' },
     });
     
     const totalRequiredAmount = useMemo(() => {
-        if (!singleUnitPrice) return 0n;
+        if (typeof singleUnitPrice !== 'bigint') return 0n;
         return singleUnitPrice * BigInt(quantity);
     }, [singleUnitPrice, quantity]);
 
     const { data: allowance, refetch: refetchAllowance, isLoading: isLoadingAllowance } = useReadContract({
-        ...soulShardContract,
+        address: soulShardContract?.address,
+        abi: soulShardContract?.abi,
         functionName: 'allowance',
         args: [address!, contractConfig?.address!],
-        query: { enabled: !!address && !!contractConfig },
+        query: { enabled: !!address && !!contractConfig && !!soulShardContract },
     });
 
-    const { writeContract: approve, data: approveData, isPending: isApproving } = useWriteContract({
+    const { writeContract: approve, isPending: isApproving } = useWriteContract({
         mutation: {
             onSuccess: (hash) => {
                 setApprovalTxHash(hash);
@@ -61,30 +62,39 @@ const useMintLogic = (type: NftToMint, quantity: number) => {
             }
         }
     });
-
-    const { isLoading: isConfirmingApproval } = useWaitForTransactionReceipt({
+    
+    // 【核心修正】移除了未被使用的 'receipt' 變數
+    const { isLoading: isConfirmingApproval, isSuccess: isConfirmed, isError: isConfirmError } = useWaitForTransactionReceipt({
         hash: approvalTxHash,
-        onSuccess: () => {
+    });
+
+    useEffect(() => {
+        if (isConfirmed) {
             showToast('授權成功！', 'success');
             refetchAllowance();
-            setStep('readyToMint');
-        },
-        onError: () => {
-             showToast('授權確認失敗', 'error');
-             setStep('needsApproval');
         }
-    });
+        if (isConfirmError) {
+            showToast('授權確認失敗', 'error');
+            setStep('needsApproval');
+        }
+    }, [isConfirmed, isConfirmError, refetchAllowance, showToast]);
 
     useEffect(() => {
         if (!address) { setStep('idle'); return; }
         if (isLoadingAllowance || isLoadingPrice) { setStep('loading'); return; }
-        if (allowance !== undefined && totalRequiredAmount > 0n) {
+        
+        if (isConfirmingApproval) {
+            setStep('approveConfirming');
+            return;
+        }
+
+        if (typeof allowance === 'bigint') {
             setStep(allowance >= totalRequiredAmount ? 'readyToMint' : 'needsApproval');
         }
-    }, [address, allowance, totalRequiredAmount, isLoadingAllowance, isLoadingPrice]);
+    }, [address, allowance, totalRequiredAmount, isLoadingAllowance, isLoadingPrice, isConfirmingApproval]);
 
     const handleApprove = () => {
-        if (step === 'needsApproval' && contractConfig) {
+        if (step === 'needsApproval' && contractConfig && soulShardContract) {
             setStep('approving');
             approve({ ...soulShardContract, functionName: 'approve', args: [contractConfig.address, maxUint256] });
         }
@@ -93,23 +103,18 @@ const useMintLogic = (type: NftToMint, quantity: number) => {
     return {
         step,
         totalRequiredAmount,
-        isLoading: step === 'loading' || step === 'approving' || isConfirmingApproval,
+        isLoading: step === 'loading' || isApproving || isConfirmingApproval,
         isReadyToMint: step === 'readyToMint',
         handleApprove
     };
 };
 
-/**
- * @notice 統一的鑄造卡片組件
- */
-const MintCard: React.FC<{ type: NftToMint }> = ({ type }) => {
+
+const MintCard: React.FC<{ type: NftToMint; options: number[] }> = ({ type, options }) => {
     const { chainId } = useAccount();
     const { showToast } = useAppToast();
     const [quantity, setQuantity] = useState(1);
     
-    // 根據合約設定批量鑄造的選項
-    const batchOptions = type === 'hero' ? [5, 10, 20, 50] : [5, 10, 20, 50, 100];
-
     const { step, totalRequiredAmount, isLoading, isReadyToMint, handleApprove } = useMintLogic(type, quantity);
     const { writeContractAsync, isPending: isMinting } = useWriteContract();
     
@@ -129,7 +134,6 @@ const MintCard: React.FC<{ type: NftToMint }> = ({ type }) => {
                 showToast(`正在批量招募 ${quantity} 位${title}...`, 'info');
                 await writeContractAsync({ ...contractConfig, functionName: 'mintBatch', args: [BigInt(quantity)] });
             }
-             // 成功訊息將由 useContractEvents 中的事件監聽觸發
         } catch (error: any) {
             if (error.message.includes('User rejected the request')) {
                 showToast('操作已由使用者取消。', 'error');
@@ -142,6 +146,9 @@ const MintCard: React.FC<{ type: NftToMint }> = ({ type }) => {
     const renderButton = () => {
         if (step === 'needsApproval') {
             return <ActionButton onClick={handleApprove} isLoading={isLoading} disabled={isLoading} className="w-48 h-12">批准代幣</ActionButton>;
+        }
+        if (step === 'approveConfirming') {
+            return <ActionButton isLoading={true} disabled={true} className="w-48 h-12">授權確認中...</ActionButton>;
         }
         
         return <ActionButton onClick={handleMint} isLoading={isMinting || isLoading} disabled={!isReadyToMint || isMinting} className="w-48 h-12">
@@ -156,7 +163,7 @@ const MintCard: React.FC<{ type: NftToMint }> = ({ type }) => {
                 所有鑄造均使用VRF安全種子，公平公正。批量鑄造更省Gas！
             </p>
             <div className="flex items-center justify-center gap-2 mb-4">
-                {[1, ...batchOptions].map(q => 
+                {options.map(q => 
                     <button key={q} onClick={() => setQuantity(q)} className={`w-12 h-12 rounded-full font-bold text-lg transition-all flex items-center justify-center border-2 ${quantity === q ? 'bg-indigo-500 text-white border-transparent scale-110' : 'bg-white/50 hover:bg-white border-gray-300'}`}>
                         {q}
                     </button>
@@ -181,13 +188,16 @@ const MintCard: React.FC<{ type: NftToMint }> = ({ type }) => {
 
 
 const MintPage: React.FC = () => {
+    const heroMintOptions = [1, 5, 10, 20, 50];
+    const relicMintOptions = [1, 5, 10, 20];
+
     return (
         <section>
             <h2 className="page-title">鑄造工坊</h2>
             <div className="space-y-12">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <MintCard type="hero" />
-                    <MintCard type="relic" />
+                    <MintCard type="hero" options={heroMintOptions} />
+                    <MintCard type="relic" options={relicMintOptions} />
                 </div>
             </div>
         </section>
