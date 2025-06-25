@@ -101,8 +101,8 @@ const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAc
     const relicContract = getContract(chainId, 'relic');
 
     // 檢查授權狀態
-    const { data: isHeroApproved } = useReadContract({ ...heroContract, functionName: 'isApprovedForAll', args: [address!, partyContract?.address!], query: { enabled: !!address && !!partyContract } });
-    const { data: isRelicApproved } = useReadContract({ ...relicContract, functionName: 'isApprovedForAll', args: [address!, partyContract?.address!], query: { enabled: !!address && !!partyContract } });
+    const { data: isHeroApproved } = useReadContract({ ...(heroContract || {}), functionName: 'isApprovedForAll', args: [address!, partyContract?.address!], query: { enabled: !!address && !!partyContract && !!heroContract && !!relicContract} });
+    const { data: isRelicApproved } = useReadContract({ ...(relicContract || {}), functionName: 'isApprovedForAll', args: [address!, partyContract?.address!], query: { enabled: !!address && !!partyContract && !!heroContract && !!relicContract} });
     const { writeContractAsync, isPending } = useWriteContract({
       mutation: {
         onSuccess: (hash, vars) => showToast(`${vars.functionName === 'createParty' ? '創建隊伍' : '解散隊伍'}請求已送出`, 'success'),

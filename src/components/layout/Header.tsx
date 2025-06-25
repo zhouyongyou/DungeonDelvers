@@ -26,7 +26,6 @@ const ThemeToggleButton: React.FC = () => {
             className="p-2 rounded-full text-gray-300 hover:bg-white/20 transition-colors"
             aria-label={`Switch to ${effectiveTheme === 'light' ? 'dark' : 'light'} mode`}
         >
-            {/* 根據當前生效的主題顯示不同的圖示 */}
             {effectiveTheme === 'dark' ? <SunIcon /> : <MoonIcon />}
         </button>
     );
@@ -45,8 +44,6 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
       { key: 'dungeon', label: '地下城' },
       { key: 'explorer', label: '數據查詢' },
   ];
-
-  // 如果是開發者，才在導覽列陣列中加入 'admin' 選項
   if (isDeveloper) {
       navItems.push({ key: 'admin', label: '管理後台' });
   }

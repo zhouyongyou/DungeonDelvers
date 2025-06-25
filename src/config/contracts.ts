@@ -2,8 +2,8 @@ import { type Address } from 'viem';
 import { bsc, bscTestnet } from 'wagmi/chains';
 import { 
   soulShardTokenABI,
-  heroABI,
-  relicABI,
+  heroABI_v4,
+  relicABI_v4,
   partyABI,
   dungeonCoreABI 
 } from './abis';
@@ -35,8 +35,8 @@ const getContractAddress = (chainId: number | undefined, name: ContractName): Ad
 const getContractAbi = (name: ContractName) => {
   const abis = {
     soulShardToken: soulShardTokenABI,
-    hero: heroABI,
-    relic: relicABI,
+    hero: heroABI_v4,
+    relic: relicABI_v4,
     party: partyABI,
     dungeonCore: dungeonCoreABI,
   };
@@ -45,7 +45,6 @@ const getContractAbi = (name: ContractName) => {
 
 export const getContract = (chainId: number | undefined, name: ContractName) => {
   if (!chainId) {
-    // console.warn(`ChainId is undefined, cannot get contract for '${name}'`);
     return null;
   }
   const address = getContractAddress(chainId, name);

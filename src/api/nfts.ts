@@ -1,22 +1,19 @@
-import { createPublicClient, http, type Address } from 'viem';
+import { createPublicClient, http, type Address, type Abi } from 'viem';
 import { bsc, bscTestnet } from 'viem/chains';
 import { getContract } from '../config/contracts';
 import type { NftType, AnyNft, HeroNft, RelicNft, PartyNft } from '../types/nft';
 
-// 建立一個 Public Client 來直接與區塊鏈溝通，用於 getLogs
-const publicClients = {
+const publicClients: Record<number, ReturnType<typeof createPublicClient>> = {
     [bsc.id]: createPublicClient({ chain: bsc, transport: http() }),
     [bscTestnet.id]: createPublicClient({ chain: bscTestnet, transport: http() }),
 }
 
-// 獲取一個地址擁有的所有特定類型的 NFT
 async function fetchNftsByType(owner: Address, chainId: number, type: NftType): Promise<AnyNft[]> {
     const publicClient = publicClients[chainId];
     const contract = getContract(chainId, type);
 
     if (!publicClient || !contract) return [];
 
-    // 1. 透過 Transfer 事件獲取該地址曾經接收過的所有 tokenId
     const logs = await publicClient.getLogs({
         address: contract.address,
         event: {
@@ -29,13 +26,12 @@ async function fetchNftsByType(owner: Address, chainId: number, type: NftType): 
             ],
         },
         args: { to: owner },
-        fromBlock: 'earliest', // 從最早的區塊開始掃描
+        fromBlock: 'earliest',
     });
 
     const uniqueTokenIds = [...new Set(logs.map(log => log.args.tokenId!))];
     if (uniqueTokenIds.length === 0) return [];
 
-    // 2. 使用 multicall 一次性檢查這些 token 的當前 owner
     const ownerCalls = uniqueTokenIds.map(tokenId => ({
         ...contract,
         functionName: 'ownerOf',
@@ -43,13 +39,12 @@ async function fetchNftsByType(owner: Address, chainId: number, type: NftType): 
     }));
     const ownerResults = await publicClient.multicall({ contracts: ownerCalls });
 
-    // 3. 過濾出當前仍然屬於該地址的 token
     const ownedTokenIds = uniqueTokenIds.filter(
         (_, i) => ownerResults[i].status === 'success' && (ownerResults[i].result as Address).toLowerCase() === owner.toLowerCase()
     );
     if (ownedTokenIds.length === 0) return [];
     
-    // 4. 為真正擁有的 token，再次使用 multicall 獲取其屬性和 tokenURI
+    // 【修正】為 multicall 的參數提供更精確的型別，以解決 'multicall' boolean 問題
     const propsCalls = ownedTokenIds.flatMap(tokenId => {
         const calls: any[] = [{ ...contract, functionName: 'tokenURI', args: [tokenId] }];
         if (type === 'hero') calls.push({ ...contract, functionName: 'getHeroProperties', args: [tokenId] });
@@ -58,14 +53,16 @@ async function fetchNftsByType(owner: Address, chainId: number, type: NftType): 
         return calls;
     });
 
-    const propsResults = await publicClient.multicall({ contracts: propsCalls });
+    const propsResults = await publicClient.multicall({ contracts: propsCalls, allowFailure: true });
 
-    // 5. 獲取 metadata 並組合最終數據
     const nfts = await Promise.all(ownedTokenIds.map(async (tokenId, i) => {
-        const uriResult = propsResults[i * 2];
-        const propsResult = propsResults[i * 2 + 1];
+        const uriIndex = i * 2;
+        const propsIndex = i * 2 + 1;
 
-        if (propsResult.status !== 'success') return null;
+        if (propsIndex >= propsResults.length || propsResults[propsIndex].status !== 'success') return null;
+
+        const uriResult = propsResults[uriIndex];
+        const propsResult = propsResults[propsIndex];
 
         const tokenURI = uriResult.status === 'success' ? uriResult.result as string : '';
         const metadata = tokenURI ? await fetch(tokenURI.replace('ipfs://', 'https://ipfs.io/ipfs/')).then(res => res.json()).catch(() => ({})) : {};
@@ -83,7 +80,6 @@ async function fetchNftsByType(owner: Address, chainId: number, type: NftType): 
     return nfts.filter(Boolean) as AnyNft[];
 }
 
-// 導出主函數，一次性獲取所有類型的 NFT
 export async function fetchAllOwnedNfts(owner: Address, chainId: number) {
     const [heroes, relics, parties] = await Promise.all([
         fetchNftsByType(owner, chainId, 'hero'),

@@ -61,7 +61,7 @@ const DungeonPage: React.FC = () => {
                 ...dungeonCoreContract, 
                 functionName: 'requestExpedition', 
                 args: [BigInt(selectedPartyId), BigInt(dungeonId)],
-                value: explorationFee
+                value: typeof explorationFee === 'bigint' ? explorationFee : 0n
             });
         } catch (e: any) {
              // 錯誤已在 writeContractAsync 中處理
