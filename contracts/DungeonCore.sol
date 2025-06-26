@@ -122,7 +122,7 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
      */
     function requestExpedition(uint256 _partyId, uint256 _dungeonId) 
         external 
-        payable // <--- 【更新】
+        payable
         nonReentrant 
         returns (uint256 requestId) 
     {

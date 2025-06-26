@@ -1,5 +1,3 @@
-CALLBACK_GAS_LIMIT
-
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -180,4 +178,5 @@ contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard 
     }
     function updateSeasonSeedByOwner() public onlyOwner {
         _requestNewSeasonSeed();
+    }
 }

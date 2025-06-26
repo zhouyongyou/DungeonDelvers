@@ -32,7 +32,13 @@ const DungeonPage: React.FC = () => {
         functionName: 'explorationFee',
         query: { enabled: !!dungeonCoreContract }
     });
-
+    // **新增的處理邏輯**
+    const displayExplorationFee = useMemo(() => {
+        if (typeof explorationFee === 'bigint') {
+            return explorationFee;
+        }
+        return 0n; // 確保它總是一個 bigint
+    }, [explorationFee]);
     // 獲取玩家擁有的隊伍
     const { data: ownedParties, isLoading: isLoadingParties } = useQuery({
         queryKey: ['ownedNfts', address, chainId, 'partiesOnly'],
@@ -88,7 +94,8 @@ const DungeonPage: React.FC = () => {
 
     const handleDispatch = async (dungeonId: number) => {
         if (!selectedPartyId) return showToast('請先選擇一個隊伍', 'error');
-        if (typeof explorationFee !== 'bigint') {
+        // 這裡也使用 displayExplorationFee，它已經保證是 bigint
+        if (typeof displayExplorationFee !== 'bigint') { // 雖然理論上不會發生，但做個防範
             return showToast('無法讀取探索費用，請稍後再試', 'error');
         }
         if (!dungeonCoreContract) return;
@@ -102,7 +109,7 @@ const DungeonPage: React.FC = () => {
                 ...dungeonCoreContract, 
                 functionName: 'requestExpedition', 
                 args: [BigInt(selectedPartyId), BigInt(dungeonId)],
-                value: explorationFee
+                value: displayExplorationFee // 使用經過處理的費用
             });
         } catch (e: any) {
              // 錯誤已在 writeContractAsync 中處理
@@ -171,7 +178,7 @@ const DungeonPage: React.FC = () => {
                                 派遣遠征
                             </ActionButton>
                             <p className="text-xs text-center mt-1 text-gray-500">
-                                (費用: {isLoadingFee ? '讀取中...' : formatEther(explorationFee ?? 0n)} BNB)
+                                (費用: {isLoadingFee ? '讀取中...' : formatEther(displayExplorationFee)} BNB)
                             </p>
                         </div>
                     ))}
