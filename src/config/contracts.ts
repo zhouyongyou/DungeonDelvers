@@ -1,4 +1,3 @@
-// import { type Address } from 'viem';
 import { bsc, bscTestnet } from 'wagmi/chains';
 import { 
     heroABI, 
@@ -8,6 +7,15 @@ import {
     soulShardTokenABI,
     altarOfAscensionABI
 } from './abis';
+
+export { 
+    heroABI, 
+    relicABI, 
+    partyABI, 
+    dungeonCoreABI, 
+    soulShardTokenABI,
+    altarOfAscensionABI
+};
 
 export const contracts = {
     hero: {
@@ -36,20 +44,17 @@ export const contracts = {
     },
 } as const;
 
-// 從上面的 contracts 物件中導出一個類型，方便在 getContract 中使用
 type ContractName = keyof typeof contracts;
 
-export const getContract = (chainId: number | undefined, name: ContractName) => {
-    if (!chainId) {
-        return null;
-    }
+export function getContract<T extends ContractName>(chainId: number | undefined, name: T): (typeof contracts)[T][keyof (typeof contracts)[T]] | null {
+    if (!chainId) return null;
 
-    const contractForChain = contracts[name]?.[chainId as keyof typeof contracts[ContractName]];
+    const contractSet = contracts[name];
+    if (!contractSet) return null;
     
-    if (!contractForChain) {
-        // console.warn(`Contract '${name}' not found for chainId '${chainId}'`);
-        return null;
+    if (chainId in contractSet) {
+        return contractSet[chainId as keyof typeof contractSet];
     }
     
-    return contractForChain;
-};
+    return null;
+}

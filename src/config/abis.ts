@@ -4373,7 +4373,26 @@ export const dungeonCoreABI = [
 	{
 		"stateMutability": "payable",
 		"type": "receive"
-	}
+	},
+	// 在 dungeonCoreABI 陣列中新增以下物件
+{
+    "inputs": [
+        {
+            "internalType": "uint256",
+            "name": "_partyId",
+            "type": "uint256"
+        },
+        {
+            "internalType": "uint256",
+            "name": "_dungeonId",
+            "type": "uint256"
+        }
+    ],
+    "name": "requestExpeditionWithProvisions",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+}
 ] as const;
 
 export const altarOfAscensionABI = [

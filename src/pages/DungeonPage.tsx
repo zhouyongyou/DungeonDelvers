@@ -1,11 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
-// [修正] 從 wagmi 移除 useQueryClient
 import { useAccount, useReadContract, useReadContracts, useWriteContract } from 'wagmi';
-// [修正] 從 @tanstack/react-query 引入 useQueryClient
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatEther } from 'viem';
 import { useAppToast } from '../hooks/useAppToast';
-import { getContract } from '../config/contracts';
+import { getContract, dungeonCoreABI } from '../config/contracts';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { SkeletonCard } from '../components/ui/SkeletonCard';
@@ -31,9 +29,9 @@ const DungeonPage: React.FC = () => {
     const [actionState, setActionState] = useState<{ type: 'dispatch' | 'claim', id: string, isLoading: boolean} | null>(null);
     const [timeLeft, setTimeLeft] = useState('');
 
-    // 讀取 BNB 探索費用
     const { data: explorationFee, isLoading: isLoadingFee } = useReadContract({
-        ...dungeonCoreContract,
+        address: dungeonCoreContract?.address,
+        abi: dungeonCoreABI,
         functionName: 'explorationFee',
         query: { enabled: !!dungeonCoreContract }
     });
@@ -51,18 +49,17 @@ const DungeonPage: React.FC = () => {
         enabled: !!address && !!chainId,
     });
     
-    // [融合方案] 讀取所選隊伍的狀態，並設定自動刷新
     const { data: partyStatusData, isLoading: isLoadingPartyStatus } = useReadContract({
-        ...dungeonCoreContract,
+        address: dungeonCoreContract?.address,
+        abi: dungeonCoreABI,
         functionName: 'partyStatuses',
         args: [selectedPartyId ? BigInt(selectedPartyId) : 0n],
         query: {
             enabled: !!selectedPartyId && !!dungeonCoreContract,
-            refetchInterval: 15000, // 每 15 秒在背景重新獲取一次數據
+            refetchInterval: 15000,
         }
     });
 
-    // 將回傳的 tuple 數據解構成具名變數
     const partyStatus = useMemo(() => {
         if (!partyStatusData || !Array.isArray(partyStatusData)) return null;
         return {
@@ -72,7 +69,6 @@ const DungeonPage: React.FC = () => {
         };
     }, [partyStatusData]);
 
-    // 計算冷卻時間資訊
     const cooldownInfo = useMemo(() => {
         if (!partyStatus?.cooldownEndsAt) return { onCooldown: false, endsAt: 0 };
         const endsAt = Number(partyStatus.cooldownEndsAt) * 1000;
@@ -82,7 +78,6 @@ const DungeonPage: React.FC = () => {
         };
     }, [partyStatus]);
 
-    // [融合方案] 使用 useEffect 實現平滑的倒數計時 UI
     useEffect(() => {
         if (!cooldownInfo.onCooldown) {
             setTimeLeft('');
@@ -95,7 +90,6 @@ const DungeonPage: React.FC = () => {
             
             if (remaining === 0) {
                 setTimeLeft('冷卻結束');
-                // 當倒數計時結束時，手動觸發一次數據刷新，以確保 UI 狀態立即更新
                 queryClient.invalidateQueries({ queryKey: ['partyStatuses', selectedPartyId] });
                 return;
             }
@@ -112,11 +106,10 @@ const DungeonPage: React.FC = () => {
         return () => clearInterval(intervalId);
     }, [cooldownInfo, selectedPartyId, queryClient]);
 
-
-    // 一次性獲取所有地城的數據
     const { data: dungeonsData, isLoading: isLoadingDungeons } = useReadContracts({
         contracts: Array.from({ length: 10 }, (_, i) => ({
-            ...dungeonCoreContract,
+            address: dungeonCoreContract?.address,
+            abi: dungeonCoreABI,
             functionName: 'dungeons',
             args: [BigInt(i + 1)],
         })),
@@ -146,17 +139,25 @@ const DungeonPage: React.FC = () => {
         
         setActionState({ type: 'dispatch', id: dungeonId.toString(), isLoading: true });
         try {
-            await writeContractAsync({ ...dungeonCoreContract, functionName: 'buyProvisions', args: [BigInt(selectedPartyId), 1n]});
+            // 步驟 1: 購買儲備
+            await writeContractAsync({ 
+                address: dungeonCoreContract.address,
+                abi: dungeonCoreABI,
+                functionName: 'buyProvisions', 
+                args: [BigInt(selectedPartyId), 1n]
+            });
             showToast('儲備購買成功，正在派遣！', 'info');
             
+            // 步驟 2: 派遣遠征
             await writeContractAsync({ 
-                ...dungeonCoreContract, 
+                address: dungeonCoreContract.address,
+                abi: dungeonCoreABI,
                 functionName: 'requestExpedition', 
                 args: [BigInt(selectedPartyId), BigInt(dungeonId)],
                 value: displayExplorationFee
             });
         } catch (e: any) {
-             // 錯誤已在 writeContractAsync 中處理
+             // 錯誤已在 writeContractAsync 中統一處理
         } finally {
             setActionState(null);
         }
@@ -167,9 +168,14 @@ const DungeonPage: React.FC = () => {
         if (!dungeonCoreContract) return;
         setActionState({ type: 'claim', id: selectedPartyId, isLoading: true });
         try {
-            await writeContractAsync({ ...dungeonCoreContract, functionName: 'claimRewards', args: [BigInt(selectedPartyId)] });
+            await writeContractAsync({ 
+                address: dungeonCoreContract.address,
+                abi: dungeonCoreABI,
+                functionName: 'claimRewards', 
+                args: [BigInt(selectedPartyId)] 
+            });
         } catch (e: any) {
-            // 錯誤已在 writeContractAsync 中處理
+            // 錯誤已在 writeContractAsync 中統一處理
         } finally {
             setActionState(null);
         }
@@ -223,7 +229,7 @@ const DungeonPage: React.FC = () => {
                                 {isLoadingPartyStatus && selectedPartyId ? <LoadingSpinner/> : cooldownInfo.onCooldown ? timeLeft : '派遣遠征'}
                             </ActionButton>
                             <p className="text-xs text-center mt-1 text-gray-500">
-                                (費用: {isLoadingFee ? '讀取中...' : formatEther(displayExplorationFee)} BNB)
+                                (費用: {isLoadingFee ? '讀取中...' : formatEther(explorationFee ?? 0n)} BNB)
                             </p>
                         </div>
                     ))}
