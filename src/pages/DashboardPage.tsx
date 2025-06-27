@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount, useBalance, useReadContract, useWriteContract } from 'wagmi';
-import { formatEther } from 'viem';
+// 【修正】修正了 'viem' 的 import 語法錯誤
+import { formatEther, type Address } from "viem"; 
 import { useAppToast } from '../hooks/useAppToast';
 import { getContract } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
@@ -10,21 +11,25 @@ const DashboardPage: React.FC = () => {
   const { address, chainId } = useAccount();
   const { showToast } = useAppToast();
 
-  const soulShardContract = getContract(chainId, 'soulShardToken');
+  // 使用正確的 key 'soulShard'
+  const soulShardContract = getContract(chainId, 'soulShard');
   const dungeonCoreContract = getContract(chainId, 'dungeonCore');
 
   const { data: tokenBalance, isLoading: isLoadingTokenBalance } = useBalance({
     address,
-    token: soulShardContract?.address,
+    token: soulShardContract?.address as Address | undefined, // 確保傳遞正確的型別
   });
 
   const { data, isLoading: isLoadingPlayerInfo } = useReadContract({
-    ...dungeonCoreContract,
+    // 明確傳遞 abi 和 address 以解決型別問題
+    abi: dungeonCoreContract?.abi,
+    address: dungeonCoreContract?.address,
     functionName: 'playerInfo',
     args: [address!],
     query: { enabled: !!address && !!dungeonCoreContract },
   });
   
+  // 處理回傳的 tuple 數據
   const playerInfo = Array.isArray(data) ? data : [0n, 0n, true];
   const [withdrawableBalance, lastWithdrawTimestamp, isFirstWithdraw] = playerInfo;
 
@@ -37,7 +42,13 @@ const DashboardPage: React.FC = () => {
 
   const handleWithdraw = () => {
     if (withdrawableBalance > 0n && dungeonCoreContract) {
-      writeContract({ ...dungeonCoreContract, functionName: 'withdraw', args: [withdrawableBalance] });
+      // 明確傳遞 abi 和 address 以解決型別問題
+      writeContract({ 
+          abi: dungeonCoreContract.abi,
+          address: dungeonCoreContract.address,
+          functionName: 'withdraw', 
+          args: [withdrawableBalance] 
+      });
     } else {
       showToast('沒有可提領的餘額', 'info');
     }

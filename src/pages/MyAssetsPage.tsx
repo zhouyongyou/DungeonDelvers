@@ -1,4 +1,4 @@
-import React, { useState, useMemo, type ReactNode } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
 import { useAppToast } from '../hooks/useAppToast';
@@ -18,9 +18,9 @@ const NftFilter: React.FC<{
     onFilterChange: (filter: 'all' | number) => void;
 }> = ({ currentFilter, onFilterChange }) => (
     <div className="flex flex-wrap gap-2 mb-4">
-        <button onClick={() => onFilterChange('all')} className={`px-3 py-1 text-sm rounded-full transition ${currentFilter === 'all' ? 'bg-indigo-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}>全部</button>
+        <button onClick={() => onFilterChange('all')} className={`px-3 py-1 text-sm rounded-full transition ${currentFilter === 'all' ? 'bg-indigo-500 text-white' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>全部</button>
         {Array.from({ length: 5 }, (_, i) => i + 1).map(star => (
-            <button key={star} onClick={() => onFilterChange(star)} className={`px-3 py-1 text-sm rounded-full transition ${currentFilter === star ? 'bg-indigo-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}>
+            <button key={star} onClick={() => onFilterChange(star)} className={`px-3 py-1 text-sm rounded-full transition ${currentFilter === star ? 'bg-indigo-500 text-white' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>
                 {'★'.repeat(star)}
             </button>
         ))}
@@ -90,26 +90,39 @@ const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAc
           return total + (hero ? Number(hero.power) : 0);
       }, 0);
     }, [nfts?.heroes, selection.heroes]);
-
+    
+    // 合約實例
     const partyContract = getContract(chainId, 'party');
     const heroContract = getContract(chainId, 'hero');
     const relicContract = getContract(chainId, 'relic');
 
     const { data: isHeroApproved } = useReadContract({ 
-        ...heroContract, 
+        address: heroContract?.address,
+        abi: heroContract?.abi,
         functionName: 'isApprovedForAll', 
         args: [address!, partyContract?.address!], 
-        query: { enabled: !!address && !!partyContract && !!heroContract } 
+        query: { enabled: !!address && !!partyContract?.address && !!heroContract?.address } 
     });
     const { data: isRelicApproved } = useReadContract({ 
-        ...relicContract, 
+        address: relicContract?.address,
+        abi: relicContract?.abi,
         functionName: 'isApprovedForAll', 
         args: [address!, partyContract?.address!], 
-        query: { enabled: !!address && !!partyContract && !!relicContract } 
+        query: { enabled: !!address && !!partyContract?.address && !!relicContract?.address } 
     });
+    
     const { writeContractAsync, isPending } = useWriteContract({
       mutation: {
-        onSuccess: (_hash, vars) => showToast(`${(vars.functionName as string) === 'createParty' ? '創建隊伍' : '解散隊伍'}請求已送出`, 'success'),
+        onSuccess: (_hash, vars) => {
+            if (vars.functionName === 'createParty') {
+                showToast('隊伍創建成功！即將跳轉至地下城頁面...', 'success');
+                setTimeout(() => {
+                    setActivePage('dungeon');
+                }, 2000);
+            } else {
+                showToast(`${(vars.functionName as string) === 'setApprovalForAll' ? '授權' : '解散隊伍'}請求已送出`, 'info');
+            }
+        },
         onError: (err) => showToast(err.message.split('\n')[0], 'error')
       }
     });
@@ -138,23 +151,33 @@ const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAc
 
         try {
             if (!isHeroApproved) {
-                if(heroContract && partyContract) await writeContractAsync({ ...heroContract, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
+                if(heroContract && partyContract?.address) {
+                    await writeContractAsync({ address: heroContract.address, abi: heroContract.abi, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
+                }
             }
             if (!isRelicApproved) {
-                 if(relicContract && partyContract) await writeContractAsync({ ...relicContract, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
+                 if(relicContract && partyContract?.address) {
+                    await writeContractAsync({ address: relicContract.address, abi: relicContract.abi, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
+                 }
             }
-            if (partyContract) await writeContractAsync({ ...partyContract, functionName: 'createParty', args: [Array.from(selection.heroes), Array.from(selection.relics)] });
+            if (partyContract) {
+                await writeContractAsync({ address: partyContract.address, abi: partyContract.abi, functionName: 'createParty', args: [Array.from(selection.heroes), Array.from(selection.relics)] });
+            }
             setSelection({ heroes: new Set(), relics: new Set() });
             setModal({ isOpen: false, type: 'create' });
-        } catch (e: any) { console.error(e) }
+        } catch (e: any) { 
+            console.error(e);
+        }
     };
 
     const handleDisbandParty = async () => {
         if (!modal.data || !partyContract) return;
         try {
-            await writeContractAsync({ ...partyContract, functionName: 'disbandParty', args: [modal.data] });
+            await writeContractAsync({ address: partyContract.address, abi: partyContract.abi, functionName: 'disbandParty', args: [modal.data] });
             setModal({ isOpen: false, type: 'disband' });
-        } catch (e: any) { console.error(e) }
+        } catch (e: any) { 
+            console.error(e);
+        }
     };
 
     return (
@@ -194,13 +217,13 @@ const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAc
                     <div className="card-bg p-6 rounded-xl shadow-lg sticky top-24">
                         <h3 className="section-title">隊伍配置</h3>
                         <div className="space-y-4 min-h-[100px] text-sm">
-                             <div><h4 className="font-bold">英雄:</h4>{selection.heroes.size > 0 ? Array.from(selection.heroes).map(id => <p key={id.toString()} className="ml-2">- 英雄 #{id.toString()}</p>) : <p className="ml-2 text-gray-500">點擊左側列表選擇</p>}</div>
-                             <div><h4 className="font-bold">聖物:</h4>{selection.relics.size > 0 ? Array.from(selection.relics).map(id => <p key={id.toString()} className="ml-2">- 聖物 #{id.toString()}</p>) : <p className="ml-2 text-gray-500">點擊左側列表選擇</p>}</div>
+                             <div><h4 className="font-bold">英雄:</h4>{selection.heroes.size > 0 ? Array.from(selection.heroes).map(id => <p key={id.toString()} className="ml-2">- 英雄 #{id.toString()}</p>) : <p className="ml-2 text-gray-500 dark:text-gray-400">點擊左側列表選擇</p>}</div>
+                             <div><h4 className="font-bold">聖物:</h4>{selection.relics.size > 0 ? Array.from(selection.relics).map(id => <p key={id.toString()} className="ml-2">- 聖物 #{id.toString()}</p>) : <p className="ml-2 text-gray-500 dark:text-gray-400">點擊左側列表選擇</p>}</div>
                              <div><h4 className="font-bold">總戰力:</h4><p className="ml-2 text-indigo-600 font-bold">{selectedHeroesPower} MP</p></div>
                         </div>
                         <div className="mt-4 flex flex-col gap-2">
                            <ActionButton onClick={() => setModal({ isOpen: true, type: 'create' })} className="w-full py-2 rounded-lg" isLoading={isPending} disabled={isPending}>創建隊伍</ActionButton>
-                           <p className="text-gray-500 mt-1">首次創建需授權NFT (戰力需 {'>'} 300)</p>
+                           <p className="text-xs text-gray-500 mt-1">首次創建需授權NFT (戰力需 {'>'} 300)</p>
                         </div>
                     </div>
                 </div>

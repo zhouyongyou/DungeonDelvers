@@ -20,17 +20,21 @@ const useMintLogic = (type: NftToMint, quantity: number) => {
     const { showToast } = useAppToast();
     const [approvalTxHash, setApprovalTxHash] = useState<Hash | undefined>();
 
+    // 【修正】明確獲取各個合約的設定
     const contractConfig = getContract(chainId, type);
-    const soulShardContract = getContract(chainId, 'soulShardToken');
+    // 【修正】使用正確的 key 'soulShard'
+    const soulShardContract = getContract(chainId, 'soulShard'); 
 
     const { data: mintPriceUSD } = useReadContract({
-        ...contractConfig,
+        address: contractConfig?.address,
+        abi: contractConfig?.abi,
         functionName: 'mintPriceUSD',
         query: { enabled: !!contractConfig },
     });
     
     const { data: singleUnitPrice, isLoading: isLoadingPrice } = useReadContract({
-        ...contractConfig,
+        address: contractConfig?.address,
+        abi: contractConfig?.abi,
         functionName: 'getSoulShardAmountForUSD',
         args: [mintPriceUSD || 0n], 
         query: { enabled: !!contractConfig && typeof mintPriceUSD === 'bigint' },
@@ -57,13 +61,16 @@ const useMintLogic = (type: NftToMint, quantity: number) => {
                 showToast('授權交易已送出，等待確認...', 'info');
             },
             onError: (err) => {
-                showToast(err.message.split('\n')[0], 'error');
+                if (err.message.includes('User rejected the request')) {
+                    showToast('操作已由使用者取消。', 'error');
+                } else {
+                    showToast(err.message.split('\n')[0], 'error');
+                }
                 setStep('needsApproval');
             }
         }
     });
     
-    // 【核心修正】移除了未被使用的 'receipt' 變數
     const { isLoading: isConfirmingApproval, isSuccess: isConfirmed, isError: isConfirmError } = useWaitForTransactionReceipt({
         hash: approvalTxHash,
     });
@@ -72,23 +79,20 @@ const useMintLogic = (type: NftToMint, quantity: number) => {
         if (isConfirmed) {
             showToast('授權成功！', 'success');
             refetchAllowance();
+            setApprovalTxHash(undefined);
         }
         if (isConfirmError) {
             showToast('授權確認失敗', 'error');
             setStep('needsApproval');
+            setApprovalTxHash(undefined);
         }
     }, [isConfirmed, isConfirmError, refetchAllowance, showToast]);
 
     useEffect(() => {
         if (!address) { setStep('idle'); return; }
         if (isLoadingAllowance || isLoadingPrice) { setStep('loading'); return; }
-        
-        if (isConfirmingApproval) {
-            setStep('approveConfirming');
-            return;
-        }
-
-        if (typeof allowance === 'bigint') {
+        if (isConfirmingApproval) { setStep('approveConfirming'); return; }
+        if (typeof allowance === 'bigint' && totalRequiredAmount > 0n) {
             setStep(allowance >= totalRequiredAmount ? 'readyToMint' : 'needsApproval');
         }
     }, [address, allowance, totalRequiredAmount, isLoadingAllowance, isLoadingPrice, isConfirmingApproval]);
@@ -96,7 +100,12 @@ const useMintLogic = (type: NftToMint, quantity: number) => {
     const handleApprove = () => {
         if (step === 'needsApproval' && contractConfig && soulShardContract) {
             setStep('approving');
-            approve({ ...soulShardContract, functionName: 'approve', args: [contractConfig.address, maxUint256] });
+            approve({ 
+                address: soulShardContract.address,
+                abi: soulShardContract.abi,
+                functionName: 'approve', 
+                args: [contractConfig.address, maxUint256] 
+            });
         }
     };
 
@@ -129,10 +138,19 @@ const MintCard: React.FC<{ type: NftToMint; options: number[] }> = ({ type, opti
         try {
             if (quantity === 1) {
                 showToast(`正在招募 1 位${title}...`, 'info');
-                await writeContractAsync({ ...contractConfig, functionName: 'mintSingle' });
+                await writeContractAsync({ 
+                    address: contractConfig.address,
+                    abi: contractConfig.abi,
+                    functionName: 'mintSingle' 
+                });
             } else {
                 showToast(`正在批量招募 ${quantity} 位${title}...`, 'info');
-                await writeContractAsync({ ...contractConfig, functionName: 'mintBatch', args: [BigInt(quantity)] });
+                await writeContractAsync({ 
+                    address: contractConfig.address,
+                    abi: contractConfig.abi,
+                    functionName: 'mintBatch', 
+                    args: [BigInt(quantity)] 
+                });
             }
         } catch (error: any) {
             if (error.message.includes('User rejected the request')) {

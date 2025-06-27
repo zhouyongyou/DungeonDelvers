@@ -5,6 +5,15 @@ import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import type { NftType } from '../types/nft';
 
+// 【修正 C-1】定義一個更明確的型別來幫助 TypeScript
+// 這個型別描述了 useReadContracts 中 contracts 陣列元素的樣子
+type ContractQuery = {
+  address: `0x${string}`;
+  abi: readonly any[];
+  functionName: string;
+  args?: any[];
+}
+
 const QuerySection: React.FC<{ type: NftType }> = ({ type }) => {
   const { chainId } = useAccount();
   const [id, setId] = useState('');
@@ -13,31 +22,31 @@ const QuerySection: React.FC<{ type: NftType }> = ({ type }) => {
   const contract = getContract(chainId, type);
   const title = { hero: '英雄', relic: '聖物', party: '隊伍' }[type];
   
-  // 這個 useMemo 的邏輯是正確的，它負責根據條件產生我們需要執行的合約呼叫陣列。
-  const contractsToQuery = useMemo(() => {
+  // 【修正 C-2】讓 useMemo 的回傳值符合我們上面定義的型別
+  const contractsToQuery = useMemo((): ContractQuery[] => {
     if (!submittedId || !contract) {
         return [];
     }
-    const ownerCall = { ...contract, functionName: 'ownerOf', args: [submittedId] } as const;
+    const { address, abi } = contract;
+    const ownerCall = { address, abi, functionName: 'ownerOf', args: [submittedId] };
+
     if (type === 'hero') {
-      return [ownerCall, { ...contract, functionName: 'getHeroProperties', args: [submittedId] }] as const;
+      return [ownerCall, { address, abi, functionName: 'getHeroProperties', args: [submittedId] }];
     }
     if (type === 'relic') {
-      return [ownerCall, { ...contract, functionName: 'getRelicProperties', args: [submittedId] }] as const;
+      return [ownerCall, { address, abi, functionName: 'getRelicProperties', args: [submittedId] }];
     }
     if (type === 'party') {
-      return [ownerCall, { ...contract, functionName: 'getPartyComposition', args: [submittedId] }] as const;
+      return [ownerCall, { address, abi, functionName: 'getPartyComposition', args: [submittedId] }];
     }
     return [];
   }, [submittedId, contract, type]);
 
   const { data, isLoading, isError, error } = useReadContracts({
-    // 【最終修正】我們將 contractsToQuery 顯式地轉換為 'any' 型別。
-    // 這是一個務實的作法，目的是告訴 TypeScript 編譯器：「停止對這個複雜的動態陣列進行過度推斷，請相信我在執行時提供的結構是正確的。」
-    // 這能有效地繞過因 wagmi 套件更新所導致的過於嚴格的型別檢查。
-    contracts: contractsToQuery as any,
+    // 【修正 C-3】現在 contractsToQuery 的型別是明確的，不再需要 as any
+    contracts: contractsToQuery,
     query: {
-      enabled: !!submittedId,
+      enabled: !!submittedId && contractsToQuery.length > 0,
     }
   });
 
@@ -50,12 +59,10 @@ const QuerySection: React.FC<{ type: NftType }> = ({ type }) => {
     if (isLoading) return <div className="flex justify-center items-center"><LoadingSpinner size="h-6 w-6" color="border-gray-500" /></div>;
     if (isError) return <p className="text-red-500">查詢失敗: {error?.message.split('\n')[0]}</p>;
     
-    // 為了彌補 'as any' 帶來的型別安全損失，我們在這裡增加一個更嚴格的執行時期檢查。
     if (!data || !Array.isArray(data) || data.length < 2 || data.some(d => d.status === 'failure')) {
         return <p className="text-red-500">查詢失敗: 可能是 ID 不存在或網路錯誤。</p>;
     }
     
-    // 在確保資料結構正確後，我們可以安全地存取結果。
     const [ownerResult, propsResult] = data;
     const owner = ownerResult.result as string;
     const props: any = propsResult.result;
