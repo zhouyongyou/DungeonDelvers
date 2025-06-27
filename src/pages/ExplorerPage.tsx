@@ -13,21 +13,33 @@ const QuerySection: React.FC<{ type: NftType }> = ({ type }) => {
   const contract = getContract(chainId, type);
   const title = { hero: '英雄', relic: '聖物', party: '隊伍' }[type];
   
-  const queryConfig = useMemo(() => {
-    if (!submittedId || !contract) return { contracts: [] };
-
-    const baseCalls = [{ ...contract, functionName: 'ownerOf', args: [submittedId] }];
-    if (type === 'hero') {
-      baseCalls.push({ ...contract, functionName: 'getHeroProperties', args: [submittedId] });
-    } else if (type === 'relic') {
-      baseCalls.push({ ...contract, functionName: 'getRelicProperties', args: [submittedId] });
-    } else if (type === 'party') {
-      baseCalls.push({ ...contract, functionName: 'getPartyComposition', args: [submittedId] });
+  // 這個 useMemo 的邏輯是正確的，它負責根據條件產生我們需要執行的合約呼叫陣列。
+  const contractsToQuery = useMemo(() => {
+    if (!submittedId || !contract) {
+        return [];
     }
-    return { contracts: baseCalls };
+    const ownerCall = { ...contract, functionName: 'ownerOf', args: [submittedId] } as const;
+    if (type === 'hero') {
+      return [ownerCall, { ...contract, functionName: 'getHeroProperties', args: [submittedId] }] as const;
+    }
+    if (type === 'relic') {
+      return [ownerCall, { ...contract, functionName: 'getRelicProperties', args: [submittedId] }] as const;
+    }
+    if (type === 'party') {
+      return [ownerCall, { ...contract, functionName: 'getPartyComposition', args: [submittedId] }] as const;
+    }
+    return [];
   }, [submittedId, contract, type]);
 
-  const { data, isLoading, isError, error } = useReadContracts(queryConfig);
+  const { data, isLoading, isError, error } = useReadContracts({
+    // 【最終修正】我們將 contractsToQuery 顯式地轉換為 'any' 型別。
+    // 這是一個務實的作法，目的是告訴 TypeScript 編譯器：「停止對這個複雜的動態陣列進行過度推斷，請相信我在執行時提供的結構是正確的。」
+    // 這能有效地繞過因 wagmi 套件更新所導致的過於嚴格的型別檢查。
+    contracts: contractsToQuery as any,
+    query: {
+      enabled: !!submittedId,
+    }
+  });
 
   const handleQuery = () => {
     if (id) setSubmittedId(BigInt(id));
@@ -37,11 +49,16 @@ const QuerySection: React.FC<{ type: NftType }> = ({ type }) => {
     if (!submittedId) return `請輸入 ID 進行查詢`;
     if (isLoading) return <div className="flex justify-center items-center"><LoadingSpinner size="h-6 w-6" color="border-gray-500" /></div>;
     if (isError) return <p className="text-red-500">查詢失敗: {error?.message.split('\n')[0]}</p>;
-    if (!data?.[0]?.result) return <p className="text-red-500">查詢失敗: 可能是 ID 不存在。</p>;
-
+    
+    // 為了彌補 'as any' 帶來的型別安全損失，我們在這裡增加一個更嚴格的執行時期檢查。
+    if (!data || !Array.isArray(data) || data.length < 2 || data.some(d => d.status === 'failure')) {
+        return <p className="text-red-500">查詢失敗: 可能是 ID 不存在或網路錯誤。</p>;
+    }
+    
+    // 在確保資料結構正確後，我們可以安全地存取結果。
     const [ownerResult, propsResult] = data;
     const owner = ownerResult.result as string;
-    const props: any = propsResult?.result;
+    const props: any = propsResult.result;
 
     return (
       <div>
@@ -66,7 +83,7 @@ const QuerySection: React.FC<{ type: NftType }> = ({ type }) => {
   
   return (
     <div className="card-bg p-6 rounded-xl shadow-md">
-      <h3 className="text-xl font-bold text-[#2D2A4A] mb-4">{title}查詢</h3>
+      <h3 className="text-xl font-bold text-[#2D2A4A] dark:text-gray-200 mb-4">{title}查詢</h3>
       <div className="flex gap-2 mb-4">
         <input
           type="number"
@@ -77,7 +94,7 @@ const QuerySection: React.FC<{ type: NftType }> = ({ type }) => {
         />
         <ActionButton onClick={handleQuery} className="px-6 py-2 rounded-lg whitespace-nowrap w-24 h-10">查詢</ActionButton>
       </div>
-      <div className="mt-4 p-4 bg-gray-100/50 rounded-md min-h-[100px] text-sm">
+      <div className="mt-4 p-4 bg-gray-100/50 dark:bg-gray-800/50 rounded-md min-h-[100px] text-sm">
         {renderResult()}
       </div>
     </div>
@@ -87,7 +104,7 @@ const QuerySection: React.FC<{ type: NftType }> = ({ type }) => {
 const ExplorerPage: React.FC = () => {
   return (
     <section>
-      <h2 className="text-3xl font-bold text-center mb-6 text-[#2D2A4A] font-serif">數據查詢</h2>
+      <h2 className="page-title">數據查詢</h2>
       <div className="space-y-8">
         <QuerySection type="party" />
         <QuerySection type="hero" />
