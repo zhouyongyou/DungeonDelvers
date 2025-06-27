@@ -99,6 +99,7 @@ contract Relic is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard
     uint256 public blockMintLimit = 300; 
     uint256 public lastMintBlock;
     uint256 public mintsInCurrentBlock;
+    address public ascensionAltarAddress;
     event RelicMinted(uint256 indexed tokenId, address indexed owner, uint8 rarity, uint8 capacity);
     event AdminRelicMinted(address indexed to, uint256 indexed tokenId, uint8 rarity, uint8 capacity);
     event BatchRelicMinted(address indexed to, uint256 count);
@@ -242,8 +243,19 @@ contract Relic is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard
     function pause() public onlyOwner {
         _pause();
     }
-
     function unpause() public onlyOwner {
         _unpause();
+    }
+    function setAscensionAltarAddress(address _altarAddress) public onlyOwner {
+        ascensionAltarAddress = _altarAddress;
+    }
+    function mintFromAltar(address _to, uint8 _rarity, uint8 _capacity) external {
+        require(msg.sender == ascensionAltarAddress, "Caller is not the authorized Altar");
+        _mintRelic(_to, _rarity, _capacity);
+    }
+    function burnFromAltar(uint256 tokenId) external {
+        require(msg.sender == ascensionAltarAddress, "Caller is not the authorized Altar");
+        // 呼叫 OpenZeppelin 的 _burn，這會檢查 token 是否存在
+        _burn(tokenId); 
     }
 }

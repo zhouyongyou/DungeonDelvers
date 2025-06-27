@@ -1,20 +1,73 @@
-// 檔案: DungeonCore.sol (【更新】)
-// 說明: 1. 將 requestExpedition 函式修改為 payable，使其可以接收 BNB。
-//       2. 新增探索費用 (explorationFee) 的邏輯。
-//       3. 新增 withdrawNative 函式，讓擁有者可以提出合約中的 BNB。
-// =======================================================================
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
-interface IPancakePair {
-    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
+interface IUniswapV3Pool {
     function token0() external view returns (address);
+    function token1() external view returns (address);
+    function observe(uint32[] calldata secondsAgos) external view returns (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s);
+}
+library FixedPoint96 {
+    uint256 internal constant Q96 = 0x1000000000000000000000000;
+}
+library TickMath {
+    function getSqrtRatioAtTick(int24 tick) internal pure returns (uint160 sqrtPriceX96) {
+        uint256 absTick = tick < 0 ? uint256(-int256(tick)) : uint256(int256(tick));
+        require(absTick <= 887272, 'T');
+        uint256 ratio = absTick & 0x1 != 0 ? 0xfffcb933bd6fad37aa2d162d1a594001 : 0x100000000000000000000000000000000;
+        if (absTick & 0x2 != 0) ratio = (ratio * 0xfff97272373d413259a46990580e213a) >> 128;
+        if (absTick & 0x4 != 0) ratio = (ratio * 0xfff2e50f5f656932ef12357cf3c7fdcc) >> 128;
+        if (absTick & 0x8 != 0) ratio = (ratio * 0xffe5caca7e10e4e61c36248dc02da379) >> 128;
+        if (absTick & 0x10 != 0) ratio = (ratio * 0xffcb9843d60f6159c9db58835c926644) >> 128;
+        if (absTick & 0x20 != 0) ratio = (ratio * 0xff973b41fa98c081472e6896dfb254c0) >> 128;
+        if (absTick & 0x40 != 0) ratio = (ratio * 0xff2ea16466c96a3843ec78b326b52861) >> 128;
+        if (absTick & 0x80 != 0) ratio = (ratio * 0xfe5dee046a99a2a811c461f1969c3053) >> 128;
+        if (absTick & 0x100 != 0) ratio = (ratio * 0xfcbe86c75d6ced848f39ebf43a425644) >> 128;
+        if (absTick & 0x200 != 0) ratio = (ratio * 0xf987a7253ac413176f2b074cf7815e54) >> 128;
+        if (absTick & 0x400 != 0) ratio = (ratio * 0xf3392b0822b70005940c7a398e4b70f3) >> 128;
+        if (absTick & 0x800 != 0) ratio = (ratio * 0xe7159475a2c29b7443b29c7fa6e889d9) >> 128;
+        if (absTick & 0x1000 != 0) ratio = (ratio * 0xd097f3bdfd2022b8845ad8f792aa5825) >> 128;
+        if (absTick & 0x2000 != 0) ratio = (ratio * 0xa9f746462d870fdf8a65dc1f90e061e5) >> 128;
+        if (absTick & 0x4000 != 0) ratio = (ratio * 0x70d869a156d2a1b890bb3df62baf32f7) >> 128;
+        if (absTick & 0x8000 != 0) ratio = (ratio * 0x31be135f97d08fd981231505542fcfa6) >> 128;
+        if (absTick & 0x10000 != 0) ratio = (ratio * 0x9aa508b5b7a84e1c677de54f3e99bc9) >> 128;
+        if (absTick & 0x20000 != 0) ratio = (ratio * 0x5d6af8dedb81196699c329225ee604) >> 128;
+        if (absTick & 0x40000 != 0) ratio = (ratio * 0x2216e584f5fa1ea926041bedfe98) >> 128;
+        if (absTick & 0x80000 != 0) ratio = (ratio * 0x48a170391f7dc42444e8fa2) >> 128;
+        if (tick > 0) ratio = type(uint256).max / ratio;
+        sqrtPriceX96 = uint160(ratio);
+    }
+}
+library OracleLibrary {
+    function consult(address pool, uint32 period) internal view returns (int24 tick) {
+        require(period != 0, 'BP');
+        uint32[] memory periods = new uint32[](2);
+        periods[0] = period;
+        periods[1] = 0;
+        (int56[] memory tickCumulatives, ) = IUniswapV3Pool(pool).observe(periods);
+        int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
+        tick = int24(tickCumulativesDelta / int56(uint56(period)));
+    }
+    function getQuoteAtTick(
+        int24 tick,
+        uint128 baseAmount,
+        address baseToken,
+        address quoteToken
+    ) internal pure returns (uint256 quoteAmount) {
+        uint160 sqrtRatioX96 = TickMath.getSqrtRatioAtTick(tick);
+        uint256 ratioX192 = uint256(sqrtRatioX96) * uint256(sqrtRatioX96);
+        if (baseToken < quoteToken) {
+            quoteAmount = (uint256(baseAmount) * ratioX192) >> 192;
+        } else {
+            quoteAmount = (uint256(baseAmount) * FixedPoint96.Q96) / (ratioX192 / FixedPoint96.Q96);
+        }
+    }
 }
 
 interface IParty {
@@ -22,10 +75,11 @@ interface IParty {
     function getPartyComposition(uint256 _partyId) external view returns (uint256[] memory heroIds, uint256[] memory relicIds, uint256 totalPower, uint256 totalCapacity);
 }
 
-contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
+contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, Pausable {
     IParty public immutable partyContract;
     IERC20 public immutable soulShardToken;
-    IPancakePair public immutable pancakePair;
+    IUniswapV3Pool public immutable soulShardUsdPool;
+    uint32 public constant TWAP_PERIOD = 1800;
     address public immutable usdToken;
 
     uint256 public provisionPriceUSD = 5 * 1e18;
@@ -84,21 +138,21 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
         address _partyAddress,
         address _soulShardTokenAddress,
         address _usdTokenAddress,
-        address _pairAddress
+        address _soulShardUsdPoolAddress 
     ) 
         Ownable(msg.sender)
         VRFV2PlusWrapperConsumerBase(_vrfWrapper) 
     {
         partyContract = IParty(_partyAddress);
         soulShardToken = IERC20(_soulShardTokenAddress);
-        pancakePair = IPancakePair(_pairAddress);
+        soulShardUsdPool = IUniswapV3Pool(_soulShardUsdPoolAddress);
         usdToken = _usdTokenAddress;
         _initializeDungeons();
     }
     
     receive() external payable {}
 
-    function buyProvisions(uint256 _partyId, uint256 _amount) external nonReentrant {
+    function buyProvisions(uint256 _partyId, uint256 _amount) external nonReentrant whenNotPaused {
         address user = partyContract.ownerOf(_partyId);
         require(user == msg.sender, "Not party owner");
         require(_amount > 0, "Amount must be > 0");
@@ -117,13 +171,11 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
         emit ProvisionsBought(_partyId, _amount, requiredSoulShard);
     }
 
-    /**
-     * @notice 【更新】將此函式改為 payable，並增加費用檢查
-     */
     function requestExpedition(uint256 _partyId, uint256 _dungeonId) 
         external 
         payable
         nonReentrant 
+        whenNotPaused
         returns (uint256 requestId) 
     {
         // 【新功能】檢查是否支付了足夠的探索費用
@@ -182,7 +234,7 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
         emit ExpeditionFulfilled(_requestId, partyId, success, reward);
     }
 
-    function claimRewards(uint256 _partyId) external nonReentrant {
+    function claimRewards(uint256 _partyId) external nonReentrant whenNotPaused {
         address user = partyContract.ownerOf(_partyId);
         require(user == msg.sender, "Not party owner");
         
@@ -195,7 +247,7 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
         emit RewardsBanked(user, _partyId, amountToBank);
     }
 
-    function withdraw(uint256 _amount) external nonReentrant {
+    function withdraw(uint256 _amount) external nonReentrant whenNotPaused {
         PlayerInfo storage player = playerInfo[msg.sender];
         require(player.withdrawableBalance >= _amount, "Insufficient balance");
         require(_amount > 0, "Amount must be > 0");
@@ -241,13 +293,11 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
         return block.timestamp < status.cooldownEndsAt || status.provisionsRemaining > 0;
     }
     
-    function getSoulShardAmountForUSD(uint256 _amountUSD) public view returns (uint256) {
-        (uint reserve0, uint reserve1, ) = pancakePair.getReserves();
-        address token0 = pancakePair.token0();
-        (uint reserveSoulShard, uint reserveUSD) = (token0 == address(soulShardToken)) 
-            ? (reserve0, reserve1) : (reserve1, reserve0);
-        require(reserveSoulShard > 0 && reserveUSD > 0, "Invalid reserves");
-        return ((_amountUSD * reserveSoulShard * 10000) / (reserveUSD * 9975)) + 1;
+    function getSoulShardAmountForUSD(uint256 _amountUSD) public view returns (uint256 amountSoulShard) {
+        int24 tick = OracleLibrary.consult(address(soulShardUsdPool), TWAP_PERIOD);
+        address token0 = soulShardUsdPool.token0();
+        address token1 = soulShardUsdPool.token1();
+        amountSoulShard = OracleLibrary.getQuoteAtTick(tick, uint128(_amountUSD), token1, token0);
     }
 
     function updateDungeon(uint256 _dungeonId, uint256 _requiredPower, uint256 _rewardAmountUSD, uint8 _successRate) public onlyOwner {
@@ -266,10 +316,6 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
         provisionPriceUSD = _newPrice;
     }
 
-    /**
-     * @notice 【新功能】允許合約擁有者提出合約中所有 BNB (包括探索費用和 VRF 的餘額)
-     * 注意：原有的 withdrawNativeFunding 已被此函式取代，功能更清晰
-     */
     function withdrawNativeFunding() public onlyOwner {
         (bool success, ) = owner().call{value: address(this).balance}("");
         require(success, "Native withdraw failed");
@@ -281,4 +327,6 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase {
             soulShardToken.transfer(owner(), balance);
         }
     }
+    function pause() public onlyOwner { _pause(); }
+    function unpause() public onlyOwner { _unpause(); }
 }

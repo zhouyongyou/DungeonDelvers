@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/security/Pausable.sol"; // << [新] 引入 Pausable
 
 interface IHero {
     function ownerOf(uint256 tokenId) external view returns (address);
@@ -22,7 +23,7 @@ interface IDungeonCore {
     function isPartyLocked(uint256 _partyId) external view returns (bool);
 }
 
-contract Party is ERC721, Ownable, ReentrancyGuard {
+contract Party is ERC721, Ownable, ReentrancyGuard, Pausable {
     string private _baseURIStorage;
     IHero public immutable heroContract;
     IRelic public immutable relicContract;
@@ -62,7 +63,7 @@ contract Party is ERC721, Ownable, ReentrancyGuard {
         _baseURIStorage = newBaseURI;
     }
 
-    function createParty(uint256[] calldata _heroIds, uint256[] calldata _relicIds) external nonReentrant returns (uint256 partyId) {
+    function createParty(uint256[] calldata _heroIds, uint256[] calldata _relicIds) external nonReentrant whenNotPaused returns (uint256 partyId) {
         require(_relicIds.length > 0, "Party must have at least one relic");
         require(_relicIds.length <= 5, "Party cannot have more than 5 relics");
         uint256 totalPower = 0;
@@ -95,7 +96,7 @@ contract Party is ERC721, Ownable, ReentrancyGuard {
         emit PartyCreated(partyId, msg.sender, _heroIds, _relicIds);
     }
 
-    function disbandParty(uint256 _partyId) external nonReentrant {
+    function disbandParty(uint256 _partyId) external nonReentrant whenNotPaused {
         require(ownerOf(_partyId) == msg.sender, "You are not the owner of this party");
         _requireNotLocked(_partyId);
         PartyComposition storage party = partyCompositions[_partyId];
@@ -123,5 +124,12 @@ contract Party is ERC721, Ownable, ReentrancyGuard {
     
     function getPartyComposition(uint256 _partyId) external view returns (PartyComposition memory) {
         return partyCompositions[_partyId];
+    }
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    function unpause() public onlyOwner {
+        _unpause();
     }
 }

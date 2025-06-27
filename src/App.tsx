@@ -6,7 +6,7 @@ import { EmptyState } from './components/ui/EmptyState';
 import { useContractEvents } from './hooks/useContractEvents';
 import { LoadingSpinner } from './components/ui/LoadingSpinner'; // 8. 引入 LoadingSpinner
 
-export type Page = 'dashboard' | 'mint' | 'party' | 'dungeon' | 'explorer' | 'admin';
+export type Page = 'dashboard' | 'mint' | 'party' | 'dungeon' | 'explorer' | 'admin' | 'altar';
 
 // 2. 將所有頁面元件的 import 改為 React.lazy() 動態導入
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -14,6 +14,7 @@ const MintPage = lazy(() => import('./pages/MintPage'));
 const ExplorerPage = lazy(() => import('./pages/ExplorerPage'));
 const MyAssetsPage = lazy(() => import('./pages/MyAssetsPage'));
 const DungeonPage = lazy(() => import('./pages/DungeonPage'));
+const AltarPage = lazy(() => import('./pages/AltarPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 
 // 3. 建立一個 Loading 元件，用於 Suspense 的 fallback
@@ -28,7 +29,7 @@ const PageLoader: React.FC = () => (
 
 const PageContent: React.FC<{ activePage: Page; setActivePage: (page: Page) => void }> = ({ activePage, setActivePage }) => {
     const { isConnected } = useAccount();
-    const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'admin'];
+    const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'admin', 'altar'];
 
     // 4. 對於需要錢包連接的頁面，保持原有的邏輯
     if (!isConnected && pageRequiresWallet.includes(activePage)) {
@@ -45,6 +46,7 @@ const PageContent: React.FC<{ activePage: Page; setActivePage: (page: Page) => v
             case 'party': return <MyAssetsPage setActivePage={setActivePage} />;
             case 'dungeon': return <DungeonPage />;
             case 'admin': return <AdminPage />;
+            case 'altar': return <AltarPage />;
             default: return <DashboardPage />;
         }
     };

@@ -1,7 +1,3 @@
-// =================================================================================================
-// [新] 扁平化整合 PancakeSwap V3 依賴項
-// 說明：以下是與 V3 TWAP 預言機互動所需的所有介面與函式庫，已直接整合至此檔案中。
-// =================================================================================================
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -106,6 +102,7 @@ contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard,
     uint256 public blockMintLimit = 300; 
     uint256 public lastMintBlock;
     uint256 public mintsInCurrentBlock;
+    address public ascensionAltarAddress;
     event HeroMinted(uint256 indexed tokenId, address indexed owner, uint8 rarity, uint256 power);
     event AdminHeroMinted(address indexed to, uint256 indexed tokenId, uint8 rarity, uint256 power);
     event BatchHeroMinted(address indexed to, uint256 count);
@@ -261,8 +258,20 @@ contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard,
     function pause() public onlyOwner {
         _pause();
     }
-
     function unpause() public onlyOwner {
         _unpause();
+    }
+    function setAscensionAltarAddress(address _altarAddress) public onlyOwner {
+        ascensionAltarAddress = _altarAddress;
+    }
+    // 以 Hero.sol 為例
+    function mintFromAltar(address _to, uint8 _rarity, uint256 _power) external {
+        require(msg.sender == ascensionAltarAddress, "Caller is not the authorized Altar");
+        _mintHero(_to, _rarity, _power); // 呼叫您現有的內部鑄造函式
+    }
+    function burnFromAltar(uint256 tokenId) external {
+        require(msg.sender == ascensionAltarAddress, "Caller is not the authorized Altar");
+        // 呼叫 OpenZeppelin 的 _burn，這會檢查 token 是否存在
+        _burn(tokenId); 
     }
 }
