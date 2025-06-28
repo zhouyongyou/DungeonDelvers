@@ -7,7 +7,6 @@ import "./ProfileSVGLibrary.sol";
 
 /**
  * @title PlayerProfile
- * @author Dungeon Delvers Team
  * @notice 這是一個靈魂綁定代幣 (SBT)，用於代表玩家在 Dungeon Delvers 中的個人檔案與成就。
  * @dev 此合約已將 SVG 生成和計算邏輯完全分離至 ProfileSVGLibrary，以解決堆疊過深的問題。
  */

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract } from 'wagmi';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAppToast } from '../hooks/useAppToast';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { getContract } from '../config/contracts';
@@ -9,14 +9,14 @@ import { SkeletonCard } from '../components/ui/SkeletonCard';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
 import { ActionButton } from '../components/ui/ActionButton';
-import type { Page } from '../App';
 import type { AnyNft, NftType, HeroNft, RelicNft } from '../types/nft';
+import type { Page } from '../types/page';
 
+// 【修正】定義 Props 介面
 interface MyAssetsPageProps {
     setActivePage: (page: Page) => void;
 }
 
-// 篩選器組件
 const NftFilter: React.FC<{
     currentFilter: 'all' | number;
     onFilterChange: (filter: 'all' | number) => void;
@@ -31,7 +31,6 @@ const NftFilter: React.FC<{
     </div>
 );
 
-// NFT 網格組件
 const NftGrid: React.FC<{
     type: NftType;
     nfts?: AnyNft[];
@@ -47,9 +46,11 @@ const NftGrid: React.FC<{
     return (<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">{nfts.map(nft => <NftCard key={nft.id.toString()} nft={nft} onSelect={onSelect} isSelected={selection?.has(nft.id)} onDisband={onDisband}/>)}</div>);
 };
 
-const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setActivePage }) => {
+// 【修正】在元件定義中使用 MyAssetsPageProps 介面
+const MyAssetsPage: React.FC<MyAssetsPageProps> = ({ setActivePage }) => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
+    const queryClient = useQueryClient(); // 【新增】加入 queryClient
     
     // 狀態管理
     const [selection, setSelection] = useState<{ heroes: Set<bigint>; relics: Set<bigint> }>({ heroes: new Set(), relics: new Set() });
@@ -66,7 +67,7 @@ const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAc
         },
         enabled: !!address && !!chainId,
     });
-
+    
     const heroStats = useMemo(() => {
         if (!nfts?.heroes) return { count: 0, totalPower: 0 };
         return {
@@ -115,22 +116,25 @@ const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAc
         query: { enabled: !!address && !!partyContract?.address && !!relicContract?.address } 
     });
     
+    // 合約寫入
     const { writeContractAsync, isPending } = useWriteContract({
       mutation: {
         onSuccess: (_hash, vars) => {
-            if (vars.functionName === 'createParty') {
-                showToast('隊伍創建成功！即將跳轉至地下城頁面...', 'success');
-                setTimeout(() => {
-                    setActivePage('dungeon');
-                }, 2000);
-            } else {
-                showToast(`${(vars.functionName as string) === 'setApprovalForAll' ? '授權' : '解散隊伍'}請求已送出`, 'info');
+            const opName = vars.functionName;
+            if (opName === 'createParty') {
+                showToast('隊伍創建成功！', 'success');
+                queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
+            } else if (opName === 'disbandParty') {
+                showToast('隊伍已解散！', 'success');
+                queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
+            } else if (opName === 'setApprovalForAll') {
+                 showToast('授權成功！', 'success');
             }
         },
         onError: (err) => showToast(err.message.split('\n')[0], 'error')
       }
     });
-
+    
     const handleSelect = (id: bigint, type: NftType) => {
         if (type === 'hero' || type === 'relic') {
             setSelection(prev => {
@@ -183,7 +187,7 @@ const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAc
             console.error(e);
         }
     };
-
+    
     return (
         <section>
             <h2 className="page-title">我的資產</h2>

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useAccount, useConnect, useDisconnect, useReadContract } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { ActionButton } from '../ui/ActionButton';
-import type { Page } from '../../App';
+import type { Page } from '../../types/page'
 import { useTheme } from '../../contexts/ThemeContext';
 import logoUrl from '/assets/images/logo-192x192.png';
 import { DEVELOPER_ADDRESS } from '../../config/constants';

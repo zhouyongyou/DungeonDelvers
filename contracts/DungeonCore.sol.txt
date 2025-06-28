@@ -8,6 +8,15 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
+// ----------------------------------------------------------------
+// [第一步] 引入 PlayerProfile 的介面
+// ----------------------------------------------------------------
+interface IPlayerProfile {
+    function mintProfile(address _player) external;
+    function addExperience(address _player, uint256 _amount) external;
+    function profileTokenOf(address _player) external view returns (uint256);
+}
+
 interface IUniswapV3Pool {
     function token0() external view returns (address);
     function token1() external view returns (address);
@@ -113,6 +122,9 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
         uint256 unclaimedRewards;
     }
     mapping(uint256 => PartyStatus) public partyStatuses;
+    
+    // [第二步] 增加 PlayerProfile 合約的狀態變數
+    IPlayerProfile public playerProfileContract;
 
     struct ExpeditionRequest {
         address requester;
@@ -132,6 +144,16 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
     event TokensWithdrawn(address indexed user, uint256 amount, uint256 taxAmount);
     event DungeonUpdated(uint256 indexed dungeonId, uint256 requiredPower, uint256 rewardAmountUSD, uint8 baseSuccessRate);
     event GlobalRewardMultiplierUpdated(uint256 newMultiplier);
+    // [第四步] 擴充 ExpeditionFulfilled 事件，加入 expGained
+    event ExpeditionFulfilled(
+        uint256 indexed requestId,
+        uint256 indexed partyId,
+        bool success,
+        uint256 reward,
+        uint256 expGained // 新增欄位
+    );
+
+    event PlayerProfileAddressUpdated(address indexed newAddress);
 
     constructor(
         address _vrfWrapper,
@@ -178,7 +200,6 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
         whenNotPaused
         returns (uint256 requestId) 
     {
-        // 【新功能】檢查是否支付了足夠的探索費用
         require(msg.value >= explorationFee, "BNB fee not met");
         require(partyContract.ownerOf(_partyId) == msg.sender, "Not party owner");
         require(dungeons[_dungeonId].isInitialized, "Dungeon DNE");
@@ -205,9 +226,6 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
         emit ExpeditionRequested(requestId, _partyId, _dungeonId);
     }
 
-    /**
-     * @notice 【新功能】允許合約擁有者設定新的探索費用
-     */
     function setExplorationFee(uint256 _newFee) public onlyOwner {
         explorationFee = _newFee;
     }
@@ -232,7 +250,58 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
         }
 
         emit ExpeditionFulfilled(_requestId, partyId, success, reward);
+
+        // ----------------------------------------------------------------
+        // [第三步] 在函式結尾增加經驗值發放邏輯
+        // ----------------------------------------------------------------
+        uint256 expGained = calculateExperience(request.dungeonId, success);  // 使用計算經驗值的函數
+
+        // 確保 PlayerProfile 合約地址已設定
+        if (address(playerProfileContract) != address(0) && success) {
+            address player = request.requester;
+
+            // 檢查玩家是否已有 Profile，若無則創建
+            try playerProfileContract.profileTokenOf(player) returns (uint256 tokenId) {
+                if (tokenId == 0) {
+                    playerProfileContract.mintProfile(player);
+                }
+            } catch {
+                playerProfileContract.mintProfile(player);
+            }
+
+            // 為玩家增加經驗值
+            if (expGained > 0) {
+                playerProfileContract.addExperience(player, expGained);
+            }
+        }
+        // 發射帶有經驗值資訊的事件
+        emit ExpeditionFulfilled(_requestId, request.partyId, success, reward, expGained);
     }
+
+    // 經驗值計算函數
+    function calculateExperience(uint256 dungeonId, bool success) internal pure returns (uint256) {
+        uint256 expGained = 0;
+
+        // 第一關和第二關的經驗值設置為固定數值
+        if (dungeonId == 1) {
+            expGained = 30;  // 第1關固定給30經驗
+        } else if (dungeonId == 2) {
+            expGained = 60;  // 第2關固定給60經驗
+        } else if (dungeonId >= 3 && dungeonId <= 10) {
+            // 第3到第10關使用平方增長
+            expGained = (dungeonId - 1) * (dungeonId - 1) * 10;
+        } else {
+            // 第11關及以後的關卡也使用平方增長
+            expGained = (dungeonId - 1) * (dungeonId - 2) * 10; // 可以根據需求調整增長方式
+        }
+
+        // 失敗時給予40%經驗值
+        if (!success) {
+            expGained = expGained * 40 / 100;
+        }
+
+        return expGained;
+        }
 
     function claimRewards(uint256 _partyId) external nonReentrant whenNotPaused {
         address user = partyContract.ownerOf(_partyId);
@@ -314,6 +383,12 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
 
     function setProvisionPriceUSD(uint256 _newPrice) public onlyOwner {
         provisionPriceUSD = _newPrice;
+    }
+
+    function setPlayerProfileContract(address _address) public onlyOwner {
+        require(_address != address(0), "DungeonCore: Zero address");
+        playerProfileContract = IPlayerProfile(_address);
+        emit PlayerProfileAddressUpdated(_address);
     }
 
     function withdrawNativeFunding() public onlyOwner {

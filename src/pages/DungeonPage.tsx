@@ -9,6 +9,13 @@ import { ActionButton } from '../components/ui/ActionButton';
 import { SkeletonCard } from '../components/ui/SkeletonCard';
 import type { AnyNft, PartyNft } from '../types/nft';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import type { Page } from '../types/page'; // 導入 Page 型別
+
+// 1. 定義 props 的介面 (Interface)
+interface DungeonPageProps {
+  setActivePage: (page: Page) => void;
+  setPreselectedPartyId: (id: bigint | null) => void;
+}
 
 interface Dungeon {
     id: number;
@@ -18,7 +25,7 @@ interface Dungeon {
     isInitialized: boolean;
 }
 
-const DungeonPage: React.FC = () => {
+const DungeonPage: React.FC<DungeonPageProps> = ({ setActivePage, setPreselectedPartyId }) => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
     const queryClient = useQueryClient();
@@ -174,6 +181,16 @@ const DungeonPage: React.FC = () => {
         }
     };
 
+    // 【新增】一個處理函式，當儲備不足時，跳轉到補給頁面
+    const handleGoToProvisions = () => {
+        if (selectedPartyId) {
+            setPreselectedPartyId(BigInt(selectedPartyId)); // 帶著選中的隊伍ID
+            setActivePage('provisions'); // 切換頁面
+        } else {
+            showToast('請先選擇一個隊伍', 'error');
+        }
+    }
+
     const getDungeonName = (id: number) => ["", "新手礦洞", "哥布林洞穴", "食人魔山谷", "蜘蛛巢穴", "石化蜥蜴沼澤", "巫妖墓穴", "奇美拉之巢", "惡魔前哨站", "巨龍之巔", "混沌深淵"][id] || "未知地城";
     
     return (
@@ -191,14 +208,18 @@ const DungeonPage: React.FC = () => {
                         ))}
                     </select>
                 </div>
-                 {/* [修正] 加入隊伍狀態和領取獎勵的 UI */}
+            {/* 在隊伍狀態區塊，可以加入一個補給按鈕 */}
                 <div className="w-full md:w-auto flex-shrink-0 card-bg bg-black/5 dark:bg-white/5 p-3 rounded-lg text-center">
                     <h3 className="section-title text-xl mb-2">2. 隊伍狀態</h3>
                      {isLoadingPartyStatus && selectedPartyId ? <LoadingSpinner /> : (
                          <div className="text-sm space-y-1">
                             <p>待領獎勵: <span className="font-bold text-green-500">{partyStatus ? parseFloat(formatEther(partyStatus.unclaimedRewards)).toFixed(4) : '...'}</span></p>
                              <p>剩餘儲備: <span className="font-bold">{partyStatus ? partyStatus.provisionsRemaining.toString() : '...'}</span> 次</p>
-                             <ActionButton onClick={handleClaimRewards} disabled={!selectedPartyId || actionState?.isLoading} isLoading={actionState?.type === 'claim' && actionState.isLoading} className="w-full h-8 text-xs mt-2">
+                            {/* 【新增】前往補給的按鈕 */}
+                            <ActionButton onClick={handleGoToProvisions} className="w-full h-8 text-xs mt-2 bg-green-600 hover:bg-green-500">
+                                購買儲備
+                            </ActionButton>
+                            <ActionButton onClick={handleClaimRewards} disabled={!selectedPartyId || actionState?.isLoading} isLoading={actionState?.type === 'claim' && actionState.isLoading} className="w-full h-8 text-xs mt-2">
                                 領取獎勵
                             </ActionButton>
                          </div>

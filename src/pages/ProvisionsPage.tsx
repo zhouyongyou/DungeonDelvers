@@ -10,6 +10,12 @@ import { NftCard } from '../components/ui/NftCard';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import type { PartyNft } from '../types/nft';
+// import type { Page } from '../types/page'; // 導入 Page 型別
+
+interface ProvisionsPageProps {
+    preselectedPartyId: bigint | null;
+    setPreselectedPartyId: (id: bigint | null) => void;
+}
 
 // ----------------------------------------------------------------
 // 1. 購買儲備的核心邏輯 Hook
@@ -142,9 +148,11 @@ const PurchaseInterface: React.FC<{ selectedParty: PartyNft | null }> = ({ selec
 // ----------------------------------------------------------------
 // 3. 主頁面元件
 // ----------------------------------------------------------------
-const ProvisionsPage: React.FC = () => {
+const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, setPreselectedPartyId }) => {
     const { address, chainId } = useAccount();
-    const [selectedPartyId, setSelectedPartyId] = useState<bigint | null>(null);
+    // const { showToast } = useAppToast();
+    // const queryClient = useQueryClient();
+    const [selectedPartyId, setSelectedPartyId] = useState<bigint | null>(preselectedPartyId);
 
     const { data: ownedParties, isLoading: isLoadingParties } = useQuery({
         queryKey: ['ownedNfts', address, chainId, 'partiesOnly'],
@@ -171,7 +179,20 @@ const ProvisionsPage: React.FC = () => {
             return { ...party, provisionsRemaining: 0n };
         });
     }, [ownedParties, statuses]);
-    
+
+    // 【修改】當外部傳入的 ID 變化時，更新內部狀態
+    useEffect(() => {
+        if (preselectedPartyId) {
+            setSelectedPartyId(preselectedPartyId);
+        }
+    }, [preselectedPartyId]);
+
+    // 【新增】處理函式，用於在頁面內點擊隊伍卡片
+    const handlePartySelection = (partyId: bigint) => {
+        setSelectedPartyId(partyId); // 更新此頁面的選擇
+        setPreselectedPartyId(partyId); // 同步更新到 App 的狀態
+    };
+
     const selectedParty = useMemo(() => partiesWithStatus.find(p => p.id === selectedPartyId) || null, [partiesWithStatus, selectedPartyId]);
 
     return (
@@ -184,7 +205,7 @@ const ProvisionsPage: React.FC = () => {
                         partiesWithStatus.length > 0 ? (
                             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                                 {partiesWithStatus.map(party => (
-                                    <div key={party.id.toString()} onClick={() => setSelectedPartyId(party.id)} className="cursor-pointer">
+                                    <div key={party.id.toString()} onClick={() => handlePartySelection(party.id)} className="cursor-pointer">
                                         <NftCard nft={party} isSelected={selectedPartyId === party.id} />
                                         <p className="text-center text-xs mt-1 font-bold">儲備: {party.provisionsRemaining.toString()}</p>
                                     </div>
