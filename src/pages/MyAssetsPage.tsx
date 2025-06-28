@@ -9,10 +9,11 @@ import { SkeletonCard } from '../components/ui/SkeletonCard';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
 import { ActionButton } from '../components/ui/ActionButton';
-import type { AnyNft, NftType, HeroNft, RelicNft } from '../types/nft';
 import type { Page } from '../types/page';
+import type { AnyNft, NftType, HeroNft, RelicNft } from '../types/nft';
+// 【第1步：導入我們新的 store】
+import { useTransactionStore } from '../stores/useTransactionStore';
 
-// 【修正】定義 Props 介面
 interface MyAssetsPageProps {
     setActivePage: (page: Page) => void;
 }
@@ -46,19 +47,18 @@ const NftGrid: React.FC<{
     return (<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">{nfts.map(nft => <NftCard key={nft.id.toString()} nft={nft} onSelect={onSelect} isSelected={selection?.has(nft.id)} onDisband={onDisband}/>)}</div>);
 };
 
-// 【修正】在元件定義中使用 MyAssetsPageProps 介面
 const MyAssetsPage: React.FC<MyAssetsPageProps> = ({ setActivePage }) => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
-    const queryClient = useQueryClient(); // 【新增】加入 queryClient
+    const queryClient = useQueryClient();
+    // 【第2步：從 store 獲取 addTransaction 函式】
+    const { addTransaction } = useTransactionStore();
     
-    // 狀態管理
     const [selection, setSelection] = useState<{ heroes: Set<bigint>; relics: Set<bigint> }>({ heroes: new Set(), relics: new Set() });
     const [modal, setModal] = useState<{ type: 'create' | 'disband', isOpen: boolean, data?: any }>({ type: 'create', isOpen: false });
     const [heroFilter, setHeroFilter] = useState<'all' | number>('all');
     const [relicFilter, setRelicFilter] = useState<'all' | number>('all');
 
-    // 數據獲取
     const { data: nfts, isLoading: isLoadingNfts } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
         queryFn: () => {
@@ -96,7 +96,6 @@ const MyAssetsPage: React.FC<MyAssetsPageProps> = ({ setActivePage }) => {
       }, 0);
     }, [nfts?.heroes, selection.heroes]);
     
-    // 合約實例
     const partyContract = getContract(chainId, 'party');
     const heroContract = getContract(chainId, 'hero');
     const relicContract = getContract(chainId, 'relic');
@@ -116,37 +115,19 @@ const MyAssetsPage: React.FC<MyAssetsPageProps> = ({ setActivePage }) => {
         query: { enabled: !!address && !!partyContract?.address && !!relicContract?.address } 
     });
     
-    // 合約寫入
-    const { writeContractAsync, isPending } = useWriteContract({
-      mutation: {
-        onSuccess: (_hash, vars) => {
-            const opName = vars.functionName;
-            if (opName === 'createParty') {
-                showToast('隊伍創建成功！', 'success');
-                queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
-            } else if (opName === 'disbandParty') {
-                showToast('隊伍已解散！', 'success');
-                queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
-            } else if (opName === 'setApprovalForAll') {
-                 showToast('授權成功！', 'success');
-            }
-        },
-        onError: (err) => showToast(err.message.split('\n')[0], 'error')
-      }
-    });
+    // 【修改】簡化 useWriteContract，移除 onSuccess 的 toast
+    const { writeContractAsync, isPending } = useWriteContract();
     
     const handleSelect = (id: bigint, type: NftType) => {
         if (type === 'hero' || type === 'relic') {
             setSelection(prev => {
                 const key = type === 'hero' ? 'heroes' : 'relics';
                 const newSet = new Set(prev[key]);
-                
                 if (newSet.has(id)) {
                     newSet.delete(id);
                 } else {
                     newSet.add(id);
                 }
-                
                 return { ...prev, [key]: newSet };
             });
         }
@@ -160,43 +141,55 @@ const MyAssetsPage: React.FC<MyAssetsPageProps> = ({ setActivePage }) => {
         try {
             if (!isHeroApproved) {
                 if(heroContract && partyContract?.address) {
-                    await writeContractAsync({ address: heroContract.address, abi: heroContract.abi, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
+                    const hash = await writeContractAsync({ address: heroContract.address, abi: heroContract.abi, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
+                    addTransaction({ hash, description: '授權隊伍合約使用英雄' });
                 }
             }
             if (!isRelicApproved) {
                  if(relicContract && partyContract?.address) {
-                    await writeContractAsync({ address: relicContract.address, abi: relicContract.abi, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
+                    const hash = await writeContractAsync({ address: relicContract.address, abi: relicContract.abi, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
+                    addTransaction({ hash, description: '授權隊伍合約使用聖物' });
                  }
             }
-            if (partyContract) {
-                await writeContractAsync({ address: partyContract.address, abi: partyContract.abi, functionName: 'createParty', args: [Array.from(selection.heroes), Array.from(selection.relics)] });
-            }
+            
+            const hash = await writeContractAsync({ address: partyContract.address, abi: partyContract.abi, functionName: 'createParty', args: [Array.from(selection.heroes), Array.from(selection.relics)] });
+            addTransaction({ hash, description: '創建新隊伍' });
+
             setSelection({ heroes: new Set(), relics: new Set() });
             setModal({ isOpen: false, type: 'create' });
-        } catch (e: any) { 
-            console.error(e);
-        }
-    };
+            queryClient.invalidateQueries({ queryKey: ['ownedNfts'] }); // 立即刷新列表
 
-    const handleDisbandParty = async () => {
-        if (!modal.data || !partyContract) return;
-        try {
-            await writeContractAsync({ address: partyContract.address, abi: partyContract.abi, functionName: 'disbandParty', args: [modal.data] });
-            setModal({ isOpen: false, type: 'disband' });
         } catch (e: any) { 
-            console.error(e);
+            // 處理使用者取消交易等錯誤
+            if (!e.message.includes('User rejected the request')) {
+                showToast('操作失敗，詳情請見主控台', 'error');
+                console.error(e);
+            }
         }
     };
     
+    const handleDisbandParty = async () => {
+        if (!modal.data || !partyContract) return;
+        try {
+            const hash = await writeContractAsync({ address: partyContract.address, abi: partyContract.abi, functionName: 'disbandParty', args: [modal.data] });
+            addTransaction({ hash, description: `解散隊伍 #${modal.data}` });
+            
+            setModal({ isOpen: false, type: 'disband' });
+            queryClient.invalidateQueries({ queryKey: ['ownedNfts'] }); // 立即刷新列表
+        } catch (e: any) { 
+            if (!e.message.includes('User rejected the request')) {
+                showToast('操作失敗，詳情請見主控台', 'error');
+                console.error(e);
+            }
+        }
+    };
     return (
         <section>
             <h2 className="page-title">我的資產</h2>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-8">
-                    {/* 隊伍 NFT 區塊 */}
                     <div><h3 className="section-title">我的隊伍 NFT</h3><NftGrid type="party" nfts={nfts?.parties} isLoading={isLoadingNfts} onDisband={(id) => setModal({ isOpen: true, type: 'disband', data: id })} setActivePage={setActivePage}/></div><hr/>
                     
-                    {/* 英雄區塊 */}
                     <div>
                         <h3 className="section-title">我的英雄</h3>
                         <div className="card-bg p-4 rounded-xl mb-4">
@@ -209,7 +202,6 @@ const MyAssetsPage: React.FC<MyAssetsPageProps> = ({ setActivePage }) => {
                         <NftGrid type="hero" nfts={filteredHeroes} isLoading={isLoadingNfts} onSelect={handleSelect} selection={selection.heroes} setActivePage={setActivePage}/>
                     </div>
 
-                    {/* 聖物區塊 */}
                     <div>
                         <h3 className="section-title">我的聖物</h3>
                         <div className="card-bg p-4 rounded-xl mb-4">

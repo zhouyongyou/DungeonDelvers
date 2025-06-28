@@ -1,12 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAccount, useConnect, useDisconnect, useReadContract } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { ActionButton } from '../ui/ActionButton';
-import type { Page } from '../../types/page'
+import type { Page } from '../../types/page';
 import { useTheme } from '../../contexts/ThemeContext';
 import logoUrl from '/assets/images/logo-192x192.png';
 import { DEVELOPER_ADDRESS } from '../../config/constants';
-import { getContract } from '../../config/contracts'; // 引入 getContract
+import { getContract } from '../../config/contracts';
+import { RecentTransactions } from '../ui/RecentTransactions'; // 【新增】導入
+import { HistoryIcon } from '../ui/icons'; // 【新增】導入
 
 const ThemeToggleButton: React.FC = () => {
     const { theme, setTheme, effectiveTheme } = useTheme();
@@ -36,6 +38,10 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
   const { address, chainId, isConnected, isConnecting } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
+
+  // 【新增】管理交易列表彈窗的狀態
+  const [isTxPopoverOpen, setIsTxPopoverOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   // [新增] 讀取玩家等級的邏輯
   const playerProfileContract = getContract(chainId, 'playerProfile');
@@ -74,6 +80,17 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
   
   const handleConnectClick = () => { if (isConnected) disconnect(); else connect({ connector: injected() }); };
 
+  // 【新增】點擊頁面其他地方時關閉彈窗
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        setIsTxPopoverOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <header className="bg-[#1F1D36] shadow-lg sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3">
@@ -92,6 +109,19 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
                 </div>
                 <div className="flex items-center gap-2">
                     <ThemeToggleButton />
+                    {/* 【新增】交易記錄按鈕和彈窗 */}
+                    {isConnected && (
+                      <div className="relative" ref={popoverRef}>
+                        <button
+                          onClick={() => setIsTxPopoverOpen(prev => !prev)}
+                          className="p-2 rounded-full text-gray-300 hover:bg-white/20 transition-colors"
+                          aria-label="顯示最近交易"
+                        >
+                          <HistoryIcon className="h-5 w-5" />
+                        </button>
+                        {isTxPopoverOpen && <RecentTransactions />}
+                      </div>
+                    )}
                     <ActionButton onClick={handleConnectClick} isLoading={isConnecting} disabled={isConnecting} className="px-4 py-2 rounded-full text-sm md:text-base w-36">
                       {isConnected && address ? `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : '連接錢包'}
                     </ActionButton>

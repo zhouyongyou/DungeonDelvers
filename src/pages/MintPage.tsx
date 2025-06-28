@@ -5,6 +5,8 @@ import { useAppToast } from '../hooks/useAppToast';
 import { getContract } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+// 【第1步：導入我們新的 store 和型別】
+import { useTransactionStore } from '../stores/useTransactionStore';
 
 type MintingStep = 'idle' | 'loading' | 'needsApproval' | 'approving' | 'approveConfirming' | 'readyToMint';
 type NftToMint = 'hero' | 'relic';
@@ -20,9 +22,10 @@ const useMintLogic = (type: NftToMint, quantity: number) => {
     const { showToast } = useAppToast();
     const [approvalTxHash, setApprovalTxHash] = useState<Hash | undefined>();
 
-    // 【修正】明確獲取各個合約的設定
+    // 【第2步：從 store 獲取 addTransaction 函式】
+    const { addTransaction } = useTransactionStore();
+
     const contractConfig = getContract(chainId, type);
-    // 【修正】使用正確的 key 'soulShard'
     const soulShardContract = getContract(chainId, 'soulShard'); 
 
     const { data: mintPriceUSD } = useReadContract({
@@ -53,23 +56,8 @@ const useMintLogic = (type: NftToMint, quantity: number) => {
         query: { enabled: !!address && !!contractConfig && !!soulShardContract },
     });
 
-    const { writeContract: approve, isPending: isApproving } = useWriteContract({
-        mutation: {
-            onSuccess: (hash) => {
-                setApprovalTxHash(hash);
-                setStep('approveConfirming');
-                showToast('授權交易已送出，等待確認...', 'info');
-            },
-            onError: (err) => {
-                if (err.message.includes('User rejected the request')) {
-                    showToast('操作已由使用者取消。', 'error');
-                } else {
-                    showToast(err.message.split('\n')[0], 'error');
-                }
-                setStep('needsApproval');
-            }
-        }
-    });
+    // 【修改】將 useWriteContract 簡化，我們將在 handleApprove 中使用異步版本
+    const { writeContractAsync: approveAsync, isPending: isApproving } = useWriteContract();
     
     const { isLoading: isConfirmingApproval, isSuccess: isConfirmed, isError: isConfirmError } = useWaitForTransactionReceipt({
         hash: approvalTxHash,
@@ -97,15 +85,32 @@ const useMintLogic = (type: NftToMint, quantity: number) => {
         }
     }, [address, allowance, totalRequiredAmount, isLoadingAllowance, isLoadingPrice, isConfirmingApproval]);
 
-    const handleApprove = () => {
+    // 【修改】handleApprove 改為 async 函式，並使用新的交易追蹤系統
+    const handleApprove = async () => {
         if (step === 'needsApproval' && contractConfig && soulShardContract) {
             setStep('approving');
-            approve({ 
-                address: soulShardContract.address,
-                abi: soulShardContract.abi,
-                functionName: 'approve', 
-                args: [contractConfig.address, maxUint256] 
-            });
+            try {
+                const hash = await approveAsync({ 
+                    address: soulShardContract.address,
+                    abi: soulShardContract.abi,
+                    functionName: 'approve', 
+                    args: [contractConfig.address, maxUint256] 
+                });
+                
+                // 【第3步：將交易加入 store，而不是用 Toast】
+                addTransaction({ hash, description: `批准 ${type === 'hero' ? '英雄' : '聖物'} 合約使用代幣` });
+
+                setApprovalTxHash(hash);
+                setStep('approveConfirming');
+
+            } catch(err: any) {
+                if (err.message.includes('User rejected the request')) {
+                    showToast('操作已由使用者取消。', 'error');
+                } else {
+                    showToast(err.message.split('\n')[0], 'error');
+                }
+                setStep('needsApproval');
+            }
         }
     };
 
@@ -124,6 +129,8 @@ const MintCard: React.FC<{ type: NftToMint; options: number[] }> = ({ type, opti
     const { showToast } = useAppToast();
     const [quantity, setQuantity] = useState(1);
     
+    // 【第4步：從 store 獲取 addTransaction 函式】
+    const { addTransaction } = useTransactionStore();
     const { step, totalRequiredAmount, isLoading, isReadyToMint, handleApprove } = useMintLogic(type, quantity);
     const { writeContractAsync, isPending: isMinting } = useWriteContract();
     
@@ -136,22 +143,20 @@ const MintCard: React.FC<{ type: NftToMint; options: number[] }> = ({ type, opti
         if (!contractConfig) return;
 
         try {
-            if (quantity === 1) {
-                showToast(`正在招募 1 位${title}...`, 'info');
-                await writeContractAsync({ 
-                    address: contractConfig.address,
-                    abi: contractConfig.abi,
-                    functionName: 'mintSingle' 
-                });
-            } else {
-                showToast(`正在批量招募 ${quantity} 位${title}...`, 'info');
-                await writeContractAsync({ 
-                    address: contractConfig.address,
-                    abi: contractConfig.abi,
-                    functionName: 'mintBatch', 
-                    args: [BigInt(quantity)] 
-                });
-            }
+            const description = quantity === 1
+                ? `招募 1 位${title}`
+                : `批量招募 ${quantity} 位${title}`;
+            
+            const hash = await writeContractAsync({ 
+                address: contractConfig.address,
+                abi: contractConfig.abi,
+                functionName: quantity === 1 ? 'mintSingle' : 'mintBatch',
+                args: quantity > 1 ? [BigInt(quantity)] : undefined
+            });
+            
+            // 【第5步：將鑄造交易加入 store】
+            addTransaction({ hash, description });
+
         } catch (error: any) {
             if (error.message.includes('User rejected the request')) {
                 showToast('操作已由使用者取消。', 'error');
@@ -170,7 +175,7 @@ const MintCard: React.FC<{ type: NftToMint; options: number[] }> = ({ type, opti
         }
         
         return <ActionButton onClick={handleMint} isLoading={isMinting || isLoading} disabled={!isReadyToMint || isMinting} className="w-48 h-12">
-            {isMinting ? '交易處理中...' : `招募 ${quantity} 個`}
+            {isMinting ? '請在錢包中確認...' : `招募 ${quantity} 個`}
         </ActionButton>;
     };
 

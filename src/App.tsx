@@ -6,6 +6,7 @@ import { EmptyState } from './components/ui/EmptyState';
 import { useContractEvents } from './hooks/useContractEvents';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import type { Page } from './types/page';
+import { TransactionWatcher } from './components/core/TransactionWatcher';
 
 // 動態導入所有頁面
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -65,7 +66,7 @@ const PageContent: React.FC<PageContentProps> = ({ activePage, setActivePage, pr
             {renderPage()}
         </Suspense>
     );
-}
+};
 
 function App() {
   const [activePage, setActivePage] = useState<Page>('dashboard');
@@ -84,6 +85,7 @@ function App() {
           />
       </main>
       <Footer />
+      <TransactionWatcher />
     </div>
   );
 }

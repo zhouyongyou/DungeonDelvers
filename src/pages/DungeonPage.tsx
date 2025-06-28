@@ -10,6 +10,7 @@ import { SkeletonCard } from '../components/ui/SkeletonCard';
 import type { AnyNft, PartyNft } from '../types/nft';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import type { Page } from '../types/page';
+import { useTransactionStore } from '../stores/useTransactionStore';
 
 interface DungeonPageProps {
   setActivePage: (page: Page) => void;
@@ -29,6 +30,7 @@ const DungeonPage: React.FC<DungeonPageProps> = ({ setActivePage, setPreselected
     const { showToast } = useAppToast();
     const queryClient = useQueryClient();
     const dungeonCoreContract = getContract(chainId, 'dungeonCore');
+    const { addTransaction } = useTransactionStore();
 
     const [selectedPartyId, setSelectedPartyId] = useState<string>('');
     const [actionState, setActionState] = useState<{ type: 'dispatch' | 'claim', id: string, isLoading: boolean} | null>(null);
@@ -60,7 +62,7 @@ const DungeonPage: React.FC<DungeonPageProps> = ({ setActivePage, setPreselected
         args: [selectedPartyId ? BigInt(selectedPartyId) : 0n],
         query: {
             enabled: !!selectedPartyId && !!dungeonCoreContract,
-            refetchInterval: 15000, 
+            refetchInterval: 15000,
         }
     });
 
@@ -123,30 +125,30 @@ const DungeonPage: React.FC<DungeonPageProps> = ({ setActivePage, setPreselected
         }).filter((d): d is Dungeon => d !== null && d.isInitialized);
     }, [dungeonsData]);
     
-    const { writeContractAsync } = useWriteContract({
-      mutation: {
-        onSuccess: (_hash, vars) => showToast(`${(vars.functionName as string) === 'requestExpedition' ? '遠征' : '領取獎勵'}請求已送出`, 'success'),
-        onError: (err) => showToast(err.message.split('\n')[0], 'error')
-      }
-    });
+    const { writeContractAsync } = useWriteContract();
 
     const handleDispatch = async (dungeonId: number) => {
         if (!selectedPartyId || !dungeonCoreContract) return;
+
         if (!partyStatus || partyStatus.provisionsRemaining === 0n) {
             showToast('儲備不足！請先為您的隊伍購買儲備。', 'error');
             return;
         }
+        
         setActionState({ type: 'dispatch', id: dungeonId.toString(), isLoading: true });
         try {
-            await writeContractAsync({
+            const hash = await writeContractAsync({
                 address: dungeonCoreContract.address,
                 abi: dungeonCoreABI,
                 functionName: 'requestExpedition',
                 args: [BigInt(selectedPartyId), BigInt(dungeonId)],
-                value: displayExplorationFee ?? 0n
+                value: displayExplorationFee
             });
-        } catch (e) {
-            console.error("Dispatch failed:", e);
+            addTransaction({ hash, description: `派遣隊伍 #${selectedPartyId} 遠征` });
+        } catch (e: any) {
+             if (!e.message.includes('User rejected the request')) {
+                showToast(e.message.split('\n')[0], 'error');
+            }
         } finally {
             setActionState(null);
         }
@@ -154,20 +156,25 @@ const DungeonPage: React.FC<DungeonPageProps> = ({ setActivePage, setPreselected
 
     const handleClaimRewards = async () => {
         if (!selectedPartyId || !dungeonCoreContract) return;
+
         if (!partyStatus || partyStatus.unclaimedRewards === 0n) {
              showToast('此隊伍沒有可領取的獎勵。', 'info');
              return;
         }
+
         setActionState({ type: 'claim', id: selectedPartyId, isLoading: true });
         try {
-             await writeContractAsync({
+             const hash = await writeContractAsync({
                 address: dungeonCoreContract.address,
                 abi: dungeonCoreABI,
                 functionName: 'claimRewards',
                 args: [BigInt(selectedPartyId)]
             });
-        } catch (e) {
-            console.error("Claim failed:", e);
+            addTransaction({ hash, description: `領取隊伍 #${selectedPartyId} 的獎勵` });
+        } catch (e: any) { 
+            if (!e.message.includes('User rejected the request')) {
+                showToast(e.message.split('\n')[0], 'error');
+            }
         } finally {
              setActionState(null);
         }
@@ -236,7 +243,8 @@ const DungeonPage: React.FC<DungeonPageProps> = ({ setActivePage, setPreselected
                                 {(isLoadingParties && !!selectedPartyId) ? <LoadingSpinner/> : cooldownInfo.onCooldown ? timeLeft : '派遣遠征'}
                             </ActionButton>
                             <p className="text-xs text-center mt-1 text-gray-500">
-                                (費用: {isLoadingFee ? '讀取中...' : formatEther(explorationFee ?? 0n)} BNB)
+                                {/* 【修正】使用 displayExplorationFee */}
+                                (費用: {isLoadingFee ? '讀取中...' : formatEther(displayExplorationFee)} BNB)
                             </p>
                         </div>
                     ))}

@@ -1,27 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount, useBalance, useReadContract, useWriteContract } from 'wagmi';
-// 【修正】修正了 'viem' 的 import 語法錯誤
 import { formatEther, type Address } from "viem"; 
 import { useAppToast } from '../hooks/useAppToast';
 import { getContract } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+// 【第1步：導入 store】
+import { useTransactionStore } from '../stores/useTransactionStore';
 
 const DashboardPage: React.FC = () => {
   const { address, chainId } = useAccount();
   const { showToast } = useAppToast();
+  // 【第2步：獲取 addTransaction 函式】
+  const { addTransaction } = useTransactionStore();
 
-  // 使用正確的 key 'soulShard'
   const soulShardContract = getContract(chainId, 'soulShard');
   const dungeonCoreContract = getContract(chainId, 'dungeonCore');
 
   const { data: tokenBalance, isLoading: isLoadingTokenBalance } = useBalance({
     address,
-    token: soulShardContract?.address as Address | undefined, // 確保傳遞正確的型別
+    token: soulShardContract?.address as Address | undefined,
   });
 
   const { data, isLoading: isLoadingPlayerInfo } = useReadContract({
-    // 明確傳遞 abi 和 address 以解決型別問題
     abi: dungeonCoreContract?.abi,
     address: dungeonCoreContract?.address,
     functionName: 'playerInfo',
@@ -29,31 +30,34 @@ const DashboardPage: React.FC = () => {
     query: { enabled: !!address && !!dungeonCoreContract },
   });
   
-  // 處理回傳的 tuple 數據
   const playerInfo = Array.isArray(data) ? data : [0n, 0n, true];
   const [withdrawableBalance, lastWithdrawTimestamp, isFirstWithdraw] = playerInfo;
 
-  const { writeContract, isPending: isWithdrawing } = useWriteContract({
-    mutation: {
-      onSuccess: () => showToast('提領請求已送出！', 'success'),
-      onError: (err) => showToast(err.message.split('\n')[0], 'error'),
-    }
-  });
+  // 【修改】移除 isPending，因為交易追蹤系統會處理
+  const { writeContractAsync, isPending: isWithdrawing } = useWriteContract();
 
-  const handleWithdraw = () => {
+  const handleWithdraw = async () => {
     if (withdrawableBalance > 0n && dungeonCoreContract) {
-      // 明確傳遞 abi 和 address 以解決型別問題
-      writeContract({ 
-          abi: dungeonCoreContract.abi,
-          address: dungeonCoreContract.address,
-          functionName: 'withdraw', 
-          args: [withdrawableBalance] 
-      });
+      try {
+        const hash = await writeContractAsync({ 
+            abi: dungeonCoreContract.abi,
+            address: dungeonCoreContract.address,
+            functionName: 'withdraw', 
+            args: [withdrawableBalance] 
+        });
+        // 【第3步：記錄交易】
+        addTransaction({ hash, description: '從金庫提領獎勵' });
+      } catch (e: any) {
+        if (!e.message.includes('User rejected the request')) {
+          showToast(e.message.split('\n')[0], 'error');
+        }
+      }
     } else {
       showToast('沒有可提領的餘額', 'info');
     }
   };
   
+  // ... (useEffect 計算稅率的邏輯保持不變) ...
   const [currentTax, setCurrentTax] = useState<number>(0);
 
   useEffect(() => {
@@ -61,14 +65,11 @@ const DashboardPage: React.FC = () => {
       setCurrentTax(0);
       return;
     }
-    
     const TAX_PERIOD = 24 * 3600; 
     const MAX_TAX_RATE = 30;
     const TAX_DECREASE_RATE = 10;
-    
     const now = Math.floor(Date.now() / 1000);
     const timeSinceLast = now - Number(lastWithdrawTimestamp);
-    
     let taxRate = 0;
     if (timeSinceLast < TAX_PERIOD * 3) {
       const periodsPassed = Math.floor(timeSinceLast / TAX_PERIOD);
@@ -76,7 +77,7 @@ const DashboardPage: React.FC = () => {
     }
     setCurrentTax(taxRate);
   }, [playerInfo, isFirstWithdraw, lastWithdrawTimestamp]);
-  
+
   const isLoading = isLoadingTokenBalance || isLoadingPlayerInfo;
 
   return (
