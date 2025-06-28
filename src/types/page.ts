@@ -1,1 +1,1 @@
-export type Page = 'dashboard' | 'mint' | 'party' | 'dungeon' | 'explorer' | 'admin' | 'altar' | 'profile' | 'provisions';
+export type Page = 'dashboard' | 'mint' | 'party' | 'dungeon' | 'explorer' | 'admin' | 'altar' | 'profile' | 'provisions' | 'vip';

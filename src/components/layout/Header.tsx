@@ -69,6 +69,7 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
       { key: 'party', label: '我的資產' },
       { key: 'dungeon', label: '地下城' },
       { key: 'altar', label: '升星祭壇' },
+      { key: 'vip', label: 'VIP' },
       { key: 'explorer', label: '數據查詢' },
   ];
   if (isDeveloper) {

@@ -18,6 +18,7 @@ const AltarPage = lazy(() => import('./pages/AltarPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const ProvisionsPage = lazy(() => import('./pages/ProvisionsPage'));
+const VipPage = lazy(() => import('./pages/VipPage')); // 新增
 
 const PageLoader: React.FC = () => (
     <div className="flex justify-center items-center h-64">
@@ -37,7 +38,7 @@ interface PageContentProps {
 
 const PageContent: React.FC<PageContentProps> = ({ activePage, setActivePage, preselectedPartyId, setPreselectedPartyId }) => {
     const { isConnected } = useAccount();
-    const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'admin', 'altar', 'profile', 'provisions'];
+    const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'admin', 'altar', 'profile', 'provisions', 'vip']; // 新增
 
     if (!isConnected && pageRequiresWallet.includes(activePage)) {
         return (<div className="mt-10"><EmptyState message="要使用此功能，請先連接您的錢包。" /></div>);
@@ -57,6 +58,7 @@ const PageContent: React.FC<PageContentProps> = ({ activePage, setActivePage, pr
             case 'admin': return <AdminPage />;
             case 'altar': return <AltarPage />;
             case 'profile': return <ProfilePage />;
+            case 'vip': return <VipPage />; // 新增
             default: return <DashboardPage />;
         }
     };

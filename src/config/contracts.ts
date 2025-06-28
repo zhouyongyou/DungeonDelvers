@@ -7,7 +7,8 @@ import {
   dungeonCoreABI,
   partyABI,
   altarOfAscensionABI,
-  playerProfileABI
+  playerProfileABI,
+  vipStakingABI // 新增
 } from './abis';
 
 export * from './abis';
@@ -21,6 +22,7 @@ export const contracts = {
     party: { address: '0x...', abi: partyABI },
     altarOfAscension: { address: '0x...', abi: altarOfAscensionABI },
     playerProfile: { address: '0x68Fb281d098E0f6b93dc7aB4D3A501f9032C18Df', abi: playerProfileABI },
+    vipStaking: { address: '0x...', abi: vipStakingABI },
   },
   [bsc.id]: {
     soulShard: { address: '0x...', abi: soulShardTokenABI },
@@ -30,6 +32,7 @@ export const contracts = {
     party: { address: '0x...', abi: partyABI },
     altarOfAscension: { address: '0x...', abi: altarOfAscensionABI },
     playerProfile: { address: '0x32cD66394B5d0df19881861B66F57B4692491254', abi: playerProfileABI },
+    vipStaking: { address: '0x...', abi: vipStakingABI },
   },
 } as const;
 

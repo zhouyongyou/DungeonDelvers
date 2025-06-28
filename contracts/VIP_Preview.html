@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIP 卡 SVG 預覽器 (最終豪華版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+TC:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #111827;
+        }
+        .font-serif {
+            font-family: 'Playfair Display', serif;
+        }
+        /* 自訂滑桿樣式 */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            background: #ffd700; /* 金色 */
+            cursor: pointer;
+            border-radius: 50%;
+            border: 4px solid #1a1a2e; /* 深色背景 */
+            box-shadow: 0 0 8px rgba(255, 215, 112, 0.8);
+        }
+        input[type=range]::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            background: #ffd700;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 4px solid #1a1a2e;
+            box-shadow: 0 0 8px rgba(255, 215, 112, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-4xl mx-auto">
+        <h1 class="text-3xl md:text-4xl font-bold text-center mb-2 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-purple-400 font-serif">
+            VIP 卡 SVG 預覽器
+        </h1>
+        <p class="text-center text-gray-400 mb-8">即時模擬 VIPStaking.sol (最終豪華版) 的視覺效果</p>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            <!-- SVG 顯示區域 -->
+            <div id="svg-container" class="w-full max-w-md mx-auto aspect-square bg-gray-800 rounded-2xl shadow-2xl shadow-purple-500/10 flex items-center justify-center p-2">
+                <!-- SVG 會被插入到這裡 -->
+            </div>
+
+            <!-- 控制項區域 -->
+            <div class="bg-gray-800 p-6 rounded-2xl shadow-lg">
+                <div class="mb-6">
+                    <label for="level-slider" class="block mb-2 font-bold text-lg text-yellow-300">VIP 等級 (加成 %)</label>
+                    <div class="flex items-center gap-4">
+                        <input id="level-slider" type="range" min="1" max="25" value="5" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                        <span id="level-value" class="font-bold text-yellow-300 w-16 text-right">LV 5</span>
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <label for="token-id-input" class="block mb-2 font-bold text-lg text-yellow-300">卡片 ID</label>
+                    <input id="token-id-input" type="number" value="888" min="1" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                </div>
+                
+                <div class="bg-gray-900/50 p-4 rounded-lg space-y-2 text-sm">
+                     <p><strong>預覽資料:</strong></p>
+                     <p><strong>背景色:</strong> <span class="font-mono">#111111 / #2d2d2d</span></p>
+                     <p><strong>高光色:</strong> <span class="font-mono">#ffd700</span> (金), <span class="font-mono">#c0c0c0</span> (銀)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const levelSlider = document.getElementById('level-slider');
+        const levelValue = document.getElementById('level-value');
+        const tokenIdInput = document.getElementById('token-id-input');
+        const svgContainer = document.getElementById('svg-container');
+
+        function updateSVG() {
+            const level = parseInt(levelSlider.value);
+            const tokenId = parseInt(tokenIdInput.value) || 1;
+
+            levelValue.textContent = `LV ${level}`;
+            
+            function _generateSVG(_tokenId, _level) {
+                const bgColor1 = "#111111";
+                const bgColor2 = "#2d2d2d";
+                const goldColor = "#ffd700";
+                const silverColor = "#c0c0c0";
+
+                return `
+                    <svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <radialGradient id="bg-gradient" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="${bgColor2}" />
+                                <stop offset="100%" stop-color="${bgColor1}" />
+                            </radialGradient>
+                            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#ffffff" stroke-width="0.2" opacity="0.05"/>
+                            </pattern>
+                            <filter id="engrave">
+                                <feDropShadow dx="1" dy="1" stdDeviation="0.5" flood-color="#000000" flood-opacity="0.5"/>
+                            </filter>
+                            <style>
+                                @keyframes breathing-glow { 0% { text-shadow: 0 0 10px ${goldColor}; } 50% { text-shadow: 0 0 20px ${goldColor}, 0 0 30px ${goldColor}; } 100% { text-shadow: 0 0 10px ${goldColor}; } }
+                                .title { font-family: serif; font-size: 24px; fill: ${silverColor}; font-weight: bold; letter-spacing: 4px; text-transform: uppercase; filter: url(#engrave);}
+                                .level { font-family: sans-serif; font-size: 96px; fill: ${goldColor}; font-weight: bold; animation: breathing-glow 5s ease-in-out infinite; }
+                                .bonus { font-family: sans-serif; font-size: 20px; fill: ${goldColor}; opacity: 0.9; animation: breathing-glow 5s ease-in-out infinite; animation-delay: -0.2s;}
+                                .card-id { font-family: monospace; font-size: 12px; fill: ${silverColor}; opacity: 0.5;}
+                            </style>
+                        </defs>
+                        <rect width="100%" height="100%" rx="20" fill="url(#bg-gradient)"/>
+                        <rect width="100%" height="100%" rx="20" fill="url(#grid)"/>
+                        <g>
+                            <circle cx="50" cy="100" r="1.5" fill="white" opacity="0.1"><animate attributeName="opacity" values="0.1;0.3;0.1" dur="5s" repeatCount="indefinite" begin="0s"/></circle>
+                            <circle cx="320" cy="80" r="0.8" fill="white" opacity="0.2"><animate attributeName="opacity" values="0.2;0.5;0.2" dur="7s" repeatCount="indefinite" begin="-2s"/></circle>
+                            <circle cx="150" cy="350" r="1.2" fill="white" opacity="0.1"><animate attributeName="opacity" values="0.1;0.4;0.1" dur="6s" repeatCount="indefinite" begin="-1s"/></circle>
+                             <circle cx="250" cy="280" r="1" fill="white" opacity="0.3"><animate attributeName="opacity" values="0.3;0.1;0.3" dur="8s" repeatCount="indefinite" begin="-3s"/></circle>
+                        </g>
+                        <rect x="30" y="40" width="60" height="40" rx="5" fill="#2c2c2c" />
+                        <rect x="35" y="45" width="50" height="30" rx="3" fill="#444" />
+                        <text x="50%" y="60" text-anchor="middle" class="title">VIP PRIVILEGE</text>
+                        <g text-anchor="middle">
+                            <text x="50%" y="220" class="level">${_level}</text>
+                            <text x="50%" y="260" class="bonus">SUCCESS RATE +${_level}%</text>
+                        </g>
+                        <text x="40" y="370" class="card-id">CARD # ${_tokenId}</text>
+                        <text x="360" y="370" text-anchor="end" class="card-id" font-weight="bold">Dungeon Delvers</text>
+                        <g stroke="${silverColor}" stroke-width="1.5" opacity="0.3">
+                            <path d="M 30 20 L 20 20 L 20 30" fill="none" />
+                            <path d="M 370 20 L 380 20 L 380 30" fill="none" />
+                            <path d="M 30 380 L 20 380 L 20 370" fill="none" />
+                            <path d="M 370 380 L 380 380 L 380 370" fill="none" />
+                        </g>
+                    </svg>
+                `;
+            }
+
+            svgContainer.innerHTML = _generateSVG(tokenId, level);
+        }
+
+        levelSlider.addEventListener('input', updateSVG);
+        tokenIdInput.addEventListener('input', updateSVG);
+        document.addEventListener('DOMContentLoaded', updateSVG);
+    </script>
+</body>
+</html>
