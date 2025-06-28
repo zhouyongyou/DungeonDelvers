@@ -22,7 +22,7 @@ export const Footer: React.FC = () => {
         return;
       }
       const currentChainId = client.chain.id;
-      const rpcUrl = client.transport.url || '未知端點';
+      const rpcUrl = (client.transport as any).url || '未知端點';
       if (currentChainId !== bsc.id && currentChainId !== bscTestnet.id) {
           setRpcStatus({ isHealthy: false, endpoint: '不支援的網路' });
           return;
@@ -39,7 +39,7 @@ export const Footer: React.FC = () => {
     checkRpcHealth();
     const intervalId = setInterval(checkRpcHealth, 15000);
     return () => clearInterval(intervalId);
-  }, [client]); // 5. useEffect 的依賴項只需要 client
+  }, [client]);
 
   const getStatusIndicator = () => {
     if (rpcStatus.isHealthy === true) return { color: 'text-green-400', text: '正常' };
@@ -49,7 +49,6 @@ export const Footer: React.FC = () => {
   
   const { color: statusColor, text: statusText } = getStatusIndicator();
 
-  // --- 伺服器切換邏輯 ---
   const isTestnet = typeof window !== 'undefined' && (window.location.hostname.includes('test') || window.location.pathname.startsWith('/test'));
   const isMainnet = !isTestnet;
   const mainnetUrl = "https://www.soulshard.fun/";
@@ -72,7 +71,6 @@ export const Footer: React.FC = () => {
 
   return (
     <footer className="bg-[#1F1D36] text-gray-300 mt-auto">
-      {/* RPC 狀態顯示 UI */}
       <div className="bg-black/20 text-white text-xs backdrop-blur-sm">
         <div className="container mx-auto px-4 py-1 flex justify-between items-center text-xs">
           <span>
@@ -90,7 +88,6 @@ export const Footer: React.FC = () => {
       </div>
 
       <div className="container mx-auto text-center py-4">
-        {/* 伺服器切換 UI */}
         <div className="flex justify-center items-center text-sm gap-2 mb-4">
           <span className="text-gray-400 text-xs">伺服器:</span>
           <button 
@@ -112,7 +109,6 @@ export const Footer: React.FC = () => {
           {isNavigating && <LoadingSpinner size="h-4 w-4" color="border-sky-400" />}
         </div>
         
-        {/* 社交媒體和合作夥伴連結 */}
         <div className="flex justify-center items-center gap-4 mb-4">
             <a href="https://twitter.com/your-twitter-handle" target="_blank" rel="noreferrer" className="flex items-center justify-center w-8 h-8 bg-[#1DA1F2] rounded-full transition-transform hover:scale-110" aria-label="Twitter"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.71v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84"></path></svg></a>
             <a href="https://t.me/soulshard_BSC" target="_blank" rel="noreferrer" className="w-8 h-8 transition-transform hover:scale-110" aria-label="Telegram"><svg viewBox="0 0 240 240"><defs><linearGradient id="telegram-gradient" x1="120" y1="240" x2="120" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#1d93d2"/><stop offset="1" stopColor="#38b0e3"/></linearGradient></defs><circle cx="120" cy="120" r="120" fill="url(#telegram-gradient)"/><path d="M81.229,128.772l14.237,39.406s1.78,3.687,3.686,3.687,30.255-29.492,30.255-29.492l31.525-60.89L81.737,118.6Z" fill="#c8daea"/><path d="M100.106,138.878l-2.733,29.046s-1.144,8.9,7.754,0,17.415-15.763,17.415-15.763" fill="#a9c6d8"/><path d="M81.486,130.178,52.2,120.636s-3.5-1.42-2.373-4.64c.232-.664.7-1.229,2.1-2.2,6.489-4.523,120.106-45.36,120.106-45.36s3.208-1.081,5.1-.362a2.766,2.766,0,0,1,1.885,2.055,9.357,9.357,0,0,1,.254,2.585c-.009.752-.1,1.449-.169,2.542-.692,11.165-21.4,94.493-21.4,94.493s-1.239,4.876-5.678,5.043A8.13,8.13,0,0,1,146.1,172.5c-8.711-7.493-38.819-27.727-45.472-32.177a1.27,1.27,0,0,1-.546-.9c-.093-.469.417-1.05.417-1.05s52.426-46.6,53.821-51.492c.108-.379-.3-.566-.848-.4-3.482,1.281-63.844,39.4-70.506,43.607A3.21,3.21,0,0,1,81.486,130.178Z" fill="#fff"/></svg></a>

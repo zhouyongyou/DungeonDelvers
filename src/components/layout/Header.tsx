@@ -7,8 +7,8 @@ import { useTheme } from '../../contexts/ThemeContext';
 import logoUrl from '/assets/images/logo-192x192.png';
 import { DEVELOPER_ADDRESS } from '../../config/constants';
 import { getContract } from '../../config/contracts';
-import { RecentTransactions } from '../ui/RecentTransactions'; // 【新增】導入
-import { HistoryIcon } from '../ui/icons'; // 【新增】導入
+import { RecentTransactions } from '../ui/RecentTransactions'; 
+import { HistoryIcon } from '../ui/icons';
 
 const ThemeToggleButton: React.FC = () => {
     const { theme, setTheme, effectiveTheme } = useTheme();
@@ -39,11 +39,9 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
 
-  // 【新增】管理交易列表彈窗的狀態
   const [isTxPopoverOpen, setIsTxPopoverOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  // [新增] 讀取玩家等級的邏輯
   const playerProfileContract = getContract(chainId, 'playerProfile');
   const { data: tokenId } = useReadContract({
     ...playerProfileContract,
@@ -55,12 +53,11 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
     ...playerProfileContract,
     functionName: 'playerExperience',
     args: [tokenId!],
-    query: { enabled: typeof tokenId === 'bigint' && tokenId > 0n }
+    query: { enabled: typeof tokenId === 'bigint' && tokenId > BigInt(0) }
   });
   const level = useMemo(() => {
     if (typeof experience !== 'bigint') return null;
-    if (experience < 100n) return 1;
-    // 注意：BigInt 沒有 Math.sqrt，這裡用近似演算法或直接轉換
+    if (experience < BigInt(100)) return 1;
     return Math.floor(Math.sqrt(Number(experience) / 100)) + 1;
   }, [experience]);
 
@@ -80,7 +77,6 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
   
   const handleConnectClick = () => { if (isConnected) disconnect(); else connect({ connector: injected() }); };
 
-  // 【新增】點擊頁面其他地方時關閉彈窗
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
@@ -109,7 +105,6 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
                 </div>
                 <div className="flex items-center gap-2">
                     <ThemeToggleButton />
-                    {/* 【新增】交易記錄按鈕和彈窗 */}
                     {isConnected && (
                       <div className="relative" ref={popoverRef}>
                         <button

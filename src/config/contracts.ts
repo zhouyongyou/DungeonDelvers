@@ -10,6 +10,8 @@ import {
   playerProfileABI
 } from './abis';
 
+export * from './abis';
+
 export const contracts = {
   [bscTestnet.id]: {
     soulShard: { address: '0xD6126BBDDC96BDDD81b0C082f45b63D6448B984F', abi: soulShardTokenABI },
