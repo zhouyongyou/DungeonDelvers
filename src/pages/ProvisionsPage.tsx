@@ -10,22 +10,12 @@ import { NftCard } from '../components/ui/NftCard';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import type { PartyNft } from '../types/nft';
-// import type { Page } from '../types/page'; // 導入 Page 型別
 
-interface ProvisionsPageProps {
-    preselectedPartyId: bigint | null;
-    setPreselectedPartyId: (id: bigint | null) => void;
-}
-
-// ----------------------------------------------------------------
-// 1. 購買儲備的核心邏輯 Hook
-// ----------------------------------------------------------------
 type PurchaseStep = 'idle' | 'loading' | 'needsApproval' | 'approving' | 'approveConfirming' | 'readyToPurchase';
 
 const useBuyProvisionsLogic = (quantity: number) => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
-    // [修正] 移除了此處未使用的 queryClient
     
     const [step, setStep] = useState<PurchaseStep>('idle');
     const [approvalTxHash, setApprovalTxHash] = useState<Hash | undefined>();
@@ -76,9 +66,6 @@ const useBuyProvisionsLogic = (quantity: number) => {
 };
 
 
-// ----------------------------------------------------------------
-// 2. 購買介面 (右側)
-// ----------------------------------------------------------------
 const PurchaseInterface: React.FC<{ selectedParty: PartyNft | null }> = ({ selectedParty }) => {
     const { chainId } = useAccount();
     const { showToast } = useAppToast();
@@ -145,13 +132,13 @@ const PurchaseInterface: React.FC<{ selectedParty: PartyNft | null }> = ({ selec
     );
 };
 
-// ----------------------------------------------------------------
-// 3. 主頁面元件
-// ----------------------------------------------------------------
+interface ProvisionsPageProps {
+    preselectedPartyId: bigint | null;
+    setPreselectedPartyId: (id: bigint | null) => void;
+}
+
 const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, setPreselectedPartyId }) => {
     const { address, chainId } = useAccount();
-    // const { showToast } = useAppToast();
-    // const queryClient = useQueryClient();
     const [selectedPartyId, setSelectedPartyId] = useState<bigint | null>(preselectedPartyId);
 
     const { data: ownedParties, isLoading: isLoadingParties } = useQuery({
@@ -180,20 +167,18 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, set
         });
     }, [ownedParties, statuses]);
 
-    // 【修改】當外部傳入的 ID 變化時，更新內部狀態
     useEffect(() => {
         if (preselectedPartyId) {
             setSelectedPartyId(preselectedPartyId);
         }
     }, [preselectedPartyId]);
 
-    // 【新增】處理函式，用於在頁面內點擊隊伍卡片
-    const handlePartySelection = (partyId: bigint) => {
-        setSelectedPartyId(partyId); // 更新此頁面的選擇
-        setPreselectedPartyId(partyId); // 同步更新到 App 的狀態
-    };
-
     const selectedParty = useMemo(() => partiesWithStatus.find(p => p.id === selectedPartyId) || null, [partiesWithStatus, selectedPartyId]);
+
+    const handlePartySelection = (partyId: bigint) => {
+        setSelectedPartyId(partyId);
+        setPreselectedPartyId(partyId);
+    };
 
     return (
         <section>

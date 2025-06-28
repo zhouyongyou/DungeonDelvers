@@ -9,9 +9,8 @@ import { ActionButton } from '../components/ui/ActionButton';
 import { SkeletonCard } from '../components/ui/SkeletonCard';
 import type { AnyNft, PartyNft } from '../types/nft';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import type { Page } from '../types/page'; // 導入 Page 型別
+import type { Page } from '../types/page';
 
-// 1. 定義 props 的介面 (Interface)
 interface DungeonPageProps {
   setActivePage: (page: Page) => void;
   setPreselectedPartyId: (id: bigint | null) => void;
@@ -54,14 +53,14 @@ const DungeonPage: React.FC<DungeonPageProps> = ({ setActivePage, setPreselected
         enabled: !!address && !!chainId,
     });
     
-    const { data: partyStatusData, isLoading: isLoadingPartyStatus } = useReadContract({
+    const { data: partyStatusData } = useReadContract({
         address: dungeonCoreContract?.address,
         abi: dungeonCoreABI,
         functionName: 'partyStatuses',
         args: [selectedPartyId ? BigInt(selectedPartyId) : 0n],
         query: {
             enabled: !!selectedPartyId && !!dungeonCoreContract,
-            refetchInterval: 15000,
+            refetchInterval: 15000, 
         }
     });
 
@@ -104,7 +103,7 @@ const DungeonPage: React.FC<DungeonPageProps> = ({ setActivePage, setPreselected
         const intervalId = setInterval(updateTimer, 1000);
         return () => clearInterval(intervalId);
     }, [cooldownInfo, selectedPartyId, queryClient]);
-
+    
     const { data: dungeonsData, isLoading: isLoadingDungeons } = useReadContracts({
         contracts: Array.from({ length: 10 }, (_, i) => ({
             address: dungeonCoreContract?.address,
@@ -131,16 +130,12 @@ const DungeonPage: React.FC<DungeonPageProps> = ({ setActivePage, setPreselected
       }
     });
 
-    // [修正] 補全 handleDispatch 函式邏輯
     const handleDispatch = async (dungeonId: number) => {
         if (!selectedPartyId || !dungeonCoreContract) return;
-
-        // 檢查儲備是否足夠
         if (!partyStatus || partyStatus.provisionsRemaining === 0n) {
             showToast('儲備不足！請先為您的隊伍購買儲備。', 'error');
             return;
         }
-        
         setActionState({ type: 'dispatch', id: dungeonId.toString(), isLoading: true });
         try {
             await writeContractAsync({
@@ -157,15 +152,12 @@ const DungeonPage: React.FC<DungeonPageProps> = ({ setActivePage, setPreselected
         }
     };
 
-    // [修正] 補全 handleClaimRewards 函式邏輯
     const handleClaimRewards = async () => {
         if (!selectedPartyId || !dungeonCoreContract) return;
-
         if (!partyStatus || partyStatus.unclaimedRewards === 0n) {
              showToast('此隊伍沒有可領取的獎勵。', 'info');
              return;
         }
-
         setActionState({ type: 'claim', id: selectedPartyId, isLoading: true });
         try {
              await writeContractAsync({
@@ -181,11 +173,10 @@ const DungeonPage: React.FC<DungeonPageProps> = ({ setActivePage, setPreselected
         }
     };
 
-    // 【新增】一個處理函式，當儲備不足時，跳轉到補給頁面
     const handleGoToProvisions = () => {
         if (selectedPartyId) {
-            setPreselectedPartyId(BigInt(selectedPartyId)); // 帶著選中的隊伍ID
-            setActivePage('provisions'); // 切換頁面
+            setPreselectedPartyId(BigInt(selectedPartyId));
+            setActivePage('provisions');
         } else {
             showToast('請先選擇一個隊伍', 'error');
         }
@@ -208,18 +199,16 @@ const DungeonPage: React.FC<DungeonPageProps> = ({ setActivePage, setPreselected
                         ))}
                     </select>
                 </div>
-            {/* 在隊伍狀態區塊，可以加入一個補給按鈕 */}
                 <div className="w-full md:w-auto flex-shrink-0 card-bg bg-black/5 dark:bg-white/5 p-3 rounded-lg text-center">
                     <h3 className="section-title text-xl mb-2">2. 隊伍狀態</h3>
-                     {isLoadingPartyStatus && selectedPartyId ? <LoadingSpinner /> : (
+                     {(isLoadingParties && !!selectedPartyId) ? <LoadingSpinner /> : (
                          <div className="text-sm space-y-1">
                             <p>待領獎勵: <span className="font-bold text-green-500">{partyStatus ? parseFloat(formatEther(partyStatus.unclaimedRewards)).toFixed(4) : '...'}</span></p>
                              <p>剩餘儲備: <span className="font-bold">{partyStatus ? partyStatus.provisionsRemaining.toString() : '...'}</span> 次</p>
-                            {/* 【新增】前往補給的按鈕 */}
-                            <ActionButton onClick={handleGoToProvisions} className="w-full h-8 text-xs mt-2 bg-green-600 hover:bg-green-500">
+                             <ActionButton onClick={handleGoToProvisions} className="w-full h-8 text-xs mt-2 bg-green-600 hover:bg-green-500">
                                 購買儲備
                             </ActionButton>
-                            <ActionButton onClick={handleClaimRewards} disabled={!selectedPartyId || actionState?.isLoading} isLoading={actionState?.type === 'claim' && actionState.isLoading} className="w-full h-8 text-xs mt-2">
+                            <ActionButton onClick={handleClaimRewards} disabled={!selectedPartyId || actionState?.isLoading} isLoading={actionState?.type === 'claim' && actionState.isLoading} className="w-full h-8 text-xs mt-1">
                                 領取獎勵
                             </ActionButton>
                          </div>
@@ -240,11 +229,11 @@ const DungeonPage: React.FC<DungeonPageProps> = ({ setActivePage, setPreselected
                             </div>
                             <ActionButton 
                                 onClick={() => handleDispatch(d.id)} 
-                                disabled={!selectedPartyId || cooldownInfo.onCooldown || (actionState?.type === 'dispatch' && actionState.isLoading) || isLoadingPartyStatus}
+                                disabled={!selectedPartyId || cooldownInfo.onCooldown || (actionState?.type === 'dispatch' && actionState.isLoading) || (isLoadingParties && !!selectedPartyId)}
                                 isLoading={actionState?.type === 'dispatch' && actionState.id === d.id.toString() && actionState.isLoading}
                                 className="w-full mt-4 h-10 py-2 rounded-lg"
                             >
-                                {isLoadingPartyStatus && selectedPartyId ? <LoadingSpinner/> : cooldownInfo.onCooldown ? timeLeft : '派遣遠征'}
+                                {(isLoadingParties && !!selectedPartyId) ? <LoadingSpinner/> : cooldownInfo.onCooldown ? timeLeft : '派遣遠征'}
                             </ActionButton>
                             <p className="text-xs text-center mt-1 text-gray-500">
                                 (費用: {isLoadingFee ? '讀取中...' : formatEther(explorationFee ?? 0n)} BNB)
