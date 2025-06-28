@@ -340,16 +340,6 @@ export const heroABI = [
 				"internalType": "address",
 				"name": "_soulShardTokenAddress",
 				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "_usdTokenAddress",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "_soulShardUsdPoolAddress",
-				"type": "address"
 			}
 		],
 		"stateMutability": "nonpayable",
@@ -730,19 +720,6 @@ export const heroABI = [
 		"type": "event"
 	},
 	{
-		"inputs": [],
-		"name": "TWAP_PERIOD",
-		"outputs": [
-			{
-				"internalType": "uint32",
-				"name": "",
-				"type": "uint32"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -860,6 +837,19 @@ export const heroABI = [
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "dungeonCore",
+		"outputs": [
+			{
+				"internalType": "contract IDungeonCore",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -939,15 +929,15 @@ export const heroABI = [
 		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "_amountUSD",
+				"name": "_quantity",
 				"type": "uint256"
 			}
 		],
-		"name": "getSoulShardAmountForUSD",
+		"name": "getRequiredSoulShardAmount",
 		"outputs": [
 			{
 				"internalType": "uint256",
-				"name": "amountSoulShard",
+				"name": "",
 				"type": "uint256"
 			}
 		],
@@ -1082,6 +1072,19 @@ export const heroABI = [
 		"name": "mintSingle",
 		"outputs": [],
 		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_count",
+				"type": "uint256"
+			}
+		],
+		"name": "mintWithVault",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -1330,6 +1333,19 @@ export const heroABI = [
 	{
 		"inputs": [
 			{
+				"internalType": "address",
+				"name": "_address",
+				"type": "address"
+			}
+		],
+		"name": "setDungeonCoreAddress",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "uint256",
 				"name": "_newMintPriceUSD",
 				"type": "uint256"
@@ -1346,19 +1362,6 @@ export const heroABI = [
 		"outputs": [
 			{
 				"internalType": "contract IERC20",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "soulShardUsdPool",
-		"outputs": [
-			{
-				"internalType": "contract IUniswapV3Pool",
 				"name": "",
 				"type": "address"
 			}
@@ -1469,19 +1472,6 @@ export const heroABI = [
 	},
 	{
 		"inputs": [],
-		"name": "usdToken",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
 		"name": "withdrawNative",
 		"outputs": [],
 		"stateMutability": "nonpayable",
@@ -1511,16 +1501,6 @@ export const relicABI = [
 			{
 				"internalType": "address",
 				"name": "_soulShardTokenAddress",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "_usdTokenAddress",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "_soulShardUsdPoolAddress",
 				"type": "address"
 			}
 		],
@@ -1902,19 +1882,6 @@ export const relicABI = [
 		"type": "event"
 	},
 	{
-		"inputs": [],
-		"name": "TWAP_PERIOD",
-		"outputs": [
-			{
-				"internalType": "uint32",
-				"name": "",
-				"type": "uint32"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -2032,6 +1999,19 @@ export const relicABI = [
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "dungeonCore",
+		"outputs": [
+			{
+				"internalType": "contract IDungeonCore",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -2111,15 +2091,15 @@ export const relicABI = [
 		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "_amountUSD",
+				"name": "_quantity",
 				"type": "uint256"
 			}
 		],
-		"name": "getSoulShardAmountForUSD",
+		"name": "getRequiredSoulShardAmount",
 		"outputs": [
 			{
 				"internalType": "uint256",
-				"name": "amountSoulShard",
+				"name": "",
 				"type": "uint256"
 			}
 		],
@@ -2230,6 +2210,19 @@ export const relicABI = [
 		"name": "mintSingle",
 		"outputs": [],
 		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_count",
+				"type": "uint256"
+			}
+		],
+		"name": "mintWithVault",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -2502,6 +2495,19 @@ export const relicABI = [
 	{
 		"inputs": [
 			{
+				"internalType": "address",
+				"name": "_address",
+				"type": "address"
+			}
+		],
+		"name": "setDungeonCoreAddress",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "uint256",
 				"name": "_newMintPriceUSD",
 				"type": "uint256"
@@ -2518,19 +2524,6 @@ export const relicABI = [
 		"outputs": [
 			{
 				"internalType": "contract IERC20",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "soulShardUsdPool",
-		"outputs": [
-			{
-				"internalType": "contract IUniswapV3Pool",
 				"name": "",
 				"type": "address"
 			}
@@ -2637,19 +2630,6 @@ export const relicABI = [
 		"name": "updateSeasonSeedByOwner",
 		"outputs": [],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "usdToken",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -3608,37 +3588,6 @@ export const dungeonCoreABI = [
 				"internalType": "uint256",
 				"name": "reward",
 				"type": "uint256"
-			}
-		],
-		"name": "ExpeditionFulfilled",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "uint256",
-				"name": "requestId",
-				"type": "uint256"
-			},
-			{
-				"indexed": true,
-				"internalType": "uint256",
-				"name": "partyId",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "bool",
-				"name": "success",
-				"type": "bool"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "reward",
-				"type": "uint256"
 			},
 			{
 				"indexed": false,
@@ -3789,6 +3738,31 @@ export const dungeonCoreABI = [
 			{
 				"indexed": true,
 				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "spender",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "bool",
+				"name": "approved",
+				"type": "bool"
+			}
+		],
+		"name": "SpenderApproved",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
 				"name": "user",
 				"type": "address"
 			},
@@ -3897,6 +3871,24 @@ export const dungeonCoreABI = [
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "spender",
+				"type": "address"
+			},
+			{
+				"internalType": "bool",
+				"name": "approved",
+				"type": "bool"
+			}
+		],
+		"name": "approveSpender",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -4057,6 +4049,30 @@ export const dungeonCoreABI = [
 			}
 		],
 		"name": "isPartyLocked",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "isSpenderApproved",
 		"outputs": [
 			{
 				"internalType": "bool",
@@ -4356,6 +4372,24 @@ export const dungeonCoreABI = [
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "player",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "spendFromVault",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
