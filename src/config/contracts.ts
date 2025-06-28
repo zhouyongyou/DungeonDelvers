@@ -5,7 +5,8 @@ import {
     partyABI, 
     dungeonCoreABI, 
     soulShardTokenABI,
-    altarOfAscensionABI
+    altarOfAscensionABI,
+    playerProfileABI
 } from './abis';
 
 export { 
@@ -14,34 +15,39 @@ export {
     partyABI, 
     dungeonCoreABI, 
     soulShardTokenABI,
-    altarOfAscensionABI
+    altarOfAscensionABI,
+    playerProfileABI
 };
 
 export const contracts = {
     hero: {
-        [bsc.id]: { address: '0x44fB99e32a673b5C271cb465851b626A5979854D', abi: heroABI },
-        [bscTestnet.id]: { address: '0x44fB99e32a673b5C271cb465851b626A5979854D', abi: heroABI },
+        [bsc.id]: { address: '0x...', abi: heroABI },
+        [bscTestnet.id]: { address: '0x...', abi: heroABI },
     },
     relic: {
-        [bsc.id]: { address: '0x44fB99e32a673b5C271cb465851b626A5979854D', abi: relicABI },
-        [bscTestnet.id]: { address: '0xb797A27AF84411D1b953aaA33483321481541300', abi: relicABI },
+        [bsc.id]: { address: '0x...', abi: relicABI },
+        [bscTestnet.id]: { address: '0x...', abi: relicABI },
     },
     party: {
-        [bsc.id]: { address: '0x44fB99e32a673b5C271cb465851b626A5979854D', abi: partyABI },
-        [bscTestnet.id]: { address: '0xF2e3f53C37754b2d495A216A6534571165158E34', abi: partyABI },
+        [bsc.id]: { address: '0x...', abi: partyABI },
+        [bscTestnet.id]: { address: '0x...', abi: partyABI },
     },
     dungeonCore: {
-        [bsc.id]: { address: '0x44fB99e32a673b5C271cb465851b626A5979854D', abi: dungeonCoreABI },
-        [bscTestnet.id]: { address: '0x696089304e287414995A1E5158A59C14980C34eE', abi: dungeonCoreABI },
+        [bsc.id]: { address: '0x...', abi: dungeonCoreABI },
+        [bscTestnet.id]: { address: '0x...', abi: dungeonCoreABI },
     },
     soulShard: {
-        [bsc.id]: { address: '0x44fB99e32a673b5C271cb465851b626A5979854D', abi: soulShardTokenABI },
-        [bscTestnet.id]: { address: '0x1922c525f543165437858485a9a2aAb3d7178048', abi: soulShardTokenABI },
+        [bsc.id]: { address: '0x...', abi: soulShardTokenABI },
+        [bscTestnet.id]: { address: '0xD6126BBDDC96BDDD81b0C082f45b63D6448B984F', abi: soulShardTokenABI },
     },
     altarOfAscension: {
-        [bsc.id]: { address: '0x44fB99e32a673b5C271cb465851b626A5979854D', abi: altarOfAscensionABI },
-        [bscTestnet.id]: { address: '0x44fB99e32a673b5C271cb465851b626A5979854D', abi: altarOfAscensionABI },
+        [bsc.id]: { address: '0x...', abi: altarOfAscensionABI },
+        [bscTestnet.id]: { address: '0x...', abi: altarOfAscensionABI },
     },
+    playerProfile: { // [新增]
+        [bsc.id]: { address: '0x32cD66394B5d0df19881861B66F57B4692491254', abi: playerProfileABI },
+        [bscTestnet.id]: { address: '0x68Fb281d098E0f6b93dc7aB4D3A501f9032C18Df', abi: playerProfileABI },
+    }
 } as const;
 
 type ContractName = keyof typeof contracts;

@@ -1,10 +1,3 @@
-/**
- * @file useContractEvents.ts
- * @notice v4.4 - 最終型別安全版 (修正 ExpeditionFulfilled 擁有者判斷邏輯)
- * @dev 1. 修正了 ExpeditionFulfilled 事件的處理邏輯，不再依賴事件中不存在的 `requester` 參數。
- * 2. 改為透過查詢 React Query 快取中的 `ownedNfts`，來判斷事件中的 `partyId` 是否屬於當前使用者。
- * 3. 確保了所有事件處理邏輯的完全型別安全與執行正確性。
- */
 import { useAccount } from 'wagmi';
 import { useWatchContractEvent } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
@@ -12,7 +5,7 @@ import { decodeEventLog, type Log } from 'viem';
 import { getContract } from '../config/contracts';
 import { useAppToast } from './useAppToast';
 import { useExpeditionResult } from '../contexts/ExpeditionContext';
-import { type AnyNft } from '../types/nft'; // 引入 NFT 型別
+import { type AnyNft } from '../types/nft';
 
 export const useContractEvents = () => {
     const { address, chainId } = useAccount();
@@ -25,14 +18,15 @@ export const useContractEvents = () => {
     const partyContract = getContract(chainId, 'party');
     const dungeonCoreContract = getContract(chainId, 'dungeonCore');
 
-    const handleEvent = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
-      showToast(message, type);
-      // 精準刷新，而不是全部刷新
-      queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
-      queryClient.invalidateQueries({ queryKey: ['balance', address, chainId] });
-      queryClient.invalidateQueries({ queryKey: ['playerInfo', address, chainId] });
+    const invalidateQueries = () => {
+        queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
+        queryClient.invalidateQueries({ queryKey: ['balance', address, chainId] });
+        queryClient.invalidateQueries({ queryKey: ['playerInfo', address, chainId] });
+        queryClient.invalidateQueries({ queryKey: ['profileTokenOf', address, chainId] });
+        queryClient.invalidateQueries({ queryKey: ['playerExperience'] });
+        queryClient.invalidateQueries({ queryKey: ['tokenURI'] });
     };
-
+    
     // 監聽 HeroMinted 事件
     useWatchContractEvent({
         ...heroContract,
@@ -42,7 +36,8 @@ export const useContractEvents = () => {
             logs.forEach(log => {
                 const decodedLog = decodeEventLog({ abi: heroContract.abi, ...log });
                 if (decodedLog.eventName === 'HeroMinted' && decodedLog.args.owner?.toLowerCase() === address.toLowerCase()) {
-                    handleEvent(`英雄 #${decodedLog.args.tokenId?.toString()} 鑄造成功！`);
+                    showToast(`英雄 #${decodedLog.args.tokenId?.toString()} 鑄造成功！`, 'success');
+                    invalidateQueries();
                 }
             });
         },
@@ -58,7 +53,8 @@ export const useContractEvents = () => {
             logs.forEach(log => {
                 const decodedLog = decodeEventLog({ abi: relicContract.abi, ...log });
                 if (decodedLog.eventName === 'RelicMinted' && decodedLog.args.owner?.toLowerCase() === address.toLowerCase()) {
-                    handleEvent(`聖物 #${decodedLog.args.tokenId?.toString()} 鑄造成功！`);
+                    showToast(`聖物 #${decodedLog.args.tokenId?.toString()} 鑄造成功！`, 'success');
+                    invalidateQueries();
                 }
             });
         },
@@ -74,7 +70,8 @@ export const useContractEvents = () => {
             logs.forEach(log => {
                 const decodedLog = decodeEventLog({ abi: heroContract.abi, ...log });
                 if (decodedLog.eventName === 'BatchHeroMinted' && decodedLog.args.to?.toLowerCase() === address.toLowerCase()) {
-                    handleEvent(`成功批量鑄造 ${decodedLog.args.count?.toString()} 個英雄！`, 'success');
+                    showToast(`成功批量鑄造 ${decodedLog.args.count?.toString()} 個英雄！`, 'success');
+                    invalidateQueries();
                 }
             })
         },
@@ -89,7 +86,8 @@ export const useContractEvents = () => {
             logs.forEach(log => {
                 const decodedLog = decodeEventLog({ abi: relicContract.abi, ...log });
                 if (decodedLog.eventName === 'BatchRelicMinted' && decodedLog.args.to?.toLowerCase() === address.toLowerCase()) {
-                    handleEvent(`成功批量鑄造 ${decodedLog.args.count?.toString()} 個聖物！`, 'success');
+                    showToast(`成功批量鑄造 ${decodedLog.args.count?.toString()} 個聖物！`, 'success');
+                    invalidateQueries();
                 }
             })
         },
@@ -110,8 +108,8 @@ export const useContractEvents = () => {
         },
         enabled: !!chainId && !!heroContract
     });
-    
-    // 其他事件監聽保持不變...
+
+    // 監聽 PartyCreated 事件
     useWatchContractEvent({
         ...partyContract,
         eventName: 'PartyCreated',
@@ -120,13 +118,15 @@ export const useContractEvents = () => {
             logs.forEach(log => {
                 const decodedLog = decodeEventLog({ abi: partyContract.abi, ...log });
                 if(decodedLog.eventName === 'PartyCreated' && decodedLog.args.owner?.toLowerCase() === address.toLowerCase()){
-                     handleEvent(`隊伍 #${decodedLog.args.partyId?.toString()} 創建成功！`);
+                     showToast(`隊伍 #${decodedLog.args.partyId?.toString()} 創建成功！`, 'success');
+                     invalidateQueries();
                 }
             });
         },
         enabled: !!address && !!chainId && !!partyContract,
     });
-    
+
+    // [新增] 監聽隊伍解散事件
     useWatchContractEvent({
         ...partyContract,
         eventName: 'PartyDisbanded',
@@ -135,45 +135,54 @@ export const useContractEvents = () => {
             logs.forEach(log => {
                 const decodedLog = decodeEventLog({ abi: partyContract.abi, ...log });
                 if(decodedLog.eventName === 'PartyDisbanded' && decodedLog.args.owner?.toLowerCase() === address.toLowerCase()){
-                    handleEvent(`隊伍 #${decodedLog.args.partyId?.toString()} 已解散！`, 'info');
+                    showToast(`隊伍 #${decodedLog.args.partyId?.toString()} 已解散！`, 'info');
+                    invalidateQueries();
                 }
             });
         },
         enabled: !!address && !!chainId && !!partyContract,
     });
 
-    // 【核心修正】ExpeditionFulfilled 事件的處理邏輯
+    // 監聽 ExpeditionFulfilled 事件 (整合經驗值系統)
     useWatchContractEvent({
         ...dungeonCoreContract,
         eventName: 'ExpeditionFulfilled',
         onLogs: (logs: Log[]) => {
             if (!dungeonCoreContract || !address || !chainId) return;
+            
             logs.forEach(log => {
                 const decodedLog = decodeEventLog({ abi: dungeonCoreContract.abi, ...log });
 
                 if (decodedLog.eventName === 'ExpeditionFulfilled') {
-                    // 同步從快取中獲取使用者擁有的 NFT 列表
                     const queryKey = ['ownedNfts', address, chainId];
-                    const ownedNftsData = queryClient.getQueryData<{ parties: AnyNft[] }>(queryKey);
-
-                    // 判斷事件中的 partyId 是否屬於當前使用者
+                    // [修正 1] 確保從快取讀取出的資料結構是我們預期的
+                    const ownedNftsData = queryClient.getQueryData<{ heroes: AnyNft[], relics: AnyNft[], parties: AnyNft[] }>(queryKey);
+                    
+                    // [修正 1] 在正確的 'parties' 陣列上呼叫 .some
                     const isMyParty = ownedNftsData?.parties.some(
-                        party => party.type === 'party' && party.id === decodedLog.args.partyId
+                        (p: AnyNft) => p.type === 'party' && p.id === decodedLog.args.partyId
                     );
 
-                    if (isMyParty) {
-                        const { partyId, success, reward } = decodedLog.args;
-                        showExpeditionResult({ success, reward });
-                        const message = `你的隊伍 #${partyId.toString()} 遠征已完成！`;
-                        showToast(message, 'info');
-                        queryClient.invalidateQueries({ queryKey: ['playerInfo', address, chainId] });
+                    // [修正 2] 增加一個型別守衛 (Type Guard)，確保 expGained 存在
+                    if (isMyParty && 'expGained' in decodedLog.args) {
+                        const { partyId, success, reward, expGained } = decodedLog.args;
+                        showExpeditionResult({ success, reward, expGained });
+
+                        let message = `隊伍 #${partyId.toString()} 遠征完成！`;
+                        if (success && expGained > 0n) { // 使用 bigint 比較
+                            message += ` 獲得 ${expGained.toString()} EXP！`;
+                        }
+                        showToast(message, success ? 'success' : 'error');
+                        
+                        invalidateQueries();
                     }
                 }
             });
         },
         enabled: !!address && !!chainId && !!dungeonCoreContract,
     });
-
+    
+    // [新增] 監聽領取獎勵到金庫事件
     useWatchContractEvent({
         ...dungeonCoreContract,
         eventName: 'RewardsBanked',
@@ -182,13 +191,15 @@ export const useContractEvents = () => {
             logs.forEach(log => {
                 const decodedLog = decodeEventLog({ abi: dungeonCoreContract.abi, ...log });
                 if(decodedLog.eventName === 'RewardsBanked' && decodedLog.args.user?.toLowerCase() === address.toLowerCase()){
-                    handleEvent(`隊伍 #${decodedLog.args.partyId?.toString()} 的獎勵已領取！`);
+                    showToast(`隊伍 #${decodedLog.args.partyId?.toString()} 的獎勵已領取！`, 'success');
+                    invalidateQueries();
                 }
             });
         },
         enabled: !!address && !!chainId && !!dungeonCoreContract,
     });
 
+    // [新增] 監聽從金庫提領事件
     useWatchContractEvent({
         ...dungeonCoreContract,
         eventName: 'TokensWithdrawn',
@@ -197,7 +208,8 @@ export const useContractEvents = () => {
              logs.forEach(log => {
                 const decodedLog = decodeEventLog({ abi: dungeonCoreContract.abi, ...log });
                 if(decodedLog.eventName === 'TokensWithdrawn' && decodedLog.args.user?.toLowerCase() === address.toLowerCase()){
-                     handleEvent(`金庫提領成功！`);
+                     showToast(`金庫提領成功！`, 'success');
+                     invalidateQueries();
                 }
             });
         },

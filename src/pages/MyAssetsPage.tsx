@@ -12,6 +12,10 @@ import { ActionButton } from '../components/ui/ActionButton';
 import type { Page } from '../App';
 import type { AnyNft, NftType, HeroNft, RelicNft } from '../types/nft';
 
+interface MyAssetsPageProps {
+    setActivePage: (page: Page) => void;
+}
+
 // 篩選器組件
 const NftFilter: React.FC<{
     currentFilter: 'all' | number;

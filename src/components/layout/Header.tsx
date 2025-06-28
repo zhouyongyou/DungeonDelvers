@@ -1,11 +1,12 @@
-import React from 'react';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import React, { useMemo } from 'react';
+import { useAccount, useConnect, useDisconnect, useReadContract } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { ActionButton } from '../ui/ActionButton';
 import type { Page } from '../../App';
 import { useTheme } from '../../contexts/ThemeContext';
 import logoUrl from '/assets/images/logo-192x192.png';
 import { DEVELOPER_ADDRESS } from '../../config/constants';
+import { getContract } from '../../config/contracts'; // 引入 getContract
 
 const ThemeToggleButton: React.FC = () => {
     const { theme, setTheme, effectiveTheme } = useTheme();
@@ -32,13 +33,35 @@ const ThemeToggleButton: React.FC = () => {
 };
 
 export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) => void }> = ({ activePage, setActivePage }) => {
-  const { address, isConnected, isConnecting } = useAccount();
+  const { address, chainId, isConnected, isConnecting } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
+
+  // [新增] 讀取玩家等級的邏輯
+  const playerProfileContract = getContract(chainId, 'playerProfile');
+  const { data: tokenId } = useReadContract({
+    ...playerProfileContract,
+    functionName: 'profileTokenOf',
+    args: [address!],
+    query: { enabled: !!address && !!playerProfileContract }
+  });
+  const { data: experience } = useReadContract({
+    ...playerProfileContract,
+    functionName: 'playerExperience',
+    args: [tokenId!],
+    query: { enabled: typeof tokenId === 'bigint' && tokenId > 0n }
+  });
+  const level = useMemo(() => {
+    if (typeof experience !== 'bigint') return null;
+    if (experience < 100n) return 1;
+    // 注意：BigInt 沒有 Math.sqrt，這裡用近似演算法或直接轉換
+    return Math.floor(Math.sqrt(Number(experience) / 100)) + 1;
+  }, [experience]);
 
   const isDeveloper = isConnected && address?.toLowerCase() === DEVELOPER_ADDRESS.toLowerCase();
   const navItems: { key: Page; label: string }[] = [
       { key: 'dashboard', label: '儀表板' },
+      { key: 'profile', label: '個人檔案' },
       { key: 'mint', label: '鑄造' },
       { key: 'party', label: '我的資產' },
       { key: 'dungeon', label: '地下城' },
@@ -59,7 +82,12 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
                     <img src={logoUrl} alt="Dungeon Delvers Logo" className="h-12 w-12 rounded-full border-2 border-[#C0A573]"/>
                     <div>
                         <h1 className="text-2xl md:text-3xl font-bold text-white text-shadow-gold">Dungeon Delvers</h1>
-                        <p className="text-sm text-gray-300 dark:text-gray-400">你的奇幻冒險由此開始</p>
+                        <div className="text-sm text-gray-300 dark:text-gray-400 flex items-center gap-2">
+                           {isConnected && level && (
+                                <span className="font-bold text-yellow-400 bg-black/20 px-2 py-0.5 rounded">LV {level}</span>
+                           )}
+                           <span>你的奇幻冒險由此開始</span>
+                        </div>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
