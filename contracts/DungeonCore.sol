@@ -8,6 +8,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
+interface IVIPStaking {
+    function getVipSuccessBonus(address _user) external view returns (uint8);
+}
 interface IUniswapV3Pool {
     function token0() external view returns (address);
     function token1() external view returns (address);
@@ -80,6 +83,7 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
     IERC20 public immutable soulShardToken;
     IUniswapV3Pool public immutable soulShardUsdPool;
     IPlayerProfile public playerProfileContract;
+    IVIPStaking public vipStakingContract;
     address public immutable usdToken;
     uint256 public provisionPriceUSD = 5 * 1e18;
     uint256 public globalRewardMultiplier = 1000;
@@ -94,6 +98,9 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
 
+    mapping(address => address) public referrers;
+    uint256 public commissionRate = 5;
+
     struct PlayerInfo { uint256 withdrawableBalance; uint256 lastWithdrawTimestamp; bool isFirstWithdraw; }
     struct Dungeon { uint256 requiredPower; uint256 rewardAmountUSD; uint8 baseSuccessRate; bool isInitialized; }
     struct PartyStatus { uint256 provisionsRemaining; uint256 cooldownEndsAt; uint256 unclaimedRewards; }
@@ -105,6 +112,8 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
     mapping(uint256 => ExpeditionRequest) public s_requests;
     mapping(address => mapping(address => bool)) public isSpenderApproved;
 
+    event ReferralSet(address indexed user, address indexed referrer);
+    event CommissionPaid(address indexed user, address indexed referrer, uint256 amount);
     event SpenderApproved(address indexed owner, address indexed spender, bool approved);
     event ExpeditionFulfilled(uint256 indexed requestId, uint256 indexed partyId, bool success, uint256 reward, uint256 expGained);
     event PlayerProfileAddressUpdated(address indexed newAddress);
@@ -114,6 +123,7 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
     event TokensWithdrawn(address indexed user, uint256 amount, uint256 taxAmount);
     event DungeonUpdated(uint256 indexed dungeonId, uint256 requiredPower, uint256 rewardAmountUSD, uint8 baseSuccessRate);
     event GlobalRewardMultiplierUpdated(uint256 newMultiplier);
+    event VipStakingContractUpdated(address indexed newAddress);
 
     constructor(
         address _vrfWrapper,
@@ -131,6 +141,14 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
     
     receive() external payable {}
 
+    function setReferrer(address _referrer) external {
+        require(referrers[msg.sender] == address(0), "Referrer already set");
+        require(_referrer != msg.sender, "Cannot refer yourself");
+        require(_referrer != address(0), "Referrer cannot be zero address");
+        referrers[msg.sender] = _referrer;
+        emit ReferralSet(msg.sender, _referrer);
+    }
+    
     function approveSpender(address spender, bool approved) external {
         isSpenderApproved[msg.sender][spender] = approved;
         emit SpenderApproved(msg.sender, spender, approved);
@@ -181,14 +199,22 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
         uint256 partyId = request.partyId;
         uint256 dungeonId = request.dungeonId;
         partyStatuses[partyId].cooldownEndsAt = block.timestamp + COOLDOWN_PERIOD;
-        bool success = (_randomWords[0] % 100) < dungeons[dungeonId].baseSuccessRate;
+        uint8 vipBonus = 0;
+        if (address(vipStakingContract) != address(0)) {
+            vipBonus = vipStakingContract.getVipSuccessBonus(request.requester);
+        }
+        uint256 finalSuccessRate = dungeons[dungeonId].baseSuccessRate + vipBonus;
+        if (finalSuccessRate > 100) {
+            finalSuccessRate = 100;
+        }
+        bool success = (_randomWords[0] % 100) < finalSuccessRate;
         uint256 reward = 0;
         if (success) {
             uint256 finalRewardUSD = (dungeons[dungeonId].rewardAmountUSD * globalRewardMultiplier) / 1000;
             reward = getSoulShardAmountForUSD(finalRewardUSD);
             partyStatuses[partyId].unclaimedRewards += reward;
         }
-        uint256 expGained = calculateExperience(request.dungeonId, success);  // 使用計算經驗值的函數
+        uint256 expGained = calculateExperience(request.dungeonId, success);
         if (address(playerProfileContract) != address(0) && success) {
             address player = request.requester;
             try playerProfileContract.profileTokenOf(player) returns (uint256 tokenId) {
@@ -204,22 +230,24 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
         }
         emit ExpeditionFulfilled(_requestId, partyId, success, reward, expGained);
     }
+    
     function calculateExperience(uint256 dungeonId, bool success) internal pure returns (uint256) {
         uint256 expGained = 0;
         if (dungeonId == 1) {
-            expGained = 30;  // 第1關固定給30經驗
+            expGained = 30;
         } else if (dungeonId == 2) {
-            expGained = 60;  // 第2關固定給60經驗
+            expGained = 60;
         } else if (dungeonId >= 3 && dungeonId <= 10) {
             expGained = (dungeonId - 1) * (dungeonId - 1) * 10;
         } else {
-            expGained = (dungeonId - 1) * (dungeonId - 2) * 10; // 可以根據需求調整增長方式
+            expGained = (dungeonId - 1) * (dungeonId - 2) * 10;
         }
         if (!success) {
             expGained = expGained * 40 / 100;
         }
         return expGained;
-        }
+    }
+
     function claimRewards(uint256 _partyId) external nonReentrant whenNotPaused {
         address user = partyContract.ownerOf(_partyId);
         require(user == msg.sender, "Not party owner");
@@ -234,6 +262,7 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
         PlayerInfo storage player = playerInfo[msg.sender];
         require(player.withdrawableBalance >= _amount, "Insufficient balance");
         require(_amount > 0, "Amount must be > 0");
+
         uint256 taxRate = 0;
         if (!player.isFirstWithdraw) {
             uint256 timeSinceLast = block.timestamp - player.lastWithdrawTimestamp;
@@ -243,40 +272,59 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
             }
         }
         uint256 taxAmount = (_amount * taxRate) / 100;
-        uint256 finalAmount = _amount - taxAmount;
+        uint256 amountAfterTaxes = _amount - taxAmount;
+
+        address referrer = referrers[msg.sender];
+        uint256 commissionAmount = 0;
+        if (referrer != address(0)) {
+            commissionAmount = (amountAfterTaxes * commissionRate) / 100;
+            if (commissionAmount > 0) {
+                soulShardToken.transfer(referrer, commissionAmount);
+                emit CommissionPaid(msg.sender, referrer, commissionAmount);
+            }
+        }
+        
+        uint256 finalAmountToPlayer = amountAfterTaxes - commissionAmount;
+
         player.withdrawableBalance -= _amount;
         player.lastWithdrawTimestamp = block.timestamp;
         player.isFirstWithdraw = false;
-        if (finalAmount > 0) {
-            soulShardToken.transfer(msg.sender, finalAmount);
+        
+        if (finalAmountToPlayer > 0) {
+            soulShardToken.transfer(msg.sender, finalAmountToPlayer);
         }
-        emit TokensWithdrawn(msg.sender, finalAmount, taxAmount);
+        
+        emit TokensWithdrawn(msg.sender, finalAmountToPlayer, taxAmount);
     }
     
     function _initializeDungeons() private {
-        dungeons[1] = Dungeon(300, 29.30 * 1e18, 89, true);    // 新手礦洞
-        dungeons[2] = Dungeon(600, 62.00 * 1e18, 83, true);    // 哥布林洞穴
-        dungeons[3] = Dungeon(900, 96.00 * 1e18, 77, true);    // 食人魔山谷
-        dungeons[4] = Dungeon(1200, 151.00 * 1e18, 69, true);  // 蜘蛛巢穴
-        dungeons[5] = Dungeon(1500, 205.00 * 1e18, 63, true);  // 石化蜥蜴沼澤
-        dungeons[6] = Dungeon(1800, 271.00 * 1e18, 57, true);  // 巫妖墓穴
-        dungeons[7] = Dungeon(2100, 418.00 * 1e18, 52, true);  // 奇美拉之巢
-        dungeons[8] = Dungeon(2400, 539.00 * 1e18, 52, true);  // 惡魔前哨站
-        dungeons[9] = Dungeon(2700, 685.00 * 1e18, 50, true);  // 巨龍之巔
-        dungeons[10] = Dungeon(3000, 850.00 * 1e18, 50, true); // 混沌深淵
+        dungeons[1] = Dungeon(300, 29.30 * 1e18, 89, true);
+        dungeons[2] = Dungeon(600, 62.00 * 1e18, 83, true);
+        dungeons[3] = Dungeon(900, 96.00 * 1e18, 77, true);
+        dungeons[4] = Dungeon(1200, 151.00 * 1e18, 69, true);
+        dungeons[5] = Dungeon(1500, 205.00 * 1e18, 63, true);
+        dungeons[6] = Dungeon(1800, 271.00 * 1e18, 57, true);
+        dungeons[7] = Dungeon(2100, 418.00 * 1e18, 52, true);
+        dungeons[8] = Dungeon(2400, 539.00 * 1e18, 52, true);
+        dungeons[9] = Dungeon(2700, 685.00 * 1e18, 50, true);
+        dungeons[10] = Dungeon(3000, 850.00 * 1e18, 50, true);
     }
+    
     function isPartyLocked(uint256 _partyId) external view returns (bool) {
         PartyStatus storage status = partyStatuses[_partyId];
         return block.timestamp < status.cooldownEndsAt || status.provisionsRemaining > 0;
     }
+    
     function getSoulShardAmountForUSD(uint256 _amountUSD) public view returns (uint256 amountSoulShard) {
         int24 tick = OracleLibrary.consult(address(soulShardUsdPool), TWAP_PERIOD);
         address token0 = soulShardUsdPool.token0(); address token1 = soulShardUsdPool.token1();
         amountSoulShard = OracleLibrary.getQuoteAtTick(tick, uint128(_amountUSD), token1, token0);
     }
+    
     function setExplorationFee(uint256 _newFee) public onlyOwner {
         explorationFee = _newFee;
     }
+    
     function updateDungeon(uint256 _dungeonId, uint256 _requiredPower, uint256 _rewardAmountUSD, uint8 _successRate) public onlyOwner {
         require(_dungeonId > 0 && _dungeonId <= NUM_DUNGEONS, "Invalid dungeon ID");
         require(_successRate <= 100, "Success rate > 100");
@@ -299,6 +347,17 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
         emit PlayerProfileAddressUpdated(_address);
     }
 
+    function setVipStakingContract(address _address) public onlyOwner {
+        require(_address != address(0), "DungeonCore: Zero address");
+        vipStakingContract = IVIPStaking(_address);
+        emit VipStakingContractUpdated(_address);
+    }
+
+    function setCommissionRate(uint256 _newRate) public onlyOwner {
+        require(_newRate <= 20, "Commission rate cannot exceed 20%");
+        commissionRate = _newRate;
+    }
+
     function withdrawNativeFunding() public onlyOwner {
         (bool success, ) = owner().call{value: address(this).balance}("");
         require(success, "Native withdraw failed");
@@ -310,6 +369,7 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
             soulShardToken.transfer(owner(), balance);
         }
     }
+    
     function pause() public onlyOwner { _pause(); }
     function unpause() public onlyOwner { _unpause(); }
 }
