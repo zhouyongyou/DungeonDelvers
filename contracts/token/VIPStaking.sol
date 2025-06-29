@@ -1,66 +1,96 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+// import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
-import "../interfaces/IDungeonCore.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 
-contract VIPStaking is ERC721Royalty, Ownable, ReentrancyGuard {
+// 引入系統介面
+import "../interfaces/IDungeonCore.sol";
+import "../interfaces/IPlayerVault.sol";
+import "../interfaces/IOracle.sol";
+
+/**
+ * @title VIPStaking (VIP 卡 NFT 質押模組)
+ * @author Your Team Name
+ * @notice 玩家可以鑄造並質押 VIP 卡 NFT 來獲取遊戲內的成功率加成。
+ * @dev 此版本已基於您的原始設計進行重構，以適配新的模組化架構。
+ */
+contract VIPStaking is ERC721Royalty, ReentrancyGuard {
     using Strings for uint256;
     using Strings for uint8;
+    using Counters for Counters.Counter;
     
+    // --- 唯一的依賴 ---
     IDungeonCore public dungeonCore;
-    IERC20 public soulShardToken;
 
+    // --- 狀態變數 (保留您的原始設計) ---
     uint256 public constant MAX_SUPPLY = 2000;
     uint256 public stakeLockPeriod;
     uint256 public mintPriceUSD = 100 * 1e18;
-    uint8 public constant STANDARD_VIP_LEVEL = 5;
+    uint8 public constant STANDARD_VIP_LEVEL = 5; // 所有卡固定的 VIP 等級
 
-    uint256 private _tokenIdCounter;
+    Counters.Counter private _tokenIdCounter;
     uint256 private _totalStaked;
     
     mapping(uint256 => uint8) public tokenVipLevel;
     
     struct StakeInfo {
         uint256 tokenId;
-        uint256 stakeTime;
         uint256 unlockTime;
     }
     mapping(address => StakeInfo) public userStakes;
     
+    // --- 事件 (保留您的原始設計) ---
     event VipCardMinted(uint256 indexed tokenId, address indexed to, uint8 level, uint256 price);
     event Staked(address indexed user, uint256 indexed tokenId, uint8 level, uint256 unlockTime);
     event Unstaked(address indexed user, uint256 indexed tokenId);
-    event ContractsUpdated(address indexed dungeonCore, address indexed soulShard);
     event StakeLockPeriodUpdated(uint256 newPeriod);
+    event DungeonCoreUpdated(address indexed newAddress);
 
-    constructor(
-        address _dungeonCoreAddress,
-        address _soulShardTokenAddress
-    ) ERC721("Dungeon Delvers VIP Card", "DD-VIP") Ownable(msg.sender) {
-        dungeonCore = IDungeonCore(_dungeonCoreAddress);
-        soulShardToken = IERC20(_soulShardTokenAddress);
-        _tokenIdCounter = 1;
-        stakeLockPeriod = 7 days;
-        _setDefaultRoyalty(owner(), 500);
+    // ★ 改變: 建立唯一的權限修飾符
+    modifier onlyCoreOwner() {
+        require(msg.sender == dungeonCore.owner(), "VIP: Not the core owner");
+        _;
     }
 
+    // ★ 改變 2: Constructor 更新，只接收 DungeonCore 地址
+    constructor(
+        address _dungeonCoreAddress,
+        address initialOwner
+    ) ERC721("Dungeon Delvers VIP Card", "DD-VIP") {
+        dungeonCore = IDungeonCore(_dungeonCoreAddress);
+        _tokenIdCounter.increment();
+        stakeLockPeriod = 7 days;
+        _setDefaultRoyalty(msg.sender, 500);
+    }
+
+    // --- 核心外部函式 (保留您的原始設計，但互動方式改變) ---
+
     function mint() external nonReentrant {
-        require(_tokenIdCounter <= MAX_SUPPLY, "VIPStaking: All VIP cards have been minted.");
-        uint256 requiredSoulShard = dungeonCore.getSoulShardAmountForUSD(mintPriceUSD);
+        require(_tokenIdCounter.current() <= MAX_SUPPLY, "VIP: All cards minted.");
+        
+        // ★ 改變 3: 從 DungeonCore 安全地獲取外部合約地址
+        IPlayerVault playerVault = IPlayerVault(dungeonCore.playerVault());
+        IERC20 soulShardToken = IERC20(playerVault.soulShardToken());
+        IOracle oracle = IOracle(dungeonCore.oracle());
+        
+        uint256 requiredSoulShard = oracle.getAmountOut(dungeonCore.usdToken(), address(soulShardToken), mintPriceUSD);
+        
+        // 從玩家錢包轉移代幣到本合約
         require(soulShardToken.transferFrom(msg.sender, address(this), requiredSoulShard), "VIP: Transfer failed");
+        
         _mintCard(msg.sender, STANDARD_VIP_LEVEL, requiredSoulShard);
     }
 
     function stake(uint256 _tokenId) external nonReentrant {
-        require(ownerOf(_tokenId) == msg.sender, "VIPStaking: You are not the owner of this VIP card.");
-        require(userStakes[msg.sender].tokenId == 0, "VIPStaking: You have already staked a card.");
+        require(ownerOf(_tokenId) == msg.sender, "VIP: Not owner of this card.");
+        require(userStakes[msg.sender].tokenId == 0, "VIP: You have already staked a card.");
         
         uint256 unlockTimestamp = block.timestamp + stakeLockPeriod;
 
@@ -69,7 +99,6 @@ contract VIPStaking is ERC721Royalty, Ownable, ReentrancyGuard {
 
         userStakes[msg.sender] = StakeInfo({
             tokenId: _tokenId,
-            stakeTime: block.timestamp,
             unlockTime: unlockTimestamp
         });
         _totalStaked++;
@@ -79,16 +108,19 @@ contract VIPStaking is ERC721Royalty, Ownable, ReentrancyGuard {
     function unstake() external nonReentrant {
         StakeInfo storage stakeInfo = userStakes[msg.sender];
         uint256 tokenIdToUnstake = stakeInfo.tokenId;
-        require(tokenIdToUnstake != 0, "VIPStaking: You have no staked card.");
-        require(block.timestamp >= stakeInfo.unlockTime, "VIPStaking: Card is still locked.");
+        require(tokenIdToUnstake != 0, "VIP: You have no staked card.");
+        require(block.timestamp >= stakeInfo.unlockTime, "VIP: Card is still locked.");
 
         delete userStakes[msg.sender];
         _totalStaked--;
+        
         // 將 NFT 從合約歸還給玩家
         _safeTransfer(address(this), msg.sender, tokenIdToUnstake, "");
         emit Unstaked(msg.sender, tokenIdToUnstake);
     }
     
+    // --- 查詢與元數據函式 (保留您的原始設計) ---
+
     function getVipSuccessBonus(address _user) external view returns (uint8) {
         StakeInfo memory stakeInfo = userStakes[_user];
         if (stakeInfo.tokenId == 0) {
@@ -102,14 +134,24 @@ contract VIPStaking is ERC721Royalty, Ownable, ReentrancyGuard {
     }
     
     function tokenURI(uint256 _tokenId) public view override returns (string memory) {
-        require(_exists(_tokenId), "ERC721Metadata: URI query for nonexistent token");
+        require(_exists(_tokenId), "VIP: URI query for nonexistent token");
         uint8 level = tokenVipLevel[_tokenId];
         string memory svg = _generateSVG(_tokenId, level);
         string memory json = Base64.encode(bytes(abi.encodePacked('{"name":"Dungeon Delvers VIP Card #',_tokenId.toString(),'","description":"A special card that grants its holder unique privileges.","image": "data:image/svg+xml;base64,',Base64.encode(bytes(svg)),'","attributes": [{"trait_type": "Success Rate Bonus", "value": ',level.toString(),', "display_type": "boost_percentage"},{"trait_type": "Level", "value": ',level.toString(),'}]}')));
         return string(abi.encodePacked("data:application/json;base64,", json));
     }
+
+    // --- 內部與管理員函式 (大部分保留，權限檢查更新) ---
+
+    modifier onlyCoreOwner() {
+        require(msg.sender == dungeonCore.owner(), "VIP: Not the core owner");
+        _;
+    }
     
+    function totalStaked() external view returns (uint256) { return _totalStaked; }
+
     function _generateSVG(uint256 _tokenId, uint8 _level) private pure returns (string memory) {
+        // 您的 SVG 生成邏輯非常棒，完全保留
         string memory bgColor1="#111111"; string memory bgColor2="#2d2d2d"; string memory goldColor="#ffd700"; string memory platinumColor="#FFFFFF"; 
         return string(abi.encodePacked(
             '<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">',
@@ -153,40 +195,50 @@ contract VIPStaking is ERC721Royalty, Ownable, ReentrancyGuard {
     }
     
     function _mintCard(address _to, uint8 _level, uint256 _price) private {
-        uint256 newTokenId = _tokenIdCounter;
-        _safeMint(_to, newTokenId);
-        tokenVipLevel[newTokenId] = _level;
-        _tokenIdCounter++;
-        emit VipCardMinted(newTokenId, _to, _level, _price);
+        uint256 tokenId = _tokenIdCounter.current();
+        _safeMint(_to, tokenId);
+        tokenVipLevel[tokenId] = _level;
+        _tokenIdCounter.increment();
+        emit VipCardMinted(tokenId, _to, _level, _price);
     }
     
-    function adminMint(address _to, uint8 _level) external onlyOwner {
+    function adminMint(address _to, uint8 _level) external onlyCoreOwner {
         _mintCard(_to, _level, 0);
     }
     
-    function setMintPriceUSD(uint256 _newPrice) public onlyOwner {
+    function setMintPriceUSD(uint256 _newPrice) public onlyCoreOwner {
         mintPriceUSD = _newPrice;
     }
     
-    function setStakeLockPeriod(uint256 _newPeriodInSeconds) external onlyOwner {
+    function setStakeLockPeriod(uint256 _newPeriodInSeconds) external onlyCoreOwner {
         stakeLockPeriod = _newPeriodInSeconds;
         emit StakeLockPeriodUpdated(_newPeriodInSeconds);
     }
 
-    function setContracts(address _dungeonCore, address _soulShard) public onlyOwner {
-        dungeonCore = IDungeonCore(_dungeonCore);
-        soulShardToken = IERC20(_soulShard);
-        emit ContractsUpdated(_dungeonCore, _soulShard);
+    function setDungeonCore(address _newAddress) public onlyCoreOwner {
+        dungeonCore = IDungeonCore(_newAddress);
+        emit DungeonCoreUpdated(_newAddress);
     }
 
-    function withdrawTokens() public onlyOwner {
+    function withdrawTokens() public onlyCoreOwner {
+        IPlayerVault playerVault = IPlayerVault(dungeonCore.playerVault());
+        IERC20 soulShardToken = IERC20(playerVault.soulShardToken());
         uint256 balance = soulShardToken.balanceOf(address(this));
         if (balance > 0) {
-            soulShardToken.transfer(owner(), balance);
+            soulShardToken.transfer(dungeonCore.owner(), balance);
         }
     }
-
-    function setDefaultRoyalty(address receiver, uint96 feeNumerator) external onlyOwner {
-        _setDefaultRoyalty(receiver, feeNumerator);
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721, ERC721URIStorage, ERC721Royalty)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
+    }
+    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+        // 在銷毀前，需要確保卡片是未質押狀態
+        // 這裡的邏輯可以根據您的業務需求進一步完善
+        super._burn(tokenId);
     }
 }
