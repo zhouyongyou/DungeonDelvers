@@ -28,6 +28,8 @@ contract PlayerVault is Ownable, ReentrancyGuard {
     event CommissionPaid(address indexed user, address indexed referrer, uint256 amount);
     event ReferrerSet(address indexed user, address indexed referrer);
     event TaxParametersUpdated(uint256 maxTax, uint256 decreaseRate, uint256 period);
+    event CommissionRateUpdated(uint256 newRate);
+    event DungeonCoreAddressUpdated(address indexed newAddress);
 
     modifier onlyDungeonCore() {
         require(msg.sender == address(dungeonCore), "Vault: Caller is not DungeonCore");
@@ -73,10 +75,10 @@ contract PlayerVault is Ownable, ReentrancyGuard {
         player.isFirstWithdraw = false;
         
         if (finalAmountToPlayer > 0) {
-            soulShardToken.transfer(msg.sender, finalAmountToPlayer);
+            require(soulShardToken.transfer(msg.sender, finalAmountToPlayer), "Vault: Player transfer failed");
         }
         if (taxAmount > 0) {
-            soulShardToken.transfer(owner(), taxAmount);
+            require(soulShardToken.transfer(owner(), taxAmount), "Vault: Tax transfer failed");
         }
 
         emit TokensWithdrawn(msg.sender, finalAmountToPlayer, taxAmount);
@@ -114,7 +116,9 @@ contract PlayerVault is Ownable, ReentrancyGuard {
     }
 
     function setDungeonCoreAddress(address _address) external onlyOwner {
+        require(_address != address(0), "Vault: Invalid address");
         dungeonCore = IDungeonCore(_address);
+        emit DungeonCoreAddressUpdated(_address);
     }
     
     function setTaxParameters(uint256 _maxTaxRate, uint256 _decreaseRate, uint256 _periodInSeconds) external onlyOwner {
@@ -123,5 +127,11 @@ contract PlayerVault is Ownable, ReentrancyGuard {
         TAX_DECREASE_RATE = _decreaseRate;
         TAX_PERIOD = _periodInSeconds;
         emit TaxParametersUpdated(_maxTaxRate, _decreaseRate, _periodInSeconds);
+    }
+
+    function setCommissionRate(uint256 _newRate) external onlyOwner {
+        require(_newRate <= 20, "Commission rate cannot exceed 20%");
+        commissionRate = _newRate;
+        emit CommissionRateUpdated(_newRate);
     }
 }

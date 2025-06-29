@@ -5,133 +5,101 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
 import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
 import "../interfaces/IDungeonCore.sol";
-
-interface IDungeonCore {
-    function spendFromVault(address player, uint256 amount) external;
-    function getSoulShardAmountForUSD(uint256 _amountUSD) external view returns (uint256);
-}
+import "../interfaces/IAltarOfAscension.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract Relic is ERC721Royalty, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard, Pausable {
+    using Strings for uint256;
+
+    IDungeonCore public dungeonCore;
+    IAltarOfAscension public ascensionAltar;
+
     string private _baseURIStorage;
-    uint32 private constant CALLBACK_GAS_LIMIT = 500000;
-    uint16 private constant REQUEST_CONFIRMATIONS = 3;
-    uint32 private constant NUM_WORDS = 1;
-
-    struct RequestStatus { bool fulfilled; }
-    mapping(uint256 => RequestStatus) public s_requests;
-
-    struct RelicProperties { uint8 rarity; uint8 capacity; }
-    mapping(uint256 => RelicProperties) public relicProperties;
-
     uint256 private s_tokenCounter;
-    IERC20 public immutable soulShardToken;
-    uint256 public mintPriceUSD = 2 * 10**18;
     uint256 public seasonSeed;
     uint256 public blockMintLimit = 80;
     uint256 public lastMintBlock;
     uint256 public mintsInCurrentBlock;
-    address public ascensionAltarAddress;
-    IDungeonCore public dungeonCore;
+    uint256 public mintPriceUSD = 2 * 10**18;
+    
+    struct RelicProperties { uint8 rarity; uint8 capacity; }
+    mapping(uint256 => RelicProperties) public relicProperties;
+
+    struct RequestStatus { bool fulfilled; }
+    mapping(uint256 => RequestStatus) public s_requests;
+
+    uint32 private constant CALLBACK_GAS_LIMIT = 500000;
+    uint16 private constant REQUEST_CONFIRMATIONS = 3;
+    uint32 private constant NUM_WORDS = 1;
 
     event RelicMinted(uint256 indexed tokenId, address indexed owner, uint8 rarity, uint8 capacity);
-    event AdminRelicMinted(address indexed to, uint256 indexed tokenId, uint8 rarity, uint8 capacity);
     event BatchRelicMinted(address indexed to, uint256 count);
     event SeasonSeedUpdated(uint256 newSeed, uint256 indexed requestId);
+    event AdminRelicMinted(address indexed to, uint256 indexed tokenId, uint8 rarity, uint8 capacity);
     event BlockMintLimitChanged(uint256 newLimit);
-
+    event DungeonCoreAddressUpdated(address indexed newAddress);
+    event AscensionAltarAddressUpdated(address indexed newAddress);
+    
     constructor(
         address _vrfWrapper,
-        address _soulShardTokenAddress
+        address _dungeonCoreAddress
     ) ERC721("Dungeon Delvers Relic", "DDR") Ownable(msg.sender) VRFV2PlusWrapperConsumerBase(_vrfWrapper) {
-        soulShardToken = IERC20(_soulShardTokenAddress);
+        dungeonCore = IDungeonCore(_dungeonCoreAddress);
         _setDefaultRoyalty(owner(), 500);
         seasonSeed = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender)));
     }
 
-    function _update(address to, uint256 tokenId, address auth) internal override returns (address) {
-        return super._update(to, tokenId, auth);
+    function tokenURI(uint256 _tokenId) public view override returns (string memory) {
+        require(_exists(_tokenId), "ERC721Metadata: URI query for nonexistent token");
+        string memory baseURI = _baseURI();
+        return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, _tokenId.toString(), ".json")) : "";
     }
 
-    function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
-        return super.supportsInterface(interfaceId);
+    function mintWithWallet(uint256 _quantity) external nonReentrant whenNotPaused {
+        _updateAndCheckBlockLimit(_quantity);
+        uint256 requiredAmount = getRequiredSoulShardAmount(_quantity);
+        IERC20 soulShardToken = dungeonCore.playerVault().soulShardToken();
+        require(soulShardToken.transferFrom(msg.sender, address(this), requiredAmount), "Relic: Wallet transfer failed");
+        _generateAndMintRelics(msg.sender, _quantity);
     }
 
-    function mintSingle() external payable nonReentrant whenNotPaused {
-        _handleMintingFromWallet(1);
+    function mintWithVault(uint256 _quantity) external nonReentrant whenNotPaused {
+        _updateAndCheckBlockLimit(_quantity);
+        uint256 requiredAmount = getRequiredSoulShardAmount(_quantity);
+        dungeonCore.spendFromVault(msg.sender, requiredAmount);
+        _generateAndMintRelics(msg.sender, _quantity);
     }
-
-    function mintBatch(uint256 _count) external payable nonReentrant whenNotPaused {
-        require(_count >= 5 && _count <= 20, "Batch count must be between 5 and 20");
-        _handleMintingFromWallet(_count);
-        _requestNewSeasonSeed();
-    }
-
-    function mintWithVault(uint256 _count) external nonReentrant whenNotPaused {
-        require(_count > 0 && _count <= 50, "Count must be between 1 and 50");
-        _handleMintingFromVault(_count);
-        _requestNewSeasonSeed();
-    }
-
-    function _handleMintingFromWallet(uint256 _count) private {
-        _updateAndCheckBlockLimit(_count);
-        _payMintFeeFromWallet(_count);
-        _generateAndMintRelic(_count);
-    }
-
-    function _handleMintingFromVault(uint256 _count) private {
-        _updateAndCheckBlockLimit(_count);
-        _payMintFeeFromVault(_count);
-        _generateAndMintRelic(_count);
-    }
-
-    function _generateAndMintRelic(uint256 _count) private {
-        for (uint256 i = 0; i < _count; i++) {
-            _generateAndMintOnChain(msg.sender, i);
-        }
-        if (_count > 1) {
-            emit BatchRelicMinted(msg.sender, _count);
-        }
-    }
-
-    function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
-        RequestStatus storage request = s_requests[_requestId];
-        require(!request.fulfilled, "Request invalid or fulfilled");
-        request.fulfilled = true;
-        seasonSeed = _randomWords[0];
-        emit SeasonSeedUpdated(seasonSeed, _requestId);
-    }
-
-    function _requestNewSeasonSeed() private {
-        bytes memory extraArgs = VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: true}));
-        (uint256 requestId, ) = requestRandomnessPayInNative(CALLBACK_GAS_LIMIT, REQUEST_CONFIRMATIONS, NUM_WORDS, extraArgs);
-        s_requests[requestId] = RequestStatus({fulfilled: false});
-    }
-
-    function _payMintFeeFromWallet(uint256 _quantity) private {
-        uint256 requiredSoulShard = getRequiredSoulShardAmount(_quantity);
-        require(soulShardToken.transferFrom(msg.sender, address(this), requiredSoulShard), "Token transfer failed");
-    }
-
-    function _payMintFeeFromVault(uint256 _quantity) private {
-        require(address(dungeonCore) != address(0), "DungeonCore address not set");
-        uint256 requiredSoulShard = getRequiredSoulShardAmount(_quantity);
-        dungeonCore.spendFromVault(msg.sender, requiredSoulShard);
-    }
-
+    
     function getRequiredSoulShardAmount(uint256 _quantity) public view returns (uint256) {
-        require(address(dungeonCore) != address(0), "DungeonCore address not set");
+        require(address(dungeonCore) != address(0), "Relic: DungeonCore not set");
         uint256 totalCostUSD = mintPriceUSD * _quantity;
         return dungeonCore.getSoulShardAmountForUSD(totalCostUSD);
     }
 
+    function _generateAndMintRelics(address _to, uint256 _count) private {
+        for (uint256 i = 0; i < _count; i++) {
+            _generateAndMintOnChain(_to, i);
+        }
+        requestNewSeasonSeed();
+        if (_count > 1) {
+            emit BatchRelicMinted(_to, _count);
+        }
+    }
+
     function _generateAndMintOnChain(address _to, uint256 _salt) private {
-        uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(seasonSeed, block.prevrandao, msg.sender, _salt)));
+        uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(
+            seasonSeed, 
+            block.prevrandao, 
+            msg.sender, 
+            _salt, 
+            s_tokenCounter,
+            block.timestamp
+        )));
         (uint8 rarity, uint8 capacity) = _calculateAttributes(pseudoRandom);
         _mintRelic(_to, rarity, capacity);
     }
@@ -143,12 +111,16 @@ contract Relic is ERC721Royalty, Ownable, VRFV2PlusWrapperConsumerBase, Reentran
         else if (rarityRoll < 94) { rarity = 3; }
         else if (rarityRoll < 99) { rarity = 4; }
         else { rarity = 5; }
-        capacity = _generateRelicCapacityByRarity(rarity);
+        capacity = _generateRelicCapacityByRarity(rarity, _randomNumber);
     }
 
-    function _generateRelicCapacityByRarity(uint8 _rarity) private pure returns (uint8 capacity) {
-        require(_rarity >= 1 && _rarity <= 5, "Invalid rarity");
-        return _rarity;
+    function _generateRelicCapacityByRarity(uint8 _rarity, uint256 _randomNumber) private pure returns (uint8 capacity) {
+        if (_rarity == 1) { capacity = 1; }
+        else if (_rarity == 2) { capacity = 1 + uint8(_randomNumber % 2); } // 1-2
+        else if (_rarity == 3) { capacity = 2 + uint8(_randomNumber % 2); } // 2-3
+        else if (_rarity == 4) { capacity = 3 + uint8(_randomNumber % 2); } // 3-4
+        else if (_rarity == 5) { capacity = 4 + uint8(_randomNumber % 2); } // 4-5
+        else { revert("Invalid rarity"); }
     }
 
     function _mintRelic(address _to, uint8 _rarity, uint8 _capacity) private {
@@ -158,7 +130,24 @@ contract Relic is ERC721Royalty, Ownable, VRFV2PlusWrapperConsumerBase, Reentran
         emit RelicMinted(newTokenId, _to, _rarity, _capacity);
     }
 
-    function getRelicProperties(uint256 _tokenId) public view returns (RelicProperties memory) { return relicProperties[_tokenId]; }
+    function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
+        require(s_requests[_requestId], "Request invalid or already fulfilled");
+        s_requests[_requestId] = false;
+        seasonSeed = _randomWords[0];
+        emit SeasonSeedUpdated(seasonSeed, _requestId);
+    }
+    
+    function requestNewSeasonSeed() public returns (uint256 requestId) {
+        bytes memory extraArgs = VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: true}));
+        (requestId, ) = requestRandomnessPayInNative(CALLBACK_GAS_LIMIT, REQUEST_CONFIRMATIONS, NUM_WORDS, extraArgs);
+        s_requests[requestId] = true;
+        return requestId;
+    }
+
+    function getRelicProperties(uint256 _tokenId) public view returns (uint8, uint8) {
+        RelicProperties memory props = relicProperties[_tokenId];
+        return (props.rarity, props.capacity);
+    }
     
     function _baseURI() internal view override returns (string memory) { return _baseURIStorage; }
 
@@ -195,18 +184,19 @@ contract Relic is ERC721Royalty, Ownable, VRFV2PlusWrapperConsumerBase, Reentran
     }
 
     function mintFromAltar(address _to, uint8 _rarity, uint8 _capacity) external {
-        require(msg.sender == ascensionAltarAddress, "Caller is not the authorized Altar");
+        require(msg.sender == address(ascensionAltar), "Caller is not the authorized Altar");
         _mintRelic(_to, _rarity, _capacity);
     }
 
     function burnFromAltar(uint256 tokenId) external {
-        require(msg.sender == ascensionAltarAddress, "Caller is not the authorized Altar");
+        require(msg.sender == address(ascensionAltar), "Caller is not the authorized Altar");
         _burn(tokenId);
     }
 
     function withdrawSoulShard() public onlyOwner {
-        uint256 balance = soulShardToken.balanceOf(address(this));
-        if (balance > 0) soulShardToken.transfer(owner(), balance);
+        IERC20 token = dungeonCore.playerVault().soulShardToken();
+        uint256 balance = token.balanceOf(address(this));
+        if (balance > 0) token.transfer(owner(), balance);
     }
 
     function withdrawNative() public onlyOwner {
@@ -214,30 +204,21 @@ contract Relic is ERC721Royalty, Ownable, VRFV2PlusWrapperConsumerBase, Reentran
         require(success, "Withdraw failed");
     }
 
-    function setAscensionAltarAddress(address _altarAddress) public onlyOwner {
-        ascensionAltarAddress = _altarAddress;
+    function setDungeonCoreAddress(address _newAddress) external onlyOwner {
+        dungeonCore = IDungeonCore(_newAddress);
+        emit DungeonCoreAddressUpdated(_newAddress);
     }
 
-    function setDungeonCoreAddress(address _address) public onlyOwner {
-        dungeonCore = IDungeonCore(_address);
+    function setAscensionAltarAddress(address _newAddress) external onlyOwner {
+        ascensionAltar = IAltarOfAscension(_newAddress);
+        emit AscensionAltarAddressUpdated(_newAddress);
     }
-
+    
     function setMintPriceUSD(uint256 _newMintPriceUSD) public onlyOwner { mintPriceUSD = _newMintPriceUSD; }
-
     function setBaseURI(string memory newBaseURI) public onlyOwner { _baseURIStorage = newBaseURI; }
-
-    function setBlockMintLimit(uint256 _newLimit) public onlyOwner {
-        blockMintLimit = _newLimit;
-        emit BlockMintLimitChanged(_newLimit);
-    }
-
-    function setDefaultRoyalty(address receiver, uint96 feeNumerator) external onlyOwner {
-        _setDefaultRoyalty(receiver, feeNumerator);
-    }
-
-    function updateSeasonSeedByOwner() public onlyOwner { _requestNewSeasonSeed(); }
-    
+    function setBlockMintLimit(uint256 _newLimit) public onlyOwner { blockMintLimit = _newLimit; emit BlockMintLimitChanged(_newLimit); }
+    function setDefaultRoyalty(address receiver, uint96 feeNumerator) external onlyOwner { _setDefaultRoyalty(receiver, feeNumerator); }
+    function updateSeasonSeedByOwner() public onlyOwner { requestNewSeasonSeed(); }
     function pause() public onlyOwner { _pause(); }
-    
     function unpause() public onlyOwner { _unpause(); }
 }
