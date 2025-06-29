@@ -7,13 +7,13 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
 
 interface IDungeonCore {
     function getSoulShardAmountForUSD(uint256 _amountUSD) external view returns (uint256);
 }
 
-contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
-
+contract VIPStaking is ERC721Royalty, Ownable, ReentrancyGuard {
     using Strings for uint256;
     using Strings for uint8;
     
@@ -21,14 +21,13 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
     IERC20 public soulShardToken;
 
     uint256 public constant MAX_SUPPLY = 2000;
-    // 【優化】將鎖倉時間從常數變為可設定的變數
     uint256 public stakeLockPeriod;
     uint256 public mintPriceUSD = 100 * 1e18;
     uint8 public constant STANDARD_VIP_LEVEL = 5;
 
     uint256 private _tokenIdCounter;
     uint256 private _totalStaked;
-
+    
     mapping(uint256 => uint8) public tokenVipLevel;
     
     struct StakeInfo {
@@ -37,12 +36,11 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
         uint256 unlockTime;
     }
     mapping(address => StakeInfo) public userStakes;
-
+    
     event VipCardMinted(uint256 indexed tokenId, address indexed to, uint8 level, uint256 price);
     event Staked(address indexed user, uint256 indexed tokenId, uint8 level, uint256 unlockTime);
     event Unstaked(address indexed user, uint256 indexed tokenId);
     event ContractsUpdated(address indexed dungeonCore, address indexed soulShard);
-    // 【優化】新增事件
     event StakeLockPeriodUpdated(uint256 newPeriod);
 
     constructor(
@@ -52,8 +50,16 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
         dungeonCoreContract = IDungeonCore(_dungeonCoreAddress);
         soulShardToken = IERC20(_soulShardTokenAddress);
         _tokenIdCounter = 1;
-        // 初始鎖倉期為 7 天
         stakeLockPeriod = 7 days;
+        _setDefaultRoyalty(owner(), 500);
+    }
+
+    function _update(address to, uint256 tokenId, address auth) internal override returns (address) {
+        return super._update(to, tokenId, auth);
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 
     function mint() external nonReentrant {
@@ -67,7 +73,6 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
         require(ownerOf(_tokenId) == msg.sender, "VIPStaking: You are not the owner of this VIP card.");
         require(userStakes[msg.sender].tokenId == 0, "VIPStaking: You have already staked a card.");
         
-        // 【優化】使用可設定的變數
         uint256 unlockTimestamp = block.timestamp + stakeLockPeriod;
 
         _safeTransfer(msg.sender, address(this), _tokenId, "");
@@ -113,7 +118,7 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
     }
     
     function _generateSVG(uint256 _tokenId, uint8 _level) private pure returns (string memory) {
-        string memory bgColor1="#111111"; string memory bgColor2="#2d2d2d"; string memory goldColor="#ffd700"; string memory platinumColor="#FFFFFF";
+        string memory bgColor1="#111111"; string memory bgColor2="#2d2d2d"; string memory goldColor="#ffd700"; string memory platinumColor="#FFFFFF"; 
         return string(abi.encodePacked(
             '<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">',
                 '<defs>',
@@ -155,8 +160,6 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
         ));
     }
     
-    // --- Admin Functions ---
-
     function adminMint(address _to, uint8 _level) external onlyOwner {
         _mintCard(_to, _level, 0);
     }
@@ -165,7 +168,6 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
         mintPriceUSD = _newPrice;
     }
     
-    // 【優化】新增函式以設定鎖倉時間
     function setStakeLockPeriod(uint256 _newPeriodInSeconds) external onlyOwner {
         stakeLockPeriod = _newPeriodInSeconds;
         emit StakeLockPeriodUpdated(_newPeriodInSeconds);
@@ -182,6 +184,10 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
         if (balance > 0) {
             soulShardToken.transfer(owner(), balance);
         }
+    }
+
+    function setDefaultRoyalty(address receiver, uint96 feeNumerator) external onlyOwner {
+        _setDefaultRoyalty(receiver, feeNumerator);
     }
     
     function _mintCard(address _to, uint8 _level, uint256 _price) private {

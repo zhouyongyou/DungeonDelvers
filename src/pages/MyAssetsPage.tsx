@@ -10,8 +10,8 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
 import { ActionButton } from '../components/ui/ActionButton';
 import type { Page } from '../types/page';
+// 【修正】從 '../types/nft' 導入 NftType
 import type { AnyNft, NftType, HeroNft, RelicNft } from '../types/nft';
-// 【第1步：導入我們新的 store】
 import { useTransactionStore } from '../stores/useTransactionStore';
 
 interface MyAssetsPageProps {
@@ -41,17 +41,23 @@ const NftGrid: React.FC<{
     onDisband?: (id: bigint) => void;
     setActivePage: (page: Page) => void;
 }> = ({ type, nfts, isLoading, onSelect, selection, onDisband, setActivePage }) => {
-    const title = { hero: '英雄', relic: '聖物', party: '隊伍' }[type];
-    if (isLoading) return <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">{Array.from({length:4}).map((_,i) => <SkeletonCard key={i}/>)}</div>;
+    // 【修正】確保 title 物件包含所有 NftType 的可能鍵值，新增 'vip'
+    const title = { hero: '英雄', relic: '聖物', party: '隊伍', vip: 'VIP卡' }[type];
+    
+    if (isLoading) return <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">{Array.from({length:5}).map((_,i) => <SkeletonCard key={i}/>)}</div>;
     if (!nfts || nfts.length === 0) return <EmptyState message={`您尚未擁有任何${title}。`} buttonText="前往鑄造" onButtonClick={() => setActivePage('mint')} />;
-    return (<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">{nfts.map(nft => <NftCard key={nft.id.toString()} nft={nft} onSelect={onSelect} isSelected={selection?.has(nft.id)} onDisband={onDisband}/>)}</div>);
+    
+    return (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {nfts.map(nft => <NftCard key={`${type}-${nft.id.toString()}`} nft={nft} onSelect={onSelect} isSelected={selection?.has(nft.id)} onDisband={onDisband}/>)}
+        </div>
+    );
 };
 
 const MyAssetsPage: React.FC<MyAssetsPageProps> = ({ setActivePage }) => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
     const queryClient = useQueryClient();
-    // 【第2步：從 store 獲取 addTransaction 函式】
     const { addTransaction } = useTransactionStore();
     
     const [selection, setSelection] = useState<{ heroes: Set<bigint>; relics: Set<bigint> }>({ heroes: new Set(), relics: new Set() });
@@ -62,7 +68,7 @@ const MyAssetsPage: React.FC<MyAssetsPageProps> = ({ setActivePage }) => {
     const { data: nfts, isLoading: isLoadingNfts } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
         queryFn: () => {
-             if (!address || !chainId) return { heroes: [], relics: [], parties: [] };
+             if (!address || !chainId) return { heroes: [], relics: [], parties: [], vipCards: [] };
              return fetchAllOwnedNfts(address, chainId);
         },
         enabled: !!address && !!chainId,
@@ -115,7 +121,6 @@ const MyAssetsPage: React.FC<MyAssetsPageProps> = ({ setActivePage }) => {
         query: { enabled: !!address && !!partyContract?.address && !!relicContract?.address } 
     });
     
-    // 【修改】簡化 useWriteContract，移除 onSuccess 的 toast
     const { writeContractAsync, isPending } = useWriteContract();
     
     const handleSelect = (id: bigint, type: NftType) => {
@@ -157,10 +162,9 @@ const MyAssetsPage: React.FC<MyAssetsPageProps> = ({ setActivePage }) => {
 
             setSelection({ heroes: new Set(), relics: new Set() });
             setModal({ isOpen: false, type: 'create' });
-            queryClient.invalidateQueries({ queryKey: ['ownedNfts'] }); // 立即刷新列表
+            queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
 
         } catch (e: any) { 
-            // 處理使用者取消交易等錯誤
             if (!e.message.includes('User rejected the request')) {
                 showToast('操作失敗，詳情請見主控台', 'error');
                 console.error(e);
@@ -175,7 +179,7 @@ const MyAssetsPage: React.FC<MyAssetsPageProps> = ({ setActivePage }) => {
             addTransaction({ hash, description: `解散隊伍 #${modal.data}` });
             
             setModal({ isOpen: false, type: 'disband' });
-            queryClient.invalidateQueries({ queryKey: ['ownedNfts'] }); // 立即刷新列表
+            queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
         } catch (e: any) { 
             if (!e.message.includes('User rejected the request')) {
                 showToast('操作失敗，詳情請見主控台', 'error');
@@ -183,6 +187,7 @@ const MyAssetsPage: React.FC<MyAssetsPageProps> = ({ setActivePage }) => {
             }
         }
     };
+
     return (
         <section>
             <h2 className="page-title">我的資產</h2>

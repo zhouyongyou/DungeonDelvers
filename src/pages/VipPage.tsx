@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useAccount, useReadContract, useWriteContract } from 'wagmi';
-import { formatEther, maxUint256, type Abi } from 'viem';
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { formatEther, maxUint256, type Abi, type Hash } from 'viem';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getContract } from '../config/contracts';
 import { useAppToast } from '../hooks/useAppToast';
@@ -10,7 +10,7 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import type { VipNft } from '../types/nft';
 
-// VIP 黑卡 SVG 預覽元件 (白金配色版)
+// VIP 黑卡 SVG 預覽元件
 const VipCardPreview: React.FC<{ tokenId: number, level: number }> = ({ tokenId, level }) => {
     const generateSVG = (_tokenId: number, _level: number) => {
         const bgColor1="#111111"; const bgColor2="#2d2d2d"; const goldColor="#ffd700"; const platinumColor="#FFFFFF";
@@ -21,9 +21,9 @@ const VipCardPreview: React.FC<{ tokenId: number, level: number }> = ({ tokenId,
     return <div className="w-full max-w-sm mx-auto aspect-square" dangerouslySetInnerHTML={{ __html: svgString }} />;
 };
 
+// 倒數計時器元件
 const CountdownTimer: React.FC<{ unlockTime: bigint }> = ({ unlockTime }) => {
   const [timeLeft, setTimeLeft] = useState('');
-  const queryClient = useQueryClient();
   const unlockTimeMs = Number(unlockTime) * 1000;
 
   useEffect(() => {
@@ -33,7 +33,6 @@ const CountdownTimer: React.FC<{ unlockTime: bigint }> = ({ unlockTime }) => {
       
       if (remaining === 0) {
         setTimeLeft('可以解鎖');
-        queryClient.invalidateQueries({ queryKey: ['userStakes'] });
         return;
       }
       const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
@@ -47,12 +46,12 @@ const CountdownTimer: React.FC<{ unlockTime: bigint }> = ({ unlockTime }) => {
     updateTimer();
     const intervalId = setInterval(updateTimer, 1000);
     return () => clearInterval(intervalId);
-  }, [unlockTimeMs, queryClient]);
+  }, [unlockTimeMs]);
 
   return <span className="font-mono text-xl text-yellow-400">{timeLeft}</span>;
 };
 
-
+// VIP 頁面主元件
 const VipPage: React.FC = () => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
@@ -60,6 +59,7 @@ const VipPage: React.FC = () => {
     const queryClient = useQueryClient();
     
     const [selectedUnstakedCardId, setSelectedUnstakedCardId] = useState<bigint | null>(null);
+    const [approvalTxHash, setApprovalTxHash] = useState<Hash | undefined>();
 
     const vipStakingContract = getContract(chainId, 'vipStaking');
     const soulShardContract = getContract(chainId, 'soulShard');
@@ -67,7 +67,7 @@ const VipPage: React.FC = () => {
 
     const { data: nfts, isLoading: isLoadingNfts } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
-        queryFn: () => fetchAllOwnedNfts(address, chainId),
+        queryFn: () => fetchAllOwnedNfts(address!, chainId!),
         enabled: !!address && !!chainId,
     });
     
@@ -77,7 +77,7 @@ const VipPage: React.FC = () => {
         query: { enabled: !!vipStakingContract, refetchInterval: 10000 } 
     });
 
-    const { data: totalStaked, refetch: refetchTotalStaked } = useReadContract({ 
+    const { data: totalStaked } = useReadContract({ 
         ...vipStakingContract, 
         functionName: 'totalStaked', 
         query: { enabled: !!vipStakingContract, refetchInterval: 10000 } 
@@ -87,11 +87,14 @@ const VipPage: React.FC = () => {
         ...vipStakingContract, 
         functionName: 'mintPriceUSD' 
     });
-
+    
     const { data: soulShardPrice } = useReadContract({ 
         ...dungeonCoreContract, 
         functionName: 'getSoulShardAmountForUSD', 
-        args: [mintPrice || BigInt(0)]
+        args: [mintPrice!],
+        query: { 
+            enabled: !!dungeonCoreContract && typeof mintPrice === 'bigint'
+        } 
     });
 
     const { data: allowance, refetch: refetchAllowance } = useReadContract({ 
@@ -101,7 +104,7 @@ const VipPage: React.FC = () => {
         query: { enabled: !!address && !!vipStakingContract?.address }
     });
     
-    const { data: stakedInfo, refetch: refetchStakedInfo } = useReadContract({ 
+    const { data: stakedInfo } = useReadContract({ 
         ...vipStakingContract, 
         functionName: 'userStakes', 
         args: [address!], 
@@ -117,7 +120,32 @@ const VipPage: React.FC = () => {
         }
     });
     
-    const { writeContractAsync, isPending } = useWriteContract();
+    const { writeContractAsync, isPending } = useWriteContract({
+        mutation: {
+            onSuccess: () => {
+                showToast('交易已送出！', 'info');
+                setTimeout(() => {
+                    queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
+                    queryClient.invalidateQueries({ queryKey: ['userStakes'] });
+                    queryClient.invalidateQueries({ queryKey: ['totalStaked'] });
+                    queryClient.invalidateQueries({ queryKey: ['tokenIdCounter'] });
+                }, 1000);
+            },
+        },
+    });
+    
+    const { isLoading: isConfirmingApproval, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({
+        hash: approvalTxHash,
+    });
+    
+    useEffect(() => {
+        if (isApprovalSuccess && approvalTxHash) {
+            showToast('授權成功！', 'success');
+            refetchAllowance();
+            setApprovalTxHash(undefined);
+        }
+    }, [isApprovalSuccess, approvalTxHash, showToast, refetchAllowance]);
+
 
     const needsApproval = useMemo(() => {
         if (typeof allowance !== 'bigint' || typeof soulShardPrice !== 'bigint') return false;
@@ -126,42 +154,39 @@ const VipPage: React.FC = () => {
     
     const handleAction = async (action: 'approve' | 'mint' | 'stake' | 'unstake') => {
         if (!vipStakingContract) return;
-        let txPromise;
+        
+        let txConfig;
         let description = '';
-        switch (action) {
-            case 'approve':
-                if (!soulShardContract) return;
-                txPromise = writeContractAsync({ address: soulShardContract.address, abi: soulShardContract.abi as Abi, functionName: 'approve', args: [vipStakingContract.address, maxUint256] });
-                description = "授權 VIP 合約";
-                break;
-            case 'mint':
-                if (needsApproval) return showToast("請先完成授權", "error");
-                txPromise = writeContractAsync({ ...(vipStakingContract as any), functionName: 'mint' });
-                description = "鑄造 VIP 卡";
-                break;
-            case 'stake':
-                if (!selectedUnstakedCardId) return showToast("請選擇一張卡", "error");
-                txPromise = writeContractAsync({ ...(vipStakingContract as any), functionName: 'stake', args: [selectedUnstakedCardId] });
-                description = `質押 VIP 卡 #${selectedUnstakedCardId}`;
-                break;
-            case 'unstake':
-                txPromise = writeContractAsync({ ...(vipStakingContract as any), functionName: 'unstake' });
-                description = "取消質押 VIP 卡";
-                break;
-        }
+
         try {
-            const hash = await txPromise;
+            switch (action) {
+                case 'approve':
+                    if (!soulShardContract) return;
+                    description = "授權 VIP 合約";
+                    txConfig = { address: soulShardContract.address, abi: soulShardContract.abi as Abi, functionName: 'approve', args: [vipStakingContract.address, maxUint256] };
+                    break;
+                case 'mint':
+                    if (needsApproval) return showToast("請先完成授權", "error");
+                    description = "鑄造 VIP 卡";
+                    txConfig = { address: vipStakingContract.address, abi: vipStakingContract.abi, functionName: 'mint' };
+                    break;
+                case 'stake':
+                    if (!selectedUnstakedCardId) return showToast("請選擇一張卡", "error");
+                    description = `質押 VIP 卡 #${selectedUnstakedCardId}`;
+                    txConfig = { address: vipStakingContract.address, abi: vipStakingContract.abi, functionName: 'stake', args: [selectedUnstakedCardId] };
+                    break;
+                case 'unstake':
+                    description = "取消質押 VIP 卡";
+                    txConfig = { address: vipStakingContract.address, abi: vipStakingContract.abi, functionName: 'unstake' };
+                    break;
+            }
+        
+            const hash = await writeContractAsync(txConfig);
             addTransaction({ hash, description });
-            showToast("交易已送出", "info");
-            setTimeout(() => {
-                queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
-                if (action === 'approve') refetchAllowance();
-                if (action === 'mint') queryClient.invalidateQueries({queryKey: ['tokenIdCounter']});
-                if (action === 'stake' || action === 'unstake') {
-                    refetchStakedInfo();
-                    refetchTotalStaked();
-                }
-            }, 2000);
+            
+            if (action === 'approve') {
+                setApprovalTxHash(hash);
+            }
         } catch (e: any) {
              if (!e.message.includes('User rejected the request')) {
                 showToast(e.shortMessage || "交易失敗", "error");
@@ -182,6 +207,8 @@ const VipPage: React.FC = () => {
     
     const currentStakedTokenId = stakedInfo?.tokenId;
     const currentUnlockTime = stakedInfo?.unlockTime ?? 0n;
+    
+    const isActionLoading = isPending || isConfirmingApproval;
 
     return (
         <section>
@@ -197,13 +224,19 @@ const VipPage: React.FC = () => {
                             <p className="text-sm text-gray-400">限量發行: <span className="font-bold text-white">{totalSupply} / 2000</span></p>
                         </div>
                         <div className="bg-black/20 p-3 rounded-lg mt-2">
-                             <p className="text-sm text-gray-400">價格: <span className="font-bold text-yellow-400">{soulShardPrice ? parseFloat(formatEther(soulShardPrice)).toFixed(2) : '...'} $SoulShard</span></p>
+                             <p className="text-sm text-gray-400">價格: <span className="font-bold text-yellow-400">
+                                 {/* 【最終修正】使用更嚴格的型別檢查來徹底解決 TypeScript 錯誤 */}
+                                 {typeof soulShardPrice === 'bigint' 
+                                     ? parseFloat(formatEther(soulShardPrice)).toFixed(2) 
+                                     : '...'
+                                 } $SoulShard
+                             </span></p>
                         </div>
                     </div>
                      {needsApproval ? (
-                        <ActionButton onClick={() => handleAction('approve')} isLoading={isPending} className="w-full h-12 text-lg">授權代幣</ActionButton>
+                        <ActionButton onClick={() => handleAction('approve')} isLoading={isActionLoading} className="w-full h-12 text-lg">授權代幣</ActionButton>
                     ) : (
-                        <ActionButton onClick={() => handleAction('mint')} isLoading={isPending} disabled={totalSupply >= 2000} className="w-full h-12 text-lg">
+                        <ActionButton onClick={() => handleAction('mint')} isLoading={isActionLoading} disabled={totalSupply >= 2000} className="w-full h-12 text-lg">
                             {totalSupply >= 2000 ? "已售罄" : "立即鑄造"}
                         </ActionButton>
                     )}
@@ -223,7 +256,7 @@ const VipPage: React.FC = () => {
                                <p className="text-gray-400 text-sm">7 天鎖倉解鎖倒數</p>
                                <CountdownTimer unlockTime={currentUnlockTime} />
                            </div>
-                           <ActionButton onClick={() => handleAction('unstake')} isLoading={isPending} disabled={Date.now()/1000 < Number(currentUnlockTime)} className="w-full mt-2 h-10 bg-red-600 hover:bg-red-500">取消質押</ActionButton>
+                           <ActionButton onClick={() => handleAction('unstake')} isLoading={isActionLoading} disabled={Date.now()/1000 < Number(currentUnlockTime)} className="w-full mt-2 h-10 bg-red-600 hover:bg-red-500">取消質押</ActionButton>
                         </div>
                     ) : (
                         <div className="text-center flex-grow flex flex-col justify-center">
@@ -236,7 +269,7 @@ const VipPage: React.FC = () => {
                                             <option key={card.id.toString()} value={card.id.toString()}>VIP 卡 #{card.id.toString()}</option>
                                         ))}
                                     </select>
-                                    <ActionButton onClick={() => handleAction('stake')} isLoading={isPending} disabled={!selectedUnstakedCardId} className="w-full h-10">質押選中的卡</ActionButton>
+                                    <ActionButton onClick={() => handleAction('stake')} isLoading={isActionLoading} disabled={!selectedUnstakedCardId} className="w-full h-10">質押選中的卡</ActionButton>
                                     <p className="text-xs text-gray-500 mt-2">質押您的 VIP 卡以啟動遠征成功率加成。</p>
                                 </>
                             )}

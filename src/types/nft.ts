@@ -47,7 +47,7 @@ export interface PartyNft extends BaseNft {
   relicIds: bigint[];
 }
 
-// 【新增】VIP 卡 NFT 的獨有屬性
+// VIP 卡 NFT 的獨有屬性
 export interface VipNft extends BaseNft {
     type: 'vip';
     // VIP 卡的核心屬性是它的等級，代表成功率加成
@@ -60,6 +60,12 @@ export interface VipNft extends BaseNft {
  * 可能是 HeroNft、RelicNft、PartyNft 或 VipNft 中的任何一種。
  */
 export type AnyNft = HeroNft | RelicNft | PartyNft | VipNft;
+
+/**
+ * 【修正】從 AnyNft 推導出所有可能的 NFT 種類字串，並將其匯出。
+ * 這會自動產生 'hero' | 'relic' | 'party' | 'vip' 的聯合型別。
+ */
+export type NftType = AnyNft['type'];
 
 /**
  * 這個型別用於定義 API 回傳的、已分類的所有 NFT 集合。

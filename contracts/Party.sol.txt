@@ -5,7 +5,8 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "@openzeppelin/contracts/security/Pausable.sol"; // << [新] 引入 Pausable
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
 
 interface IHero {
     function ownerOf(uint256 tokenId) external view returns (address);
@@ -23,7 +24,7 @@ interface IDungeonCore {
     function isPartyLocked(uint256 _partyId) external view returns (bool);
 }
 
-contract Party is ERC721, Ownable, ReentrancyGuard, Pausable {
+contract Party is ERC721Royalty, Ownable, ReentrancyGuard, Pausable {
     string private _baseURIStorage;
     IHero public immutable heroContract;
     IRelic public immutable relicContract;
@@ -45,14 +46,19 @@ contract Party is ERC721, Ownable, ReentrancyGuard, Pausable {
     constructor(address _heroAddress, address _relicAddress) ERC721("Dungeon Delvers Party", "DDP") Ownable(msg.sender) {
         heroContract = IHero(_heroAddress);
         relicContract = IRelic(_relicAddress);
+        _setDefaultRoyalty(owner(), 500); // 5% 版稅給擁有者
     }
     
-    function _update(address to, uint256 tokenId, address auth) internal virtual override returns (address) {
+    function _update(address to, uint256 tokenId, address auth) internal override returns (address) {
         address from = _ownerOf(tokenId);
         if (from != address(0) && to != address(0)) {
             _requireNotLocked(tokenId);
         }
         return super._update(to, tokenId, auth);
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 
     function _baseURI() internal view override returns (string memory) {
@@ -66,25 +72,31 @@ contract Party is ERC721, Ownable, ReentrancyGuard, Pausable {
     function createParty(uint256[] calldata _heroIds, uint256[] calldata _relicIds) external nonReentrant whenNotPaused returns (uint256 partyId) {
         require(_relicIds.length > 0, "Party must have at least one relic");
         require(_relicIds.length <= 5, "Party cannot have more than 5 relics");
+        
         uint256 totalPower = 0;
         uint256 totalCapacity = 0;
+        
         for (uint i = 0; i < _relicIds.length; i++) {
             require(relicContract.ownerOf(_relicIds[i]) == msg.sender, "You do not own all relics");
             (, uint8 capacity) = relicContract.getRelicProperties(_relicIds[i]);
             totalCapacity += capacity;
         }
+
         require(_heroIds.length <= totalCapacity, "Too many heroes for party capacity");
+        
         for (uint i = 0; i < _heroIds.length; i++) {
             require(heroContract.ownerOf(_heroIds[i]) == msg.sender, "You do not own all heroes");
             (, uint256 power) = heroContract.getHeroProperties(_heroIds[i]);
             totalPower += power;
         }
+
         for (uint i = 0; i < _relicIds.length; i++) {
             relicContract.transferFrom(msg.sender, address(this), _relicIds[i]);
         }
         for (uint i = 0; i < _heroIds.length; i++) {
             heroContract.transferFrom(msg.sender, address(this), _heroIds[i]);
         }
+        
         partyId = ++s_tokenCounter;
         partyCompositions[partyId] = PartyComposition({
             heroIds: _heroIds,
@@ -92,6 +104,7 @@ contract Party is ERC721, Ownable, ReentrancyGuard, Pausable {
             totalPower: totalPower,
             totalCapacity: totalCapacity
         });
+        
         _safeMint(msg.sender, partyId);
         emit PartyCreated(partyId, msg.sender, _heroIds, _relicIds);
     }
@@ -99,13 +112,16 @@ contract Party is ERC721, Ownable, ReentrancyGuard, Pausable {
     function disbandParty(uint256 _partyId) external nonReentrant whenNotPaused {
         require(ownerOf(_partyId) == msg.sender, "You are not the owner of this party");
         _requireNotLocked(_partyId);
+        
         PartyComposition storage party = partyCompositions[_partyId];
+        
         for (uint i = 0; i < party.relicIds.length; i++) {
             relicContract.transferFrom(address(this), msg.sender, party.relicIds[i]);
         }
         for (uint i = 0; i < party.heroIds.length; i++) {
             heroContract.transferFrom(address(this), msg.sender, party.heroIds[i]);
         }
+        
         delete partyCompositions[_partyId];
         _burn(_partyId);
         emit PartyDisbanded(_partyId, msg.sender);
@@ -125,6 +141,11 @@ contract Party is ERC721, Ownable, ReentrancyGuard, Pausable {
     function getPartyComposition(uint256 _partyId) external view returns (PartyComposition memory) {
         return partyCompositions[_partyId];
     }
+    
+    function setDefaultRoyalty(address receiver, uint96 feeNumerator) external onlyOwner {
+        _setDefaultRoyalty(receiver, feeNumerator);
+    }
+
     function pause() public onlyOwner {
         _pause();
     }

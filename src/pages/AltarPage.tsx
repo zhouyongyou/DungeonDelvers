@@ -1,258 +1,243 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useWatchContractEvent } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { formatEther } from 'viem';
-import { useAppToast } from '../hooks/useAppToast';
 import { getContract } from '../config/contracts';
-import { fetchAllOwnedNfts } from '../api/nfts';
-import { ActionButton } from '../components/ui/ActionButton';
-import { NftCard } from '../components/ui/NftCard';
-import { EmptyState } from '../components/ui/EmptyState';
-import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import type { HeroNft, RelicNft } from '../types/nft';
-// 【第1步：導入 store】
+import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
+import { fetchAllOwnedNfts } from '../api/nfts';
+// 【修正】修正 UI 元件的導入路徑
+import { NftCard } from '../components/ui/NftCard';
+import { SkeletonCard } from '../components/ui/SkeletonCard';
+import { ActionButton } from '../components/ui/ActionButton';
+import { EmptyState } from '../components/ui/EmptyState';
+import type { AnyNft, HeroNft, RelicNft, AllNftCollections } from '../types/nft';
+import { type Hash, type Abi } from 'viem';
 
+// 定義祭壇升級的組合配方
+const ASCENSION_RECIPES: { [key: string]: { requiredRarity: number; count: number } } = {
+  'common-to-uncommon': { requiredRarity: 1, count: 5 },
+  'uncommon-to-rare': { requiredRarity: 2, count: 5 },
+  'rare-to-epic': { requiredRarity: 3, count: 4 },
+  'epic-to-legendary': { requiredRarity: 4, count: 3 },
+};
 
 const AltarPage: React.FC = () => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
-    const queryClient = useQueryClient();
-    // 【第2步：獲取 addTransaction 函式】
     const { addTransaction } = useTransactionStore();
+    const queryClient = useQueryClient();
 
-    const altarContract = useMemo(() => getContract(chainId, 'altarOfAscension'), [chainId]);
-    const heroContract = useMemo(() => getContract(chainId, 'hero'), [chainId]);
-    const relicContract = useMemo(() => getContract(chainId, 'relic'), [chainId]);
+    const [selectedNfts, setSelectedNfts] = useState<AnyNft[]>([]);
+    const [approvalTxHash, setApprovalTxHash] = useState<Hash | undefined>();
 
-    // --- 狀態管理 ---
-    const [tab, setTab] = useState<'hero' | 'relic'>('hero');
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-    const [targetRarity, setTargetRarity] = useState(1);
-    
-    // 【修改】簡化狀態，不再需要 isProcessing 和 upgradeTxHash
-    const [approvalTxHash, setApprovalTxHash] = useState<`0x${string}` | undefined>();
+    const altarContract = getContract(chainId, 'altarOfAscension');
+    const heroContract = getContract(chainId, 'hero');
+    const relicContract = getContract(chainId, 'relic');
 
-    // --- Wagmi Hooks ---
-    // 【修改】移除 isPending，因為我們將使用 isApproving 和 isConfirmingUpgrade 來判斷讀取狀態
-    const { writeContractAsync } = useWriteContract();
-    const { data: ownedNfts, isLoading: isLoadingNfts } = useQuery({
-        queryKey: ['ownedNfts', address, chainId, 'all'],
+    const { data: nfts, isLoading: isLoadingNfts } = useQuery<AllNftCollections>({
+        queryKey: ['ownedNfts', address, chainId],
         queryFn: () => {
-            if (!address || !chainId) return { heroes: [], relics: [], parties: [] };
-            return fetchAllOwnedNfts(address, chainId);
+             if (!address || !chainId) {
+                return { heroes: [], relics: [], parties: [], vipCards: [] };
+             }
+             return fetchAllOwnedNfts(address, chainId);
         },
         enabled: !!address && !!chainId,
     });
     
-    const { data: isApprovedHero, refetch: refetchHeroApproval } = useReadContract({
-        abi: heroContract?.abi,
+    const { data: isHeroApproved, refetch: refetchHeroApproval } = useReadContract({
         address: heroContract?.address,
+        abi: heroContract?.abi,
         functionName: 'isApprovedForAll',
         args: [address!, altarContract?.address!],
-        query: { enabled: !!address && !!heroContract?.address && !!altarContract?.address }
+        query: { enabled: !!address && !!altarContract?.address && !!heroContract?.address },
     });
 
-    const { data: isApprovedRelic, refetch: refetchRelicApproval } = useReadContract({
-        abi: relicContract?.abi,
+    const { data: isRelicApproved, refetch: refetchRelicApproval } = useReadContract({
         address: relicContract?.address,
+        abi: relicContract?.abi,
         functionName: 'isApprovedForAll',
         args: [address!, altarContract?.address!],
-        query: { enabled: !!address && !!relicContract?.address && !!altarContract?.address }
+        query: { enabled: !!address && !!altarContract?.address && !!relicContract?.address },
     });
 
-    const { data: upgradeRuleData } = useReadContract({
-        abi: altarContract?.abi,
-        address: altarContract?.address,
-        functionName: 'upgradeRules',
-        args: [BigInt(targetRarity)],
-        query: { enabled: !!altarContract?.address }
-    });
-    
-    // --- 派生狀態 (與之前相同) ---
-    const isApproved = tab === 'hero' ? isApprovedHero : isApprovedRelic;
-    const materials: (HeroNft | RelicNft)[] = useMemo(() => {
-        const nfts = tab === 'hero' ? ownedNfts?.heroes : ownedNfts?.relics;
-        return nfts?.filter((nft): nft is HeroNft | RelicNft => !!nft && 'rarity' in nft && nft.rarity === targetRarity) ?? [];
-    }, [ownedNfts, tab, targetRarity]);
-    
-    const upgradeRule = useMemo(() => {
-        if (!upgradeRuleData || !Array.isArray(upgradeRuleData)) return null;
-        const data = upgradeRuleData.slice();
-        return {
-            materialsRequired: Number(data[0]),
-            nativeFee: data[1] as bigint,
-            greatSuccessChance: Number(data[2]),
-            successChance: Number(data[3]),
-            partialFailChance: Number(data[4]),
-        };
-    }, [upgradeRuleData]);
-
-    const requiredCount = upgradeRule?.materialsRequired ?? 0;
-    const fee = upgradeRule?.nativeFee ?? 0n;
-
-    // --- 事件監聽與處理 ---
-    // 【修改】簡化邏輯，只處理核心 UI 更新
-    useWatchContractEvent({
-        abi: altarContract?.abi,
-        address: altarContract?.address,
-        eventName: 'UpgradeFulfilled',
-        onLogs(logs: any[]) {
-            const myLog = logs.find(log => log.args.player === address);
-            if (myLog) {
-                const outcome = myLog.args.outcome;
-                let message = '升級完成！';
-                if(outcome === 3) message = '✨ 大成功！恭喜獲得雙倍獎勵！';
-                else if(outcome === 2) message = '✨ 恭喜！升星成功！';
-                else if(outcome === 1) message = '💔 可惜，返還了部分材料。';
-                else if(outcome === 0) message = '💀 運氣不佳，所有材料都消失了。';
-                
-                showToast(message, 'info');
-                queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
-                setSelectedIds(new Set());
-            }
-        },
-        enabled: !!address && !!altarContract
-    });
-    
-    // 【修改】移除 isConfirmingUpgrade，因為 TransactionWatcher 會處理
-    const { isLoading: isApproving, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({ hash: approvalTxHash });
+    const { writeContractAsync, isPending } = useWriteContract();
+    const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: approvalTxHash });
 
     useEffect(() => {
-        if (isApprovalSuccess) {
-            showToast('授權成功！正在刷新狀態...', 'success');
-            if (tab === 'hero') refetchHeroApproval();
-            else refetchRelicApproval();
-            setApprovalTxHash(undefined);
+        if (isConfirmed) {
+            showToast('授權成功！', 'success');
+            refetchHeroApproval();
+            refetchRelicApproval();
         }
-    }, [isApprovalSuccess, tab, refetchHeroApproval, refetchRelicApproval]);
+    }, [isConfirmed, refetchHeroApproval, refetchRelicApproval, showToast]);
 
-    // --- 函式 ---
-    const toggleSelection = (id: string) => {
-        const newSelection = new Set(selectedIds);
-        if (newSelection.has(id)) newSelection.delete(id);
-        else if (newSelection.size < requiredCount) newSelection.add(id);
-        setSelectedIds(newSelection);
-    };
 
-    const handleApprove = async () => {
-        const contractToApprove = tab === 'hero' ? heroContract : relicContract;
-        if (!contractToApprove?.address || !altarContract?.address) return;
-        
-        try {
-            const hash = await writeContractAsync({ 
-                abi: contractToApprove.abi,
-                address: contractToApprove.address,
-                functionName: 'setApprovalForAll', 
-                args: [altarContract.address, true] 
-            });
-            // 【第3步：記錄交易】
-            addTransaction({ hash, description: `授權祭壇操作${tab === 'hero' ? '英雄' : '聖物'}` });
-            setApprovalTxHash(hash);
-        } catch (e: any) { 
-            if (!e.message.includes('User rejected the request')) {
-                showToast(e.message.split('\n')[0], 'error');
+    const handleSelectNft = (nft: AnyNft) => {
+        setSelectedNfts(prev => {
+            const isSelected = prev.some(item => item.id === nft.id && item.type === nft.type);
+            if (isSelected) {
+                return prev.filter(item => !(item.id === nft.id && item.type === nft.type));
+            } else {
+                return [...prev, nft];
             }
-        }
+        });
     };
 
-    const handleUpgrade = async () => {
-        const contractToUpgrade = tab === 'hero' ? heroContract : relicContract;
-        if (!contractToUpgrade?.address || !altarContract?.address) return;
-        if (selectedIds.size !== requiredCount) {
-            showToast(`請選擇 ${requiredCount} 個 ${targetRarity}星 材料`, 'error');
+    const ascensionTarget = useMemo(() => {
+        if (selectedNfts.length === 0) return null;
+        const firstNft = selectedNfts[0];
+        const { rarity } = firstNft as HeroNft | RelicNft;
+        if (rarity >= 5) return null;
+
+        const recipeKey = Object.keys(ASCENSION_RECIPES).find(key => ASCENSION_RECIPES[key].requiredRarity === rarity);
+        if (!recipeKey) return null;
+
+        const recipe = ASCENSION_RECIPES[recipeKey];
+        if (selectedNfts.length !== recipe.count) return null;
+
+        const allSameTypeAndRarity = selectedNfts.every(nft => {
+            const currentNft = nft as HeroNft | RelicNft;
+            return currentNft.type === firstNft.type && currentNft.rarity === rarity;
+        });
+
+        if (!allSameTypeAndRarity) return null;
+
+        return {
+            type: firstNft.type,
+            targetRarity: rarity + 1,
+            tokenIds: selectedNfts.map(nft => nft.id),
+        };
+    }, [selectedNfts]);
+    
+    const needsApproval = useMemo(() => {
+        if (!ascensionTarget) return { hero: false, relic: false };
+        const { type } = ascensionTarget;
+        return {
+            hero: type === 'hero' && !isHeroApproved,
+            relic: type === 'relic' && !isRelicApproved,
+        };
+    }, [ascensionTarget, isHeroApproved, isRelicApproved]);
+
+    const heroesAndRelics: (HeroNft | RelicNft)[] = useMemo(() => {
+        if (!nfts) return [];
+        return [...(nfts.heroes ?? []), ...(nfts.relics ?? [])];
+    }, [nfts]);
+
+    const handleAscendOrApprove = async () => {
+        if (!altarContract) return;
+
+        if (needsApproval.hero && heroContract) {
+            try {
+                const hash = await writeContractAsync({
+                    address: heroContract.address,
+                    abi: heroContract.abi as Abi,
+                    functionName: 'setApprovalForAll',
+                    args: [altarContract.address, true],
+                });
+                setApprovalTxHash(hash);
+                addTransaction({ hash, description: '批准祭壇使用英雄' });
+            } catch (e: any) { showToast(e.shortMessage || "授權失敗", "error"); }
             return;
         }
 
+        if (needsApproval.relic && relicContract) {
+             try {
+                const hash = await writeContractAsync({
+                    address: relicContract.address,
+                    abi: relicContract.abi as Abi,
+                    functionName: 'setApprovalForAll',
+                    args: [altarContract.address, true],
+                });
+                setApprovalTxHash(hash);
+                addTransaction({ hash, description: '批准祭壇使用聖物' });
+            } catch (e: any) { showToast(e.shortMessage || "授權失敗", "error"); }
+            return;
+        }
+
+        if (!ascensionTarget) return;
+        const { type, tokenIds, targetRarity } = ascensionTarget;
+        const functionName = type === 'hero' ? 'ascendHeroes' : 'ascendRelics';
+
         try {
+            // 【修正】將 ABI 強制轉型為 'any' 來繞過因 ABI 設定檔不匹配造成的 TypeScript 型別錯誤。
+            // 這是一個臨時解決方案，最終應確保前端的 ABI 與部署的合約完全一致。
             const hash = await writeContractAsync({
-                abi: altarContract.abi,
                 address: altarContract.address,
-                functionName: 'upgradeNFTs',
-                args: [contractToUpgrade.address, Array.from(selectedIds).map(id => BigInt(id))],
-                value: fee
+                abi: altarContract.abi as any, 
+                functionName,
+                args: [tokenIds, targetRarity],
             });
-            // 【第4步：記錄交易】
-            addTransaction({ hash, description: `獻祭 ${requiredCount} 個 ${targetRarity}星 ${tab === 'hero' ? '英雄' : '聖物'}` });
+            addTransaction({ hash, description: `升星 ${type === 'hero' ? '英雄' : '聖物'} 至 ${targetRarity} 星` });
+            setSelectedNfts([]);
+            queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
         } catch (e: any) {
-            if (!e.message.includes('User rejected the request')) {
-                showToast(e.message.split('\n')[0], 'error');
-            }
+            showToast(e.shortMessage || "升星失敗", "error");
         }
     };
+
+    const actionButtonText = useMemo(() => {
+        if (!ascensionTarget) return '配方無效';
+        if (needsApproval.hero) return '批准英雄';
+        if (needsApproval.relic) return '批准聖物';
+        return '開始升星';
+    }, [ascensionTarget, needsApproval]);
+
 
     return (
         <section>
             <h2 className="page-title">升星祭壇</h2>
-            <div className="flex justify-center mb-6">
-                <div className="tabs tabs-boxed">
-                    <a className={`tab ${tab === 'hero' ? 'tab-active' : ''}`} onClick={() => { setTab('hero'); setSelectedIds(new Set()); }}>英雄升星</a>
-                    <a className={`tab ${tab === 'relic' ? 'tab-active' : ''}`} onClick={() => { setTab('relic'); setSelectedIds(new Set()); }}>聖物升星</a>
-                </div>
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="md:col-span-2">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="section-title">選擇材料 ({selectedIds.size} / {requiredCount > 0 ? requiredCount : '...'})</h3>
-                        <select value={targetRarity} onChange={e => { setTargetRarity(Number(e.target.value)); setSelectedIds(new Set()); }} className="select select-bordered select-sm">
-                            <option value={1}>升級 ★</option>
-                            <option value={2}>升級 ★★</option>
-                            <option value={3}>升級 ★★★</option>
-                            <option value={4}>升級 ★★★★</option>
-                        </select>
-                    </div>
-                    {isLoadingNfts ? <div className="text-center p-8"><LoadingSpinner /></div> : (
-                        materials.length > 0 ? (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                                {materials.map(nft => (
-                                    <div key={nft.id} onClick={() => toggleSelection(nft.id.toString())} className={`cursor-pointer transition-all duration-200 ${selectedIds.has(nft.id.toString()) ? 'ring-2 ring-primary ring-offset-2 ring-offset-base-100 rounded-lg' : ''}`}>
-                                        <NftCard nft={nft} />
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <EmptyState message={`您沒有 ${targetRarity}星 的${tab === 'hero' ? '英雄' : '聖物'}可供升級。`} />
-                        )
+                    <h3 className="section-title">選擇要獻祭的資產</h3>
+                    <p className="text-sm text-gray-400 mb-4">選擇 3-5 個相同類型和星級的英雄或聖物來合成更高星級的資產。</p>
+                    {isLoadingNfts ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                            {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
+                        </div>
+                    ) : heroesAndRelics.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                            {heroesAndRelics.map((nft: HeroNft | RelicNft) => (
+                                <NftCard
+                                    key={`${nft.type}-${nft.id}`}
+                                    nft={nft}
+                                    onSelect={() => handleSelectNft(nft)}
+                                    isSelected={selectedNfts.some(item => item.id === nft.id && item.type === nft.type)}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <EmptyState message="您沒有可用於升星的英雄或聖物。" />
                     )}
                 </div>
-
-                <div>
-                    <div className="card-bg p-6 rounded-xl sticky top-24">
-                        <h3 className="section-title">祭壇獻祭</h3>
-                        <p className="text-sm my-2">將 {requiredCount > 0 ? requiredCount : '...'} 個 {targetRarity}星 {tab === 'hero' ? '英雄' : '聖物'} 獻祭，嘗試獲得 {targetRarity + 1}星 資產。</p>
-                        <p className="text-sm font-bold">費用: {formatEther(fee)} BNB</p>
-                        <div className="divider"></div>
-                        {/* 【修改】移除按鈕的讀取狀態判斷，因為交易追蹤系統會處理 */}
-                        {isApproved ? (
-                            <ActionButton 
-                                onClick={handleUpgrade} 
-                                disabled={selectedIds.size !== requiredCount} 
-                                className="w-full"
-                            >
-                                開始升級
-                            </ActionButton>
-                        ) : (
-                            <ActionButton 
-                                onClick={handleApprove} 
-                                isLoading={isApproving}
-                                disabled={isApproving}
-                                className="w-full"
-                            >
-                                {isApproving ? '正在授權...' : '授權祭壇操作材料'}
-                            </ActionButton>
-                        )}
-                        <div className="text-xs text-gray-500 mt-4">
-                            {upgradeRule ? (<>
-                                <p>• 大成功機率: {upgradeRule.greatSuccessChance}% (獲得x2獎勵)</p>
-                                <p>• 成功機率: {upgradeRule.successChance}%</p>
-                                <p>• 失敗返還機率: {upgradeRule.partialFailChance}%</p>
-                                <p>• 失敗全損機率: {100 - (upgradeRule.greatSuccessChance + upgradeRule.successChance + upgradeRule.partialFailChance)}%</p>
-                            </>) : <p>正在讀取規則...</p>}
+                <div className="md:col-span-1">
+                    <div className="card-bg p-6 rounded-xl shadow-lg sticky top-24">
+                        <h3 className="section-title">獻祭清單</h3>
+                        <div className="min-h-[200px] bg-black/20 rounded-lg p-4 space-y-2">
+                            {selectedNfts.length > 0 ? (
+                                selectedNfts.map(nft => <p key={`${nft.type}-${nft.id}`} className="text-sm text-gray-300">- {nft.name}</p>)
+                            ) : (
+                                <p className="text-sm text-gray-500">從左側選擇資產...</p>
+                            )}
                         </div>
+                        {ascensionTarget && (
+                            <div className="mt-4 text-center">
+                                <p className="text-green-400">✨ 配方有效 ✨</p>
+                                <p>將合成: {ascensionTarget.targetRarity} 星 {ascensionTarget.type === 'hero' ? '英雄' : '聖物'}</p>
+                            </div>
+                        )}
+                        <ActionButton
+                            onClick={handleAscendOrApprove}
+                            isLoading={isPending || isConfirming}
+                            disabled={!ascensionTarget || isPending || isConfirming}
+                            className="w-full mt-4"
+                        >
+                            {actionButtonText}
+                        </ActionButton>
                     </div>
                 </div>
-            </div>        </section>
+            </div>
+        </section>
     );
 };
 

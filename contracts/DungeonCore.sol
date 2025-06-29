@@ -90,9 +90,9 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
     uint256 public explorationFee = 0.0015 ether;
     uint32 public constant TWAP_PERIOD = 1800;
     uint256 public constant COOLDOWN_PERIOD = 24 hours;
-    uint256 public constant TAX_PERIOD = 24 hours;
-    uint256 public constant MAX_TAX_RATE = 30;
-    uint256 public constant TAX_DECREASE_RATE = 10;
+    uint256 public TAX_PERIOD = 24 hours;
+    uint256 public MAX_TAX_RATE = 30;
+    uint256 public TAX_DECREASE_RATE = 10;
     uint256 public constant NUM_DUNGEONS = 10;
     uint32 private s_callbackGasLimit = 500000;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
@@ -339,6 +339,13 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
 
     function setProvisionPriceUSD(uint256 _newPrice) public onlyOwner {
         provisionPriceUSD = _newPrice;
+    }
+
+    function setTaxParameters(uint256 _maxTaxRate, uint256 _decreaseRate, uint256 _periodInSeconds) external onlyOwner {
+        require(_maxTaxRate <= 100, "Max tax rate cannot exceed 100%");
+        MAX_TAX_RATE = _maxTaxRate;
+        TAX_DECREASE_RATE = _decreaseRate;
+        TAX_PERIOD = _periodInSeconds;
     }
 
     function setPlayerProfileContract(address _address) public onlyOwner {
