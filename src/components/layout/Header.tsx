@@ -4,7 +4,7 @@ import { injected } from 'wagmi/connectors';
 import { ActionButton } from '../ui/ActionButton';
 import type { Page } from '../../types/page';
 import { useTheme } from '../../contexts/ThemeContext';
-import logoUrl from '/assets/images/logo-192x192.png';
+import logoUrl from '/logo-192x192.png';
 import { DEVELOPER_ADDRESS } from '../../config/constants';
 import { getContract } from '../../config/contracts';
 import { RecentTransactions } from '../ui/RecentTransactions'; 
