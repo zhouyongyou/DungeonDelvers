@@ -6,7 +6,6 @@ import { useAppToast } from '../hooks/useAppToast';
 import { getContract, dungeonCoreABI } from '../config/contracts';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { ActionButton } from '../components/ui/ActionButton';
-import { SkeletonCard } from '../components/ui/SkeletonCard';
 import type { AnyNft, PartyNft } from '../types/nft';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import type { Page } from '../types/page';
@@ -24,6 +23,25 @@ interface Dungeon {
     baseSuccessRate: number;
     isInitialized: boolean;
 }
+
+// 這是地下城卡片的骨架元件，它將會在載入時顯示
+const DungeonSkeletonCard: React.FC = () => (
+    <div className="card-bg p-4 rounded-xl shadow-lg flex flex-col animate-pulse">
+        {/* 地下城名稱骨架 */}
+        <div className="h-7 bg-gray-300 dark:bg-gray-700 rounded w-3/4 mb-3"></div>
+        <div className="flex-grow mt-2 text-sm space-y-2">
+            {/* 屬性骨架 */}
+            <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-5/6"></div>
+            <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-full"></div>
+            <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div>
+            <div className="h-4 bg-sky-300/50 dark:bg-sky-700/50 rounded w-2/5"></div>
+        </div>
+        {/* 按鈕骨架 */}
+        <div className="h-10 bg-gray-400 dark:bg-gray-600 rounded-lg w-full mt-4"></div>
+        {/* 費用文字骨架 */}
+        <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-1/3 mx-auto mt-2"></div>
+    </div>
+);
 
 const DungeonPage: React.FC<DungeonPageProps> = ({ setActivePage, setPreselectedPartyId }) => {
     const { address, chainId } = useAccount();
@@ -223,7 +241,14 @@ const DungeonPage: React.FC<DungeonPageProps> = ({ setActivePage, setPreselected
                 </div>
             </div>
              <h3 className="section-title text-xl mb-4">3. 選擇目標地城</h3>
-            {isLoadingDungeons ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}</div> : (
+
+            {/* 這就是修改的核心：當 isLoadingDungeons 為 true 時，顯示骨架畫面 */}
+            {isLoadingDungeons ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* 我們渲染 6 個骨架卡片作為載入中的佔位符 */}
+                    {Array.from({ length: 6 }).map((_, i) => <DungeonSkeletonCard key={i} />)}
+                </div>
+            ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {dungeons.map(d => (
                         <div key={d.id} className="card-bg p-4 rounded-xl shadow-lg flex flex-col">
@@ -243,7 +268,6 @@ const DungeonPage: React.FC<DungeonPageProps> = ({ setActivePage, setPreselected
                                 {(isLoadingParties && !!selectedPartyId) ? <LoadingSpinner/> : cooldownInfo.onCooldown ? timeLeft : '派遣遠征'}
                             </ActionButton>
                             <p className="text-xs text-center mt-1 text-gray-500">
-                                {/* 【修正】使用 displayExplorationFee */}
                                 (費用: {isLoadingFee ? '讀取中...' : formatEther(displayExplorationFee)} BNB)
                             </p>
                         </div>

@@ -210,7 +210,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                     <QuickActionButton title="鑄造 NFT" description="獲取新的英雄與聖物" onAction={() => setActivePage('mint')} icon={<Icons.Mint className="w-8 h-8"/>} />
                     <QuickActionButton title="升星祭壇" description="提升你的 NFT 星級" onAction={() => setActivePage('altar')} icon={<Icons.Altar className="w-8 h-8"/>}/>
-                    <QuickActionButton title="我的資產" description="管理你的所有 NFT" onAction={() => setActivePage('party')} icon={<Icons.Assets className="w-8 h-8"/>}/>
+                    <QuickActionButton title="隊伍" description="管理你的所有 NFT" onAction={() => setActivePage('party')} icon={<Icons.Assets className="w-8 h-8"/>}/>
                     <QuickActionButton title="前往地下城" description="開始你的冒險" onAction={() => setActivePage('dungeon')} icon={<Icons.Dungeon className="w-8 h-8"/>}/>
                 </div>
             </div>

@@ -66,7 +66,7 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
       { key: 'dashboard', label: '儀表板' },
       { key: 'profile', label: '個人檔案' },
       { key: 'mint', label: '鑄造' },
-      { key: 'party', label: '我的資產' },
+      { key: 'party', label: '隊伍' },
       { key: 'dungeon', label: '地下城' },
       { key: 'altar', label: '升星祭壇' },
       { key: 'vip', label: 'VIP' },

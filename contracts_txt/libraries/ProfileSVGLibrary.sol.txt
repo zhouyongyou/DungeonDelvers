@@ -5,9 +5,17 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
+/**
+ * @title ProfileSVGLibrary
+ * @notice 這是一個專門用於生成玩家檔案 SVG 的函式庫 (功能完整版)。
+ * @dev 包含星空背景、動態能量環和流光邊框，需要搭配 viaIR 編譯器優化。
+ */
 library ProfileSVGLibrary {
     using Strings for uint256;
 
+    /**
+     * @notice 函式庫的唯一入口點，負責生成完整的 tokenURI。
+     */
     function buildTokenURI(uint256 _tokenId, uint256 _exp) internal pure returns (string memory) {
         uint256 level = getLevel(_exp);
         string memory svg = generateSVG(_tokenId, _exp, level);
@@ -28,6 +36,8 @@ library ProfileSVGLibrary {
 
         return string(abi.encodePacked("data:application/json;base64,", json));
     }
+
+    // --- 以下所有函式都是內部輔助函式 ---
 
     function getLevel(uint256 _exp) internal pure returns (uint256) {
         if (_exp < 100) return 1;

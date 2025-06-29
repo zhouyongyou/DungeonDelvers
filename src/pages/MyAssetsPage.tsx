@@ -10,7 +10,6 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
 import { ActionButton } from '../components/ui/ActionButton';
 import type { Page } from '../types/page';
-// 【修正】從 '../types/nft' 導入 NftType
 import type { AnyNft, NftType, HeroNft, RelicNft } from '../types/nft';
 import { useTransactionStore } from '../stores/useTransactionStore';
 
@@ -190,7 +189,7 @@ const MyAssetsPage: React.FC<MyAssetsPageProps> = ({ setActivePage }) => {
 
     return (
         <section>
-            <h2 className="page-title">我的資產</h2>
+            <h2 className="page-title">隊伍</h2>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-8">
                     <div><h3 className="section-title">我的隊伍 NFT</h3><NftGrid type="party" nfts={nfts?.parties} isLoading={isLoadingNfts} onDisband={(id) => setModal({ isOpen: true, type: 'disband', data: id })} setActivePage={setActivePage}/></div><hr/>
