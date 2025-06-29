@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
@@ -28,12 +29,13 @@ import "../interfaces/IOracle.sol";
  * - 【鏈上隨機性】: 使用 seasonSeed 和其他鏈上參數來偽隨機生成聖物的稀有度和容量。
  * - 【權限控制】: 來自祭壇的鑄造和銷毀，以及管理員功能，都受到嚴格的權限控制。
  */
-contract Relic is ERC721Royalty, ERC721URIStorage, VRFV2PlusWrapperConsumerBase, ReentrancyGuard, Pausable {
+contract Relic is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard, Pausable {
     using Counters for Counters.Counter;
     using Strings for uint256;
+    using Strings for uint8;
 
     // --- 唯一的依賴 ---
-    IDungeonCore public immutable dungeonCore;
+    IDungeonCore public dungeonCore;
     Counters.Counter private _nextTokenId;
 
     // --- 狀態變數 ---
@@ -68,21 +70,20 @@ contract Relic is ERC721Royalty, ERC721URIStorage, VRFV2PlusWrapperConsumerBase,
         _;
     }
 
-    modifier onlyCoreOwner() {
-        require(msg.sender == dungeonCore.owner(), "Relic: Not the core owner");
-        _;
-    }
-
     constructor(
         address _dungeonCoreAddress,
         address _vrfWrapper,
         string memory _initialBaseURI
-    ) ERC721("Dungeon Delvers Relic", "DDR") VRFV2PlusWrapperConsumerBase(_vrfWrapper) {
+    )
+        ERC721("Dungeon Delvers Relic", "DDR")
+        VRFV2PlusWrapperConsumerBase(_vrfWrapper)
+        Ownable(msg.sender)
+    {
         dungeonCore = IDungeonCore(_dungeonCoreAddress);
         seasonSeed = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender, block.chainid)));
         _baseTokenURI = _initialBaseURI;
         _nextTokenId.increment(); // ID 從 1 開始
-        _setDefaultRoyalty(owner(), 500);
+        _setDefaultRoyalty(msg.sender, 500);
     }
 
     // --- 外部鑄造函式 (玩家直接呼叫) ---
@@ -92,7 +93,7 @@ contract Relic is ERC721Royalty, ERC721URIStorage, VRFV2PlusWrapperConsumerBase,
         uint256 requiredAmount = getRequiredSoulShardAmount(_quantity);
 
         IPlayerVault playerVault = IPlayerVault(dungeonCore.playerVault());
-        IERC20 soulShardToken = IERC20(playerVault.soulShardToken());
+        IERC20 soulShardToken = playerVault.soulShardToken();
         
         require(soulShardToken.transferFrom(msg.sender, address(this), requiredAmount), "Relic: Wallet transfer failed");
         _generateAndMintRelics(msg.sender, _quantity);
@@ -109,7 +110,7 @@ contract Relic is ERC721Royalty, ERC721URIStorage, VRFV2PlusWrapperConsumerBase,
         uint256 totalCostUSD = mintPriceUSD * _quantity;
         
         IPlayerVault playerVault = IPlayerVault(dungeonCore.playerVault());
-        address soulShardTokenAddress = playerVault.soulShardToken();
+        address soulShardTokenAddress = address(playerVault.soulShardToken());
         address usdTokenAddress = dungeonCore.usdToken();
         IOracle oracle = IOracle(dungeonCore.oracle());
 
@@ -118,8 +119,8 @@ contract Relic is ERC721Royalty, ERC721URIStorage, VRFV2PlusWrapperConsumerBase,
 
     // --- 授權鑄造/銷毀函式 (給祭壇呼叫) ---
 
-    function mintFromAltar(address _to, uint8 _rarity, uint256 _randomNumber) external onlyAltar returns (uint256) {
-        uint8 capacity = _generateRelicCapacityByRarity(_rarity, _randomNumber);
+    function mintFromAltar(address _to, uint8 _rarity) external onlyAltar returns (uint256) {
+        uint8 capacity = _generateRelicCapacityByRarity(_rarity);
         return _mintRelic(_to, _rarity, capacity);
     }
 
@@ -156,15 +157,15 @@ contract Relic is ERC721Royalty, ERC721URIStorage, VRFV2PlusWrapperConsumerBase,
         else if (rarityRoll < 94) { rarity = 3; }
         else if (rarityRoll < 99) { rarity = 4; }
         else { rarity = 5; }
-        capacity = _generateRelicCapacityByRarity(rarity, _randomNumber >> 8);
+        capacity = _generateRelicCapacityByRarity(rarity);
     }
 
-    function _generateRelicCapacityByRarity(uint8 _rarity, uint256 _randomNumber) private pure returns (uint8 capacity) {
+    function _generateRelicCapacityByRarity(uint8 _rarity) private pure returns (uint8 capacity) {
         if (_rarity == 1) { capacity = 1; }
-        else if (_rarity == 2) { capacity = 1 + uint8(_randomNumber % 2); } // 1-2
-        else if (_rarity == 3) { capacity = 2 + uint8(_randomNumber % 2); } // 2-3
-        else if (_rarity == 4) { capacity = 3 + uint8(_randomNumber % 2); } // 3-4
-        else if (_rarity == 5) { capacity = 4 + uint8(_randomNumber % 2); } // 4-5
+        else if (_rarity == 2) { capacity = 2; }
+        else if (_rarity == 3) { capacity = 3; }
+        else if (_rarity == 4) { capacity = 4; }
+        else if (_rarity == 5) { capacity = 5; }
         else { revert("Relic: Invalid rarity"); }
     }
 
@@ -194,23 +195,12 @@ contract Relic is ERC721Royalty, ERC721URIStorage, VRFV2PlusWrapperConsumerBase,
     }
     
     // --- 外部查詢與輔助函式 ---
-
     function getRelicProperties(uint256 _tokenId) public view returns (uint8 rarity, uint8 capacity) {
-        require(_exists(_tokenId), "Relic: Query for nonexistent token");
+        ownerOf(_tokenId);
         Properties memory props = relicProperties[_tokenId];
         return (props.rarity, props.capacity);
     }
     
-    function tokenURI(uint256 _tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
-        _requireOwned(_tokenId);
-        // 1. 先獲取這個 Token 在鏈上儲存的真實稀有度
-        (uint8 rarity, ) = getRelicProperties(_tokenId);
-        require(rarity > 0, "Relic: Invalid rarity");
-
-        // 2. 根據稀有度來構建 URI，指向對應的 JSON 檔案 (例如 1.json, 2.json...)
-        return string(abi.encodePacked(_baseTokenURI, rarity.toString(), ".json"));
-    }
-
     function _updateAndCheckBlockLimit(uint256 _count) private {
         if (block.number == lastMintBlock) {
             mintsInCurrentBlock += _count;
@@ -223,36 +213,52 @@ contract Relic is ERC721Royalty, ERC721URIStorage, VRFV2PlusWrapperConsumerBase,
 
     // --- Owner 管理函式 ---
 
-    function ownerMint(address _to, uint8 _rarity, uint8 _capacity) external onlyCoreOwner returns (uint256) {
+    function ownerMint(address _to, uint8 _rarity, uint8 _capacity) external onlyOwner returns (uint256) {
         return _mintRelic(_to, _rarity, _capacity);
     }
 
-    function setBaseURI(string calldata baseURI) external onlyCoreOwner {
+    function setBaseURI(string calldata baseURI) external onlyOwner {
         _baseTokenURI = baseURI;
     }
 
-    function setMintPriceUSD(uint256 _newPrice) external onlyCoreOwner {
+    function setMintPriceUSD(uint256 _newPrice) external onlyOwner {
         mintPriceUSD = _newPrice;
     }
     
-    function withdrawSoulShard() external onlyCoreOwner {
-        IERC20 token = IERC20(IPlayerVault(dungeonCore.playerVault()).soulShardToken());
+    function withdrawSoulShard() external onlyOwner {
+        IPlayerVault playerVault = IPlayerVault(dungeonCore.playerVault());
+        IERC20 token = playerVault.soulShardToken();
         uint256 balance = token.balanceOf(address(this));
-        if (balance > 0) token.transfer(dungeonCore.owner(), balance);
+        if (balance > 0) token.transfer(owner(), balance);
     }
 
-    function pause() external onlyCoreOwner { _pause(); }
-    function unpause() external onlyCoreOwner { _unpause(); }
+    function pause() external onlyOwner { _pause(); }
+    function unpause() external onlyOwner { _unpause(); }
+
+    // ★ 修正 2: 覆寫 _update 來處理銷毀時的 URI 清除，這是 v5.x 的標準做法
+    function _update(address to, uint256 tokenId, address auth) internal override(ERC721) returns (address) {
+        if (to == address(0)) {
+            // Token is being burned, clear the URI
+            _setTokenURI(tokenId, "");
+        }
+        return super._update(to, tokenId, auth);
+    }
 
     // --- 覆寫函式 ---
+    function tokenURI(uint256 _tokenId) public view override (ERC721, ERC721URIStorage) returns (string memory) {
+        _requireOwned(_tokenId);
+        // 1. 先獲取這個 Token 在鏈上儲存的真實稀有度
+        (uint8 rarity, ) = getRelicProperties(_tokenId);
+        require(rarity > 0, "Relic: Invalid rarity");
 
-    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
-        super._burn(tokenId);
+        // 2. 根據稀有度來構建 URI，指向對應的 JSON 檔案 (例如 1.json, 2.json...)
+        return string(abi.encodePacked(_baseTokenURI, rarity.toString(), ".json"));
     }
+
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(ERC721, ERC721URIStorage, ERC721Royalty)
+        override (ERC721, ERC721URIStorage, ERC721Royalty)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
