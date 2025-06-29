@@ -8,13 +8,14 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Oracle is Ownable {
     IUniswapV3Pool public pool;
-    address public immutable token0;
-    address public immutable token1;
+    address public token0; // <--- 移除 immutable
+    address public token1; // <--- 移除 immutable
     uint32 public constant TWAP_PERIOD = 1800; // 30 分鐘
 
     event PoolUpdated(address indexed newPool);
 
-    constructor(address _poolAddress) {
+    // BUG 1 修正：初始化 Ownable，並傳入 msg.sender
+    constructor(address _poolAddress) Ownable(msg.sender) {
         require(_poolAddress != address(0), "Oracle: Invalid pool address");
         pool = IUniswapV3Pool(_poolAddress);
         token0 = pool.token0();
@@ -39,11 +40,13 @@ contract Oracle is Ownable {
         if (isToken0Input) {
             amountOut = (amountIn * ratioX192) >> 192;
         } else {
-            amountOut = (amountIn * FixedPoint96.Q96) / (ratioX192 / FixedPoint96.Q96);
+            // 為了避免下溢 (underflow)，在使用除法前先做乘法是好的實踐
+            amountOut = (amountIn * FixedPoint96.Q96 * FixedPoint96.Q96) / ratioX192;
         }
     }
 
     function _consult(uint32 period) internal view returns (int24 tick) {
+        // ... (此函式邏輯正確，無需修改)
         uint32[] memory periods = new uint32[](2);
         periods[0] = period;
         periods[1] = 0;
@@ -54,9 +57,12 @@ contract Oracle is Ownable {
         tick = int24(tickCumulativesDelta / int56(uint56(period)));
     }
 
+    // BUG 2 修正：同時更新 pool, token0, 和 token1
     function setPool(address _newPoolAddress) external onlyOwner {
         require(_newPoolAddress != address(0), "Oracle: Invalid pool address");
         pool = IUniswapV3Pool(_newPoolAddress);
+        token0 = pool.token0(); // <--- 新增
+        token1 = pool.token1(); // <--- 新增
         emit PoolUpdated(_newPoolAddress);
     }
 }
