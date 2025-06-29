@@ -1,25 +1,35 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./interfaces/IUniswapV3Pool.sol";
+import "./interfaces/external/IUniswapV3Pool.sol";
 import "./libraries/TickMath.sol";
 import "./libraries/FixedPoint96.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Oracle is Ownable {
-    IUniswapV3Pool public immutable pool;
+    IUniswapV3Pool public pool;
     address public immutable token0;
     address public immutable token1;
     uint32 public constant TWAP_PERIOD = 1800; // 30 分鐘
 
+    event PoolUpdated(address indexed newPool);
+
     constructor(address _poolAddress) {
+        require(_poolAddress != address(0), "Oracle: Invalid pool address");
         pool = IUniswapV3Pool(_poolAddress);
         token0 = pool.token0();
         token1 = pool.token1();
     }
 
-    function getAmountOut(address inputToken, address quoteToken, uint256 amountIn) public view returns (uint256 amountOut) {
-        require((inputToken == token0 && quoteToken == token1) || (inputToken == token1 && quoteToken == token0), "Oracle: Invalid token pair");
+    function getAmountOut(
+        address inputToken,
+        address quoteToken,
+        uint256 amountIn
+    ) public view returns (uint256 amountOut) {
+        require(
+            (inputToken == token0 && quoteToken == token1) || (inputToken == token1 && quoteToken == token0),
+            "Oracle: Invalid token pair"
+        );
 
         int24 tick = _consult(TWAP_PERIOD);
         uint160 sqrtRatioX96 = TickMath.getSqrtRatioAtTick(tick);
@@ -42,5 +52,11 @@ contract Oracle is Ownable {
         int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
 
         tick = int24(tickCumulativesDelta / int56(uint56(period)));
+    }
+
+    function setPool(address _newPoolAddress) external onlyOwner {
+        require(_newPoolAddress != address(0), "Oracle: Invalid pool address");
+        pool = IUniswapV3Pool(_newPoolAddress);
+        emit PoolUpdated(_newPoolAddress);
     }
 }

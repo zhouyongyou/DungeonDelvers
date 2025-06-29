@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
+import "../interfaces/IDungeonCore.sol";
 
 interface IDungeonCore {
     function spendFromVault(address player, uint256 amount) external;
