@@ -17,7 +17,7 @@ interface IDungeonCore {
 
 contract Relic is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard, Pausable {
     string private _baseURIStorage;
-    uint32 private constant CALLBACK_GAS_LIMIT = 250000;
+    uint32 private constant CALLBACK_GAS_LIMIT = 500000;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
     struct RequestStatus { bool fulfilled; }

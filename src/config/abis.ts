@@ -3536,6 +3536,31 @@ export const dungeonCoreABI = [
 		"inputs": [
 			{
 				"indexed": true,
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "referrer",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "CommissionPaid",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
 				"internalType": "uint256",
 				"name": "dungeonId",
 				"type": "uint256"
@@ -3718,6 +3743,25 @@ export const dungeonCoreABI = [
 			},
 			{
 				"indexed": true,
+				"internalType": "address",
+				"name": "referrer",
+				"type": "address"
+			}
+		],
+		"name": "ReferralSet",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"indexed": true,
 				"internalType": "uint256",
 				"name": "partyId",
 				"type": "uint256"
@@ -3793,6 +3837,19 @@ export const dungeonCoreABI = [
 			}
 		],
 		"name": "Unpaused",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "newAddress",
+				"type": "address"
+			}
+		],
+		"name": "VipStakingContractUpdated",
 		"type": "event"
 	},
 	{
@@ -3920,6 +3977,19 @@ export const dungeonCoreABI = [
 		"name": "claimRewards",
 		"outputs": [],
 		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "commissionRate",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -4232,6 +4302,25 @@ export const dungeonCoreABI = [
 		"type": "function"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "referrers",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [],
 		"name": "renounceOwnership",
 		"outputs": [],
@@ -4300,6 +4389,19 @@ export const dungeonCoreABI = [
 		"inputs": [
 			{
 				"internalType": "uint256",
+				"name": "_newRate",
+				"type": "uint256"
+			}
+		],
+		"name": "setCommissionRate",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
 				"name": "_newFee",
 				"type": "uint256"
 			}
@@ -4344,6 +4446,32 @@ export const dungeonCoreABI = [
 			}
 		],
 		"name": "setProvisionPriceUSD",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_referrer",
+				"type": "address"
+			}
+		],
+		"name": "setReferrer",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_address",
+				"type": "address"
+			}
+		],
+		"name": "setVipStakingContract",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -4446,6 +4574,19 @@ export const dungeonCoreABI = [
 		"outputs": [
 			{
 				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "vipStakingContract",
+		"outputs": [
+			{
+				"internalType": "contract IVIPStaking",
 				"name": "",
 				"type": "address"
 			}
@@ -5908,6 +6049,19 @@ export const vipStakingABI = [
 		"anonymous": false,
 		"inputs": [
 			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "newPeriod",
+				"type": "uint256"
+			}
+		],
+		"name": "StakeLockPeriodUpdated",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
 				"indexed": true,
 				"internalType": "address",
 				"name": "user",
@@ -5924,6 +6078,12 @@ export const vipStakingABI = [
 				"internalType": "uint8",
 				"name": "level",
 				"type": "uint8"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "unlockTime",
+				"type": "uint256"
 			}
 		],
 		"name": "Staked",
@@ -6333,6 +6493,19 @@ export const vipStakingABI = [
 		"type": "function"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_newPeriodInSeconds",
+				"type": "uint256"
+			}
+		],
+		"name": "setStakeLockPeriod",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"inputs": [],
 		"name": "soulShardToken",
 		"outputs": [
@@ -6356,6 +6529,19 @@ export const vipStakingABI = [
 		"name": "stake",
 		"outputs": [],
 		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "stakeLockPeriod",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -6429,6 +6615,19 @@ export const vipStakingABI = [
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "totalStaked",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -6489,6 +6688,11 @@ export const vipStakingABI = [
 			{
 				"internalType": "uint256",
 				"name": "stakeTime",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "unlockTime",
 				"type": "uint256"
 			}
 		],

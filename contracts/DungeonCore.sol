@@ -94,7 +94,7 @@ contract DungeonCore is Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, 
     uint256 public constant MAX_TAX_RATE = 30;
     uint256 public constant TAX_DECREASE_RATE = 10;
     uint256 public constant NUM_DUNGEONS = 10;
-    uint32 private s_callbackGasLimit = 250000;
+    uint32 private s_callbackGasLimit = 500000;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
 

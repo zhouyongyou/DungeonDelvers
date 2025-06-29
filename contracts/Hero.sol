@@ -34,7 +34,7 @@ contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard,
     struct RequestStatus { bool fulfilled; }
     mapping(uint256 => RequestStatus) public s_requests;
 
-    uint32 private constant CALLBACK_GAS_LIMIT = 250000;
+    uint32 private constant CALLBACK_GAS_LIMIT = 500000;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
 
