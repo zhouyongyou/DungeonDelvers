@@ -63,6 +63,7 @@ contract Relic is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, VRFV2PlusWra
     // --- 事件 ---
     event RelicMinted(uint256 indexed tokenId, address indexed owner, uint8 rarity, uint8 capacity);
     event SeasonSeedUpdated(uint256 newSeed, uint256 indexed requestId);
+    event DungeonCoreUpdated(address indexed newAddress);
 
     // --- 修飾符 ---
     modifier onlyAltar() {
@@ -234,6 +235,11 @@ contract Relic is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, VRFV2PlusWra
 
     function pause() external onlyOwner { _pause(); }
     function unpause() external onlyOwner { _unpause(); }
+
+    function setDungeonCore(address _newAddress) public onlyOwner {
+        dungeonCore = IDungeonCore(_newAddress);
+        emit DungeonCoreUpdated(_newAddress);
+    }
 
     // ★ 修正 2: 覆寫 _update 來處理銷毀時的 URI 清除，這是 v5.x 的標準做法
     function _update(address to, uint256 tokenId, address auth) internal override(ERC721) returns (address) {
