@@ -2,169 +2,219 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "../interfaces/IDungeonCore.sol";
-import "../interfaces/IHero.sol";
-import "../interfaces/IRelic.sol";
-import "../interfaces/IDungeonMaster.sol";
-import "../libraries/DungeonSVGLibrary.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+
+// --- 內部接口與函式庫 ---
+import "./interfaces/IParty.sol";
+import "./interfaces/IHero.sol";
+import "./interfaces/IRelic.sol";
+import "./interfaces/IDungeonMaster.sol";
+import "./interfaces/IDungeonCore.sol";
+import "./libraries/DungeonSVGLibrary.sol";
 
 /**
- * @title Party (隊伍 NFT - 最終版)
+ * @title Party (隊伍 NFT - 資產託管最終版)
  * @author Your Team Name
- * @notice 採用「託管模式」和動態 SVG，並實現了「經驗傳承」系統。
+ * @notice 採用「資產託管」與「快照容器」模式。英雄與聖物在組隊時會被轉移至本合約進行鎖定。
+ * @dev Party NFT 作為提貨單。解散時，隊伍經驗會被分配給所有成員，且資產會被歸還。
  */
-contract Party is ERC721, Ownable, Pausable {
+contract Party is ERC721, IParty, Ownable, ReentrancyGuard, Pausable, ERC721Holder {
     using Counters for Counters.Counter;
 
-    IDungeonCore public dungeonCore;
+    // --- 狀態變數 ---
     Counters.Counter private _nextTokenId;
+    IDungeonCore public dungeonCore;
 
     struct PartyComposition {
+        address leader;
         uint256[] heroIds;
-        string heroRarityComposition;
         uint256[] relicIds;
-        string relicRarityComposition;
         uint256 totalPower;
         uint256 totalCapacity;
-        uint256 expeditions;
     }
-    mapping(uint256 => PartyComposition) public partyCompositions;
 
-    event PartyFormed(uint256 indexed partyId, address indexed owner, uint256[] heroIds);
-    event PartyDisbanded(uint256 indexed partyId, address indexed owner);
-    event ExpeditionCompleted(uint256 indexed partyId);
+    mapping(uint256 => PartyComposition) internal partyCompositions;
+    mapping(address => uint256) public partyOf;
+    mapping(uint256 => uint256) public expeditions;
+
+    // --- 事件 ---
+    event PartyFormed(uint256 indexed partyId, address indexed leader, uint256[] heroIds, uint256[] relicIds);
+    event PartyDisbanded(uint256 indexed partyId, address indexed leader);
+    event PartyExpeditionIncreased(uint256 indexed partyId, uint256 newCount);
+    event DungeonCoreUpdated(address indexed newAddress);
 
     constructor(
         address _dungeonCoreAddress,
-        address _initialOwner
-    ) ERC721("Dungeon Delvers Party", "DDPY") Ownable(_initialOwner) {
+        address initialOwner
+    )
+        ERC721("Dungeon Delvers Party", "DDP")
+        Ownable(initialOwner)
+    {
+        require(_dungeonCoreAddress != address(0), "Party: Invalid DungeonCore address");
         dungeonCore = IDungeonCore(_dungeonCoreAddress);
         _nextTokenId.increment();
     }
 
-    function formParty(uint256[] calldata _heroIds, uint256[] calldata _relicIds) external whenNotPaused {
+    // --- 核心功能 ---
+
+    function formParty(uint256[] calldata _heroIds, uint256[] calldata _relicIds) external nonReentrant whenNotPaused {
+        require(partyOf[msg.sender] == 0, "Party: Player is already in a party");
+        require(_heroIds.length > 0 && _heroIds.length <= 5, "Party: Invalid number of heroes (1-5)");
+
         IHero heroContract = IHero(dungeonCore.heroContract());
         IRelic relicContract = IRelic(dungeonCore.relicContract());
 
-        require(_heroIds.length > 0 && _heroIds.length <= 5, "Party: Invalid hero count");
-        
         uint256 totalPower = 0;
         uint256 totalCapacity = 0;
-        uint[6] memory heroRarityCounts; // index 0 is unused, 1-5 for rarity
-        uint[6] memory relicRarityCounts;
 
-        for (uint i = 0; i < _relicIds.length; i++) {
-            require(relicContract.ownerOf(_relicIds[i]) == msg.sender, "Party: Not relic owner");
-            IHR_Properties.Properties memory props = relicContract.getRelicProperties(_relicIds[i]);
-            totalCapacity += props.capacity;
-            relicRarityCounts[props.rarity]++;
-            relicContract.transferFrom(msg.sender, address(this), _relicIds[i]);
-        }
-
-        require(_heroIds.length <= totalCapacity, "Party: Not enough capacity");
-
+        // 轉移英雄並計算戰力
         for (uint i = 0; i < _heroIds.length; i++) {
-            require(heroContract.ownerOf(_heroIds[i]) == msg.sender, "Party: Not hero owner");
-            IHR_Properties.Properties memory props = heroContract.getHeroProperties(_heroIds[i]);
-            totalPower += props.power;
-            heroRarityCounts[props.rarity]++;
-            heroContract.transferFrom(msg.sender, address(this), _heroIds[i]);
+            uint256 heroId = _heroIds[i];
+            require(heroContract.ownerOf(heroId) == msg.sender, "Party: Not the owner of hero");
+            (IHero.HeroData memory data, ) = heroContract.getHero(heroId);
+            totalPower += data.power;
+            // ★ 核心修改：將英雄 NFT 所有權轉移至本合約
+            heroContract.safeTransferFrom(msg.sender, address(this), heroId);
         }
-        
+
+        // 轉移聖物並計算容量
+        for (uint i = 0; i < _relicIds.length; i++) {
+            uint256 relicId = _relicIds[i];
+            require(relicContract.ownerOf(relicId) == msg.sender, "Party: Not the owner of relic");
+            (IRelic.RelicData memory data, ) = relicContract.getRelic(relicId);
+            totalCapacity += data.capacity;
+            // ★ 核心修改：將聖物 NFT 所有權轉移至本合約
+            relicContract.safeTransferFrom(msg.sender, address(this), relicId);
+        }
+
+        require(_heroIds.length <= totalCapacity, "Party: Not enough capacity for heroes");
+
         uint256 newPartyId = _nextTokenId.current();
-        _nextTokenId.increment();
-        
         partyCompositions[newPartyId] = PartyComposition({
+            leader: msg.sender,
             heroIds: _heroIds,
             relicIds: _relicIds,
-            heroRarityComposition: _buildRarityCompString(heroRarityCounts),
-            relicRarityComposition: _buildRarityCompString(relicRarityCounts),
             totalPower: totalPower,
-            totalCapacity: totalCapacity,
-            expeditions: 0
+            totalCapacity: totalCapacity
         });
 
+        partyOf[msg.sender] = newPartyId;
         _safeMint(msg.sender, newPartyId);
-        emit PartyFormed(newPartyId, msg.sender, _heroIds);
+        _nextTokenId.increment();
+        emit PartyFormed(newPartyId, msg.sender, _heroIds, _relicIds);
     }
 
-    function disbandParty(uint256 _partyId) external whenNotPaused {
+    function disbandParty(uint256 _partyId) external nonReentrant whenNotPaused {
         require(ownerOf(_partyId) == msg.sender, "Party: Not the party owner");
         _requireNotLocked(_partyId);
+        
+        PartyComposition memory comp = partyCompositions[_partyId];
+        address leader = comp.leader;
+        uint256 totalExp = expeditions[_partyId];
 
         IHero heroContract = IHero(dungeonCore.heroContract());
         IRelic relicContract = IRelic(dungeonCore.relicContract());
-        PartyComposition storage party = partyCompositions[_partyId];
-        uint256 expeditionCount = party.expeditions;
 
-        for (uint i = 0; i < party.heroIds.length; i++) {
-            uint256 heroId = party.heroIds[i];
-            if(expeditionCount > 0) heroContract.addExpeditions(heroId, expeditionCount);
-            heroContract.safeTransferFrom(address(this), msg.sender, heroId);
-        }
-        for (uint i = 0; i < party.relicIds.length; i++) {
-            uint256 relicId = party.relicIds[i];
-            if(expeditionCount > 0) relicContract.addExpeditions(relicId, expeditionCount);
-            relicContract.safeTransferFrom(address(this), msg.sender, relicId);
-        }
-
-        delete partyCompositions[_partyId];
-        _burn(_partyId);
-        emit PartyDisbanded(_partyId, msg.sender);
-    }
-    
-    function completeExpedition(uint256 _partyId) external {
-        require(msg.sender == dungeonCore.dungeonMaster(), "Party: Not the dungeon master");
-        partyCompositions[_partyId].expeditions++;
-        emit ExpeditionCompleted(_partyId);
-    }
-
-    function tokenURI(uint256 _tokenId) public view override returns (string memory) {
-        _requireOwned(_tokenId);
-        PartyComposition memory party = partyCompositions[_tokenId];
-        
-        DungeonSVGLibrary.PartyData memory data = DungeonSVGLibrary.PartyData({
-            tokenId: _tokenId,
-            totalPower: party.totalPower,
-            heroCount: party.heroIds.length,
-            relicCount: party.relicIds.length,
-            capacity: party.totalCapacity,
-            expeditions: party.expeditions,
-            heroComposition: party.heroRarityComposition,
-            relicComposition: party.relicRarityComposition
-        });
-        
-        return DungeonSVGLibrary.buildPartyURI(data);
-    }
-    
-    function _requireNotLocked(uint256 _partyId) internal view {
-        address dmAddress = dungeonCore.dungeonMaster();
-        if (dmAddress != address(0)) {
-            require(!IDungeonMaster(dmAddress).isPartyLocked(_partyId), "Party: Is locked");
-        }
-    }
-    
-    function _buildRarityCompString(uint[6] memory counts) internal pure returns (string memory) {
-        string memory result = "";
-        for (uint8 i = 5; i >= 1; i--) {
-            if (counts[i] > 0) {
-                result = string(abi.encodePacked(result, i.toString(), "★×", counts[i].toString(), " "));
+        // ★ 核心修改：歸還英雄並分配經驗
+        for (uint i = 0; i < comp.heroIds.length; i++) {
+            uint256 heroId = comp.heroIds[i];
+            if (totalExp > 0) {
+                heroContract.incrementExpeditions(heroId, totalExp);
             }
+            // 將英雄所有權從本合約歸還給領隊
+            heroContract.safeTransferFrom(address(this), leader, heroId);
         }
-        return result;
+
+        // ★ 核心修改：歸還聖物並分配經驗
+        for (uint i = 0; i < comp.relicIds.length; i++) {
+            uint256 relicId = comp.relicIds[i];
+            if (totalExp > 0) {
+                relicContract.incrementExpeditions(relicId, totalExp);
+            }
+            // 將聖物所有權從本合約歸還給領隊
+            relicContract.safeTransferFrom(address(this), leader, relicId);
+        }
+
+        // 清理狀態
+        delete partyOf[leader];
+        delete partyCompositions[_partyId];
+        delete expeditions[_partyId];
+        
+        _burn(_partyId);
+        emit PartyDisbanded(_partyId, leader);
     }
 
+    function incrementExpeditions(uint256 partyId, uint256 amount) external override {
+        require(msg.sender == address(dungeonCore.dungeonMaster()), "Party: Only DungeonMaster can increment expeditions");
+        require(_exists(partyId), "Party does not exist.");
+        expeditions[partyId] += amount;
+        emit PartyExpeditionIncreased(partyId, expeditions[partyId]);
+    }
+
+    // --- 視圖與元數據 ---
+    function getPartyComposition(uint256 _partyId) public view returns (PartyComposition memory) {
+        require(_exists(_partyId), "Party: Query for non-existent party");
+        return partyCompositions[_partyId];
+    }
+
+    function tokenURI(uint256 partyId) public view override returns (string memory) {
+        require(_exists(partyId), "ERC721: URI query for nonexistent token");
+        
+        PartyComposition memory comp = partyCompositions[partyId];
+        string memory rarityTierName;
+        uint8 partyRarity;
+        if (comp.totalCapacity >= 20) { rarityTierName = "Diamond"; partyRarity = 5; }
+        else if (comp.totalCapacity >= 15) { rarityTierName = "Platinum"; partyRarity = 4; }
+        else if (comp.totalCapacity >= 10) { rarityTierName = "Gold"; partyRarity = 3; }
+        else if (comp.totalCapacity >= 5) { rarityTierName = "Silver"; partyRarity = 2; }
+        else { rarityTierName = "Bronze"; partyRarity = 1; }
+        DungeonSVGLibrary.PartyData memory svgData = DungeonSVGLibrary.PartyData({
+            tokenId: partyId,
+            totalPower: comp.totalPower,
+            heroCount: comp.heroIds.length,
+            capacity: comp.totalCapacity,
+            expeditions: expeditions[partyId],
+            partyRarity: partyRarity,
+            rarityTierName: rarityTierName
+        });
+        return DungeonSVGLibrary.buildPartyURI(svgData);
+    }
+
+    // --- 內部與管理員函式 ---
+    function _requireNotLocked(uint256 _partyId) internal view {
+        address dmAddress = address(dungeonCore.dungeonMaster());
+        if (dmAddress != address(0)) {
+            require(!IDungeonMaster(dmAddress).isPartyLocked(_partyId), "Party: Is locked or on cooldown");
+        }
+    }
+
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize) internal override whenNotPaused {
+        super._beforeTokenTransfer(from, to, tokenId, batchSize);
+        if (from != address(0)) {
+            _requireNotLocked(tokenId);
+            delete partyOf[from];
+        }
+        if (to != address(0)) {
+            require(partyOf[to] == 0, "Party: Recipient is already in a party");
+            partyOf[to] = tokenId;
+            partyCompositions[tokenId].leader = to; // 更新領隊地址
+        }
+        // 在銷毀時自動清理 composition
+        if (to == address(0)) {
+            delete partyCompositions[tokenId];
+        }
+    }
+    
     function setDungeonCore(address _newAddress) public onlyOwner {
+        require(_newAddress != address(0), "Party: Zero address");
         dungeonCore = IDungeonCore(_newAddress);
+        emit DungeonCoreUpdated(_newAddress);
     }
 
     function pause() public onlyOwner { _pause(); }
     function unpause() public onlyOwner { _unpause(); }
-
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721) returns (bool) {
-        return super.supportsInterface(interfaceId);
-    }
 }
