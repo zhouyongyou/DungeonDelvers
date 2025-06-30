@@ -2,204 +2,169 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol"; // ★ 1. 加回 Pausable 庫
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "../interfaces/IDungeonCore.sol";
 import "../interfaces/IHero.sol";
 import "../interfaces/IRelic.sol";
-import "../interfaces/IDungeonMaster.sol"; // ★ 1. 加回 IDungeonMaster 介面
+import "../interfaces/IDungeonMaster.sol";
+import "../libraries/DungeonSVGLibrary.sol";
 
 /**
- * @title Party (隊伍 NFT - 完整功能最終版)
+ * @title Party (隊伍 NFT - 最終版)
  * @author Your Team Name
- * @notice 代表玩家的出戰隊伍。此版本採用「快照容器」模式，並整合了版稅和暫停功能。
+ * @notice 採用「託管模式」和動態 SVG，並實現了「經驗傳承」系統。
  */
-// ★ 2. 加回繼承 (ERC721Royalty, Pausable)
-contract Party is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Pausable {
+contract Party is ERC721, Ownable, Pausable {
     using Counters for Counters.Counter;
 
     IDungeonCore public dungeonCore;
     Counters.Counter private _nextTokenId;
-    string private _baseTokenURI;
 
-    // 隊伍結構體，儲存創建時的「快照」資訊
     struct PartyComposition {
-        address leader;
         uint256[] heroIds;
+        string heroRarityComposition;
         uint256[] relicIds;
-        uint256 totalPower; // 預先計算並儲存總戰力
+        string relicRarityComposition;
+        uint256 totalPower;
+        uint256 totalCapacity;
+        uint256 expeditions;
     }
+    mapping(uint256 => PartyComposition) public partyCompositions;
 
-    // 將 mapping 設為 internal，並提供 public getter
-    mapping(uint256 => PartyComposition) internal partyCompositions;
-    // 用於快速查詢玩家所在的隊伍 ID
-    mapping(address => uint256) public partyOf; 
-
-    event PartyFormed(uint256 indexed partyId, address indexed leader, uint256[] heroIds, uint256 totalPower);
-    event PartyDisbanded(uint256 indexed partyId);
-    event DungeonCoreUpdated(address indexed newAddress);
+    event PartyFormed(uint256 indexed partyId, address indexed owner, uint256[] heroIds);
+    event PartyDisbanded(uint256 indexed partyId, address indexed owner);
+    event ExpeditionCompleted(uint256 indexed partyId);
 
     constructor(
         address _dungeonCoreAddress,
-        string memory _initialBaseURI,
         address _initialOwner
     ) ERC721("Dungeon Delvers Party", "DDPY") Ownable(_initialOwner) {
         dungeonCore = IDungeonCore(_dungeonCoreAddress);
-        _baseTokenURI = _initialBaseURI;
-        _setDefaultRoyalty(_initialOwner, 500); // 設定 5% 的預設版稅
+        _nextTokenId.increment();
     }
 
-    /**
-     * @notice 提供一個 public 的 getter 函式來查詢隊伍的詳細組成。
-     * @dev 由於數據是預先儲存的，此操作非常節省 Gas。
-     */
-    function getPartyComposition(uint256 _partyId) public view returns (PartyComposition memory) {
-        ownerOf(_partyId); // 確認隊伍 NFT 存在
-        return partyCompositions[_partyId];
-    }
-    
-    /**
-     * @notice 玩家組建一個新的隊伍。
-     * @dev 會驗證資產所有權，計算總戰力，並鑄造一個新的 Party NFT。
-     * @param _heroIds 欲編入隊伍的英雄 Token ID 陣列。
-     * @param _relicIds 欲裝備的聖物 Token ID 陣列。
-     */
     function formParty(uint256[] calldata _heroIds, uint256[] calldata _relicIds) external whenNotPaused {
         IHero heroContract = IHero(dungeonCore.heroContract());
         IRelic relicContract = IRelic(dungeonCore.relicContract());
 
-        // --- 前置檢查 ---
-        require(_heroIds.length > 0 && _heroIds.length <= 5, "Party: Invalid number of heroes");
-        require(partyOf[msg.sender] == 0, "Party: Player is already in a party");
+        require(_heroIds.length > 0 && _heroIds.length <= 5, "Party: Invalid hero count");
         
-        // --- 計算總戰力、總容量並驗證所有權 ---
         uint256 totalPower = 0;
-        for (uint i = 0; i < _heroIds.length; i++) {
-            require(heroContract.ownerOf(_heroIds[i]) == msg.sender, "Party: Not the owner of hero");
-            (, uint256 power) = heroContract.getHeroProperties(_heroIds[i]);
-            totalPower += power;
-        }
+        uint256 totalCapacity = 0;
+        uint[6] memory heroRarityCounts; // index 0 is unused, 1-5 for rarity
+        uint[6] memory relicRarityCounts;
 
-        uint8 totalCapacity = 0;
         for (uint i = 0; i < _relicIds.length; i++) {
-            require(relicContract.ownerOf(_relicIds[i]) == msg.sender, "Party: Not the owner of relic");
-            (, uint8 capacity) = relicContract.getRelicProperties(_relicIds[i]);
-            totalCapacity += capacity;
+            require(relicContract.ownerOf(_relicIds[i]) == msg.sender, "Party: Not relic owner");
+            IHR_Properties.Properties memory props = relicContract.getRelicProperties(_relicIds[i]);
+            totalCapacity += props.capacity;
+            relicRarityCounts[props.rarity]++;
+            relicContract.transferFrom(msg.sender, address(this), _relicIds[i]);
         }
 
-        // ★★★★★【修正：加回容量檢查】★★★★★
-        // 確保英雄的數量不超過聖物提供的總容量
-        require(_heroIds.length <= totalCapacity, "Party: Not enough capacity for heroes");
+        require(_heroIds.length <= totalCapacity, "Party: Not enough capacity");
 
-        // --- 創建隊伍 NFT ---
-        _nextTokenId.increment();
+        for (uint i = 0; i < _heroIds.length; i++) {
+            require(heroContract.ownerOf(_heroIds[i]) == msg.sender, "Party: Not hero owner");
+            IHR_Properties.Properties memory props = heroContract.getHeroProperties(_heroIds[i]);
+            totalPower += props.power;
+            heroRarityCounts[props.rarity]++;
+            heroContract.transferFrom(msg.sender, address(this), _heroIds[i]);
+        }
+        
         uint256 newPartyId = _nextTokenId.current();
-
+        _nextTokenId.increment();
+        
         partyCompositions[newPartyId] = PartyComposition({
-            leader: msg.sender,
             heroIds: _heroIds,
             relicIds: _relicIds,
-            totalPower: totalPower
+            heroRarityComposition: _buildRarityCompString(heroRarityCounts),
+            relicRarityComposition: _buildRarityCompString(relicRarityCounts),
+            totalPower: totalPower,
+            totalCapacity: totalCapacity,
+            expeditions: 0
         });
 
-        partyOf[msg.sender] = newPartyId;
         _safeMint(msg.sender, newPartyId);
-
-        emit PartyFormed(newPartyId, msg.sender, _heroIds, totalPower);
+        emit PartyFormed(newPartyId, msg.sender, _heroIds);
     }
 
-    /**
-     * @notice 玩家解散自己的隊伍。
-     * @dev 會銷毀 Party NFT 並清除相關數據。
-     * @param _partyId 欲解散的隊伍 Token ID。
-     */
     function disbandParty(uint256 _partyId) external whenNotPaused {
         require(ownerOf(_partyId) == msg.sender, "Party: Not the party owner");
-        
-        // ★ 2. 加回鎖定檢查，確保隊伍空閒時才能解散
         _requireNotLocked(_partyId);
-        
-        // 清理 partyOf mapping
-        delete partyOf[msg.sender];
-        
-        // 銷毀 NFT 的操作會觸發下方我們覆寫的 _update 函式，進而清理其他數據
-        _burn(_partyId); 
 
-        emit PartyDisbanded(_partyId);
+        IHero heroContract = IHero(dungeonCore.heroContract());
+        IRelic relicContract = IRelic(dungeonCore.relicContract());
+        PartyComposition storage party = partyCompositions[_partyId];
+        uint256 expeditionCount = party.expeditions;
+
+        for (uint i = 0; i < party.heroIds.length; i++) {
+            uint256 heroId = party.heroIds[i];
+            if(expeditionCount > 0) heroContract.addExpeditions(heroId, expeditionCount);
+            heroContract.safeTransferFrom(address(this), msg.sender, heroId);
+        }
+        for (uint i = 0; i < party.relicIds.length; i++) {
+            uint256 relicId = party.relicIds[i];
+            if(expeditionCount > 0) relicContract.addExpeditions(relicId, expeditionCount);
+            relicContract.safeTransferFrom(address(this), msg.sender, relicId);
+        }
+
+        delete partyCompositions[_partyId];
+        _burn(_partyId);
+        emit PartyDisbanded(_partyId, msg.sender);
     }
     
-    // ★ 3. 加回內部鎖定檢查函式
-    /**
-     * @notice 內部函式，用於檢查隊伍是否被 DungeonMaster 鎖定。
-     */
+    function completeExpedition(uint256 _partyId) external {
+        require(msg.sender == dungeonCore.dungeonMaster(), "Party: Not the dungeon master");
+        partyCompositions[_partyId].expeditions++;
+        emit ExpeditionCompleted(_partyId);
+    }
+
+    function tokenURI(uint256 _tokenId) public view override returns (string memory) {
+        _requireOwned(_tokenId);
+        PartyComposition memory party = partyCompositions[_tokenId];
+        
+        DungeonSVGLibrary.PartyData memory data = DungeonSVGLibrary.PartyData({
+            tokenId: _tokenId,
+            totalPower: party.totalPower,
+            heroCount: party.heroIds.length,
+            relicCount: party.relicIds.length,
+            capacity: party.totalCapacity,
+            expeditions: party.expeditions,
+            heroComposition: party.heroRarityComposition,
+            relicComposition: party.relicRarityComposition
+        });
+        
+        return DungeonSVGLibrary.buildPartyURI(data);
+    }
+    
     function _requireNotLocked(uint256 _partyId) internal view {
         address dmAddress = dungeonCore.dungeonMaster();
-        // 只有在 DungeonMaster 地址被設定後才執行檢查
         if (dmAddress != address(0)) {
-            IDungeonMaster dungeonMaster = IDungeonMaster(dmAddress);
-            require(!dungeonMaster.isPartyLocked(_partyId), "Party: Is locked or on cooldown");
+            require(!IDungeonMaster(dmAddress).isPartyLocked(_partyId), "Party: Is locked");
         }
     }
     
-    // --- ★ 3. 加回暫停功能函式 ---
-    function pause() public onlyOwner {
-        _pause();
+    function _buildRarityCompString(uint[6] memory counts) internal pure returns (string memory) {
+        string memory result = "";
+        for (uint8 i = 5; i >= 1; i--) {
+            if (counts[i] > 0) {
+                result = string(abi.encodePacked(result, i.toString(), "★×", counts[i].toString(), " "));
+            }
+        }
+        return result;
     }
 
-    function unpause() public onlyOwner {
-        _unpause();
-    }
-    
-    // --- Owner 管理函式 ---
-    
     function setDungeonCore(address _newAddress) public onlyOwner {
         dungeonCore = IDungeonCore(_newAddress);
-        emit DungeonCoreUpdated(_newAddress);
-    }
-    
-    function setBaseURI(string calldata newBaseURI) external onlyOwner {
-        _baseTokenURI = newBaseURI;
     }
 
-    // --- 覆寫函式 (採用 v5.x 最新標準) ---
+    function pause() public onlyOwner { _pause(); }
+    function unpause() public onlyOwner { _unpause(); }
 
-    /**
-     * @notice 覆寫 _update，在銷毀隊伍時自動清理數據。
-     * @dev 這是 OpenZeppelin v5.x 的標準做法，取代了覆寫 _burn。
-     */
-    function _update(address to, uint256 tokenId, address auth) internal override(ERC721) returns (address) {
-        address from = _ownerOf(tokenId);
-
-        // ★ 4. 增加轉移時的鎖定檢查，防止漏洞
-        if (from != address(0) && to != address(0)) {
-            _requireNotLocked(tokenId);
-        }
-        
-        if (to == address(0)) {
-            // 當隊伍被銷毀時 (to == address(0))，清理 composition mapping
-            delete partyCompositions[tokenId];
-        }
-        // 呼叫父合約的 _update，完成核心的轉移/銷毀邏輯
-        return super._update(to, tokenId, auth);
-    }
-
-    /**
-     * @notice 覆寫 tokenURI，為隊伍 NFT 提供元數據。
-     * @dev Party NFT 通常共享同一個 metadata，指向一個代表「隊伍」的通用 JSON 檔案。
-     */
-    function tokenURI(uint256 _tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
-        _requireOwned(_tokenId);
-        return string(abi.encodePacked(_baseTokenURI, "party.json")); 
-    }
-
-    /**
-     * @notice 覆寫 supportsInterface，宣告支援版稅等功能。
-     * @dev 這是確保能在 OpenSea 等市場上收到版稅的關鍵。
-     */
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage, ERC721Royalty) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 }
