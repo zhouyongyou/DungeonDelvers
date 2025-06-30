@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dungeon SVG Previewer v4.1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Georgia&family=Inconsolata:wght@400;700&display=swap');
+        body {
+            background-color: #1a1a1a;
+            color: #e5e7eb;
+        }
+        .control-panel {
+            background-color: #2a2a2a;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid #444;
+        }
+        label {
+            font-family: 'Inconsolata', monospace;
+            color: #9ca3af;
+            font-size: 0.875rem;
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #4a4a4a;
+            border-radius: 5px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #a7a7a7;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        input, select {
+             background-color: #374151;
+             border: 1px solid #4b5563;
+             border-radius: 0.375rem;
+             padding: 0.5rem;
+             width: 100%;
+        }
+        h1, h2 {
+            font-family: 'Georgia', serif;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-white">Dungeon SVG Previewer</h1>
+            <p class="text-lg text-gray-400 mt-2">v4.1 - 最終數據同步版</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Hero -->
+            <div class="space-y-4">
+                <h2 class="text-2xl text-center font-bold">Hero</h2>
+                <div id="hero-svg-container" class="bg-black rounded-lg p-4 flex justify-center items-center min-h-[450px]"></div>
+                <div class="control-panel space-y-4">
+                    <div>
+                        <label for="hero-rarity" id="hero-rarity-label">Rarity (4)</label>
+                        <input type="range" id="hero-rarity" min="1" max="5" value="4">
+                    </div>
+                    <div>
+                        <label for="hero-class">Class</label>
+                        <select id="hero-class">
+                            <option value="0">Warrior</option>
+                            <option value="1" selected>Mage</option>
+                            <option value="2">Archer</option>
+                            <option value="3">Rogue</option>
+                            <option value="4">Cleric</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <!-- Relic -->
+            <div class="space-y-4">
+                <h2 class="text-2xl text-center font-bold">Relic</h2>
+                <div id="relic-svg-container" class="bg-black rounded-lg p-4 flex justify-center items-center min-h-[450px]"></div>
+                <div class="control-panel space-y-4">
+                     <div>
+                        <label for="relic-rarity" id="relic-rarity-label">Rarity (5)</label>
+                        <input type="range" id="relic-rarity" min="1" max="5" value="5">
+                     </div>
+                     <div>
+                        <label for="relic-element">Element</label>
+                        <select id="relic-element">
+                            <option value="0">Fire</option>
+                            <option value="1">Water</option>
+                            <option value="2">Earth</option>
+                            <option value="3">Wind</option>
+                            <option value="4" selected>Light</option>
+                            <option value="5">Aether</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <!-- Party -->
+            <div class="space-y-4">
+                <h2 class="text-2xl text-center font-bold">Party</h2>
+                <div id="party-svg-container" class="bg-black rounded-lg p-4 flex justify-center items-center min-h-[450px]"></div>
+                 <div class="control-panel space-y-4">
+                    <div>
+                        <label for="party-capacity" id="party-capacity-label">Total Capacity (12)</label>
+                        <input type="range" id="party-capacity" min="1" max="25" value="12">
+                    </div>
+                    <div>
+                        <label for="party-heroes" id="party-heroes-label">Hero Count (4)</label>
+                        <input type="range" id="party-heroes" min="1" max="12" value="4">
+                    </div>
+                 </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // JS version of the new DungeonSVGLibrary v4.1
+        const DungeonSVGLibrary = {
+            _getSVGHeader: () => `<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">`,
+            _getGlobalStyles: () => `<style>.base{font-family: 'Georgia', serif; fill: #e0e0e0;}.title{font-size: 20px; font-weight: bold;}.subtitle{font-size: 14px; opacity: 0.7;}.stat-label{font-size: 12px; font-weight: bold; text-transform: uppercase; opacity: 0.6;}.stat-value{font-size: 16px; font-weight: bold;}.main-stat-value{font-size: 42px; font-weight: bold;}.footer-text{font-size: 12px; opacity: 0.5;}</style>`,
+            _getGradientDefs: (c1, c2) => `<defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${c1}"/><stop offset="100%" stop-color="${c2}"/></linearGradient></defs>`,
+            _getBackgroundPattern: (color) => `<rect width="400" height="400" fill="#111"/><g opacity="0.1"><path d="M10 0 L0 10 M20 0 L0 20 M30 0 L0 30" stroke="${color}" stroke-width="1"/><path d="M-10 400 L410 400" stroke="${color}" stroke-width="2"/></g>`,
+            _getBorder: (rarity) => `<rect x="4" y="4" width="392" height="392" rx="15" fill="transparent" stroke="${DungeonSVGLibrary._getRarityColor(rarity)}" stroke-width="2" stroke-opacity="0.8"/>`,
+            _getHeader: (title, subtitle, tokenId) => `<text x="20" y="38" class="base title">${title}<tspan class="subtitle">${subtitle}</tspan></text><text x="380" y="38" class="base subtitle" text-anchor="end">#${tokenId}</text>`,
+            _getCentralImage: (emoji) => `<rect x="50" y="65" width="300" height="150" rx="10" fill="rgba(0,0,0,0.2)"/><text x="50%" y="140" font-size="90" text-anchor="middle" dominant-baseline="middle">${emoji}</text>`,
+            _getPrimaryStat: (label, value) => `<text x="50%" y="245" class="base stat-label" text-anchor="middle">${label}</text><text x="50%" y="280" class="base main-stat-value" text-anchor="middle" fill="url(#grad)">${value}</text>`,
+            _getSecondaryStats: (label1, value1, label2, value2) => `<line x1="20" y1="320" x2="380" y2="320" stroke="#444" stroke-width="1"/><g text-anchor="middle"><text x="120" y="345" class="base stat-label">${label1}</text><text x="120" y="365" class="base stat-value">${value1}</text><text x="280" y="345" class="base stat-label">${label2}</text><text x="280" y="365" class="base stat-value">${value2}</text></g>`,
+            _getPartyStats: (label1, value1, label2, value2) => `<line x1="20" y1="320" x2="380" y2="320" stroke="#444" stroke-width="1"/><g text-anchor="middle"><text x="120" y="345" class="base stat-label">${label1}</text><text x="120" y="365" class="base stat-value">${value1}</text><text x="280" y="345" class="base stat-label">${label2}</text><text x="280" y="365" class="base stat-value">${value2}</text></g>`,
+            _getFooter: (text) => `<text x="50%" y="390" class="base footer-text" text-anchor="middle">${text}</text>`,
+            
+            _getHeroStyles: (id) => {
+                if (id == 0) return ["#B71C1C", "#F44336", "Warrior", "⚔️"];
+                if (id == 1) return ["#1A237E", "#3F51B5", "Mage", "🔮"];
+                if (id == 2) return ["#1B5E20", "#4CAF50", "Archer", "🏹"];
+                if (id == 3) return ["#4A148C", "#9C27B0", "Rogue", "🗡️"];
+                if (id == 4) return ["#F57F17", "#FFEB3B", "Cleric", "✙"];
+                return ["#212121", "#757575", "Unknown", "❓"];
+            },
+            _getRelicStyles: (id) => {
+                if (id == 0) return ["#E65100", "#FF9800", "Fire", "🔥"];
+                if (id == 1) return ["#01579B", "#03A9F4", "Water", "💧"];
+                if (id == 2) return ["#3E2723", "#795548", "Earth", "🪨"];
+                if (id == 3) return ["#81C784", "#C8E6C9", "Wind", "🌬️"];
+                if (id == 4) return ["#F8BBD0", "#FCE4EC", "Light", "✨"];
+                return ["#37474F", "#90A4AE", "Aether", "🌀"];
+            },
+            _getPartyStyles: (rarity) => {
+                if (rarity == 5) return ["#4A148C", "#E1BEE7", "Diamond Tier"];
+                if (rarity == 4) return ["#0D47A1", "#BBDEFB", "Platinum Tier"];
+                if (rarity == 3) return ["#FF6F00", "#FFECB3", "Gold Tier"];
+                if (rarity == 2) return ["#BDBDBD", "#FAFAFA", "Silver Tier"];
+                return ["#BF360C", "#FFCCBC", "Bronze Tier"];
+            },
+            _getRarityColor: (rarity) => {
+                if (rarity == 5) return "#E040FB";
+                if (rarity == 4) return "#00B0FF";
+                if (rarity == 3) return "#FFD600";
+                if (rarity == 2) return "#CFD8DC";
+                return "#D7CCC8";
+            },
+            _getRarityStars: (rarity) => {
+                let stars = '';
+                const color = DungeonSVGLibrary._getRarityColor(rarity);
+                for (let i = 0; i < 5; i++) {
+                    stars += `<tspan fill="${color}" fill-opacity="${i < rarity ? '1' : '0.2'}">★</tspan>`;
+                }
+                return stars;
+            },
+            _generateHeroPowerByRarity: (rarity, randomNumber) => {
+                if (rarity == 1) { return 15 + (randomNumber % (50 - 15 + 1)); } 
+                if (rarity == 2) { return 50 + (randomNumber % (100 - 50 + 1)); } 
+                if (rarity == 3) { return 100 + (randomNumber % (150 - 100 + 1)); } 
+                if (rarity == 4) { return 150 + (randomNumber % (200 - 150 + 1)); } 
+                if (rarity == 5) { return 200 + (randomNumber % (255 - 200 + 1)); }
+                return 0;
+            },
+
+            generateHeroSVG: (data) => {
+                const [primaryColor, accentColor, name, emoji] = DungeonSVGLibrary._getHeroStyles(data.heroClass);
+                return [
+                    DungeonSVGLibrary._getSVGHeader(),
+                    DungeonSVGLibrary._getGlobalStyles(),
+                    DungeonSVGLibrary._getGradientDefs(primaryColor, accentColor),
+                    DungeonSVGLibrary._getBackgroundPattern(primaryColor),
+                    DungeonSVGLibrary._getBorder(data.rarity),
+                    DungeonSVGLibrary._getHeader(name, " HERO", data.tokenId),
+                    DungeonSVGLibrary._getCentralImage(emoji),
+                    DungeonSVGLibrary._getPrimaryStat("POWER", data.power),
+                    DungeonSVGLibrary._getSecondaryStats("RARITY", DungeonSVGLibrary._getRarityStars(data.rarity), "EXPEDITIONS", data.expeditions),
+                    DungeonSVGLibrary._getFooter("Dungeon Delvers"),
+                    '</svg>'
+                ].join('');
+            },
+            generateRelicSVG: (data) => {
+                const [primaryColor, accentColor, name, emoji] = DungeonSVGLibrary._getRelicStyles(data.element);
+                return [
+                    DungeonSVGLibrary._getSVGHeader(),
+                    DungeonSVGLibrary._getGlobalStyles(),
+                    DungeonSVGLibrary._getGradientDefs(primaryColor, accentColor),
+                    DungeonSVGLibrary._getBackgroundPattern(primaryColor),
+                    DungeonSVGLibrary._getBorder(data.rarity),
+                    DungeonSVGLibrary._getHeader(name, " RELIC", data.tokenId),
+                    DungeonSVGLibrary._getCentralImage(emoji),
+                    DungeonSVGLibrary._getPrimaryStat("CAPACITY", data.capacity),
+                    DungeonSVGLibrary._getSecondaryStats("RARITY", DungeonSVGLibrary._getRarityStars(data.rarity), "EXPEDITIONS", data.expeditions),
+                    DungeonSVGLibrary._getFooter("Ancient Artifact"),
+                    '</svg>'
+                ].join('');
+            },
+            generatePartySVG: (data) => {
+                const [primaryColor, accentColor, rarityTierName] = DungeonSVGLibrary._getPartyStyles(data.partyRarity);
+                return [
+                    DungeonSVGLibrary._getSVGHeader(),
+                    DungeonSVGLibrary._getGlobalStyles(),
+                    DungeonSVGLibrary._getGradientDefs(primaryColor, accentColor),
+                    DungeonSVGLibrary._getBackgroundPattern(primaryColor),
+                    DungeonSVGLibrary._getBorder(data.partyRarity),
+                    DungeonSVGLibrary._getHeader("Delvers", " PARTY", data.tokenId),
+                    DungeonSVGLibrary._getCentralImage("🛡️"),
+                    DungeonSVGLibrary._getPrimaryStat("TOTAL POWER", data.totalPower),
+                    DungeonSVGLibrary._getPartyStats(rarityTierName, `${data.heroCount} / ${data.capacity} SLOTS`, "EXPEDITIONS", data.expeditions),
+                    DungeonSVGLibrary._getFooter("United We Stand"),
+                    '</svg>'
+                ].join('');
+            }
+        };
+
+        function updateAll() {
+            // Hero
+            const heroRaritySlider = document.getElementById('hero-rarity');
+            const heroRarity = parseInt(heroRaritySlider.value);
+            document.getElementById('hero-rarity-label').textContent = `Rarity (${heroRarity})`;
+            const heroClass = parseInt(document.getElementById('hero-class').value);
+            const heroPower = DungeonSVGLibrary._generateHeroPowerByRarity(heroRarity, Math.floor(Math.random() * 1000));
+            const heroData = { tokenId: 1337, rarity: heroRarity, power: heroPower, expeditions: 42, heroClass: heroClass };
+            document.getElementById('hero-svg-container').innerHTML = DungeonSVGLibrary.generateHeroSVG(heroData);
+
+            // Relic
+            const relicRaritySlider = document.getElementById('relic-rarity');
+            const relicRarity = parseInt(relicRaritySlider.value);
+            document.getElementById('relic-rarity-label').textContent = `Rarity (${relicRarity})`;
+            const relicElement = parseInt(document.getElementById('relic-element').value);
+            // ★ 數據同步：聖物容量 = 稀有度
+            const relicCapacity = relicRarity;
+            const relicData = { tokenId: 789, rarity: relicRarity, capacity: relicCapacity, expeditions: 128, element: relicElement };
+            document.getElementById('relic-svg-container').innerHTML = DungeonSVGLibrary.generateRelicSVG(relicData);
+            
+            // Party
+            const partyCapacitySlider = document.getElementById('party-capacity');
+            const partyCapacity = parseInt(partyCapacitySlider.value);
+            document.getElementById('party-capacity-label').textContent = `Total Capacity (${partyCapacity})`;
+            
+            const partyHeroesSlider = document.getElementById('party-heroes');
+            // ★ 數據同步：英雄數量上限 = 總容量
+            partyHeroesSlider.max = partyCapacity;
+            if (parseInt(partyHeroesSlider.value) > partyCapacity) {
+                partyHeroesSlider.value = partyCapacity;
+            }
+            const partyHeroes = parseInt(partyHeroesSlider.value);
+            document.getElementById('party-heroes-label').textContent = `Hero Count (${partyHeroes})`;
+            
+            let partyRarity = 1;
+            if (partyCapacity >= 20) { partyRarity = 5; }
+            else if (partyCapacity >= 15) { partyRarity = 4; }
+            else if (partyCapacity >= 10) { partyRarity = 3; }
+            else if (partyCapacity >= 5) { partyRarity = 2; }
+            
+            // ★ 數據同步：更真實的隊伍戰力模擬
+            const avgHeroPower = DungeonSVGLibrary._generateHeroPowerByRarity(partyRarity, Math.floor(Math.random() * 1000));
+            const totalPower = avgHeroPower * partyHeroes;
+
+            const partyData = { tokenId: 1, totalPower: totalPower, heroCount: partyHeroes, capacity: partyCapacity, expeditions: 5, partyRarity: partyRarity };
+            document.getElementById('party-svg-container').innerHTML = DungeonSVGLibrary.generatePartySVG(partyData);
+        }
+
+        document.querySelectorAll('input, select').forEach(el => el.addEventListener('input', updateAll));
+        updateAll();
+    </script>
+</body>
+</html>
