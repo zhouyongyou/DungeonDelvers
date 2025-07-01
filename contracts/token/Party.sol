@@ -1,3 +1,4 @@
+// contracts/token/Party.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -7,8 +8,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-// --- 內部接口與函式庫 ---
 import "../interfaces/IParty.sol";
 import "../interfaces/IHero.sol";
 import "../interfaces/IRelic.sol";
@@ -18,9 +19,8 @@ import "../libraries/DungeonSVGLibrary.sol";
 
 /**
  * @title Party (隊伍 NFT - 資產託管最終版)
- * @author Your Team Name
- * @notice 採用「資產託管」與「快照容器」模式。英雄與聖物在組隊時會被轉移至本合約進行鎖定。
- * @dev Party NFT 作為提貨單。解散時，隊伍經驗會被分配給所有成員，且資產會被歸還。
+ * @author Z
+ * @notice 採用「資產託管」與「快照容器」模式。此版本修正了多重繼承導致的函式覆寫問題。
  */
 contract Party is ERC721, IParty, Ownable, ReentrancyGuard, Pausable, ERC721Holder {
     using Counters for Counters.Counter;
@@ -28,14 +28,6 @@ contract Party is ERC721, IParty, Ownable, ReentrancyGuard, Pausable, ERC721Hold
     // --- 狀態變數 ---
     Counters.Counter private _nextTokenId;
     IDungeonCore public dungeonCore;
-
-    struct PartyComposition {
-        address leader;
-        uint256[] heroIds;
-        uint256[] relicIds;
-        uint256 totalPower;
-        uint256 totalCapacity;
-    }
 
     mapping(uint256 => PartyComposition) internal partyCompositions;
     mapping(address => uint256) public partyOf;
@@ -71,22 +63,20 @@ contract Party is ERC721, IParty, Ownable, ReentrancyGuard, Pausable, ERC721Hold
         uint256 totalPower = 0;
         uint256 totalCapacity = 0;
 
-        // 轉移英雄並計算戰力
         for (uint i = 0; i < _heroIds.length; i++) {
             uint256 heroId = _heroIds[i];
             require(heroContract.ownerOf(heroId) == msg.sender, "Party: Not the owner of hero");
             (IHero.HeroData memory data, ) = heroContract.getHero(heroId);
             totalPower += data.power;
-            heroContract.safeTransferFrom(msg.sender, address(this), heroId);
+            IERC721(address(heroContract)).safeTransferFrom(msg.sender, address(this), heroId);
         }
 
-        // 轉移聖物並計算容量
         for (uint i = 0; i < _relicIds.length; i++) {
             uint256 relicId = _relicIds[i];
             require(relicContract.ownerOf(relicId) == msg.sender, "Party: Not the owner of relic");
             (IRelic.RelicData memory data, ) = relicContract.getRelic(relicId);
             totalCapacity += data.capacity;
-            relicContract.safeTransferFrom(msg.sender, address(this), relicId);
+            IERC721(address(relicContract)).safeTransferFrom(msg.sender, address(this), relicId);
         }
 
         require(_heroIds.length <= totalCapacity, "Party: Not enough capacity for heroes");
@@ -97,7 +87,8 @@ contract Party is ERC721, IParty, Ownable, ReentrancyGuard, Pausable, ERC721Hold
             heroIds: _heroIds,
             relicIds: _relicIds,
             totalPower: totalPower,
-            totalCapacity: totalCapacity
+            totalCapacity: totalCapacity,
+            partyType: 0 // 0 for standard Party
         });
 
         partyOf[msg.sender] = newPartyId;
@@ -117,25 +108,22 @@ contract Party is ERC721, IParty, Ownable, ReentrancyGuard, Pausable, ERC721Hold
         IHero heroContract = IHero(dungeonCore.heroContract());
         IRelic relicContract = IRelic(dungeonCore.relicContract());
 
-        // 歸還英雄並分配經驗
         for (uint i = 0; i < comp.heroIds.length; i++) {
             uint256 heroId = comp.heroIds[i];
             if (totalExp > 0) {
                 heroContract.incrementExpeditions(heroId, totalExp);
             }
-            heroContract.safeTransferFrom(address(this), leader, heroId);
+            IERC721(address(heroContract)).safeTransferFrom(address(this), leader, heroId);
         }
 
-        // 歸還聖物並分配經驗
         for (uint i = 0; i < comp.relicIds.length; i++) {
             uint256 relicId = comp.relicIds[i];
             if (totalExp > 0) {
                 relicContract.incrementExpeditions(relicId, totalExp);
             }
-            relicContract.safeTransferFrom(address(this), leader, relicId);
+            IERC721(address(relicContract)).safeTransferFrom(address(this), leader, relicId);
         }
 
-        // 清理狀態
         delete partyOf[leader];
         delete partyCompositions[_partyId];
         delete expeditions[_partyId];
@@ -146,21 +134,27 @@ contract Party is ERC721, IParty, Ownable, ReentrancyGuard, Pausable, ERC721Hold
 
     function incrementExpeditions(uint256 partyId, uint256 amount) external override {
         require(msg.sender == address(dungeonCore.dungeonMaster()), "Party: Only DungeonMaster can increment expeditions");
-        // ★ 核心修正：使用 _ownerOf 替代 _exists
         require(_ownerOf(partyId) != address(0), "Party does not exist.");
         expeditions[partyId] += amount;
         emit PartyExpeditionIncreased(partyId, expeditions[partyId]);
     }
 
     // --- 視圖與元數據 ---
-    function getPartyComposition(uint256 _partyId) public view returns (PartyComposition memory) {
-        // ★ 核心修正：使用 _ownerOf 替代 _exists
+
+    /**
+     * @notice 【新增】覆寫 ownerOf 函式以解決繼承衝突。
+     * @dev 我們明確指定使用 OpenZeppelin 的 ERC721 標準實作。
+     */
+    function ownerOf(uint256 tokenId) public view override(ERC721, IParty) returns (address) {
+        return super.ownerOf(tokenId);
+    }
+
+    function getPartyComposition(uint256 _partyId) public view override returns (PartyComposition memory) {
         require(_ownerOf(_partyId) != address(0), "Party: Query for non-existent party");
         return partyCompositions[_partyId];
     }
 
     function tokenURI(uint256 partyId) public view override returns (string memory) {
-        // ★ 核心修正：使用 _ownerOf 替代 _exists
         require(_ownerOf(partyId) != address(0), "ERC721: URI query for nonexistent token");
         
         PartyComposition memory comp = partyCompositions[partyId];
@@ -193,30 +187,19 @@ contract Party is ERC721, IParty, Ownable, ReentrancyGuard, Pausable, ERC721Hold
         }
     }
 
-    /**
-     * @dev ★ 核心修正：使用 OpenZeppelin v5.0 的 _update 內部掛鉤函式。
-     * 此函式會在 NFT 被轉移或銷毀時自動觸發。
-     */
-    function _update(address to, uint256 tokenId, address auth) internal override(ERC721, ERC721Holder) returns (address) {
+    function _update(address to, uint256 tokenId, address auth) internal override(ERC721) returns (address) {
         address from = _ownerOf(tokenId);
-
-        // 僅在轉移時（非鑄造）檢查鎖定狀態並清理舊擁有者數據
         if (from != address(0)) {
             _requireNotLocked(tokenId);
             delete partyOf[from];
         }
-
-        // 僅在轉移或鑄造時（非銷毀）設定新擁有者數據
         if (to != address(0)) {
             require(partyOf[to] == 0, "Party: Recipient is already in a party");
             partyOf[to] = tokenId;
-            // 僅在轉移時更新領隊，鑄造時的領隊在 formParty 中設定
             if (from != address(0)) {
                 partyCompositions[tokenId].leader = to;
             }
         }
-
-        // 呼叫父合約的函式，完成轉移的核心邏輯
         return super._update(to, tokenId, auth);
     }
     
