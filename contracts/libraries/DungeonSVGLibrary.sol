@@ -3,40 +3,65 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
-import "../interfaces/IHero.sol";
-import "../interfaces/IRelic.sol";
-import "../interfaces/IParty.sol";
+// Note: We no longer need to import the interfaces just for the structs.
+// The structs are now defined locally within this library.
 
 /**
- * @title DungeonSVGLibrary (最終決定版 v4.1)
+ * @title DungeonSVGLibrary (最終決定版 v4.2)
  * @author Your Team Name
  * @notice 統一的函式庫，為 Hero, Relic, Party 生成具有高級視覺風格的動態 SVG 和 TokenURI。
- * @dev 採用 400x400 方形設計，視覺與數據邏輯均與 v4.1 預覽工具同步。
+ * @dev 採用 400x400 方形設計，修正了所有 Unicode 編碼與結構體定義問題。
  */
 library DungeonSVGLibrary {
     using Strings for uint256;
     using Strings for uint8;
 
+    // ★★★★★ 核心修正 ★★★★★
+    // 將數據結構直接定義在函式庫內部，解決 DeclarationError。
+    struct HeroData {
+        uint8 rarity;
+        uint256 power;
+        uint8 heroClass;
+    }
+
+    struct RelicData {
+        uint8 rarity;
+        uint8 capacity;
+        uint8 element;
+    }
+
+    struct PartyData {
+        uint256 tokenId;
+        uint256 totalPower;
+        uint256 heroCount;
+        uint256 capacity;
+        uint256 expeditions;
+        uint8 partyRarity;
+        string rarityTierName;
+    }
+
+
     // --- Public URI Builders ---
 
-    function buildHeroURI(IHero.HeroData memory _data, uint256 _tokenId, uint256 _expeditions) internal pure returns (string memory) {
+    // ★★★★★ 核心修正：更新函式簽名，使用本地定義的 struct ★★★★★
+    function buildHeroURI(HeroData memory _data, uint256 _tokenId, uint256 _expeditions) internal pure returns (string memory) {
         string memory svg = generateHeroSVG(_data, _tokenId, _expeditions);
         return _buildJSON("Hero", _tokenId, "A mighty hero of Dungeon Delvers.", svg);
     }
 
-    function buildRelicURI(IRelic.RelicData memory _data, uint256 _tokenId, uint256 _expeditions) internal pure returns (string memory) {
+    function buildRelicURI(RelicData memory _data, uint256 _tokenId, uint256 _expeditions) internal pure returns (string memory) {
         string memory svg = generateRelicSVG(_data, _tokenId, _expeditions);
         return _buildJSON("Relic", _tokenId, "An ancient relic of great power.", svg);
     }
 
-    function buildPartyURI(IParty.PartyData memory _data) internal pure returns (string memory) {
+    function buildPartyURI(PartyData memory _data) internal pure returns (string memory) {
         string memory svg = generatePartySVG(_data);
         return _buildJSON("Party", _data.tokenId, "A brave party of delvers.", svg);
     }
 
     // --- SVG Generation ---
 
-    function generateHeroSVG(IHero.HeroData memory _data, uint256 _tokenId, uint256 _expeditions) private pure returns (string memory) {
+    function generateHeroSVG(HeroData memory _data, uint256 _tokenId, uint256 _expeditions) private pure returns (string memory) {
         (string memory primaryColor, string memory accentColor, string memory name, string memory emoji) = _getHeroStyles(_data.heroClass);
         
         return string(abi.encodePacked(
@@ -53,7 +78,7 @@ library DungeonSVGLibrary {
         ));
     }
 
-    function generateRelicSVG(IRelic.RelicData memory _data, uint256 _tokenId, uint256 _expeditions) private pure returns (string memory) {
+    function generateRelicSVG(RelicData memory _data, uint256 _tokenId, uint256 _expeditions) private pure returns (string memory) {
         (string memory primaryColor, string memory accentColor, string memory name, string memory emoji) = _getRelicStyles(_data.element);
 
         return string(abi.encodePacked(
@@ -70,7 +95,7 @@ library DungeonSVGLibrary {
         ));
     }
     
-    function generatePartySVG(IParty.PartyData memory _data) private pure returns (string memory) {
+    function generatePartySVG(PartyData memory _data) private pure returns (string memory) {
         (string memory primaryColor, string memory accentColor, string memory tierName) = _getPartyStyles(_data.partyRarity);
 
         return string(abi.encodePacked(
@@ -80,7 +105,7 @@ library DungeonSVGLibrary {
             _getBackgroundPattern(primaryColor),
             _getBorder(_data.partyRarity),
             _getHeader("Delvers", " PARTY", _data.tokenId),
-            _getCentralImage("🛡️"),
+            _getCentralImage(unicode"🛡️"),
             _getPrimaryStat("TOTAL POWER", _data.totalPower.toString()),
             _getPartyStats(tierName, string(abi.encodePacked(_data.heroCount.toString(), " / ", _data.capacity.toString(), " SLOTS")), "EXPEDITIONS", _data.expeditions.toString()),
             _getFooter("United We Stand")
@@ -155,21 +180,21 @@ library DungeonSVGLibrary {
 
     // --- Style Helpers ---
     function _getHeroStyles(uint8 id) private pure returns(string memory, string memory, string memory, string memory) {
-        if (id == 0) return ("#B71C1C", "#F44336", "Warrior", "⚔️");
-        if (id == 1) return ("#1A237E", "#3F51B5", "Mage", "🔮");
-        if (id == 2) return ("#1B5E20", "#4CAF50", "Archer", "🏹");
-        if (id == 3) return ("#4A148C", "#9C27B0", "Rogue", "🗡️");
-        if (id == 4) return ("#F57F17", "#FFEB3B", "Cleric", "✙");
-        return ("#212121", "#757575", "Unknown", "❓");
+        if (id == 0) return ("#B71C1C", "#F44336", "Warrior", unicode"⚔️");
+        if (id == 1) return ("#1A237E", "#3F51B5", "Mage", unicode"🔮");
+        if (id == 2) return ("#1B5E20", "#4CAF50", "Archer", unicode"🏹");
+        if (id == 3) return ("#4A148C", "#9C27B0", "Rogue", unicode"🗡️");
+        if (id == 4) return ("#F57F17", "#FFEB3B", "Cleric", unicode"✙");
+        return ("#212121", "#757575", "Unknown", unicode"❓");
     }
 
     function _getRelicStyles(uint8 id) private pure returns(string memory, string memory, string memory, string memory) {
-        if (id == 0) return ("#E65100", "#FF9800", "Fire", "🔥");
-        if (id == 1) return ("#01579B", "#03A9F4", "Water", "💧");
-        if (id == 2) return ("#3E2723", "#795548", "Earth", "🪨");
-        if (id == 3) return ("#81C784", "#C8E6C9", "Wind", "🌬️");
-        if (id == 4) return ("#F8BBD0", "#FCE4EC", "Light", "✨");
-        return ("#37474F", "#90A4AE", "Aether", "🌀");
+        if (id == 0) return ("#E65100", "#FF9800", "Fire", unicode"🔥");
+        if (id == 1) return ("#01579B", "#03A9F4", "Water", unicode"💧");
+        if (id == 2) return ("#3E2723", "#795548", "Earth", unicode"🪨");
+        if (id == 3) return ("#81C784", "#C8E6C9", "Wind", unicode"🌬️");
+        if (id == 4) return ("#F8BBD0", "#FCE4EC", "Light", unicode"✨");
+        return ("#37474F", "#90A4AE", "Aether", unicode"🌀");
     }
 
     function _getPartyStyles(uint8 rarity) private pure returns(string memory, string memory, string memory) {
@@ -191,8 +216,9 @@ library DungeonSVGLibrary {
     function _getRarityStars(uint8 rarity) private pure returns (string memory) {
         string memory stars;
         string memory color = _getRarityColor(rarity);
+        string memory starSymbol = unicode"★"; 
         for (uint i = 0; i < 5; i++) {
-            stars = string(abi.encodePacked(stars, '<tspan fill="', color, '" fill-opacity="', i < rarity ? '1' : '0.2', '">★</tspan>'));
+            stars = string(abi.encodePacked(stars, '<tspan fill="', color, '" fill-opacity="', i < rarity ? '1' : '0.2', '">', starSymbol, '</tspan>'));
         }
         return stars;
     }
