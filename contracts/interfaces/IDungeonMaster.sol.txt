@@ -2,19 +2,28 @@
 pragma solidity ^0.8.20;
 
 /**
- * @title IDungeonCore Interface
- * @notice 整個系統的核心註冊表接口。
- * @dev 其他合約通過此接口查詢核心模塊的地址。
+ * @title IDungeonMaster Interface
+ * @notice 地下城主合約的外部接口，管理隊伍的探險活動。
+ * @dev 此版本包含了 isPartyLocked 和 getPartyCooldown 的完整定義。
  */
-interface IDungeonCore {
-    function heroContract() external view returns (address);
-    function relicContract() external view returns (address);
-    function partyContract() external view returns (address);
-    function playerVault() external view returns (address);
-    function altarOfAscension() external view returns (address);
-    function dungeonMaster() external view returns (address);
-    function oracle() external view returns (address);
-    function usdToken() external view returns (address);
-    function playerProfile() external view returns (address);
-    function vipStaking() external view returns (address);
+interface IDungeonMaster {
+    /**
+     * @notice 隊伍進入地下城開始探險。
+     */
+    function enterDungeon(uint256 _partyId) external;
+
+    /**
+     * @notice 隊伍完成探險後領取獎勵。
+     */
+    function claimRewards(uint256 _partyId) external;
+
+    /**
+     * @notice 檢查一個隊伍當前是否被鎖定（正在探險或冷卻中）。
+     */
+    function isPartyLocked(uint256 _partyId) external view returns (bool);
+
+    /**
+     * @notice 獲取隊伍的冷卻結束時間。
+     */
+    function getPartyCooldown(uint256 _partyId) external view returns (uint256);
 }

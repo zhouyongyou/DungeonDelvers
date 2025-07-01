@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 /**
  * @title IPlayerProfile Interface
  * @notice 玩家個人資料合約的外部接口。
+ * @dev 此版本修正了經驗值函式的定義。
  */
 interface IPlayerProfile {
     /**
@@ -12,12 +13,11 @@ interface IPlayerProfile {
     struct Profile {
         string name;
         uint256 createdAt;
-        uint256 expeditionsCompleted;
+        uint256 experience; // 將 expeditionsCompleted 改為 experience
     }
 
     /**
      * @notice 創建一個新的玩家個人資料。
-     * @param _name 玩家的暱稱。
      */
     function createProfile(string calldata _name) external;
 
@@ -27,8 +27,10 @@ interface IPlayerProfile {
     function getProfile(address _player) external view returns (Profile memory);
 
     /**
-     * @notice 增加玩家完成的遠征總次數。
-     * @dev 應由 DungeonMaster 在成功完成探險後呼叫。
+     * @notice 為玩家增加指定數量的經驗值。
+     * @dev ★ 核心修正：函式名稱與參數已更新，以符合 DungeonMaster 的邏輯。
+     * @param player 玩家地址。
+     * @param amount 要增加的經驗值數量。
      */
-    function incrementExpeditions(address _player) external;
+    function addExperience(address player, uint256 amount) external;
 }

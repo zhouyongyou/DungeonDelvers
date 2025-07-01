@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 /**
  * @title IVIPStaking Interface
  * @notice VIP 質押系統的外部接口。
+ * @dev 此版本包含了 getVipLevel 的完整定義。
  */
 interface IVIPStaking {
     /**
