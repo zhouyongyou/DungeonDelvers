@@ -6,18 +6,16 @@ pragma solidity ^0.8.20;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 import "../interfaces/IPlayerProfile.sol";
 import "../interfaces/IDungeonCore.sol";
 import "../libraries/ProfileSVGLibrary.sol";
 
 contract PlayerProfile is IPlayerProfile, ERC721, Ownable {
-    using Counters for Counters.Counter;
-
     IDungeonCore public dungeonCore;
+    // ★ 核心修正 1：將 Counters.Counter 換成原生的 uint256
+    uint256 private _nextTokenId;
     mapping(address => Profile) public profiles;
     mapping(address => uint256) public profileTokenOf;
-    Counters.Counter private _nextTokenId;
 
     event ProfileCreated(address indexed player, uint256 indexed tokenId, string name);
     event ProfileNameUpdated(address indexed player, string newName);
@@ -35,7 +33,7 @@ contract PlayerProfile is IPlayerProfile, ERC721, Ownable {
         address initialOwner
     ) ERC721("Dungeon Delvers Profile", "DDPF") Ownable(initialOwner) {
         dungeonCore = IDungeonCore(_dungeonCoreAddress);
-        _nextTokenId.increment();
+        _nextTokenId++;
     }
 
     function addExperience(address _player, uint256 _amount) external override onlyAuthorized {
@@ -55,8 +53,8 @@ contract PlayerProfile is IPlayerProfile, ERC721, Ownable {
     }
 
     function _createProfileForPlayer(address _player, string memory _name) private returns (uint256 newTokenId) {
-        newTokenId = _nextTokenId.current();
-        _nextTokenId.increment();
+        newTokenId = _nextTokenId;
+        _nextTokenId++;
         _safeMint(_player, newTokenId);
         profileTokenOf[_player] = newTokenId;
         profiles[_player] = Profile({

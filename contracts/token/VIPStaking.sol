@@ -8,18 +8,17 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import "../interfaces/IDungeonCore.sol";
 import "../interfaces/IOracle.sol";
 import "../libraries/VIPSVGLibrary.sol";
 
 contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
-    using Counters for Counters.Counter;
+    // ★ 核心修正 1：將 Counters.Counter 換成原生的 uint256
+    uint256 private _nextTokenId;
 
     IDungeonCore public dungeonCore;
     IERC20 public immutable soulShardToken;
-    Counters.Counter private _nextTokenId;
 
     uint256 public unstakeCooldown;
     uint256 public totalPendingUnstakes;
@@ -63,8 +62,8 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
 
         uint256 currentTokenId = userStake.tokenId;
         if (currentTokenId == 0) {
-            _nextTokenId.increment();
-            currentTokenId = _nextTokenId.current();
+            _nextTokenId++;
+            currentTokenId = _nextTokenId;
             userStake.tokenId = currentTokenId;
             _safeMint(msg.sender, currentTokenId);
         }

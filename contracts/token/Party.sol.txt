@@ -5,7 +5,6 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -23,10 +22,10 @@ import "../libraries/DungeonSVGLibrary.sol";
  * @notice 採用「資產託管」與「快照容器」模式。此版本修正了多重繼承導致的函式覆寫問題。
  */
 contract Party is ERC721, IParty, Ownable, ReentrancyGuard, Pausable, ERC721Holder {
-    using Counters for Counters.Counter;
 
     // --- 狀態變數 ---
-    Counters.Counter private _nextTokenId;
+    // ★ 核心修正 1：將 Counters.Counter 換成原生的 uint256
+    uint256 private _nextTokenId;
     IDungeonCore public dungeonCore;
 
     mapping(uint256 => PartyComposition) internal partyCompositions;
@@ -48,7 +47,7 @@ contract Party is ERC721, IParty, Ownable, ReentrancyGuard, Pausable, ERC721Hold
     {
         require(_dungeonCoreAddress != address(0), "Party: Invalid DungeonCore address");
         dungeonCore = IDungeonCore(_dungeonCoreAddress);
-        _nextTokenId.increment();
+        _nextTokenId = 1;
     }
 
     // --- 核心功能 ---
@@ -81,7 +80,7 @@ contract Party is ERC721, IParty, Ownable, ReentrancyGuard, Pausable, ERC721Hold
 
         require(_heroIds.length <= totalCapacity, "Party: Not enough capacity for heroes");
 
-        uint256 newPartyId = _nextTokenId.current();
+        uint256 newPartyId = _nextTokenId;
         partyCompositions[newPartyId] = PartyComposition({
             leader: msg.sender,
             heroIds: _heroIds,
@@ -93,7 +92,7 @@ contract Party is ERC721, IParty, Ownable, ReentrancyGuard, Pausable, ERC721Hold
 
         partyOf[msg.sender] = newPartyId;
         _safeMint(msg.sender, newPartyId);
-        _nextTokenId.increment();
+        _nextTokenId++;
         emit PartyFormed(newPartyId, msg.sender, _heroIds, _relicIds);
     }
 

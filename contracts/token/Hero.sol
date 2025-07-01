@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 // Chainlink imports
 import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
@@ -25,11 +24,11 @@ import "../interfaces/IOracle.sol";
  * @notice 融合了舊版完整機制與新版模塊化架構的最終版本，並為未來擴展做好了準備。
  */
 contract Hero is IHero, ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard, Pausable, ERC721Holder {
-    using Counters for Counters.Counter;
 
     // --- 狀態變數 ---
     IDungeonCore public dungeonCore;
-    Counters.Counter private _nextTokenId;
+    // ★ 核心修正 1：將 Counters.Counter 換成原生的 uint256
+    uint256 private _nextTokenId;
     uint256 public seasonSeed;
     uint256 public mintPriceUSD = 2 * 1e18;
     
@@ -68,7 +67,8 @@ contract Hero is IHero, ERC721, Ownable, VRFV2PlusWrapperConsumerBase, Reentranc
     {
         dungeonCore = IDungeonCore(_dungeonCoreAddress);
         seasonSeed = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender, block.chainid)));
-        _nextTokenId.increment();
+        // ★ 核心修正 2：設定初始 Token ID 為 1
+        _nextTokenId = 1;
     }
 
     // --- 外部鑄造函式 ---
@@ -108,13 +108,15 @@ contract Hero is IHero, ERC721, Ownable, VRFV2PlusWrapperConsumerBase, Reentranc
     }
 
     function _generateAndMintOnChain(address _to, uint256 _salt) private {
-        uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(seasonSeed, block.prevrandao, msg.sender, _salt, _nextTokenId.current())));
+        // ★ 核心修正 3：直接使用 _nextTokenId
+        uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(seasonSeed, block.prevrandao, msg.sender, _salt, _nextTokenId)));
         (uint8 rarity, uint256 power, uint8 heroClass) = _calculateAttributes(pseudoRandom);
         _mintHero(_to, rarity, power, heroClass);
     }
 
     function _mintHero(address _to, uint8 _rarity, uint256 _power, uint8 _heroClass) private returns (uint256) {
-        uint256 tokenId = _nextTokenId.current();
+        // ★ 核心修正 4：直接使用 _nextTokenId
+        uint256 tokenId = _nextTokenId;
         heroData[tokenId] = HeroData({
             rarity: _rarity,
             power: _power,
@@ -122,7 +124,8 @@ contract Hero is IHero, ERC721, Ownable, VRFV2PlusWrapperConsumerBase, Reentranc
             generation: 1 
         });
         _safeMint(_to, tokenId);
-        _nextTokenId.increment();
+        // ★ 核心修正 5：手動遞增
+        _nextTokenId++;
         emit HeroMinted(tokenId, _to, _rarity, _power, _heroClass, 1);
         return tokenId;
     }
@@ -230,17 +233,7 @@ contract Hero is IHero, ERC721, Ownable, VRFV2PlusWrapperConsumerBase, Reentranc
     function pause() public onlyOwner { _pause(); }
     function unpause() public onlyOwner { _unpause(); }
 
-    // ★ 核心修正：明確覆寫 ownerOf 以解決繼承衝突。
     function ownerOf(uint256 tokenId) public view override(ERC721, IHero) returns (address) {
         return super.ownerOf(tokenId);
     }
-
-    // ★ 核心修正：移除對 safeTransferFrom 的覆寫，因為父合約中的版本不是 virtual 的。
-    // function safeTransferFrom(address from, address to, uint256 tokenId) public override(ERC721, IHero) {
-    //     super.safeTransferFrom(from, to, tokenId);
-    // }
-    
-    // function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public override(ERC721, IHero) {
-    //     super.safeTransferFrom(from, to, tokenId, data);
-    // }
 }
