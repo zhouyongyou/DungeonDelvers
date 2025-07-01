@@ -1,62 +1,57 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+// OpenZeppelin imports
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
+// Chainlink imports
 import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
-
-// --- 內部接口與函式庫 ---
-import "./interfaces/IRelic.sol";
-import "./libraries/DungeonSVGLibrary.sol";
-
-// --- 外部核心合約接口 ---
-import "./interfaces/IDungeonCore.sol";
-import "./interfaces/IPlayerVault.sol";
-import "./interfaces/IOracle.sol";
-import "./interfaces/IParty.sol";
-
+// Local imports
+import "../interfaces/IRelic.sol";
+import "../libraries/DungeonSVGLibrary.sol";
+import "../interfaces/IDungeonCore.sol";
+import "../interfaces/IPlayerVault.sol";
+import "../interfaces/IOracle.sol";
 
 /**
- * @title Relic (聖物 NFT - 最終融合版 v2)
+ * @title Relic (聖物 NFT - 終極完整版)
  * @author Your Team Name
- * @notice 代表玩家的聖物 NFT 資產。此版本已完整整合 Chainlink VRF，達到與 Hero 合約相同的最高標準。
- * @dev 採用了 Chainlink VRF 以確保隨機性，並保留了支付邏輯與鏈上 SVG 功能。
+ * @notice 融合了舊版完整機制與新版模塊化架構的最終版本，並為未來擴展做好了準備。
  */
-contract Relic is ERC721, IRelic, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard, Pausable, ERC721Holder {
+contract Relic is IRelic, ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard, Pausable, ERC721Holder {
     using Counters for Counters.Counter;
-    using Strings for uint256;
 
     // --- 狀態變數 ---
     IDungeonCore public dungeonCore;
     Counters.Counter private _nextTokenId;
+    uint256 public seasonSeed;
+    uint256 public mintPriceUSD = 2 * 1e18; // 聖物價格通常比英雄低
+    
+    uint256 public blockMintLimit = 80; // 聖物鑄造上限可設高一些
+    uint256 public lastMintBlock;
+    uint256 public mintsInCurrentBlock;
 
-    uint256 public seasonSeed; // 由 VRF 更新的隨機數種子
-    uint256 public mintPriceUSD = 2 * 1e18; // 每個聖物的鑄造價格（以美元計）
-
-    // 聖物屬性數據
     mapping(uint256 => RelicData) public relicData;
     mapping(uint256 => uint256) public expeditions;
     
-    // Chainlink VRF 相關
+    // VRF
     mapping(uint256 => bool) public s_requests;
     uint32 private constant CALLBACK_GAS_LIMIT = 500000;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
 
     // --- 事件 ---
-    event RelicMinted(uint256 indexed tokenId, address indexed owner, uint8 rarity, uint8 capacity, uint8 element);
+    event RelicMinted(uint256 indexed tokenId, address indexed owner, uint8 rarity, uint8 capacity, uint8 element, uint256 generation);
     event RelicExpeditionIncreased(uint256 indexed tokenId, uint256 newCount);
-    event DungeonCoreUpdated(address indexed newAddress);
     event SeasonSeedUpdated(uint256 newSeed, uint256 indexed requestId);
+    event DungeonCoreUpdated(address indexed newAddress);
 
-    // --- 修改器 ---
     modifier onlyAltar() {
         require(msg.sender == dungeonCore.altarOfAscension(), "Relic: Caller is not the Altar");
         _;
@@ -73,45 +68,47 @@ contract Relic is ERC721, IRelic, Ownable, VRFV2PlusWrapperConsumerBase, Reentra
     {
         dungeonCore = IDungeonCore(_dungeonCoreAddress);
         seasonSeed = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender, block.chainid)));
-        _nextTokenId.increment(); // 從 Token ID 1 開始
+        _nextTokenId.increment();
     }
 
-    // --- 核心鑄造函式 ---
-
+    // --- 外部鑄造函式 ---
     function mintWithWallet(uint256 _quantity) external nonReentrant whenNotPaused {
+        _updateAndCheckBlockLimit(_quantity);
         uint256 requiredAmount = getRequiredSoulShardAmount(_quantity);
         IPlayerVault playerVault = IPlayerVault(dungeonCore.playerVault());
         IERC20 soulShardToken = playerVault.soulShardToken();
         require(soulShardToken.transferFrom(msg.sender, address(playerVault), requiredAmount), "Relic: Wallet transfer failed");
         _generateAndMintRelics(msg.sender, _quantity);
     }
-
+    
     function mintWithVault(uint256 _quantity) external nonReentrant whenNotPaused {
+        _updateAndCheckBlockLimit(_quantity);
         uint256 requiredAmount = getRequiredSoulShardAmount(_quantity);
         IPlayerVault(dungeonCore.playerVault()).spendForGame(msg.sender, requiredAmount);
         _generateAndMintRelics(msg.sender, _quantity);
     }
 
-    function mintFromAltar(address _to, uint8 _rarity, uint256 _randomNumber) external onlyAltar returns (uint256) {
-        uint8 capacity = _rarity;
-        uint8 element = uint8((_randomNumber >> 8) % 6);
+    // --- 授權鑄造/銷毀函式 ---
+    function mintFromAltar(address _to, uint8 _rarity, uint256 _randomNumber) external override onlyAltar returns (uint256) {
+        ( , uint8 capacity, uint8 element) = _calculateAttributes(_randomNumber, _rarity);
         return _mintRelic(_to, _rarity, capacity, element);
     }
 
-    function burnFromAltar(uint256 _tokenId) external onlyAltar {
+    function burnFromAltar(uint256 _tokenId) external override onlyAltar {
         _burn(_tokenId);
     }
 
+    // --- 內部核心邏輯 ---
     function _generateAndMintRelics(address _to, uint256 _count) private {
-        for (uint i = 0; i < _count; i++) {
+        for (uint256 i = 0; i < _count; i++) {
             _generateAndMintOnChain(_to, i);
         }
         requestNewSeasonSeed();
     }
 
     function _generateAndMintOnChain(address _to, uint256 _salt) private {
-        uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(seasonSeed, block.prevrandao, msg.sender, _nextTokenId.current(), _salt)));
-        (uint8 rarity, uint8 capacity, uint8 element) = _calculateAttributes(pseudoRandom);
+        uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(seasonSeed, block.prevrandao, msg.sender, _salt, _nextTokenId.current())));
+        (uint8 rarity, uint8 capacity, uint8 element) = _calculateAttributes(pseudoRandom, 0);
         _mintRelic(_to, rarity, capacity, element);
     }
 
@@ -120,30 +117,32 @@ contract Relic is ERC721, IRelic, Ownable, VRFV2PlusWrapperConsumerBase, Reentra
         relicData[tokenId] = RelicData({
             rarity: _rarity,
             capacity: _capacity,
-            element: _element
+            element: _element,
+            generation: 1 
         });
         _safeMint(_to, tokenId);
         _nextTokenId.increment();
-        emit RelicMinted(tokenId, _to, _rarity, _capacity, _element);
+        emit RelicMinted(tokenId, _to, _rarity, _capacity, _element, 1);
         return tokenId;
     }
 
-    // --- 屬性計算 ---
-
-    function _calculateAttributes(uint256 _randomNumber) private pure returns (uint8 rarity, uint8 capacity, uint8 element) {
-        uint256 rarityRoll = _randomNumber % 100;
-        if (rarityRoll < 44) { rarity = 1; }
-        else if (rarityRoll < 79) { rarity = 2; }
-        else if (rarityRoll < 94) { rarity = 3; }
-        else if (rarityRoll < 99) { rarity = 4; }
-        else { rarity = 5; }
-        capacity = rarity;
+    function _calculateAttributes(uint256 _randomNumber, uint8 _fixedRarity) private pure returns (uint8 rarity, uint8 capacity, uint8 element) {
+        if (_fixedRarity > 0) {
+            rarity = _fixedRarity;
+        } else {
+            uint256 rarityRoll = _randomNumber % 100;
+            if (rarityRoll < 44) { rarity = 1; } 
+            else if (rarityRoll < 79) { rarity = 2; } 
+            else if (rarityRoll < 94) { rarity = 3; } 
+            else if (rarityRoll < 99) { rarity = 4; } 
+            else { rarity = 5; }
+        }
+        capacity = rarity; // 容量 = 稀有度
         element = uint8((_randomNumber >> 8) % 6);
     }
 
-    // --- Chainlink VRF 邏輯 ---
-
-    function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override nonReentrant {
+    // --- VRF 相關函式 ---
+    function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
         require(s_requests[_requestId], "Relic: Request invalid or already fulfilled");
         delete s_requests[_requestId];
         seasonSeed = _randomWords[0];
@@ -157,65 +156,75 @@ contract Relic is ERC721, IRelic, Ownable, VRFV2PlusWrapperConsumerBase, Reentra
         return requestId;
     }
 
-    // --- 視圖與外部函式 ---
-
+    // --- 外部查詢與輔助函式 ---
     function getRequiredSoulShardAmount(uint256 _quantity) public view returns (uint256) {
         uint256 totalCostUSD = mintPriceUSD * _quantity;
         IPlayerVault playerVault = IPlayerVault(dungeonCore.playerVault());
         address soulShardTokenAddress = address(playerVault.soulShardToken());
-        address usdTokenAddress = dungeonCore.usdToken();
+        address usdToken = dungeonCore.usdToken();
         IOracle oracle = IOracle(dungeonCore.oracle());
-        return oracle.getAmountOut(usdTokenAddress, soulShardTokenAddress, totalCostUSD);
+        return oracle.getAmountOut(usdToken, soulShardTokenAddress, totalCostUSD);
     }
-    
+
     function getRelic(uint256 tokenId) external view override returns (RelicData memory, uint256) {
-        require(_exists(tokenId), "Relic does not exist.");
+        require(_ownerOf(tokenId) != address(0), "Relic does not exist.");
         return (relicData[tokenId], expeditions[tokenId]);
     }
 
     function incrementExpeditions(uint256 tokenId, uint256 amount) external override {
         address partyContractAddress = dungeonCore.partyContract();
         address dungeonMasterAddress = dungeonCore.dungeonMaster();
-        require(msg.sender == partyContractAddress || msg.sender == dungeonMasterAddress, "Hero: Caller not authorized");
-        require(_exists(tokenId), "Relic does not exist.");
-        
+        require(msg.sender == partyContractAddress || msg.sender == dungeonMasterAddress, "Relic: Caller not authorized");
+        require(_ownerOf(tokenId) != address(0), "Relic does not exist.");
         expeditions[tokenId] += amount;
         emit RelicExpeditionIncreased(tokenId, expeditions[tokenId]);
     }
 
-    // --- 元數據 URI (採用鏈上 SVG) ---
-
-    function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        require(_exists(tokenId), "ERC721: URI query for nonexistent token");
-
-        RelicData memory data = relicData[tokenId];
-        DungeonSVGLibrary.RelicData memory svgData = DungeonSVGLibrary.RelicData({
-            tokenId: tokenId,
-            rarity: data.rarity,
-            capacity: data.capacity,
-            expeditions: expeditions[tokenId],
-            element: data.element
-        });
-        
-        return DungeonSVGLibrary.buildRelicURI(svgData);
+    function _updateAndCheckBlockLimit(uint256 _count) private {
+        if (block.number == lastMintBlock) {
+            mintsInCurrentBlock += _count;
+        } else {
+            lastMintBlock = block.number;
+            mintsInCurrentBlock = _count;
+        }
+        require(mintsInCurrentBlock <= blockMintLimit, "Relic: Mint limit for this block exceeded");
     }
 
-    // --- 管理員函式 ---
+    // --- 元數據 URI ---
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        require(_ownerOf(tokenId) != address(0), "ERC721: URI query for nonexistent token");
+        RelicData memory data = relicData[tokenId];
+        DungeonSVGLibrary.RelicData memory svgData = DungeonSVGLibrary.RelicData({
+            rarity: data.rarity,
+            capacity: data.capacity,
+            element: data.element
+        });
+        return DungeonSVGLibrary.buildRelicURI(svgData, tokenId, expeditions[tokenId]);
+    }
+
+    // --- Owner 管理函式 ---
+    function ownerMint(address _to, uint8 _rarity, uint8 _capacity, uint8 _element) external onlyOwner returns (uint256) {
+        return _mintRelic(_to, _rarity, _capacity, _element);
+    }
 
     function setDungeonCore(address _newAddress) public onlyOwner {
         require(_newAddress != address(0), "Relic: Zero address");
         dungeonCore = IDungeonCore(_newAddress);
         emit DungeonCoreUpdated(_newAddress);
     }
-    
+
     function setMintPriceUSD(uint256 _newPrice) external onlyOwner {
         mintPriceUSD = _newPrice;
+    }
+    
+    function setBlockMintLimit(uint256 _newLimit) external onlyOwner {
+        blockMintLimit = _newLimit;
     }
 
     function pause() public onlyOwner { _pause(); }
     function unpause() public onlyOwner { _unpause(); }
 
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721) returns (bool) {
-        return super.supportsInterface(interfaceId);
+    function ownerOf(uint256 tokenId) public view override(ERC721, IRelic) returns (address) {
+        return super.ownerOf(tokenId);
     }
 }

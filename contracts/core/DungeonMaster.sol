@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+// 【修正】v5 路徑更新
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
@@ -144,7 +145,11 @@ contract DungeonMaster is IDungeonMaster, VRFV2PlusWrapperConsumerBase, Reentran
         uint8 vipBonus = 0;
         address vipStakingAddress = dungeonCore.vipStaking();
         if (vipStakingAddress != address(0)) {
-            vipBonus = IVIPStaking(vipStakingAddress).getVipLevel(request.requester);
+            try IVIPStaking(vipStakingAddress).getVipLevel(request.requester) returns (uint8 level) {
+                vipBonus = level;
+            } catch {
+                // Silently ignore if the call fails, or handle as needed
+            }
         }
         uint256 finalSuccessRate = dungeons[dungeonId].baseSuccessRate + vipBonus;
         if (finalSuccessRate > 100) finalSuccessRate = 100;

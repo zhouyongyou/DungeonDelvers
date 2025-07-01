@@ -1,21 +1,26 @@
+// =================================================================
+// 檔案: contracts/Oracle.sol (最終修正版)
+// 說明: 修正了 import 路徑
+// =================================================================
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+// 【修正】將導入路徑從 "../" 改為 "./"
+import "./interfaces/IOracle.sol";
 import "./interfaces/external/IUniswapV3Pool.sol";
 import "./libraries/TickMath.sol";
 import "./libraries/FixedPoint96.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract Oracle is Ownable {
+contract Oracle is IOracle, Ownable {
     IUniswapV3Pool public pool;
-    address public token0; // <--- 移除 immutable
-    address public token1; // <--- 移除 immutable
+    address public token0;
+    address public token1;
     uint32 public constant TWAP_PERIOD = 1800; // 30 分鐘
 
     event PoolUpdated(address indexed newPool);
 
-    // BUG 1 修正：初始化 Ownable，並傳入 msg.sender
-    constructor(address _poolAddress) Ownable(msg.sender) {
+    constructor(address _poolAddress, address initialOwner) Ownable(initialOwner) {
         require(_poolAddress != address(0), "Oracle: Invalid pool address");
         pool = IUniswapV3Pool(_poolAddress);
         token0 = pool.token0();
@@ -26,7 +31,7 @@ contract Oracle is Ownable {
         address inputToken,
         address quoteToken,
         uint256 amountIn
-    ) public view returns (uint256 amountOut) {
+    ) public view override returns (uint256 amountOut) {
         require(
             (inputToken == token0 && quoteToken == token1) || (inputToken == token1 && quoteToken == token0),
             "Oracle: Invalid token pair"
@@ -40,13 +45,33 @@ contract Oracle is Ownable {
         if (isToken0Input) {
             amountOut = (amountIn * ratioX192) >> 192;
         } else {
-            // 為了避免下溢 (underflow)，在使用除法前先做乘法是好的實踐
-            amountOut = (amountIn * FixedPoint96.Q96 * FixedPoint96.Q96) / ratioX192;
+            amountOut = (amountIn * (1 << 192)) / ratioX192;
+        }
+    }
+
+    function getAmountIn(
+        address inputToken,
+        address quoteToken,
+        uint256 amountOut
+    ) public view override returns (uint256 amountIn) {
+        require(
+            (inputToken == token0 && quoteToken == token1) || (inputToken == token1 && quoteToken == token0),
+            "Oracle: Invalid token pair"
+        );
+
+        int24 tick = _consult(TWAP_PERIOD);
+        uint160 sqrtRatioX96 = TickMath.getSqrtRatioAtTick(tick);
+        uint256 ratioX192 = uint256(sqrtRatioX96) * uint256(sqrtRatioX96);
+
+        bool isToken0Input = inputToken == token0;
+        if (isToken0Input) {
+            amountIn = (amountOut * (1 << 192)) / ratioX192;
+        } else {
+            amountIn = (amountOut * ratioX192) >> 192;
         }
     }
 
     function _consult(uint32 period) internal view returns (int24 tick) {
-        // ... (此函式邏輯正確，無需修改)
         uint32[] memory periods = new uint32[](2);
         periods[0] = period;
         periods[1] = 0;
@@ -57,12 +82,11 @@ contract Oracle is Ownable {
         tick = int24(tickCumulativesDelta / int56(uint56(period)));
     }
 
-    // BUG 2 修正：同時更新 pool, token0, 和 token1
     function setPool(address _newPoolAddress) external onlyOwner {
         require(_newPoolAddress != address(0), "Oracle: Invalid pool address");
         pool = IUniswapV3Pool(_newPoolAddress);
-        token0 = pool.token0(); // <--- 新增
-        token1 = pool.token1(); // <--- 新增
+        token0 = pool.token0();
+        token1 = pool.token1();
         emit PoolUpdated(_newPoolAddress);
     }
 }
