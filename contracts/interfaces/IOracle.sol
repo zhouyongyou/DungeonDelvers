@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 /**
  * @title IOracle Interface
  * @notice 價格預言機的外部接口。
+ * @dev 此為功能最完整的最終版本，包含 getAmountOut 和 getAmountIn。
  */
 interface IOracle {
     /**

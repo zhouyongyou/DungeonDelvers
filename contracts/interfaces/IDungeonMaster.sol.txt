@@ -8,9 +8,13 @@ pragma solidity ^0.8.20;
  */
 interface IDungeonMaster {
     /**
-     * @notice 隊伍進入地下城開始探險。
+     * @notice 隊伍請求進入地下城開始探險。
+     * @dev ★ 核心修正：函式簽名已與 DungeonMaster.sol 的實作同步。
+     * @param _partyId 進入地城的隊伍 Token ID。
+     * @param _dungeonId 欲挑戰的地城 ID。
+     * @return requestId Chainlink VRF 的請求 ID。
      */
-    function enterDungeon(uint256 _partyId) external;
+    function requestExpedition(uint256 _partyId, uint256 _dungeonId) external payable returns (uint256 requestId);
 
     /**
      * @notice 隊伍完成探險後領取獎勵。
