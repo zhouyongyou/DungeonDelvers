@@ -7,34 +7,22 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
+import "./AltarStorage.sol";
 import "../interfaces/IAltarOfAscension.sol";
 import "../interfaces/IDungeonCore.sol";
 import "../interfaces/IHero.sol";
 import "../interfaces/IRelic.sol";
 
 /**
- * @title AltarOfAscension (飛升祭壇 - 終極完整版)
- * @author Your Team Name
- * @notice 這個模組專門處理 Hero 和 Relic 的「合成升階」功能，包含複雜的成功/失敗機率。
- * @dev 已整合 Chainlink VRF 以確保結果的隨機性，並與最新的模塊化接口完全兼容。
+ * @title AltarOfAscension (飛升祭壇 - 重構版)
+ * @dev 採用邏輯與儲存分離模式，以解決合約大小超限的問題。
  */
 contract AltarOfAscension is IAltarOfAscension, Ownable, ReentrancyGuard, VRFV2PlusWrapperConsumerBase, Pausable {
 
     IDungeonCore public dungeonCore;
 
-    // --- 合成規則 ---
-    // ★ 核心修正：將 mapping 設為 internal，並提供一個 public 的 getter 函式來實現接口。
-    mapping(uint8 => Recipe) internal upgradeRules;
+    AltarStorage public immutable altarStorage; // 【重構】儲存合約的實例
 
-    // --- 升星請求 ---
-    struct UpgradeRequest {
-        address player;
-        address tokenContract;
-        uint8 baseRarity;
-    }
-    mapping(uint256 => UpgradeRequest) public s_requests;
-
-    // --- VRF 常數 ---
     uint32 private constant CALLBACK_GAS_LIMIT = 500000;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
@@ -47,70 +35,63 @@ contract AltarOfAscension is IAltarOfAscension, Ownable, ReentrancyGuard, VRFV2P
 
     constructor(
         address _dungeonCoreAddress,
+        address _altarStorageAddress, // 【重構】新增儲存合約地址
         address _vrfWrapper,
         address _initialOwner
     ) VRFV2PlusWrapperConsumerBase(_vrfWrapper) Ownable(_initialOwner) {
         dungeonCore = IDungeonCore(_dungeonCoreAddress);
-        // 初始化預設的合成規則
-        _setRule(1, 5, 0.005 ether, 5, 65, 28);
-        _setRule(2, 4, 0.01 ether, 4, 51, 35);
-        _setRule(3, 3, 0.02 ether, 3, 32, 45);
-        _setRule(4, 2, 0.05 ether, 2, 18, 50);
+        altarStorage = AltarStorage(_altarStorageAddress);
     }
     
     // --- 核心外部函式 ---
 
     function upgradeNFTs(address _tokenContract, uint256[] calldata _tokenIds)
-        external
-        override
-        payable
-        whenNotPaused
-        nonReentrant
+        external override payable whenNotPaused nonReentrant
     {
         uint8 baseRarity = _validateAndBurnMaterials(_tokenContract, _tokenIds);
-        Recipe memory rule = upgradeRules[baseRarity];
+        Recipe memory rule = altarStorage.getUpgradeRule(baseRarity); // 【重構】讀取
         
-        require(rule.requiredCount > 0, "Altar: Upgrades for this rarity are not configured");
-        require(msg.value >= rule.nativeFee, "Altar: Insufficient native fee");
+        require(rule.requiredCount > 0, "Altar: Rule not configured");
+        require(msg.value >= rule.nativeFee, "Altar: Insufficient fee");
         
         bytes memory extraArgs = VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: true}));
         (uint256 requestId, ) = requestRandomnessPayInNative(CALLBACK_GAS_LIMIT, REQUEST_CONFIRMATIONS, NUM_WORDS, extraArgs);
 
-        s_requests[requestId] = UpgradeRequest({
+        // 【重構】寫入
+        altarStorage.setRequest(requestId, AltarStorage.UpgradeRequestData({
             player: msg.sender,
             tokenContract: _tokenContract,
             baseRarity: baseRarity
-        });
+        }));
         
         emit UpgradeRequested(requestId, msg.sender, _tokenContract, baseRarity, _tokenIds.length);
     }
     
     function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override nonReentrant {
-        UpgradeRequest storage request = s_requests[_requestId];
+        AltarStorage.UpgradeRequestData memory request = altarStorage.getRequest(_requestId);
         require(request.player != address(0), "Altar: Invalid request");
 
-        uint256 randomValue = _randomWords[0];
-        uint256 chanceRoll = randomValue % 100;
-        Recipe memory rule = upgradeRules[request.baseRarity];
+        uint256 chanceRoll = _randomWords[0] % 100;
+        Recipe memory rule = altarStorage.getUpgradeRule(request.baseRarity); // 【重構】讀取
         
-        uint8 outcome; // 0=全失敗, 1=部分失敗, 2=成功, 3=大成功
+        uint8 outcome;
         uint256[] memory newTokens;
 
-        if (chanceRoll < rule.greatSuccessChance) { // 大成功
+        if (chanceRoll < rule.greatSuccessChance) {
             outcome = 3;
             newTokens = new uint256[](2);
-            newTokens[0] = _mintUpgradedNFT(request.player, request.tokenContract, request.baseRarity + 1, randomValue);
-            newTokens[1] = _mintUpgradedNFT(request.player, request.tokenContract, request.baseRarity + 1, randomValue >> 32);
-        } else if (chanceRoll < rule.greatSuccessChance + rule.successChance) { // 成功
+            newTokens[0] = _mintUpgradedNFT(request.player, request.tokenContract, request.baseRarity + 1, _randomWords[0]);
+            newTokens[1] = _mintUpgradedNFT(request.player, request.tokenContract, request.baseRarity + 1, _randomWords[0] >> 32);
+        } else if (chanceRoll < rule.greatSuccessChance + rule.successChance) {
             outcome = 2;
             newTokens = new uint256[](1);
-            newTokens[0] = _mintUpgradedNFT(request.player, request.tokenContract, request.baseRarity + 1, randomValue);
-        } else if (chanceRoll < rule.greatSuccessChance + rule.successChance + rule.partialFailChance) { // 部分失敗
+            newTokens[0] = _mintUpgradedNFT(request.player, request.tokenContract, request.baseRarity + 1, _randomWords[0]);
+        } else if (chanceRoll < rule.greatSuccessChance + rule.successChance + rule.partialFailChance) {
             outcome = 1;
             uint256 materialsToReturn = rule.requiredCount / 2;
             newTokens = new uint256[](materialsToReturn);
             for (uint i = 0; i < materialsToReturn; i++) {
-                newTokens[i] = _mintUpgradedNFT(request.player, request.tokenContract, request.baseRarity, randomValue + i);
+                newTokens[i] = _mintUpgradedNFT(request.player, request.tokenContract, request.baseRarity, _randomWords[0] + i);
             }
         } else { // 徹底失敗
             outcome = 0;
@@ -118,12 +99,12 @@ contract AltarOfAscension is IAltarOfAscension, Ownable, ReentrancyGuard, VRFV2P
         }
 
         emit UpgradeFulfilled(_requestId, request.player, outcome, newTokens);
-        delete s_requests[_requestId];
+        altarStorage.deleteRequest(_requestId); // 【重構】寫入
     }
 
     // --- 視圖函式 ---
     function getAscensionRecipe(uint8 _rarity) external view override returns (Recipe memory) {
-        return upgradeRules[_rarity];
+        return altarStorage.getUpgradeRule(_rarity); // 【重構】讀取
     }
 
     // --- 內部輔助函式 ---
@@ -135,7 +116,8 @@ contract AltarOfAscension is IAltarOfAscension, Ownable, ReentrancyGuard, VRFV2P
         address relicContractAddress = dungeonCore.relicContract();
         
         require(heroContractAddress != address(0) && relicContractAddress != address(0), "Altar: Contracts not set in Core");
-
+        
+        // Get base rarity from the first token
         if (_tokenContract == heroContractAddress) {
             (IHero.HeroData memory data, ) = IHero(_tokenContract).getHero(_tokenIds[0]);
             baseRarity = data.rarity;
@@ -147,8 +129,12 @@ contract AltarOfAscension is IAltarOfAscension, Ownable, ReentrancyGuard, VRFV2P
         }
         
         require(baseRarity > 0 && baseRarity < 5, "Altar: Invalid rarity for upgrade");
-        require(_tokenIds.length == upgradeRules[baseRarity].requiredCount, "Altar: Incorrect number of materials");
         
+        // 【關鍵修正】從儲存合約讀取規則以進行驗證
+        Recipe memory rule = altarStorage.getUpgradeRule(baseRarity);
+        require(_tokenIds.length == rule.requiredCount, "Altar: Incorrect number of materials");
+        
+        // Validate and burn all materials
         for (uint i = 0; i < _tokenIds.length; i++) {
             if (_tokenContract == heroContractAddress) {
                 IHero hero = IHero(_tokenContract);
@@ -176,6 +162,16 @@ contract AltarOfAscension is IAltarOfAscension, Ownable, ReentrancyGuard, VRFV2P
     
     // --- Owner 管理函式 ---
     
+    // 【重構】將初始化移出建構函式
+    function initializeRules() external onlyOwner {
+        Recipe memory rule1 = altarStorage.getUpgradeRule(1);
+        require(rule1.requiredCount == 0, "Altar: Rules already initialized");
+        _setRule(1, 5, 0.005 ether, 5, 65, 28);
+        _setRule(2, 4, 0.01 ether, 4, 51, 35);
+        _setRule(3, 3, 0.02 ether, 3, 32, 45);
+        _setRule(4, 2, 0.05 ether, 2, 18, 50);
+    }
+    
     function setUpgradeRule(uint8 _fromRarity, uint8 _materialsRequired, uint256 _nativeFee, uint8 _great, uint8 _success, uint8 _partial) external onlyOwner {
         _setRule(_fromRarity, _materialsRequired, _nativeFee, _great, _success, _partial);
     }
@@ -183,16 +179,15 @@ contract AltarOfAscension is IAltarOfAscension, Ownable, ReentrancyGuard, VRFV2P
     function _setRule(uint8 _fromRarity, uint8 _materialsRequired, uint256 _nativeFee, uint8 _great, uint8 _success, uint8 _partial) private {
         require(_fromRarity > 0 && _fromRarity < 5, "Altar: Invalid fromRarity");
         require(_great + _success + _partial < 100, "Altar: Total chance must be < 100");
-        Recipe memory newRule = Recipe({
+        altarStorage.setUpgradeRule(_fromRarity, Recipe({
             requiredRarity: _fromRarity,
             requiredCount: _materialsRequired,
             nativeFee: _nativeFee,
             greatSuccessChance: _great,
             successChance: _success,
             partialFailChance: _partial
-        });
-        upgradeRules[_fromRarity] = newRule;
-        emit UpgradeRuleSet(_fromRarity, newRule);
+        }));
+        emit UpgradeRuleSet(_fromRarity, altarStorage.getUpgradeRule(_fromRarity));
     }
 
     function setDungeonCore(address _newAddress) public onlyOwner {

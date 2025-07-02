@@ -1,35 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/**
- * @title IAltarOfAscension Interface
- * @notice 升階祭壇的外部接口。
- * @dev 此為與 AltarOfAscension.sol (終極完整版) 完全匹配的接口文件。
- */
+// 【修正】將共享的結構體定義在介面檔案中
+struct Recipe {
+    uint8 requiredRarity;
+    uint8 requiredCount;
+    uint256 nativeFee;
+    uint8 greatSuccessChance;
+    uint8 successChance;
+    uint8 partialFailChance;
+}
+
+// 這個結構體目前在 AltarStorage 中定義，為了讓 AltarOfAscension 能識別，我們在這裡也聲明
+// 一個更好的做法是將這個結構體也移到一個共享的 Library 或 Interface 中
+struct UpgradeRequest {
+    address player;
+    address tokenContract;
+    uint8 baseRarity;
+}
+
+
 interface IAltarOfAscension {
-    /**
-     * @dev 升階配方的數據結構，定義了合成所需的材料、費用和各種成功機率。
-     */
-    struct Recipe {
-        uint8 requiredRarity;     // 需求材料的稀有度
-        uint8 requiredCount;      // 需求材料的數量
-        uint256 nativeFee;        // 需要支付的原生代幣費用 (例如 ETH)
-        uint8 greatSuccessChance; // 大成功機率 (0-99)
-        uint8 successChance;      // 成功機率 (0-99)
-        uint8 partialFailChance;  // 部分失敗機率 (0-99)
-    }
-
-    /**
-     * @notice 獲取指定稀有度 NFT 的升階配方。
-     * @param _rarity 要查詢的材料稀有度。
-     * @return The recipe for the given rarity.
-     */
-    function getAscensionRecipe(uint8 _rarity) external view returns (Recipe memory);
-
-    /**
-     * @notice 玩家提交 NFT 進行升階。
-     * @param _tokenContract 要升階的 NFT 合約地址 (Hero 或 Relic)。
-     * @param _tokenIds 用於升階的 NFT Token ID 列表。
-     */
     function upgradeNFTs(address _tokenContract, uint256[] calldata _tokenIds) external payable;
+    function getAscensionRecipe(uint8 _rarity) external view returns (Recipe memory);
 }

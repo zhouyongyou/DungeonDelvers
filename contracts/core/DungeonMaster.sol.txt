@@ -2,13 +2,11 @@
 pragma solidity ^0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-// 【修正】v5 路徑更新
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {ReentrancyGuard}from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
-import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
-// --- 核心接口 ---
+import "./DungeonStorage.sol";
+import "./DungeonMasterVRF.sol"; // 【瘦身】引入 VRF 衛星合約
 import "../interfaces/IDungeonCore.sol";
 import "../interfaces/IDungeonMaster.sol";
 import "../interfaces/IPlayerVault.sol";
@@ -18,48 +16,23 @@ import "../interfaces/IVIPStaking.sol";
 import "../interfaces/IOracle.sol";
 
 /**
- * @title DungeonMaster (地城管理模組 - 最終完整版)
+ * @title DungeonMaster (地城管理模組 - 最終瘦身版)
  * @author Your Team Name
- * @notice 遊戲的核心邏輯模組，專門處理探險、VRF 回調、獎勵與經驗值計算、冷卻時間等事務。
- * @dev 此版本恢復了舊版的完整遊戲機制，並與最新的模塊化接口完全兼容。
+ * @notice 遊戲的核心邏輯模組。已將儲存與 VRF 功能分離，以解決合約大小限制。
+ * @dev 不再直接處理 VRF，將其委託給 DungeonMasterVRF 衛星合約。
  */
-contract DungeonMaster is IDungeonMaster, VRFV2PlusWrapperConsumerBase, ReentrancyGuard, Pausable, Ownable {
+contract DungeonMaster is IDungeonMaster, ReentrancyGuard, Pausable, Ownable {
 
-    IDungeonCore public immutable dungeonCore;
+    // 【最終修正】將 public 狀態變數改為 internal，並提供明確的 getter 函式
+    IDungeonCore internal immutable _dungeonCore;
+    DungeonStorage internal immutable _dungeonStorage;
+    DungeonMasterVRF internal _vrfContract; 
 
-    // --- 遊戲設定 ---
+    // --- 遊戲設定 (保留在邏輯合約中) ---
     uint256 public provisionPriceUSD = 5 * 1e18;
     uint256 public globalRewardMultiplier = 1000; // 1000 = 100%
     uint256 public explorationFee = 0.0015 ether;
     uint256 public constant COOLDOWN_PERIOD = 24 hours;
-    uint256 public constant NUM_DUNGEONS = 10;
-
-    struct Dungeon {
-        uint256 requiredPower;
-        uint256 rewardAmountUSD;
-        uint8 baseSuccessRate;
-        bool isInitialized;
-    }
-    mapping(uint256 => Dungeon) public dungeons;
-
-    // --- 遊戲進程狀態 ---
-    struct PartyStatus {
-        uint256 provisionsRemaining;
-        uint256 cooldownEndsAt;
-        uint256 unclaimedRewards;
-    }
-    mapping(uint256 => PartyStatus) public partyStatuses;
-
-    // --- VRF 相關 ---
-    struct ExpeditionRequest {
-        address requester;
-        uint256 partyId;
-        uint256 dungeonId;
-    }
-    mapping(uint256 => ExpeditionRequest) public s_requests;
-    uint32 private s_callbackGasLimit = 500000;
-    uint16 private constant REQUEST_CONFIRMATIONS = 3;
-    uint32 private constant NUM_WORDS = 1;
 
     // --- 事件 ---
     event ProvisionsBought(uint256 indexed partyId, uint256 amount, uint256 cost);
@@ -69,128 +42,140 @@ contract DungeonMaster is IDungeonMaster, VRFV2PlusWrapperConsumerBase, Reentran
     event DungeonUpdated(uint256 indexed dungeonId, uint256 requiredPower, uint256 rewardAmountUSD, uint8 baseSuccessRate);
     
     modifier onlyPartyOwner(uint256 _partyId) {
-        IParty partyContract = IParty(dungeonCore.partyContract());
-        require(partyContract.ownerOf(_partyId) == msg.sender, "DM: Not party owner");
+        require(IParty(_dungeonCore.partyContract()).ownerOf(_partyId) == msg.sender, "DM: Not party owner");
         _;
     }
 
-    constructor(address _dungeonCoreAddress, address _vrfWrapper, address _initialOwner) 
-        VRFV2PlusWrapperConsumerBase(_vrfWrapper) 
-        Ownable(_initialOwner)
-    {
-        dungeonCore = IDungeonCore(_dungeonCoreAddress);
-        _initializeDungeons();
+    constructor(address _dungeonCoreAddress, address _dungeonStorageAddress, address _initialOwner) Ownable(_initialOwner) {
+        _dungeonCore = IDungeonCore(_dungeonCoreAddress);
+        _dungeonStorage = DungeonStorage(_dungeonStorageAddress);
+    }
+    
+    // --- 視圖函式 (明確實現接口) ---
+    function dungeonCore() public view override returns (address) {
+        return address(_dungeonCore);
+    }
+
+    function dungeonStorage() public view override returns (address) {
+        return address(_dungeonStorage);
+    }
+
+    function vrfContract() public view override returns (address) {
+        return address(_vrfContract);
+    }
+
+    // --- Owner 管理函式 ---
+    function setVrfContract(address _vrfContractAddress) external onlyOwner {
+        _vrfContract = DungeonMasterVRF(_vrfContractAddress);
     }
 
     // --- 核心邏輯函式 ---
 
     function buyProvisions(uint256 _partyId, uint256 _amount) 
-        external 
-        nonReentrant 
-        whenNotPaused 
-        onlyPartyOwner(_partyId)
+        external nonReentrant whenNotPaused onlyPartyOwner(_partyId)
     {
         require(_amount > 0, "DM: Amount must be > 0");
 
-        IOracle oracle = IOracle(dungeonCore.oracle());
-        IPlayerVault playerVault = IPlayerVault(dungeonCore.playerVault());
+        IPlayerVault playerVault = IPlayerVault(_dungeonCore.playerVault());
+        IOracle oracle = IOracle(_dungeonCore.oracle());
         
         uint256 totalCostUSD = provisionPriceUSD * _amount;
         
         address soulShardToken = address(playerVault.soulShardToken());
-        address usdToken = dungeonCore.usdToken();
+        address usdToken = _dungeonCore.usdToken();
         uint256 requiredSoulShard = oracle.getAmountOut(usdToken, soulShardToken, totalCostUSD);
         
         playerVault.spendForGame(msg.sender, requiredSoulShard);
         
-        partyStatuses[_partyId].provisionsRemaining += _amount;
+        DungeonStorage.PartyStatus memory status = _dungeonStorage.getPartyStatus(_partyId);
+        status.provisionsRemaining += _amount;
+        _dungeonStorage.setPartyStatus(_partyId, status);
+
         emit ProvisionsBought(_partyId, _amount, requiredSoulShard);
     }
 
     function requestExpedition(uint256 _partyId, uint256 _dungeonId) 
-        external payable 
+        external 
+        payable 
+        override
         nonReentrant 
         whenNotPaused 
-        onlyPartyOwner(_partyId) 
+        onlyPartyOwner(_partyId)
         returns (uint256 requestId)
     {
+        require(address(_vrfContract) != address(0), "DM: VRF contract not set");
         require(msg.value >= explorationFee, "DM: BNB fee not met");
-        require(dungeons[_dungeonId].isInitialized, "DM: Dungeon DNE");
         
-        PartyStatus storage status = partyStatuses[_partyId];
+        DungeonStorage.Dungeon memory dungeon = _dungeonStorage.getDungeon(_dungeonId);
+        DungeonStorage.PartyStatus memory status = _dungeonStorage.getPartyStatus(_partyId);
+
+        require(dungeon.isInitialized, "DM: Dungeon DNE");
         require(status.provisionsRemaining > 0, "DM: No provisions");
         require(!isPartyLocked(_partyId), "DM: Party on cooldown or in dungeon");
         
-        IParty partyContract = IParty(dungeonCore.partyContract());
-        IParty.PartyComposition memory comp = partyContract.getPartyComposition(_partyId);
-        require(comp.totalPower >= dungeons[_dungeonId].requiredPower, "DM: Power too low");
+        require(IParty(_dungeonCore.partyContract()).getPartyComposition(_partyId).totalPower >= dungeon.requiredPower, "DM: Power too low");
 
         status.provisionsRemaining--;
-        status.cooldownEndsAt = block.timestamp + COOLDOWN_PERIOD; // 預先鎖定冷卻時間
+        status.cooldownEndsAt = block.timestamp + COOLDOWN_PERIOD;
+        _dungeonStorage.setPartyStatus(_partyId, status);
 
-        bytes memory extraArgs = VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: true}));
-        (requestId, ) = requestRandomnessPayInNative(s_callbackGasLimit, REQUEST_CONFIRMATIONS, NUM_WORDS, extraArgs);
+        requestId = _vrfContract.sendRequest(msg.sender, _partyId, _dungeonId);
         
-        s_requests[requestId] = ExpeditionRequest({ requester: msg.sender, partyId: _partyId, dungeonId: _dungeonId });
+        _dungeonStorage.setExpeditionRequest(requestId, 
+            DungeonStorage.ExpeditionRequest({ requester: msg.sender, partyId: _partyId, dungeonId: _dungeonId })
+        );
         emit ExpeditionRequested(requestId, _partyId, _dungeonId);
     }
 
-    function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
-        ExpeditionRequest storage request = s_requests[_requestId];
+    function processExpeditionResult(uint256 _requestId, uint256[] memory _randomWords) external override {
+        require(msg.sender == address(_vrfContract), "DM: Caller is not the VRF contract");
+
+        DungeonStorage.ExpeditionRequest memory request = _dungeonStorage.getExpeditionRequest(_requestId);
         require(request.requester != address(0), "DM: Request invalid/fulfilled");
         
         uint256 partyId = request.partyId;
-        uint256 dungeonId = request.dungeonId;
-
+        DungeonStorage.Dungeon memory dungeon = _dungeonStorage.getDungeon(request.dungeonId);
+        DungeonStorage.PartyStatus memory status = _dungeonStorage.getPartyStatus(partyId);
+        
         uint8 vipBonus = 0;
-        address vipStakingAddress = dungeonCore.vipStaking();
-        if (vipStakingAddress != address(0)) {
-            try IVIPStaking(vipStakingAddress).getVipLevel(request.requester) returns (uint8 level) {
-                vipBonus = level;
-            } catch {
-                // Silently ignore if the call fails, or handle as needed
-            }
-        }
-        uint256 finalSuccessRate = dungeons[dungeonId].baseSuccessRate + vipBonus;
+        try IVIPStaking(_dungeonCore.vipStaking()).getVipLevel(request.requester) returns (uint8 level) {
+            vipBonus = level;
+        } catch {}
+        
+        uint256 finalSuccessRate = dungeon.baseSuccessRate + vipBonus;
         if (finalSuccessRate > 100) finalSuccessRate = 100;
 
         bool success = (_randomWords[0] % 100) < finalSuccessRate;
-
         uint256 reward = 0;
+
         if (success) {
-            IOracle oracle = IOracle(dungeonCore.oracle());
-            IPlayerVault playerVault = IPlayerVault(dungeonCore.playerVault());
-            address soulShardToken = address(playerVault.soulShardToken());
-            address usdToken = dungeonCore.usdToken();
-
-            uint256 finalRewardUSD = (dungeons[dungeonId].rewardAmountUSD * globalRewardMultiplier) / 1000;
-            reward = oracle.getAmountOut(usdToken, soulShardToken, finalRewardUSD);
-            partyStatuses[partyId].unclaimedRewards += reward;
+            IPlayerVault playerVault = IPlayerVault(_dungeonCore.playerVault());
+            reward = IOracle(_dungeonCore.oracle()).getAmountOut(_dungeonCore.usdToken(), address(playerVault.soulShardToken()), (dungeon.rewardAmountUSD * globalRewardMultiplier) / 1000);
+            status.unclaimedRewards += reward;
         }
 
-        uint256 expGained = calculateExperience(dungeonId, success);
+        uint256 expGained = calculateExperience(request.dungeonId, success);
         if (expGained > 0) {
-            IParty(dungeonCore.partyContract()).incrementExpeditions(partyId, expGained);
-            // ★ 核心修正：呼叫 addExperience 並傳入正確的參數
-            IPlayerProfile(dungeonCore.playerProfile()).addExperience(request.requester, expGained);
+            IParty(_dungeonCore.partyContract()).incrementExpeditions(partyId, expGained);
+            IPlayerProfile(_dungeonCore.playerProfile()).addExperience(request.requester, expGained);
         }
-
+        
+        _dungeonStorage.setPartyStatus(partyId, status);
         emit ExpeditionFulfilled(_requestId, partyId, success, reward, expGained);
-        delete s_requests[_requestId];
+        _dungeonStorage.deleteExpeditionRequest(_requestId);
     }
-
+    
     function claimRewards(uint256 _partyId) external nonReentrant whenNotPaused onlyPartyOwner(_partyId) {
-        uint256 amountToBank = partyStatuses[_partyId].unclaimedRewards;
+        DungeonStorage.PartyStatus memory status = _dungeonStorage.getPartyStatus(_partyId);
+        uint256 amountToBank = status.unclaimedRewards;
         require(amountToBank > 0, "DM: No rewards to claim");
         
-        partyStatuses[_partyId].unclaimedRewards = 0;
+        status.unclaimedRewards = 0;
+        _dungeonStorage.setPartyStatus(_partyId, status);
         
-        IPlayerVault(dungeonCore.playerVault()).deposit(msg.sender, amountToBank);
-        
+        IPlayerVault(_dungeonCore.playerVault()).deposit(msg.sender, amountToBank);
         emit RewardsBanked(msg.sender, _partyId, amountToBank);
     }
-
-    // --- 輔助與查詢函式 ---
 
     function calculateExperience(uint256 dungeonId, bool success) internal pure returns (uint256) {
         uint256 baseExp = dungeonId * 5 + 20;
@@ -198,32 +183,33 @@ contract DungeonMaster is IDungeonMaster, VRFV2PlusWrapperConsumerBase, Reentran
     }
 
     function isPartyLocked(uint256 _partyId) public view override returns (bool) {
-        return block.timestamp < partyStatuses[_partyId].cooldownEndsAt;
+        DungeonStorage.PartyStatus memory status = _dungeonStorage.getPartyStatus(_partyId);
+        return block.timestamp < status.cooldownEndsAt;
     }
     
     function getPartyCooldown(uint256 _partyId) external view override returns (uint256) {
-        return partyStatuses[_partyId].cooldownEndsAt;
+        DungeonStorage.PartyStatus memory status = _dungeonStorage.getPartyStatus(_partyId);
+        return status.cooldownEndsAt;
     }
 
-    // --- Owner 管理函式 ---
-
-    function _initializeDungeons() private {
-        dungeons[1] = Dungeon(300, 29 * 1e18, 89, true);
-        dungeons[2] = Dungeon(600, 62 * 1e18, 83, true);
-        dungeons[3] = Dungeon(900, 96 * 1e18, 77, true);
-        dungeons[4] = Dungeon(1200, 151 * 1e18, 69, true);
-        dungeons[5] = Dungeon(1500, 205 * 1e18, 63, true);
-        dungeons[6] = Dungeon(1800, 271 * 1e18, 57, true);
-        dungeons[7] = Dungeon(2100, 418 * 1e18, 52, true);
-        dungeons[8] = Dungeon(2400, 539 * 1e18, 52, true);
-        dungeons[9] = Dungeon(2700, 685 * 1e18, 50, true);
-        dungeons[10] = Dungeon(3000, 850 * 1e18, 50, true);
+    function bulkInitializeDungeons() external onlyOwner {
+        require(!_dungeonStorage.getDungeon(1).isInitialized, "DM: Dungeons already initialized");
+        _dungeonStorage.setDungeon(1, DungeonStorage.Dungeon(300, 29 * 1e18, 89, true));
+        _dungeonStorage.setDungeon(2, DungeonStorage.Dungeon(600, 62 * 1e18, 83, true));
+        _dungeonStorage.setDungeon(3, DungeonStorage.Dungeon(900, 96 * 1e18, 77, true));
+        _dungeonStorage.setDungeon(4, DungeonStorage.Dungeon(1200, 151 * 1e18, 69, true));
+        _dungeonStorage.setDungeon(5, DungeonStorage.Dungeon(1500, 205 * 1e18, 63, true));
+        _dungeonStorage.setDungeon(6, DungeonStorage.Dungeon(1800, 271 * 1e18, 57, true));
+        _dungeonStorage.setDungeon(7, DungeonStorage.Dungeon(2100, 418 * 1e18, 52, true));
+        _dungeonStorage.setDungeon(8, DungeonStorage.Dungeon(2400, 539 * 1e18, 52, true));
+        _dungeonStorage.setDungeon(9, DungeonStorage.Dungeon(2700, 685 * 1e18, 50, true));
+        _dungeonStorage.setDungeon(10, DungeonStorage.Dungeon(3000, 850 * 1e18, 50, true));
     }
-
+    
     function updateDungeon(uint256 _dungeonId, uint256 _requiredPower, uint256 _rewardAmountUSD, uint8 _successRate) external onlyOwner {
-        require(_dungeonId > 0 && _dungeonId <= NUM_DUNGEONS, "DM: Invalid dungeon ID");
+        require(_dungeonId > 0 && _dungeonId <= _dungeonStorage.NUM_DUNGEONS(), "DM: Invalid dungeon ID");
         require(_successRate <= 100, "DM: Success rate > 100");
-        dungeons[_dungeonId] = Dungeon(_requiredPower, _rewardAmountUSD, _successRate, true);
+        _dungeonStorage.setDungeon(_dungeonId, DungeonStorage.Dungeon(_requiredPower, _rewardAmountUSD, _successRate, true));
         emit DungeonUpdated(_dungeonId, _requiredPower, _rewardAmountUSD, _successRate);
     }
     
