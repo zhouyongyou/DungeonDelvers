@@ -1,4 +1,4 @@
-// AltarOfAscension
+// AltarOfAscension.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -7,23 +7,24 @@ pragma solidity ^0.8.20;
 // =================================================================================================
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
 // --- Hero & Relic 合約介面 ---
+// 確保介面與我們之前版本的 Hero/Relic 合約函式一致
 interface IHero {
     function ownerOf(uint256 tokenId) external view returns (address);
     function getHeroProperties(uint256 tokenId) external view returns (uint8 rarity, uint256 power);
-    function mintFromAltar(address _to, uint8 _rarity, uint256 _power) external;
+    function mintFromAltar(address to, uint8 rarity, uint256 power) external;
     function burnFromAltar(uint256 tokenId) external;
 }
 
 interface IRelic {
     function ownerOf(uint256 tokenId) external view returns (address);
     function getRelicProperties(uint256 tokenId) external view returns (uint8 rarity, uint8 capacity);
-    function mintFromAltar(address _to, uint8 _rarity, uint8 _capacity) external;
+    function mintFromAltar(address to, uint8 rarity, uint8 capacity) external;
     function burnFromAltar(uint256 tokenId) external;
 }
 
@@ -32,9 +33,9 @@ interface IRelic {
 // Section 2: AltarOfAscension 合約主體
 // =================================================================================================
 /**
- * @title Altar of Ascension
- * @author Your Name
- * @notice 處理英雄與聖物 NFT 升星的核心邏輯合約。
+ * @title Altar of Ascension (完整機制版)
+ * @notice 處理英雄與聖物 NFT 升星的核心邏輯合約，引入了基於 VRF 的隨機成功率機制。
+ * @dev 採用獨立依賴管理模式，與系統其他模塊解耦。
  */
 contract AltarOfAscension is Ownable, ReentrancyGuard, Pausable, VRFV2PlusWrapperConsumerBase {
 
@@ -52,11 +53,12 @@ contract AltarOfAscension is Ownable, ReentrancyGuard, Pausable, VRFV2PlusWrappe
 
     // --- 升級規則 ---
     struct UpgradeRule {
-        uint8 materialsRequired;
-        uint256 nativeFee;
-        uint8 greatSuccessChance;
-        uint8 successChance;
-        uint8 partialFailChance;
+        uint8 materialsRequired;    // 需要的材料數量
+        uint256 nativeFee;          // 需要支付的平台幣費用 (BNB/ETH)
+        uint8 greatSuccessChance;   // 大成功機率 (獲得 2 個升級品)
+        uint8 successChance;        // 成功機率 (獲得 1 個升級品)
+        uint8 partialFailChance;    // 部分失敗機率 (返還一半材料)
+                                    // (100 - great - success - partial) 為徹底失敗機率
     }
     mapping(uint8 => UpgradeRule) public upgradeRules;
 
@@ -75,6 +77,8 @@ contract AltarOfAscension is Ownable, ReentrancyGuard, Pausable, VRFV2PlusWrappe
     event UpgradeRequested(uint256 indexed requestId, address indexed player, address indexed tokenContract, uint256[] tokenIds);
     event UpgradeFulfilled(uint256 indexed requestId, address indexed player, uint8 targetRarity, uint8 outcome);
     event UpgradeRuleSet(uint8 indexed fromRarity, UpgradeRule rule);
+    event HeroContractSet(address indexed newAddress);
+    event RelicContractSet(address indexed newAddress);
 
     // =================================================================
     // Section 2.3: 建構函式
@@ -82,12 +86,9 @@ contract AltarOfAscension is Ownable, ReentrancyGuard, Pausable, VRFV2PlusWrappe
     
     constructor(
         address _vrfWrapper,
-        address _heroContractAddress,
-        address _relicContractAddress
-    ) VRFV2PlusWrapperConsumerBase(_vrfWrapper) Ownable(msg.sender) {
-        heroContract = IHero(_heroContractAddress);
-        relicContract = IRelic(_relicContractAddress);
-
+        address _initialOwner
+    ) VRFV2PlusWrapperConsumerBase(_vrfWrapper) Ownable(_initialOwner) {
+        // 在此設定初始的升級規則，擁有者後續可以通過 setUpgradeRule 進行修改
         upgradeRules[1] = UpgradeRule({ materialsRequired: 5, nativeFee: 0.005 ether, greatSuccessChance: 5, successChance: 65, partialFailChance: 28 });
         emit UpgradeRuleSet(1, upgradeRules[1]);
         upgradeRules[2] = UpgradeRule({ materialsRequired: 4, nativeFee: 0.01 ether, greatSuccessChance: 4, successChance: 51, partialFailChance: 35 });
@@ -102,11 +103,11 @@ contract AltarOfAscension is Ownable, ReentrancyGuard, Pausable, VRFV2PlusWrappe
     // Section 2.4: 核心升級函式
     // =================================================================
 
-    function upgradeNFTs(address _tokenContract, uint256[] calldata _tokenIds) 
-        external 
-        payable 
-        whenNotPaused 
-        nonReentrant 
+    function upgradeNFTs(address _tokenContract, uint256[] calldata _tokenIds)
+        external
+        payable
+        whenNotPaused
+        nonReentrant
     {
         uint8 baseRarity = _validateMaterials(_tokenContract, _tokenIds);
         UpgradeRule memory rule = upgradeRules[baseRarity];
@@ -115,6 +116,7 @@ contract AltarOfAscension is Ownable, ReentrancyGuard, Pausable, VRFV2PlusWrappe
         require(_tokenIds.length == rule.materialsRequired, "Altar: Incorrect number of materials");
         require(msg.value >= rule.nativeFee, "Altar: Insufficient BNB fee");
         
+        // 請求隨機數
         bytes memory extraArgs = VRFV2PlusClient._argsToBytes(
             VRFV2PlusClient.ExtraArgsV1({nativePayment: true})
         );
@@ -125,12 +127,14 @@ contract AltarOfAscension is Ownable, ReentrancyGuard, Pausable, VRFV2PlusWrappe
             extraArgs
         );
 
+        // 儲存請求資訊
         s_requests[requestId] = UpgradeRequest({
             player: msg.sender,
             tokenContract: _tokenContract,
             baseRarity: baseRarity
         });
 
+        // 銷毀作為材料的 NFT
         for (uint i = 0; i < _tokenIds.length; i++) {
             if (_tokenContract == address(heroContract)) {
                 heroContract.burnFromAltar(_tokenIds[i]);
@@ -152,22 +156,26 @@ contract AltarOfAscension is Ownable, ReentrancyGuard, Pausable, VRFV2PlusWrappe
 
         uint256 randomValue = _randomWords[0] % 100;
         UpgradeRule memory rule = upgradeRules[request.baseRarity];
-        uint8 outcome;
+        uint8 outcome; // 0=失敗, 1=部分失敗, 2=成功, 3=大成功
 
         if (randomValue < rule.greatSuccessChance) {
+            // 大成功: 獲得 2 個升級後的 NFT
             _mintUpgradedNFT(request.player, request.tokenContract, request.baseRarity + 1);
             _mintUpgradedNFT(request.player, request.tokenContract, request.baseRarity + 1);
             outcome = 3;
         } else if (randomValue < rule.greatSuccessChance + rule.successChance) {
+            // 成功: 獲得 1 個升級後的 NFT
             _mintUpgradedNFT(request.player, request.tokenContract, request.baseRarity + 1);
             outcome = 2;
         } else if (randomValue < rule.greatSuccessChance + rule.successChance + rule.partialFailChance) {
+            // 部分失敗: 返還一半材料
             uint256 materialsToReturn = rule.materialsRequired / 2;
             for (uint i = 0; i < materialsToReturn; i++) {
                  _mintUpgradedNFT(request.player, request.tokenContract, request.baseRarity);
             }
             outcome = 1;
         } else {
+            // 徹底失敗: 不返還任何東西
             outcome = 0;
         }
 
@@ -177,7 +185,9 @@ contract AltarOfAscension is Ownable, ReentrancyGuard, Pausable, VRFV2PlusWrappe
 
     function _validateMaterials(address _tokenContract, uint256[] calldata _tokenIds) internal view returns (uint8 baseRarity) {
         require(_tokenIds.length > 0, "Altar: No materials provided");
+        require(address(heroContract) != address(0) && address(relicContract) != address(0), "Altar: Contracts not set");
 
+        // 驗證合約地址並獲取第一個材料的稀有度
         if (_tokenContract == address(heroContract)) {
             (baseRarity,) = IHero(_tokenContract).getHeroProperties(_tokenIds[0]);
         } else if (_tokenContract == address(relicContract)) {
@@ -188,6 +198,7 @@ contract AltarOfAscension is Ownable, ReentrancyGuard, Pausable, VRFV2PlusWrappe
 
         require(baseRarity > 0 && baseRarity < 5, "Altar: Invalid rarity for upgrade");
         
+        // 驗證所有材料都屬於呼叫者，且稀有度一致
         for (uint i = 0; i < _tokenIds.length; i++) {
             if (_tokenContract == address(heroContract)) {
                 require(IHero(_tokenContract).ownerOf(_tokenIds[i]) == msg.sender, "Altar: Not owner of all materials");
@@ -212,22 +223,23 @@ contract AltarOfAscension is Ownable, ReentrancyGuard, Pausable, VRFV2PlusWrappe
     }
 
     function _generatePowerByRarity(uint8 _rarity) internal view returns (uint256) {
+        // 使用一個簡單的偽隨機數來決定力量值
         uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp, _rarity, msg.sender)));
-        if (_rarity == 1) return 15 + (pseudoRandom % 36);
-        if (_rarity == 2) return 50 + (pseudoRandom % 51);
-        if (_rarity == 3) return 100 + (pseudoRandom % 51);
-        if (_rarity == 4) return 150 + (pseudoRandom % 51);
-        if (_rarity == 5) return 200 + (pseudoRandom % 56);
+        if (_rarity == 1) return 15 + (pseudoRandom % 36); // 15-50
+        if (_rarity == 2) return 50 + (pseudoRandom % 51); // 50-100
+        if (_rarity == 3) return 100 + (pseudoRandom % 51); // 100-150
+        if (_rarity == 4) return 150 + (pseudoRandom % 51); // 150-200
+        if (_rarity == 5) return 200 + (pseudoRandom % 56); // 200-255
         return 0;
     }
 
     function _generateCapacityByRarity(uint8 _rarity) internal pure returns (uint8) {
         require(_rarity > 0 && _rarity <= 5, "Invalid rarity");
-        return _rarity;
+        return _rarity; // 容量直接等於稀有度
     }
 
     // =================================================================
-    // Section 6: 管理員函式
+    // Section 2.6: 管理員函式
     // =================================================================
     
     function setUpgradeRule(uint8 _fromRarity, UpgradeRule calldata _rule) external onlyOwner {
@@ -240,8 +252,15 @@ contract AltarOfAscension is Ownable, ReentrancyGuard, Pausable, VRFV2PlusWrappe
         emit UpgradeRuleSet(_fromRarity, _rule);
     }
     
-    function setHeroContract(address _address) external onlyOwner { heroContract = IHero(_address); }
-    function setRelicContract(address _address) external onlyOwner { relicContract = IRelic(_address); }
+    function setHeroContract(address _address) external onlyOwner {
+        heroContract = IHero(_address);
+        emit HeroContractSet(_address);
+    }
+
+    function setRelicContract(address _address) external onlyOwner {
+        relicContract = IRelic(_address);
+        emit RelicContractSet(_address);
+    }
 
     function withdrawNative() external onlyOwner {
         (bool success, ) = owner().call{value: address(this).balance}("");

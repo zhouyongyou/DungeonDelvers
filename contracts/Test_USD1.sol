@@ -192,9 +192,9 @@ contract FourERC20 is Context, IERC20, IERC20Metadata {
     }
 }
 
-contract Test_SoulShard is FourERC20, Ownable {
+contract Test_USD1 is FourERC20, Ownable {
     constructor() {
-        _init("Test SoulShard", "TSOUL");
+        _init("Test USD1", "TUSD1");
         _mint(owner(), 1000000000 * 10 ** decimals());
     }
 }
