@@ -124,7 +124,8 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
         require(msg.value >= explorationFee, "DM: BNB fee not met");
         
         (uint256 requiredPower, , , bool isInitialized) = dungeonStorage.getDungeon(_dungeonId);
-        (uint256 provisions, uint256 cooldown, ) = dungeonStorage.getPartyStatus(_partyId);
+        // ★ 錯誤修正：從 Storage 獲取所有三個狀態變數
+        (uint256 provisions, uint256 cooldown, uint256 unclaimedRewards) = dungeonStorage.getPartyStatus(_partyId);
 
         require(isInitialized, "DM: Dungeon DNE");
         require(provisions > 0, "DM: No provisions");
@@ -135,7 +136,8 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
 
         provisions--;
         cooldown = block.timestamp + COOLDOWN_PERIOD;
-        dungeonStorage.setPartyStatus(_partyId, provisions, cooldown, partyStatuses[_partyId].unclaimedRewards);
+        // ★ 錯誤修正：將未改變的 unclaimedRewards 寫回，而不是嘗試讀取一個不存在的本地變數
+        dungeonStorage.setPartyStatus(_partyId, provisions, cooldown, unclaimedRewards);
 
         requestId = vrfContract.sendRequest(msg.sender, _partyId, _dungeonId);
         
