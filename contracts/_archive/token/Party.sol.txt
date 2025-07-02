@@ -39,14 +39,14 @@ contract Party is ERC721, IParty, Ownable, ReentrancyGuard, Pausable, ERC721Hold
     event DungeonCoreUpdated(address indexed newAddress);
 
     constructor(
-        address _dungeonCoreAddress,
+        // address _dungeonCoreAddress,
         address initialOwner
     )
         ERC721("Dungeon Delvers Party", "DDP")
         Ownable(initialOwner)
     {
-        require(_dungeonCoreAddress != address(0), "Party: Invalid DungeonCore address");
-        dungeonCore = IDungeonCore(_dungeonCoreAddress);
+        // require(_dungeonCoreAddress != address(0), "Party: Invalid DungeonCore address");
+        // dungeonCore = IDungeonCore(_dungeonCoreAddress);
         _nextTokenId = 1;
     }
 

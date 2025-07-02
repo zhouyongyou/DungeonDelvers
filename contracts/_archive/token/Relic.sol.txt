@@ -57,7 +57,7 @@ contract Relic is IRelic, ERC721, Ownable, VRFV2PlusWrapperConsumerBase, Reentra
     }
 
     constructor(
-        address _dungeonCoreAddress,
+        // address _dungeonCoreAddress,
         address _vrfWrapper,
         address _initialOwner
     )
@@ -65,7 +65,7 @@ contract Relic is IRelic, ERC721, Ownable, VRFV2PlusWrapperConsumerBase, Reentra
         VRFV2PlusWrapperConsumerBase(_vrfWrapper)
         Ownable(_initialOwner)
     {
-        dungeonCore = IDungeonCore(_dungeonCoreAddress);
+        // dungeonCore = IDungeonCore(_dungeonCoreAddress);
         seasonSeed = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender, block.chainid)));
         // ★ 核心修正 2：設定初始 Token ID 為 1
         _nextTokenId = 1;
