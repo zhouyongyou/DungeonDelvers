@@ -1,4 +1,4 @@
-// Hero_Upgraded.sol
+// Hero_NoVRF.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -11,72 +11,42 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 
-// Chainlink imports
-import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
-import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+// ★ 架構變更：不再需要與 VRF 相關的任何介面
 
-// Local imports
 // ★ 整合重點：為了實現鏈上 SVG，我們需要引入這個 SVG 庫。
 // import "../libraries/DungeonSVGLibrary.sol"; 
 
-// ★ 整合重點：這是新版的核心，一個中心化的介面，讓 Hero 合約只依賴它。
-// ★ 架構變更：Hero 合約現在需要知道 DungeonCore 的介面，以便呼叫它。
 interface IDungeonCore {
-    // 讓 PlayerVault 扣款
     function spendFromVault(address player, uint256 amount) external;
-    // 透過 Oracle 查詢價格
     function getSoulShardAmountForUSD(uint256 _amountUSD) external view returns (uint256);
-    // 獲取 Altar 地址以進行授權
-    // function altarOfAscension() external view returns (address);
 }
 
-/**
- * @title Hero (優化整合版)
- * @notice 本合約融合了原始版本的核心鑄造邏輯與新版本的模塊化、鏈上元數據等優點。
- * @dev 專為第一階段部署設計，移除了職業、世代等複雜功能，但保留了未來擴展的彈性。
- */
-contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard, Pausable {
-    // 將 Base64 函式庫的功能附加到 bytes 型別上
+contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable {
     using Base64 for bytes;
     
     // --- 狀態變數 ---
-    // ★ 架構變更：Hero 合約現在自己儲存所有需要的外部地址。
     IDungeonCore public dungeonCore;
     IERC20 public soulShardToken;
     address public ascensionAltarAddress;
-    
-//  string private _baseURIStorage;
-    // ★ 整合重點 2：使用原生 uint256 管理 Token ID，更簡潔且省 Gas。
-    // 舊：uint256 private s_tokenCounter;
+
+    // ★ 隨機性升級：引入一個動態更新的種子，形成隨機鏈
+    uint256 public dynamicSeed;
     uint256 private _nextTokenId;
-    
-    uint256 public seasonSeed;
     uint256 public blockMintLimit = 200;
     uint256 public lastMintBlock;
     uint256 public mintsInCurrentBlock;
     uint256 public mintPriceUSD = 2 * 10**18;
 
-    struct HeroProperties { uint8 rarity; uint256 power; }
+    struct HeroProperties {
+        uint8 rarity;
+        uint256 power;
+    }
     mapping(uint256 => HeroProperties) public heroProperties;
 
-    // struct RequestStatus { bool fulfilled; }
-    // mapping(uint256 => RequestStatus) public s_requests;
-    // ★ 整合重點 3：優化 VRF request 狀態的儲存方式。
-    // 使用 mapping(uint256 => bool) 比 struct 更省 Gas。
-    // 舊：struct RequestStatus { bool fulfilled; } mapping(uint256 => RequestStatus) public s_requests;
-    mapping(uint256 => bool) public s_requests;
-
-    // --- 常數 ---
-    uint32 private constant CALLBACK_GAS_LIMIT = 500000;
-    uint16 private constant REQUEST_CONFIRMATIONS = 3;
-    uint32 private constant NUM_WORDS = 1;
-    
     // --- 事件 ---
     event HeroMinted(uint256 indexed tokenId, address indexed owner, uint8 rarity, uint256 power);
-    event BatchHeroMinted(address indexed to, uint256 count);
-    event SeasonSeedUpdated(uint256 newSeed, uint256 indexed requestId);
-    event BlockMintLimitChanged(uint256 newLimit);
-    event DungeonCoreUpdated(address indexed newAddress);
+    event DynamicSeedUpdated(uint256 newSeed);
+    event DungeonCoreSet(address indexed newAddress);
     event SoulShardTokenSet(address indexed newAddress);
     event AscensionAltarSet(address indexed newAddress);
 
@@ -87,17 +57,14 @@ contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard,
         _;
     }
 
-    // --- 建構函式 ---
-    constructor(
-        address _vrfWrapper,
-        address _initialOwner
-    ) ERC721("Dungeon Delvers Hero", "DDH") VRFV2PlusWrapperConsumerBase(_vrfWrapper) Ownable(_initialOwner) {
+    // ★ 架構變更：構造函數極簡化，不再需要 vrfWrapper 地址
+    constructor(address _initialOwner) ERC721("Dungeon Delvers Hero", "DDH") Ownable(_initialOwner) {
         _nextTokenId = 1;
-        seasonSeed = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender)));
+        // 使用部署時的區塊資訊作為初始種子
+        dynamicSeed = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender, block.chainid)));
     }
 
     // --- 核心鑄造邏輯 ---
-
     function mintSingle() external payable nonReentrant whenNotPaused {
         _handleMintingFromWallet(1);
     }
@@ -118,10 +85,8 @@ contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard,
 
     function _handleMintingFromWallet(uint256 _count) private {
         _updateAndCheckBlockLimit(_count);
-        
         uint256 requiredSoulShard = getRequiredSoulShardAmount(_count);
-        soulShardToken.transferFrom(msg.sender, address(this), requiredSoulShard);
-        
+        IERC20(soulShardToken).transferFrom(msg.sender, address(this), requiredSoulShard);
         _generateAndMintHeroes(msg.sender, _count);
     }
 
@@ -129,25 +94,33 @@ contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard,
         for (uint256 i = 0; i < _count; i++) {
             _generateAndMintOnChain(_to, i);
         }
-        if (_count > 1) {
-            emit BatchHeroMinted(_to, _count);
-        }
-        // 每次批量鑄造後都請求新的隨機種子
-        _requestNewSeasonSeed();
     }
 
     function _generateAndMintOnChain(address _to, uint256 _salt) private {
-        uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(seasonSeed, block.prevrandao, msg.sender, _salt, _nextTokenId)));
+        // ★ 隨機性升級：使用鏈上偽隨機數生成器，結合了多種變數
+        uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(
+            dynamicSeed,          // 上一次的結果或管理員設定的種子
+            block.prevrandao,     // 上一個區塊的隨機數 (PoS 下的 randomness)
+            block.timestamp,      // 當前區塊時間戳
+            msg.sender,           // 呼叫者地址
+            _salt,                // 批次鑄造時的鹽值
+            _nextTokenId          // 每個 Token 獨有的 ID
+        )));
+        
         (uint8 rarity, uint256 power) = _calculateAttributes(pseudoRandom);
+        
+        // ★ 隨機性升級：在鑄造英雄後，立刻更新動態種子，為下一次鑄造做準備
+        // 這樣，下一次鑄造的隨機性就依賴於本次的結果，形成一條不可預測的鏈
+        dynamicSeed = uint256(keccak256(abi.encodePacked(dynamicSeed, pseudoRandom, uint256(power))));
+
         _mintHero(_to, rarity, power);
     }
 
     function _mintHero(address _to, uint8 _rarity, uint256 _power) private {
-        uint256 newTokenId = _nextTokenId; // 先賦值
+        uint256 newTokenId = _nextTokenId++;
         heroProperties[newTokenId] = HeroProperties({rarity: _rarity, power: _power});
         _safeMint(_to, newTokenId);
         emit HeroMinted(newTokenId, _to, _rarity, _power);
-        _nextTokenId++; // 再遞增
     }
 
     // --- 元數據 URI (動態 SVG) ---
@@ -193,27 +166,6 @@ contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard,
         else { revert("Invalid rarity"); }
     }
 
-    // --- VRF 相關 ---
-    function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal override {
-        // ★ 整合重點 7：使用 delete 清理狀態並獲得 Gas 返還。
-        // 舊：require(!s_requests[_requestId].fulfilled, ...); s_requests[_requestId].fulfilled = true;
-        // RequestStatus storage request = s_requests[_requestId];
-        // require(!request.fulfilled, "Request invalid or fulfilled");
-        // request.fulfilled = true;
-        require(s_requests[_requestId], "Request invalid or already fulfilled");
-        delete s_requests[_requestId];
-        
-        seasonSeed = _randomWords[0];
-        emit SeasonSeedUpdated(seasonSeed, _requestId);
-    }
-
-    function _requestNewSeasonSeed() private {
-        bytes memory extraArgs = VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: true}));
-        (uint256 requestId, ) = requestRandomnessPayInNative(CALLBACK_GAS_LIMIT, REQUEST_CONFIRMATIONS, NUM_WORDS, extraArgs);
-        // s_requests[requestId] = RequestStatus({fulfilled: false});
-        s_requests[requestId] = true;
-    }
-
     receive() external payable {}
 
     // --- 授權函式 (給 Altar 呼叫) ---
@@ -224,11 +176,27 @@ contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard,
     function burnFromAltar(uint256 tokenId) external onlyAltar {
         _burn(tokenId);
     }
+    // --- 其他輔助函式 ---
+    function getRequiredSoulShardAmount(uint256 _quantity) public view returns (uint256) {
+        require(address(dungeonCore) != address(0), "DungeonCore address not set");
+        uint256 totalCostUSD = mintPriceUSD * _quantity;
+        return dungeonCore.getSoulShardAmountForUSD(totalCostUSD);
+    }
+
+    function _updateAndCheckBlockLimit(uint256 _count) private {
+        if (block.number == lastMintBlock) {
+            mintsInCurrentBlock += _count;
+        } else {
+            lastMintBlock = block.number;
+            mintsInCurrentBlock = _count;
+        }
+        require(mintsInCurrentBlock <= blockMintLimit, "Mint limit for this block exceeded");
+    }
 
     // --- Owner 管理函式 ---
-    function setDungeonCoreAddress(address _address) public onlyOwner {
+    function setDungeonCore(address _address) public onlyOwner {
         dungeonCore = IDungeonCore(_address);
-        emit DungeonCoreUpdated(_address);
+        emit DungeonCoreSet(_address);
     }
 
     function setSoulShardToken(address _address) public onlyOwner {
@@ -236,9 +204,9 @@ contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard,
         emit SoulShardTokenSet(_address);
     }
 
-    function setAscensionAltarAddress(address _altarAddress) public onlyOwner {
-        ascensionAltarAddress = _altarAddress;
-        emit AscensionAltarSet(_altarAddress);
+    function setAscensionAltarAddress(address _address) public onlyOwner {
+        ascensionAltarAddress = _address;
+        emit AscensionAltarSet(_address);
     }
     
     function setMintPriceUSD(uint256 _newMintPriceUSD) public onlyOwner {
@@ -247,20 +215,11 @@ contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard,
     
     function setBlockMintLimit(uint256 _newLimit) public onlyOwner {
         blockMintLimit = _newLimit;
-        emit BlockMintLimitChanged(_newLimit);
     }
-
-    function updateSeasonSeedByOwner() public onlyOwner { _requestNewSeasonSeed(); }
 
     function pause() public onlyOwner { _pause(); }
     function unpause() public onlyOwner { _unpause(); }
 
-    // --- 其他輔助函式 ---
-    function getRequiredSoulShardAmount(uint256 _quantity) public view returns (uint256) {
-        require(address(dungeonCore) != address(0), "DungeonCore address not set");
-        uint256 totalCostUSD = mintPriceUSD * _quantity;
-        return dungeonCore.getSoulShardAmountForUSD(totalCostUSD);
-    }
 
     function getHeroProperties(uint256 _tokenId) public view returns (HeroProperties memory) { return heroProperties[_tokenId]; }
 
@@ -272,15 +231,5 @@ contract Hero is ERC721, Ownable, VRFV2PlusWrapperConsumerBase, ReentrancyGuard,
     function withdrawNative() public onlyOwner {
         (bool success, ) = owner().call{value: address(this).balance}("");
         require(success, "Withdraw failed");
-    }
-
-    function _updateAndCheckBlockLimit(uint256 _count) private {
-        if (block.number == lastMintBlock) {
-            mintsInCurrentBlock += _count;
-        } else {
-            lastMintBlock = block.number;
-            mintsInCurrentBlock = _count;
-        }
-        require(mintsInCurrentBlock <= blockMintLimit, "Mint limit for this block exceeded");
     }
 }

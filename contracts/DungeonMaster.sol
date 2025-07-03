@@ -1,4 +1,4 @@
-// DungeonMaster_Modular.sol
+// DungeonMaster_NoVRF.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -7,10 +7,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
 // --- 介面定義 ---
-// 這裡定義了 DungeonMaster 需要知道的所有其他合約的介面
 interface IDungeonCore {
-    function heroContract() external view returns (address);
-    function relicContract() external view returns (address);
     function partyContract() external view returns (address);
     function playerVault() external view returns (address);
     function playerProfile() external view returns (address);
@@ -43,58 +40,44 @@ interface IVIPStaking {
     function getVipLevel(address user) external view returns (uint8);
 }
 
-interface IDungeonMasterVRF {
-    function sendRequest(address requester, uint256 partyId, uint256 dungeonId) external returns (uint256 requestId);
-}
-
 interface IDungeonStorage {
-    // 為了簡潔，這裡省略了 DungeonStorage 的完整介面
-    // 實際開發中應包含所有需要互動的函式
     function getDungeon(uint256 dungeonId) external view returns (uint256 requiredPower, uint256 rewardAmountUSD, uint8 baseSuccessRate, bool isInitialized);
     function getPartyStatus(uint256 partyId) external view returns (uint256 provisionsRemaining, uint256 cooldownEndsAt, uint256 unclaimedRewards);
     function setPartyStatus(uint256 partyId, uint256 provisionsRemaining, uint256 cooldownEndsAt, uint256 unclaimedRewards) external;
-    function setExpeditionRequest(uint256 requestId, address requester, uint256 partyId, uint256 dungeonId) external;
-    function getExpeditionRequest(uint256 requestId) external view returns (address requester, uint256 partyId, uint256 dungeonId);
-    function deleteExpeditionRequest(uint256 requestId) external;
 }
 
-
-/**
- * @title DungeonMaster (模組化改造版)
- * @notice 遊戲的核心邏輯模組，職責單一，專注於處理探險和獎勵計算。
- * @dev 所有外部依賴都通過 set 函式在部署後注入，消除了構造函數的複雜性。
- */
 contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
-
+    
     // --- 狀態變數 ---
     IDungeonCore public dungeonCore;
     IDungeonStorage public dungeonStorage;
-    IDungeonMasterVRF public vrfContract; 
+    
+    uint256 public dynamicSeed;
 
     // 遊戲設定
     uint256 public provisionPriceUSD = 5 * 1e18;
-    uint256 public globalRewardMultiplier = 1000; // 1000 = 100%
+    uint256 public globalRewardMultiplier = 1000;
     uint256 public explorationFee = 0.0015 ether;
     uint256 public constant COOLDOWN_PERIOD = 24 hours;
 
     // --- 事件 ---
     event ProvisionsBought(uint256 indexed partyId, uint256 amount, uint256 cost);
-    event ExpeditionRequested(uint256 indexed requestId, uint256 indexed partyId, uint256 indexed dungeonId);
-    event ExpeditionFulfilled(uint256 indexed requestId, uint256 indexed partyId, bool success, uint256 reward, uint256 expGained);
+    event ExpeditionFulfilled(uint256 indexed partyId, bool success, uint256 reward, uint256 expGained);
     event RewardsBanked(address indexed user, uint256 indexed partyId, uint256 amount);
+    event DynamicSeedUpdated(uint256 newSeed);
     event DungeonCoreSet(address indexed newAddress);
     event DungeonStorageSet(address indexed newAddress);
-    event VrfContractSet(address indexed newAddress);
-    
+
     modifier onlyPartyOwner(uint256 _partyId) {
         require(IParty(dungeonCore.partyContract()).ownerOf(_partyId) == msg.sender, "DM: Not party owner");
         _;
     }
 
-    // ★ 核心改造：構造函數極簡化，只設定擁有者。
-    constructor(address _initialOwner) Ownable(_initialOwner) {}
+    constructor(address _initialOwner) Ownable(_initialOwner) {
+        dynamicSeed = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender)));
+    }
     
-    // --- 核心邏輯函式 ---
+    // --- 核心遊戲邏輯 ---
 
     function buyProvisions(uint256 _partyId, uint256 _amount) 
         external nonReentrant whenNotPaused onlyPartyOwner(_partyId)
@@ -118,13 +101,12 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
     }
 
     function requestExpedition(uint256 _partyId, uint256 _dungeonId) 
-        external payable nonReentrant whenNotPaused onlyPartyOwner(_partyId) returns (uint256 requestId)
+        external payable nonReentrant whenNotPaused onlyPartyOwner(_partyId)
     {
-        require(address(vrfContract) != address(0), "DM: VRF contract not set");
         require(msg.value >= explorationFee, "DM: BNB fee not met");
+        require(address(dungeonCore) != address(0) && address(dungeonStorage) != address(0), "DM: Core contracts not set");
         
         (uint256 requiredPower, , , bool isInitialized) = dungeonStorage.getDungeon(_dungeonId);
-        // ★ 錯誤修正：從 Storage 獲取所有三個狀態變數
         (uint256 provisions, uint256 cooldown, uint256 unclaimedRewards) = dungeonStorage.getPartyStatus(_partyId);
 
         require(isInitialized, "DM: Dungeon DNE");
@@ -136,52 +118,70 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
 
         provisions--;
         cooldown = block.timestamp + COOLDOWN_PERIOD;
-        // ★ 錯誤修正：將未改變的 unclaimedRewards 寫回，而不是嘗試讀取一個不存在的本地變數
         dungeonStorage.setPartyStatus(_partyId, provisions, cooldown, unclaimedRewards);
 
-        requestId = vrfContract.sendRequest(msg.sender, _partyId, _dungeonId);
-        
-        dungeonStorage.setExpeditionRequest(requestId, msg.sender, _partyId, _dungeonId);
-        emit ExpeditionRequested(requestId, _partyId, _dungeonId);
+        _processExpeditionResult(msg.sender, _partyId, _dungeonId);
     }
-
-    function processExpeditionResult(uint256 _requestId, uint256[] memory _randomWords) external {
-        require(msg.sender == address(vrfContract), "DM: Caller is not the VRF contract");
-
-        (address requester, uint256 partyId, uint256 dungeonId) = dungeonStorage.getExpeditionRequest(_requestId);
-        require(requester != address(0), "DM: Request invalid/fulfilled");
+    
+    function _processExpeditionResult(address _requester, uint256 _partyId, uint256 _dungeonId) private {
+        // 1. 獲取地城成功率
+        ( , , uint8 baseSuccessRate, ) = dungeonStorage.getDungeon(_dungeonId);
         
-        (, uint256 rewardAmountUSD, uint8 baseSuccessRate, ) = dungeonStorage.getDungeon(dungeonId);
-        (uint256 provisions, uint256 cooldown, uint256 unclaimedRewards) = dungeonStorage.getPartyStatus(partyId);
-        
+        // 2. 計算最終成功率
         uint8 vipBonus = 0;
-        try IVIPStaking(dungeonCore.vipStaking()).getVipLevel(requester) returns (uint8 level) {
+        try IVIPStaking(dungeonCore.vipStaking()).getVipLevel(_requester) returns (uint8 level) {
             vipBonus = level;
         } catch {}
-        
         uint256 finalSuccessRate = baseSuccessRate + vipBonus;
         if (finalSuccessRate > 100) finalSuccessRate = 100;
 
-        bool success = (_randomWords[0] % 100) < finalSuccessRate;
-        uint256 reward = 0;
+        // 3. 判定成功與否
+        uint256 randomValue = uint256(keccak256(abi.encodePacked(dynamicSeed, block.timestamp, _requester, _partyId, _dungeonId))) % 100;
+        bool success = randomValue < finalSuccessRate;
 
-        if (success) {
-            IPlayerVault playerVault = IPlayerVault(dungeonCore.playerVault());
-            reward = IOracle(dungeonCore.oracle()).getAmountOut(dungeonCore.usdToken(), playerVault.soulShardToken(), (rewardAmountUSD * globalRewardMultiplier) / 1000);
+        // 4. ★ Stack Too Deep 修正：將後續的複雜邏輯拆分到一個新的內部函式中
+        (uint256 reward, uint256 expGained) = _handleExpeditionOutcome(_requester, _partyId, _dungeonId, success);
+
+        // 5. 更新狀態
+        (uint256 provisions, uint256 cooldown, uint256 unclaimedRewards) = dungeonStorage.getPartyStatus(_partyId);
+        if (reward > 0) {
             unclaimedRewards += reward;
         }
+        dynamicSeed = uint256(keccak256(abi.encodePacked(dynamicSeed, randomValue, success ? 1 : 0)));
+        dungeonStorage.setPartyStatus(_partyId, provisions, cooldown, unclaimedRewards);
 
-        uint256 expGained = calculateExperience(dungeonId, success);
-        if (expGained > 0) {
-            IParty(dungeonCore.partyContract()).incrementExpeditions(partyId, expGained);
-            IPlayerProfile(dungeonCore.playerProfile()).addExperience(requester, expGained);
-        }
-        
-        dungeonStorage.setPartyStatus(partyId, provisions, cooldown, unclaimedRewards);
-        emit ExpeditionFulfilled(_requestId, partyId, success, reward, expGained);
-        dungeonStorage.deleteExpeditionRequest(_requestId);
+        // 6. 發送事件
+        emit ExpeditionFulfilled(_partyId, success, reward, expGained);
     }
-    
+
+    // ★ Stack Too Deep 修正：這是一個新的內部函式，專門處理探險成功或失敗後的獎勵和經驗計算
+    function _handleExpeditionOutcome(address _requester, uint256 _partyId, uint256 _dungeonId, bool _success) private returns (uint256 reward, uint256 expGained) {
+        // 如果成功，計算獎勵
+        if (_success) {
+            ( , uint256 rewardAmountUSD, , ) = dungeonStorage.getDungeon(_dungeonId);
+            IPlayerVault playerVault = IPlayerVault(dungeonCore.playerVault());
+            IOracle oracle = IOracle(dungeonCore.oracle());
+            address soulShardTokenAddress = playerVault.soulShardToken();
+            address usdTokenAddress = dungeonCore.usdToken();
+            uint256 finalRewardUSD = (rewardAmountUSD * globalRewardMultiplier) / 1000;
+            
+            reward = oracle.getAmountOut(
+                usdTokenAddress,
+                soulShardTokenAddress,
+                finalRewardUSD
+            );
+        } else {
+            reward = 0;
+        }
+
+        // 計算並分配經驗值
+        expGained = calculateExperience(_dungeonId, _success);
+        if (expGained > 0) {
+            IParty(dungeonCore.partyContract()).incrementExpeditions(_partyId, expGained);
+            try IPlayerProfile(dungeonCore.playerProfile()).addExperience(_requester, expGained) {} catch {}
+        }
+    }
+
     function claimRewards(uint256 _partyId) external nonReentrant whenNotPaused onlyPartyOwner(_partyId) {
         (uint256 provisions, uint256 cooldown, uint256 unclaimedRewards) = dungeonStorage.getPartyStatus(_partyId);
         require(unclaimedRewards > 0, "DM: No rewards to claim");
@@ -192,17 +192,21 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
         emit RewardsBanked(msg.sender, _partyId, unclaimedRewards);
     }
 
+    // --- 輔助函式 (補全) ---
+
     function calculateExperience(uint256 dungeonId, bool success) internal pure returns (uint256) {
         uint256 baseExp = dungeonId * 5 + 20;
         return success ? baseExp : baseExp / 4;
     }
 
     function isPartyLocked(uint256 _partyId) public view returns (bool) {
+        if (address(dungeonStorage) == address(0)) return false;
         (, uint256 cooldown, ) = dungeonStorage.getPartyStatus(_partyId);
         return block.timestamp < cooldown;
     }
-    
-    // --- Owner 管理函式 ---
+
+    // --- Owner 管理函式 (補全) ---
+
     function setDungeonCore(address _newAddress) external onlyOwner {
         dungeonCore = IDungeonCore(_newAddress);
         emit DungeonCoreSet(_newAddress);
@@ -213,9 +217,9 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
         emit DungeonStorageSet(_newAddress);
     }
 
-    function setVrfContract(address _vrfContractAddress) external onlyOwner {
-        vrfContract = IDungeonMasterVRF(_vrfContractAddress);
-        emit VrfContractSet(_vrfContractAddress);
+    function updateDynamicSeed(uint256 _newSeed) external onlyOwner {
+        dynamicSeed = _newSeed;
+        emit DynamicSeedUpdated(_newSeed);
     }
 
     function setGlobalRewardMultiplier(uint256 _newMultiplier) external onlyOwner {
