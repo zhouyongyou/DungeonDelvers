@@ -53,11 +53,8 @@ interface IDungeonMaster {
 
 interface IDungeonStorage {
     function getDungeon(uint256 dungeonId) external view returns (uint256 requiredPower, uint256 rewardAmountUSD, uint8 baseSuccessRate, bool isInitialized);
-    
-    // ★ 核心修改：為 get/set 函式增加 fatigueLevel 參數
     function getPartyStatus(uint256 partyId) external view returns (uint256 provisionsRemaining, uint256 cooldownEndsAt, uint256 unclaimedRewards, uint8 fatigueLevel);
     function setPartyStatus(uint256 partyId, uint256 provisionsRemaining, uint256 cooldownEndsAt, uint256 unclaimedRewards, uint8 fatigueLevel) external;
-    
     function setExpeditionRequest(uint256 requestId, address requester, uint256 partyId, uint256 dungeonId) external;
     function getExpeditionRequest(uint256 requestId) external view returns (address requester, uint256 partyId, uint256 dungeonId);
     function deleteExpeditionRequest(uint256 requestId) external;
@@ -91,7 +88,6 @@ interface IRelic {
 
 interface IParty {
     function ownerOf(uint256 tokenId) external view returns (address);
-    // ★ 核心修改：返回的結構體中不再需要 heroIds 和 relicIds
     function getPartyComposition(uint256 partyId) external view returns (uint256 totalPower, uint256 totalCapacity);
     function setApprovalForAll(address operator, bool approved) external;
 }
@@ -102,6 +98,7 @@ interface IParty {
 
 interface IPlayerProfile {
     function addExperience(address player, uint256 amount) external;
+    function getLevel(address _player) external view returns (uint256);
 }
 
 interface IVIPStaking {

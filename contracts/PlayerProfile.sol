@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol"; // ★ 修正：導入 Math 函式庫
 
 // --- 介面定義 ---
 interface IDungeonCore {
@@ -22,6 +23,7 @@ interface IProfileSVGLibrary {
  * @dev 此合約採用模組化設計，且 NFT 不可轉讓。
  */
 contract PlayerProfile is ERC721, Ownable {
+    using Math for uint256; // ★ 修正：為 uint256 型別啟用 Math 函式庫
 
     // --- 狀態變數 ---
     IDungeonCore public dungeonCore;
@@ -101,5 +103,15 @@ contract PlayerProfile is ERC721, Ownable {
         // 只允許在鑄造時（from 為 0 地址）轉移，禁止任何後續的轉移
         require(from == address(0), "PlayerProfile: This SBT is non-transferable");
         return super._update(to, tokenId, auth);
+    }
+
+    function getLevel(address _player) external view returns (uint256) {
+        uint256 tokenId = profileTokenOf[_player];
+        if (tokenId == 0) {
+            return 0;
+        }
+        uint256 exp = playerExperience[tokenId];
+        if (exp < 100) return 1;
+        return Math.sqrt(exp / 100) + 1;
     }
 }

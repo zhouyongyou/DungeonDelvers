@@ -5,25 +5,12 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "./interfaces.sol";
 
-// --- 介面定義 ---
-interface IHero {
-    function ownerOf(uint256 tokenId) external view returns (address);
-    function getHeroProperties(uint256 tokenId) external view returns (uint8 rarity, uint256 power);
-    function mintFromAltar(address to, uint8 rarity, uint256 power) external;
-    function burnFromAltar(uint256 tokenId) external;
-}
-
-interface IRelic {
-    function ownerOf(uint256 tokenId) external view returns (address);
-    function getRelicProperties(uint256 tokenId) external view returns (uint8 rarity, uint8 capacity);
-    function mintFromAltar(address to, uint8 rarity, uint8 capacity) external;
-    function burnFromAltar(uint256 tokenId) external;
-}
 
 contract AltarOfAscension is Ownable, ReentrancyGuard, Pausable {
-    
-    // --- 狀態變數 ---
+    IDungeonCore public dungeonCore;
+
     IHero public heroContract;
     IRelic public relicContract;
 
@@ -45,7 +32,8 @@ contract AltarOfAscension is Ownable, ReentrancyGuard, Pausable {
     event UpgradeRuleSet(uint8 indexed fromRarity, UpgradeRule rule);
     event HeroContractSet(address indexed newAddress);
     event RelicContractSet(address indexed newAddress);
-    
+    event DungeonCoreSet(address indexed newAddress);
+
     constructor(address _initialOwner) Ownable(_initialOwner) {
         // 使用部署時的區塊資訊作為初始種子
         dynamicSeed = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender)));
@@ -179,6 +167,12 @@ contract AltarOfAscension is Ownable, ReentrancyGuard, Pausable {
     function setRelicContract(address _address) external onlyOwner {
         relicContract = IRelic(_address);
         emit RelicContractSet(_address);
+    }
+
+    function setDungeonCore(address _newAddress) external onlyOwner {
+        require(_newAddress != address(0), "Altar: Address cannot be zero");
+        dungeonCore = IDungeonCore(_newAddress);
+        emit DungeonCoreSet(_newAddress);
     }
 
     function updateDynamicSeed(uint256 _newSeed) external onlyOwner {

@@ -201,5 +201,9 @@ contract Relic is ERC721, Ownable, ReentrancyGuard, Pausable {
         require(success, "Native withdraw failed");
     }
 
+    function setPlatformFee(uint256 _newFee) external onlyOwner {
+        platformFee = _newFee;
+    }
+
     receive() external payable {}
 }

@@ -191,4 +191,11 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
         require(from == address(0) || to == address(0), "VIP: Non-transferable");
         return super._update(to, tokenId, auth);
     }
+
+    // 在 VIPStaking.sol 中加入這個函數
+    function getVipTaxReduction(address _user) external view returns (uint256) {
+        uint8 level = getVipLevel(_user);
+        // 每級減免 0.5% (50 / 10000)
+        return uint256(level) * 50;
+    }
 }

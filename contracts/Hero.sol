@@ -30,7 +30,7 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable {
     uint256 public dynamicSeed;
     uint256 private _nextTokenId;
     uint256 public mintPriceUSD = 2 * 10**18;
-uint256 public platformFee = 0.0003 ether; // 0.0003 BNB
+    uint256 public platformFee = 0.0003 ether; // 0.0003 BNB
     mapping(uint256 => IDungeonSVGLibrary.HeroData) public heroData;
 
     // --- 事件 ---
@@ -213,6 +213,10 @@ uint256 public platformFee = 0.0003 ether; // 0.0003 BNB
     function withdrawNativeFunding() external onlyOwner {
         (bool success, ) = owner().call{value: address(this).balance}("");
         require(success, "Native withdraw failed");
+    }
+
+    function setPlatformFee(uint256 _newFee) external onlyOwner {
+        platformFee = _newFee;
     }
 
     receive() external payable {}
