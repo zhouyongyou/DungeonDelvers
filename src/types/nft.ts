@@ -5,6 +5,8 @@
  * 為不同種類的 NFT 提供強型別支援，讓前端程式碼更安全、更易於維護。
  */
 
+import { type Address } from 'viem';
+
 // 所有 NFT 的元數據中，屬性陣列的單個物件格式
 export interface NftAttribute {
   trait_type: string;
@@ -19,7 +21,7 @@ export interface BaseNft {
   description: string;
   image: string;
   attributes: NftAttribute[];
-  contractAddress: `0x${string}`;
+  contractAddress: Address;
 }
 
 // 英雄 NFT 的獨有屬性
@@ -39,6 +41,7 @@ export interface RelicNft extends BaseNft {
 }
 
 // 隊伍 NFT 的獨有屬性
+// 【修改】新增 heroIds 和 relicIds，與 Party.sol 合約的 getPartyComposition 函式回傳值保持一致
 export interface PartyNft extends BaseNft {
   type: 'party';
   totalPower: number;
@@ -62,7 +65,7 @@ export interface VipNft extends BaseNft {
 export type AnyNft = HeroNft | RelicNft | PartyNft | VipNft;
 
 /**
- * 【修正】從 AnyNft 推導出所有可能的 NFT 種類字串，並將其匯出。
+ * 從 AnyNft 推導出所有可能的 NFT 種類字串，並將其匯出。
  * 這會自動產生 'hero' | 'relic' | 'party' | 'vip' 的聯合型別。
  */
 export type NftType = AnyNft['type'];

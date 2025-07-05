@@ -1,3 +1,5 @@
+// src/config/contracts.ts
+
 import { type Address } from 'viem';
 import { bsc, bscTestnet } from 'wagmi/chains';
 import {
@@ -8,61 +10,65 @@ import {
   partyABI,
   altarOfAscensionABI,
   playerProfileABI,
-  vipStakingABI // 新增
+  vipStakingABI
 } from './abis';
 
+// 重新匯出 ABIs，方便其他地方統一導入
 export * from './abis';
 
+// =================================================================
+// 1. 定義所有合約的地址和 ABI
+// =================================================================
 export const contracts = {
   [bscTestnet.id]: {
-    soulShard: { address: '0xD6126BBDDC96BDDD81b0C082f45b63D6448B984F', abi: soulShardTokenABI },
-    hero: { address: '0x...', abi: heroABI },
-    relic: { address: '0x...', abi: relicABI },
-    dungeonCore: { address: '0x...', abi: dungeonCoreABI },
-    party: { address: '0x...', abi: partyABI },
-    altarOfAscension: { address: '0x...', abi: altarOfAscensionABI },
-    playerProfile: { address: '0x68Fb281d098E0f6b93dc7aB4D3A501f9032C18Df', abi: playerProfileABI },
-    vipStaking: { address: '0x...', abi: vipStakingABI },
+    soulShard: { address: '0x89AF1ab41C685cDe2332C72f116751d74F49Bc3c', abi: soulShardTokenABI },
+    hero: { address: '0x3eF0465a44cBfd9dCD0C171Db4a5E4E18b8B44C6', abi: heroABI },
+    relic: { address: '0x3A7ad003398FF2992c8593D22B8dfc2dE83d849B', abi: relicABI },
+    dungeonCore: { address: '0x4e771432EB5dDBe15B08A6D3FF518F37c6C66008', abi: dungeonCoreABI },
+    party: { address: '0x6b12A3Ae454c159b2aEef6A6F8AB0A78e0f73424', abi: partyABI },
+    altarOfAscension: { address: '0x278fb199c83c26c1fA263CcB5C0da624980910Fd', abi: altarOfAscensionABI },
+    playerProfile: { address: '0x888cAf0c7C963800C6c3c71D4cC7cc4e086a78f6', abi: playerProfileABI },
+    vipStaking: { address: '0x5ed023caD3218727d81636c3dDF3A764920Ce66a', abi: vipStakingABI },
   },
   [bsc.id]: {
-    soulShard: { address: '0x...', abi: soulShardTokenABI },
-    hero: { address: '0x...', abi: heroABI },
-    relic: { address: '0x...', abi: relicABI },
-    dungeonCore: { address: '0x...', abi: dungeonCoreABI },
-    party: { address: '0x...', abi: partyABI },
-    altarOfAscension: { address: '0x...', abi: altarOfAscensionABI },
-    playerProfile: { address: '0x32cD66394B5d0df19881861B66F57B4692491254', abi: playerProfileABI },
-    vipStaking: { address: '0x...', abi: vipStakingABI },
+    soulShard: { address: '0xYOUR_MAINNET_SOULSHARD_ADDRESS', abi: soulShardTokenABI },
+    hero: { address: '0xYOUR_MAINNET_HERO_ADDRESS', abi: heroABI },
+    relic: { address: '0xYOUR_MAINNET_RELIC_ADDRESS', abi: relicABI },
+    dungeonCore: { address: '0xYOUR_MAINNET_DUNGEONCORE_ADDRESS', abi: dungeonCoreABI },
+    party: { address: '0xYOUR_MAINNET_PARTY_ADDRESS', abi: partyABI },
+    altarOfAscension: { address: '0xYOUR_MAINNET_ALTAR_ADDRESS', abi: altarOfAscensionABI },
+    playerProfile: { address: '0xYOUR_MAINNET_PLAYERPROFILE_ADDRESS', abi: playerProfileABI },
+    vipStaking: { address: '0xYOUR_MAINNET_VIPSTAKING_ADDRESS', abi: vipStakingABI },
   },
 } as const;
 
-// 【第1步：定義我們支援的 Chain ID 的型別】
+
+// =================================================================
+// 2. 自動推斷型別
+// =================================================================
 type SupportedChainId = keyof typeof contracts;
-
-// 【第2步：建立一個輔助函式 (型別守衛)，來檢查 chainId 是否被支援】
-function isSupportedChain(chainId: number): chainId is SupportedChainId {
-    return chainId in contracts;
-}
-
-// 【第3步：更新 ContractName 的型別定義，讓它更精確】
 export type ContractName = keyof (typeof contracts)[SupportedChainId];
 
-// 【第4步：重構 getContract 函式，使用我們的型別守衛】
-export function getContract<T extends ContractName>(
-  chainId: number | undefined,
-  name: T
-): { address: Address; abi: (typeof contracts)[SupportedChainId][T]['abi'] } | null {
-  // 使用型別守衛來檢查和縮小 chainId 的型別範圍
-  if (!chainId || !isSupportedChain(chainId)) {
+
+// =================================================================
+// 3. 重構 getContract 函式
+// =================================================================
+export function getContract<
+  TChainId extends SupportedChainId,
+  TContractName extends keyof (typeof contracts)[TChainId]
+>(
+  chainId: TChainId | undefined,
+  name: TContractName
+): (typeof contracts)[TChainId][TContractName] | null {
+  if (!chainId || !contracts[chainId]) {
     return null;
   }
   
-  // 在這個 if 區塊之後，TypeScript 就知道 chainId 絕對是 97 或 56，
-  // 所以 contracts[chainId] 是一個完全安全的操作。
   const contractConfig = contracts[chainId][name];
-
-  if (!contractConfig) {
-      return null;
+  
+  // 檢查合約地址是否為預留位置
+  if (!contractConfig || (contractConfig.address as string).includes('YOUR_')) {
+    return null;
   }
   
   return contractConfig;

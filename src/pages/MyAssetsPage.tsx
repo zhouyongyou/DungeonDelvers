@@ -1,247 +1,270 @@
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAppToast } from '../hooks/useAppToast';
 import { fetchAllOwnedNfts } from '../api/nfts';
-import { getContract } from '../config/contracts';
 import { NftCard } from '../components/ui/NftCard';
-import { SkeletonCard } from '../components/ui/SkeletonCard';
-import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
 import { ActionButton } from '../components/ui/ActionButton';
-import type { Page } from '../types/page';
-import type { AnyNft, NftType, HeroNft, RelicNft } from '../types/nft';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { EmptyState } from '../components/ui/EmptyState';
+import { getContract } from '../config/contracts';
+import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
+import type { Page } from '../types/page';
+import type { AnyNft, HeroNft, RelicNft, NftType } from '../types/nft';
 
-interface MyAssetsPageProps {
-    setActivePage: (page: Page) => void;
+// =================================================================
+// Section: TeamBuilder 子元件
+// =================================================================
+
+interface TeamBuilderProps {
+  heroes: HeroNft[];
+  relics: RelicNft[];
+  onCreateParty: (heroIds: bigint[], relicIds: bigint[]) => void;
+  isCreating: boolean;
 }
 
-const NftFilter: React.FC<{
-    currentFilter: 'all' | number;
-    onFilterChange: (filter: 'all' | number) => void;
-}> = ({ currentFilter, onFilterChange }) => (
-    <div className="flex flex-wrap gap-2 mb-4">
-        <button onClick={() => onFilterChange('all')} className={`px-3 py-1 text-sm rounded-full transition ${currentFilter === 'all' ? 'bg-indigo-500 text-white' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>全部</button>
-        {Array.from({ length: 5 }, (_, i) => i + 1).map(star => (
-            <button key={star} onClick={() => onFilterChange(star)} className={`px-3 py-1 text-sm rounded-full transition ${currentFilter === star ? 'bg-indigo-500 text-white' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>
-                {'★'.repeat(star)}
-            </button>
-        ))}
-    </div>
-);
+const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty, isCreating }) => {
+    const [selectedHeroes, setSelectedHeroes] = useState<bigint[]>([]);
+    const [selectedRelics, setSelectedRelics] = useState<bigint[]>([]);
 
-const NftGrid: React.FC<{
-    type: NftType;
-    nfts?: AnyNft[];
-    isLoading: boolean;
-    onSelect?: (id: bigint, type: NftType) => void;
-    selection?: Set<bigint>;
-    onDisband?: (id: bigint) => void;
-    setActivePage: (page: Page) => void;
-}> = ({ type, nfts, isLoading, onSelect, selection, onDisband, setActivePage }) => {
-    // 【修正】確保 title 物件包含所有 NftType 的可能鍵值，新增 'vip'
-    const title = { hero: '英雄', relic: '聖物', party: '隊伍', vip: 'VIP卡' }[type];
-    
-    if (isLoading) return <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">{Array.from({length:5}).map((_,i) => <SkeletonCard key={i}/>)}</div>;
-    if (!nfts || nfts.length === 0) return <EmptyState message={`您尚未擁有任何${title}。`} buttonText="前往鑄造" onButtonClick={() => setActivePage('mint')} />;
-    
+    const toggleSelection = (id: bigint, type: 'hero' | 'relic') => {
+        const list = type === 'hero' ? selectedHeroes : selectedRelics;
+        const setList = type === 'hero' ? setSelectedHeroes : setSelectedRelics;
+        const limit = type === 'hero' ? 5 : 5;
+
+        if (list.includes(id)) {
+            setList(list.filter(i => i !== id));
+        } else if (list.length < limit) {
+            setList([...list, id]);
+        }
+    };
+
+    const { totalPower, totalCapacity } = useMemo(() => {
+        const power = selectedHeroes.reduce((acc, id) => {
+            const hero = heroes.find(h => h.id === id);
+            return acc + (hero ? hero.power : 0);
+        }, 0);
+        const capacity = selectedRelics.reduce((acc, id) => {
+            const relic = relics.find(r => r.id === id);
+            return acc + (relic ? relic.capacity : 0);
+        }, 0);
+        return { totalPower: power, totalCapacity: capacity };
+    }, [selectedHeroes, selectedRelics, heroes, relics]);
+
+    const canCreate = selectedHeroes.length > 0;
+
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {nfts.map(nft => <NftCard key={`${type}-${nft.id.toString()}`} nft={nft} onSelect={onSelect} isSelected={selection?.has(nft.id)} onDisband={onDisband}/>)}
+        <div className="card-bg p-6 rounded-2xl shadow-xl">
+            <h3 className="section-title">創建新隊伍</h3>
+            <p className="text-sm text-gray-400 mb-4">選擇最多5位英雄和5件聖物來組建你的冒險隊伍。</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                {/* 英雄選擇區 */}
+                <div>
+                    <h4 className="font-semibold text-lg mb-2 text-white">選擇英雄 ({selectedHeroes.length}/5)</h4>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
+                        {heroes.map(hero => (
+                            <NftCard 
+                                key={`select-${hero.id}`} 
+                                nft={hero} 
+                                onSelect={() => toggleSelection(hero.id, 'hero')} 
+                                isSelected={selectedHeroes.includes(hero.id)} 
+                            />
+                        ))}
+                         {heroes.length === 0 && <div className="col-span-full"><EmptyState message="沒有可用的英雄" small /></div>}
+                    </div>
+                </div>
+                {/* 聖物選擇區 */}
+                <div>
+                    <h4 className="font-semibold text-lg mb-2 text-white">選擇聖物 ({selectedRelics.length}/5)</h4>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
+                        {relics.map(relic => (
+                            <NftCard 
+                                key={`select-${relic.id}`} 
+                                nft={relic} 
+                                onSelect={() => toggleSelection(relic.id, 'relic')} 
+                                isSelected={selectedRelics.includes(relic.id)} 
+                            />
+                        ))}
+                        {relics.length === 0 && <div className="col-span-full"><EmptyState message="沒有可用的聖物" small /></div>}
+                    </div>
+                </div>
+            </div>
+
+            {/* 隊伍總結與創建按鈕 */}
+            <div className="flex flex-col sm:flex-row justify-between items-center bg-gray-900/50 p-4 rounded-lg">
+                <div className="flex gap-6 text-center">
+                    <div>
+                        <p className="text-sm text-gray-400">總戰力</p>
+                        <p className="text-2xl font-bold text-indigo-400">{totalPower}</p>
+                    </div>
+                    <div>
+                        <p className="text-sm text-gray-400">總容量</p>
+                        <p className="text-2xl font-bold text-teal-400">{totalCapacity}</p>
+                    </div>
+                </div>
+                <ActionButton 
+                    onClick={() => onCreateParty(selectedHeroes, selectedRelics)} 
+                    isLoading={isCreating}
+                    disabled={!canCreate || isCreating}
+                    className="w-full sm:w-48 h-12 mt-4 sm:mt-0"
+                >
+                    創建隊伍
+                </ActionButton>
+            </div>
         </div>
     );
 };
 
-const MyAssetsPage: React.FC<MyAssetsPageProps> = ({ setActivePage }) => {
+// =================================================================
+// Section: NftGrid 子元件
+// =================================================================
+
+interface NftGridProps {
+    nfts: AnyNft[];
+    onDisband?: (id: bigint) => void;
+}
+
+const NftGrid: React.FC<NftGridProps> = ({ nfts, onDisband }) => {
+    if (nfts.length === 0) {
+        return <EmptyState message="這裡空空如也..." />;
+    }
+    return (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {nfts.map(nft => <NftCard key={nft.id} nft={nft} onDisband={onDisband} />)}
+        </div>
+    );
+};
+
+// =================================================================
+// Section: MyAssetsPage 主元件
+// =================================================================
+
+const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setActivePage }) => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
-    const queryClient = useQueryClient();
     const { addTransaction } = useTransactionStore();
-    
-    const [selection, setSelection] = useState<{ heroes: Set<bigint>; relics: Set<bigint> }>({ heroes: new Set(), relics: new Set() });
-    const [modal, setModal] = useState<{ type: 'create' | 'disband', isOpen: boolean, data?: any }>({ type: 'create', isOpen: false });
-    const [heroFilter, setHeroFilter] = useState<'all' | number>('all');
-    const [relicFilter, setRelicFilter] = useState<'all' | number>('all');
+    const queryClient = useQueryClient();
 
-    const { data: nfts, isLoading: isLoadingNfts } = useQuery({
+    const [filter, setFilter] = useState<NftType>('party');
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [partyToDisband, setPartyToDisband] = useState<bigint | null>(null);
+
+    const partyContract = getContract(chainId, 'party');
+    const { writeContractAsync, isPending: isTxPending } = useWriteContract();
+
+    const { data: nfts, isLoading } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
-        queryFn: () => {
-             if (!address || !chainId) return { heroes: [], relics: [], parties: [], vipCards: [] };
-             return fetchAllOwnedNfts(address, chainId);
-        },
+        queryFn: () => fetchAllOwnedNfts(address!, chainId!),
         enabled: !!address && !!chainId,
     });
-    
-    const heroStats = useMemo(() => {
-        if (!nfts?.heroes) return { count: 0, totalPower: 0 };
-        return {
-            count: nfts.heroes.length,
-            totalPower: nfts.heroes.reduce((sum, h) => sum + Number((h as HeroNft).power), 0)
-        };
-    }, [nfts?.heroes]);
 
-    const filteredHeroes = useMemo(() => {
-        if (!nfts?.heroes) return [];
-        if (heroFilter === 'all') return nfts.heroes;
-        return nfts.heroes.filter(h => (h as HeroNft).rarity === heroFilter);
-    }, [nfts?.heroes, heroFilter]);
-
-    const filteredRelics = useMemo(() => {
-        if (!nfts?.relics) return [];
-        if (relicFilter === 'all') return nfts.relics;
-        return nfts.relics.filter(r => (r as RelicNft).rarity === relicFilter);
-    }, [nfts?.relics, relicFilter]);
-    
-    const selectedHeroesPower = useMemo(() => {
-      if (!nfts?.heroes || selection.heroes.size === 0) return 0;
-      return Array.from(selection.heroes).reduce((total, id) => {
-          const hero = nfts.heroes.find(h => (h as HeroNft).id === id) as HeroNft | undefined;
-          return total + (hero ? Number(hero.power) : 0);
-      }, 0);
-    }, [nfts?.heroes, selection.heroes]);
-    
-    const partyContract = getContract(chainId, 'party');
-    const heroContract = getContract(chainId, 'hero');
-    const relicContract = getContract(chainId, 'relic');
-
-    const { data: isHeroApproved } = useReadContract({ 
-        address: heroContract?.address,
-        abi: heroContract?.abi,
-        functionName: 'isApprovedForAll', 
-        args: [address!, partyContract?.address!], 
-        query: { enabled: !!address && !!partyContract?.address && !!heroContract?.address } 
-    });
-    const { data: isRelicApproved } = useReadContract({ 
-        address: relicContract?.address,
-        abi: relicContract?.abi,
-        functionName: 'isApprovedForAll', 
-        args: [address!, partyContract?.address!], 
-        query: { enabled: !!address && !!partyContract?.address && !!relicContract?.address } 
-    });
-    
-    const { writeContractAsync, isPending } = useWriteContract();
-    
-    const handleSelect = (id: bigint, type: NftType) => {
-        if (type === 'hero' || type === 'relic') {
-            setSelection(prev => {
-                const key = type === 'hero' ? 'heroes' : 'relics';
-                const newSet = new Set(prev[key]);
-                if (newSet.has(id)) {
-                    newSet.delete(id);
-                } else {
-                    newSet.add(id);
-                }
-                return { ...prev, [key]: newSet };
-            });
+    const filteredNfts = useMemo(() => {
+        if (!nfts) return [];
+        switch (filter) {
+            case 'hero': return nfts.heroes;
+            case 'relic': return nfts.relics;
+            case 'party': return nfts.parties;
+            case 'vip': return nfts.vipCards;
+            default: return [];
         }
-    };
-    
-    const handleCreateParty = async () => {
-        if (selectedHeroesPower < 300) return showToast('隊伍總戰力未達 300！', 'error');
-        if (selection.relics.size === 0) return showToast('請至少選擇一個聖物!', 'error');
+    }, [filter, nfts]);
+
+    const handleCreateParty = async (heroIds: bigint[], relicIds: bigint[]) => {
         if (!partyContract) return;
-
         try {
-            if (!isHeroApproved) {
-                if(heroContract && partyContract?.address) {
-                    const hash = await writeContractAsync({ address: heroContract.address, abi: heroContract.abi, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
-                    addTransaction({ hash, description: '授權隊伍合約使用英雄' });
-                }
-            }
-            if (!isRelicApproved) {
-                 if(relicContract && partyContract?.address) {
-                    const hash = await writeContractAsync({ address: relicContract.address, abi: relicContract.abi, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
-                    addTransaction({ hash, description: '授權隊伍合約使用聖物' });
-                 }
-            }
-            
-            const hash = await writeContractAsync({ address: partyContract.address, abi: partyContract.abi, functionName: 'createParty', args: [Array.from(selection.heroes), Array.from(selection.relics)] });
-            addTransaction({ hash, description: '創建新隊伍' });
-
-            setSelection({ heroes: new Set(), relics: new Set() });
-            setModal({ isOpen: false, type: 'create' });
-            queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
-
-        } catch (e: any) { 
+            const hash = await writeContractAsync({
+                ...partyContract,
+                functionName: 'createParty',
+                args: [heroIds, relicIds],
+            });
+            addTransaction({ hash, description: `創建新隊伍` });
+        } catch (e: any) {
             if (!e.message.includes('User rejected the request')) {
-                showToast('操作失敗，詳情請見主控台', 'error');
-                console.error(e);
+                showToast(e.shortMessage || "創建隊伍失敗", "error");
             }
         }
     };
     
     const handleDisbandParty = async () => {
-        if (!modal.data || !partyContract) return;
+        if (!partyContract || partyToDisband === null) return;
         try {
-            const hash = await writeContractAsync({ address: partyContract.address, abi: partyContract.abi, functionName: 'disbandParty', args: [modal.data] });
-            addTransaction({ hash, description: `解散隊伍 #${modal.data}` });
-            
-            setModal({ isOpen: false, type: 'disband' });
-            queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
-        } catch (e: any) { 
+            const hash = await writeContractAsync({
+                ...partyContract,
+                functionName: 'disbandParty',
+                args: [partyToDisband],
+            });
+            addTransaction({ hash, description: `解散隊伍 #${partyToDisband.toString()}` });
+        } catch (e: any) {
             if (!e.message.includes('User rejected the request')) {
-                showToast('操作失敗，詳情請見主控台', 'error');
-                console.error(e);
+                showToast(e.shortMessage || "解散隊伍失敗", "error");
             }
+        } finally {
+            setIsModalOpen(false);
+            setPartyToDisband(null);
         }
     };
 
-    return (
-        <section>
-            <h2 className="page-title">隊伍</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-8">
-                    <div><h3 className="section-title">我的隊伍 NFT</h3><NftGrid type="party" nfts={nfts?.parties} isLoading={isLoadingNfts} onDisband={(id) => setModal({ isOpen: true, type: 'disband', data: id })} setActivePage={setActivePage}/></div><hr/>
-                    
-                    <div>
-                        <h3 className="section-title">我的英雄</h3>
-                        <div className="card-bg p-4 rounded-xl mb-4">
-                            <div className="flex justify-around text-center mb-4">
-                                <div><p className="text-sm text-gray-500">總數量</p><p className="text-xl font-bold">{heroStats.count}</p></div>
-                                <div><p className="text-sm text-gray-500">總戰力</p><p className="text-xl font-bold">{heroStats.totalPower}</p></div>
-                            </div>
-                            <NftFilter currentFilter={heroFilter} onFilterChange={setHeroFilter} />
-                        </div>
-                        <NftGrid type="hero" nfts={filteredHeroes} isLoading={isLoadingNfts} onSelect={handleSelect} selection={selection.heroes} setActivePage={setActivePage}/>
-                    </div>
+    const openDisbandModal = (id: bigint) => {
+        setPartyToDisband(id);
+        setIsModalOpen(true);
+    };
 
-                    <div>
-                        <h3 className="section-title">我的聖物</h3>
-                        <div className="card-bg p-4 rounded-xl mb-4">
-                            <div className="flex justify-around text-center mb-4">
-                                <div><p className="text-sm text-gray-500">總數量</p><p className="text-xl font-bold">{nfts?.relics?.length ?? 0}</p></div>
-                            </div>
-                             <NftFilter currentFilter={relicFilter} onFilterChange={setRelicFilter} />
-                        </div>
-                        <NftGrid type="relic" nfts={filteredRelics} isLoading={isLoadingNfts} onSelect={handleSelect} selection={selection.relics} setActivePage={setActivePage}/>
+    const filterOptions: { key: NftType; label: string }[] = [
+        { key: 'party', label: '我的隊伍' },
+        { key: 'hero', label: '我的英雄' },
+        { key: 'relic', label: '我的聖物' },
+        { key: 'vip', label: '我的VIP卡' },
+    ];
+
+    if (isLoading) {
+        return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
+    }
+
+    return (
+        <section className="space-y-8">
+            <h2 className="page-title">我的資產與隊伍</h2>
+            
+            {/* 隊伍創建器 */}
+            <TeamBuilder 
+                heroes={nfts?.heroes ?? []} 
+                relics={nfts?.relics ?? []}
+                onCreateParty={handleCreateParty}
+                isCreating={isTxPending}
+            />
+
+            {/* 我的收藏 */}
+            <div className="card-bg p-6 rounded-2xl shadow-xl">
+                <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
+                    <h3 className="section-title">我的收藏</h3>
+                    <div className="flex items-center gap-2 bg-gray-900/50 p-1 rounded-lg mt-2 sm:mt-0">
+                        {filterOptions.map(({ key, label }) => (
+                            <button 
+                                key={key}
+                                onClick={() => setFilter(key)}
+                                className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${filter === key ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'}`}
+                            >
+                                {label}
+                            </button>
+                        ))}
                     </div>
                 </div>
-                <div className="lg:col-span-1">
-                    <div className="card-bg p-6 rounded-xl shadow-lg sticky top-24">
-                        <h3 className="section-title">隊伍配置</h3>
-                        <div className="space-y-4 min-h-[100px] text-sm">
-                             <div><h4 className="font-bold">英雄:</h4>{selection.heroes.size > 0 ? Array.from(selection.heroes).map(id => <p key={id.toString()} className="ml-2">- 英雄 #{id.toString()}</p>) : <p className="ml-2 text-gray-500 dark:text-gray-400">點擊左側列表選擇</p>}</div>
-                             <div><h4 className="font-bold">聖物:</h4>{selection.relics.size > 0 ? Array.from(selection.relics).map(id => <p key={id.toString()} className="ml-2">- 聖物 #{id.toString()}</p>) : <p className="ml-2 text-gray-500 dark:text-gray-400">點擊左側列表選擇</p>}</div>
-                             <div><h4 className="font-bold">總戰力:</h4><p className="ml-2 text-indigo-600 font-bold">{selectedHeroesPower} MP</p></div>
-                        </div>
-                        <div className="mt-4 flex flex-col gap-2">
-                           <ActionButton onClick={() => setModal({ isOpen: true, type: 'create' })} className="w-full py-2 rounded-lg" isLoading={isPending} disabled={isPending}>創建隊伍</ActionButton>
-                           <p className="text-xs text-gray-500 mt-1">首次創建需授權NFT (戰力需 {'>'} 300)</p>
-                        </div>
-                    </div>
-                </div>
+                <NftGrid nfts={filteredNfts} onDisband={openDisbandModal} />
             </div>
+
+            {/* 解散確認對話方塊 */}
             <Modal
-                isOpen={modal.isOpen}
-                onClose={() => setModal({ ...modal, isOpen: false })}
-                title={modal.type === 'create' ? "確認創建隊伍" : "確認解散隊伍"}
-                onConfirm={modal.type === 'create' ? handleCreateParty : handleDisbandParty}
-                confirmText={modal.type === 'create' ? "創建" : "解散"}
-                isConfirming={isPending}
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onConfirm={handleDisbandParty}
+                title="確認解散隊伍"
+                confirmText="確認解散"
+                isConfirming={isTxPending}
+                confirmVariant="danger"
             >
-                {modal.type === 'create' && <div><p>您確定要用以下資產創建一個新的隊伍嗎？</p><p className="mt-2"><b>英雄:</b> {Array.from(selection.heroes).join(', ') || '無'}</p><p><b>聖物:</b> {Array.from(selection.relics).join(', ') || '無'}</p></div>}
-                {modal.type === 'disband' && <p>您確定要解散隊伍 #{modal.data?.toString()} 嗎？此隊伍 NFT 將被銷毀，其中的英雄和聖物將會歸還到您的錢包。</p>}
+                <p>您確定要解散隊伍 #{partyToDisband?.toString()} 嗎？</p>
+                <p className="mt-2 text-sm text-yellow-500">解散後，隊伍中的所有英雄和聖物將會返回您的收藏，但隊伍本身將被銷毀。</p>
             </Modal>
         </section>
     );
