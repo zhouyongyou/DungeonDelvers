@@ -35,6 +35,8 @@ export const contracts = {
     playerVault: { address: '0x1bB582739D5C18547F4B785aA1A85180AE9a22a9', abi: playerVaultABI },
     dungeonMaster: { address: '0xFB7229320C6B3d19D62D7dfCb4498BC1fCB5fE92', abi: dungeonMasterABI },
     oracle: { address: '0xfD9Df1Df0C8c47F04305AB594CcEfA0D1A6A54BF', abi: oracleABI },
+        // 【新增】為 dungeonStorage 新增一個條目
+    dungeonStorage: { address: '0x488390461f7720A8a439a78Ad815Eb58706ccDea', abi: dungeonStorageABI },
   },
   [bsc.id]: {
     soulShard: { address: '0xYOUR_MAINNET_SOULSHARD_ADDRESS', abi: soulShardTokenABI },
@@ -48,6 +50,8 @@ export const contracts = {
     playerVault: { address: '0xYOUR_MAINNET_PLAYERVAULT_ADDRESS', abi: playerVaultABI },
     dungeonMaster: { address: '0xYOUR_MAINNET_DUNGEONMASTER_ADDRESS', abi: dungeonMasterABI },
     oracle: { address: '0xYOUR_MAINNET_ORACLE_ADDRESS', abi: oracleABI },
+        // 【新增】為 dungeonStorage 新增一個條目
+    dungeonStorage: { address: 'YOUR_MAINNET_DUNGEONSTORAGE_ADDRESS', abi: dungeonStorageABI },
   },
 } as const;
 
