@@ -1,4 +1,5 @@
-// PlayerVault_Modular.sol (v2 - 新稅制簡化版)
+// contracts/PlayerVault.sol.txt
+
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -8,9 +9,9 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
- * @title PlayerVault (模組化改造版)
+ * @title PlayerVault (v3 - 增加邀請功能)
  * @notice 專門負責玩家資金的存儲、提款和遊戲內消費。
- * @dev v2 版本實現了更精細的分層稅率和動態減免機制。
+ * @dev v3 版本加入了設定邀請人的功能。
  */
 contract PlayerVault is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -19,28 +20,26 @@ contract PlayerVault is Ownable, ReentrancyGuard {
     IDungeonCore public dungeonCore;
     IERC20 public soulShardToken;
 
-    // ★ 核心修改：更新 PlayerInfo 結構體
     struct PlayerInfo {
         uint256 withdrawableBalance;
-        uint256 lastWithdrawTimestamp;      // 用於計算時間衰減
-        uint256 lastFreeWithdrawTimestamp;  // 用於追蹤每日小額免稅
+        uint256 lastWithdrawTimestamp;
+        uint256 lastFreeWithdrawTimestamp;
     }
     mapping(address => PlayerInfo) public playerInfo;
     mapping(address => address) public referrers;
 
-    // ★ 核心修改：更新稅務參數
-    uint256 public constant PERCENT_DIVISOR = 10000; // 萬分位基數 for 100.00%
+    uint256 public constant PERCENT_DIVISOR = 10000;
     uint256 public constant USD_DECIMALS = 1e18;
     
     uint256 public smallWithdrawThresholdUSD = 20 * USD_DECIMALS;
     uint256 public largeWithdrawThresholdUSD = 1000 * USD_DECIMALS;
 
-    uint256 public standardInitialRate = 2500;      // 25.00%
-    uint256 public largeWithdrawInitialRate = 4000; // 40.00%
-    uint256 public decreaseRatePerPeriod = 500;     // 5.00%
-    uint256 public periodDuration = 1 days;         // 每日降低
+    uint256 public standardInitialRate = 2500;
+    uint256 public largeWithdrawInitialRate = 4000;
+    uint256 public decreaseRatePerPeriod = 500;
+    uint256 public periodDuration = 1 days;
 
-    uint256 public commissionRate = 500; // 5.00% (改為萬分位)
+    uint256 public commissionRate = 500;
 
     // --- 事件 ---
     event Deposited(address indexed player, uint256 amount);
@@ -53,9 +52,7 @@ contract PlayerVault is Ownable, ReentrancyGuard {
     event TaxParametersUpdated(uint256 standardRate, uint256 largeRate, uint256 decreaseRate, uint256 period);
     event WithdrawThresholdsUpdated(uint256 smallAmount, uint256 largeAmount);
 
-    // --- 修飾符 ---
     modifier onlyAuthorized() {
-        // ... (此處邏輯不變)
         require(address(dungeonCore) != address(0), "Vault: DungeonCore not set");
         address sender = msg.sender;
         require(
@@ -70,36 +67,42 @@ contract PlayerVault is Ownable, ReentrancyGuard {
 
     constructor(address initialOwner) Ownable(initialOwner) {}
     
-    // --- 核心提現邏輯 (完全重寫) ---
+    /**
+     * @notice 【新增】設定邀請人函式
+     * @dev 每個玩家只能設定一次邀請人，且不能是自己。
+     * @param _referrer 邀請人的地址。
+     */
+    function setReferrer(address _referrer) external nonReentrant {
+        require(referrers[msg.sender] == address(0), "Vault: Referrer already set");
+        require(_referrer != msg.sender, "Vault: Cannot refer yourself");
+        require(_referrer != address(0), "Vault: Referrer cannot be zero address");
+        referrers[msg.sender] = _referrer;
+        emit ReferralSet(msg.sender, _referrer);
+    }
 
     function withdraw(uint256 _amount) external nonReentrant {
         PlayerInfo storage player = playerInfo[msg.sender];
         require(_amount > 0, "Vault: Amount must be > 0");
         require(player.withdrawableBalance >= _amount, "Vault: Insufficient balance");
 
-        // ★ 核心修改：獲取提領金額的 USD 價值
         uint256 amountUSD = IOracle(dungeonCore.oracle()).getAmountOut(
             address(soulShardToken), dungeonCore.usdToken(), _amount
         );
 
-        // ★ 核心修改：檢查是否符合每日小額免稅資格
         if (amountUSD <= smallWithdrawThresholdUSD && player.lastFreeWithdrawTimestamp + 1 days <= block.timestamp) {
             player.lastFreeWithdrawTimestamp = block.timestamp;
-            _processWithdrawal(player, _amount, 0); // 稅率為 0
+            _processWithdrawal(player, _amount, 0);
             return;
         }
 
-        // ★ 核心修改：如果不符合免稅，則計算完整稅率
         uint256 taxRate = _calculateTaxRate(msg.sender, amountUSD);
         
         _processWithdrawal(player, _amount, taxRate);
     }
 
-    // --- 內部輔助函式 ---
-
     function _processWithdrawal(PlayerInfo storage player, uint256 _amount, uint256 _taxRate) private {
         player.withdrawableBalance -= _amount;
-        player.lastWithdrawTimestamp = block.timestamp; // 無論是否免稅，都更新時間戳
+        player.lastWithdrawTimestamp = block.timestamp;
 
         uint256 taxAmount = (_amount * _taxRate) / PERCENT_DIVISOR;
         uint256 amountAfterTaxes = _amount - taxAmount;
@@ -127,31 +130,22 @@ contract PlayerVault is Ownable, ReentrancyGuard {
         emit Withdrawn(msg.sender, finalAmountToPlayer, taxAmount);
     }
 
-    /**
-     * @notice ★ 新增：計算最終提現稅率的核心內部函數
-     * @dev 整合了所有減免邏輯：時間衰減、VIP 等級、玩家等級
-     */
     function _calculateTaxRate(address _player, uint256 _amountUSD) internal view returns (uint256) {
         PlayerInfo storage player = playerInfo[_player];
         
-        // 1. 確定基礎初始稅率 (大額懲罰)
         uint256 initialRate = (_amountUSD > largeWithdrawThresholdUSD) 
             ? largeWithdrawInitialRate 
             : standardInitialRate;
 
-        // 2. 計算時間衰減
         uint256 periodsPassed = (block.timestamp - player.lastWithdrawTimestamp) / periodDuration;
         uint256 timeDecay = periodsPassed * decreaseRatePerPeriod;
         
-        // 3. 獲取 VIP 等級減免 (每級減 0.5%)
         uint256 vipLevel = IVIPStaking(dungeonCore.vipStaking()).getVipLevel(_player);
-        uint256 vipReduction = vipLevel * 50; // 50 / 10000 = 0.5%
+        uint256 vipReduction = vipLevel * 50;
 
-        // 4. 獲取玩家等級減免 (每10級減 1%)
         uint256 playerLevel = IPlayerProfile(dungeonCore.playerProfile()).getLevel(_player);
-        uint256 levelReduction = (playerLevel / 10) * 100; // 100 / 10000 = 1%
+        uint256 levelReduction = (playerLevel / 10) * 100;
 
-        // 5. 匯總計算
         uint256 totalReduction = timeDecay + vipReduction + levelReduction;
 
         if (totalReduction >= initialRate) {
@@ -161,11 +155,6 @@ contract PlayerVault is Ownable, ReentrancyGuard {
         return initialRate - totalReduction;
     }
 
-    // ★ 核心修改：移除舊的 getTaxRateForUser，因為邏輯已整合到 _calculateTaxRate 中
-
-    // --- Owner 管理函式 ---
-    
-    // ★ 核心修改：更新 setTaxParameters 以匹配新的稅制結構
     function setTaxParameters(
         uint256 _standardRate,
         uint256 _largeRate,
@@ -180,14 +169,12 @@ contract PlayerVault is Ownable, ReentrancyGuard {
         emit TaxParametersUpdated(_standardRate, _largeRate, _decreaseRate, _period);
     }
 
-    // ★ 新增：設定提現門檻的函數
     function setWithdrawThresholds(uint256 _smallUSD, uint256 _largeUSD) external onlyOwner {
         smallWithdrawThresholdUSD = _smallUSD;
         largeWithdrawThresholdUSD = _largeUSD;
         emit WithdrawThresholdsUpdated(_smallUSD, _largeUSD);
     }
     
-    // ... 其他現有管理函數不變 (setDungeonCore, setSoulShardToken, etc.) ...
     function setDungeonCore(address _newAddress) external onlyOwner {
         dungeonCore = IDungeonCore(_newAddress);
         emit DungeonCoreSet(_newAddress);
@@ -199,7 +186,7 @@ contract PlayerVault is Ownable, ReentrancyGuard {
     }
 
     function setCommissionRate(uint256 _newRate) external onlyOwner {
-        require(_newRate <= 2000, "Vault: Commission rate > 20%"); // 2000 / 10000 = 20%
+        require(_newRate <= 2000, "Vault: Commission rate > 20%");
         commissionRate = _newRate;
     }
     

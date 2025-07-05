@@ -1,3 +1,5 @@
+// src/components/ui/NftCard.tsx
+
 import React, { memo } from 'react';
 import type { AnyNft, NftType, HeroNft, RelicNft, PartyNft, VipNft } from '../../types/nft';
 
@@ -5,7 +7,6 @@ interface NftCardProps {
   nft: AnyNft;
   onSelect?: (id: bigint, type: NftType) => void;
   isSelected?: boolean;
-  onDisband?: (id: bigint) => void;
 }
 
 // 輔助元件，用於產生星星評級，確保視覺一致性
@@ -20,10 +21,10 @@ const StarRating: React.FC<{ rating: number }> = memo(({ rating }) => (
 ));
 
 // NFT 卡片的主元件
-const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected, onDisband }) => {
+const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected }) => {
   const { id, name, image, type } = nft;
   const fallbackImage = `https://placehold.co/200x200/1F1D36/C0A573?text=${type}+%23${id}`;
-  const imageUrl = image?.replace('ipfs://', 'https://ipfs.io/ipfs/');
+  const imageUrl = image?.replace('ipfs://', '[https://ipfs.io/ipfs/](https://ipfs.io/ipfs/)');
 
   // 根據不同的 NFT 種類，渲染對應的屬性
   const renderAttributes = () => {
@@ -48,6 +49,7 @@ const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected, o
         const party = nft as PartyNft;
         return (
           <>
+            <StarRating rating={party.partyRarity} />
             <div className="text-xs text-gray-400 flex justify-center items-center gap-2">
                 <span>英雄: {party.heroIds.length}</span>
                 <span>/</span>
@@ -73,7 +75,7 @@ const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected, o
     <div 
         className={`card-bg p-3 rounded-xl text-center border-2 transition-all duration-300 ease-in-out flex flex-col overflow-hidden hover:shadow-2xl hover:-translate-y-1 ${isSelected ? 'ring-4 ring-indigo-500 ring-offset-2 ring-offset-gray-800 border-indigo-500' : 'border-transparent'}`}
     >
-      <div className="flex-grow cursor-pointer" onClick={() => onSelect && onSelect(id, type)}>
+      <div className={`flex-grow ${onSelect ? 'cursor-pointer' : ''}`} onClick={() => onSelect && onSelect(id, type)}>
         <div className="aspect-square w-full mb-2 overflow-hidden rounded-lg">
             <img 
                 src={imageUrl || fallbackImage} 
@@ -88,18 +90,9 @@ const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected, o
             {renderAttributes()}
         </div>
       </div>
-      {type === 'party' && onDisband && (
-        <button 
-            onClick={() => onDisband(id)} 
-            className="mt-2 w-full text-xs bg-red-600/80 hover:bg-red-600 text-white py-1.5 rounded-md transition-colors duration-200"
-        >
-          解散
-        </button>
-      )}
     </div>
   );
 };
 
 // 使用 React.memo 進行性能優化，只有在 props 改變時才會重新渲染
 export const NftCard = memo(NftCardComponent);
-

@@ -1,3 +1,5 @@
+// src/pages/DungeonPage.tsx
+
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContracts, useReadContract, useWriteContract } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
@@ -12,8 +14,9 @@ import { useTransactionStore } from '../stores/useTransactionStore';
 import type { Page } from '../types/page';
 import type { PartyNft } from '../types/nft';
 import { Icons } from '../components/ui/icons';
+import { Modal } from '../components/ui/Modal'; // 【新增】導入 Modal
+import ProvisionsPage from './ProvisionsPage'; // 【新增】導入 ProvisionsPage 的邏輯
 
-// ... 子元件保持不變 ...
 interface Dungeon {
   id: number;
   name: string;
@@ -28,10 +31,11 @@ interface PartyStatusCardProps {
   dungeons: Dungeon[];
   onStartExpedition: (partyId: bigint, dungeonId: bigint, fee: bigint) => void;
   onRest: (partyId: bigint) => void;
+  onBuyProvisions: (partyId: bigint) => void; // 【新增】購買儲備的處理函式
   isTxPending: boolean;
 }
 
-const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onStartExpedition, onRest, isTxPending }) => {
+const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onStartExpedition, onRest, onBuyProvisions, isTxPending }) => {
     const { chainId } = useAccount();
     const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
     const [selectedDungeonId, setSelectedDungeonId] = useState<bigint>(1n);
@@ -42,13 +46,6 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
         args: [party.id],
         query: { enabled: !!chainId, refetchInterval: 5000 }
     });
-
-    const { data: restCost, isLoading: isLoadingCost } = useReadContract({
-        ...dungeonMasterContract,
-        functionName: 'getRestCost',
-        args: [party.id],
-        query: { enabled: !!dungeonMasterContract && !!partyStatus && (partyStatus as any).fatigueLevel > 0 }
-    });
     
     const { data: explorationFee } = useReadContract({
         ...dungeonMasterContract,
@@ -56,17 +53,19 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
         query: { enabled: !!dungeonMasterContract }
     });
 
-    const { isOnCooldown, fatigueLevel, effectivePower } = useMemo(() => {
-        if (!partyStatus) return { isOnCooldown: false, fatigueLevel: 0, effectivePower: party.totalPower };
+    const { isOnCooldown, fatigueLevel, effectivePower, provisionsRemaining } = useMemo(() => {
+        if (!partyStatus) return { isOnCooldown: false, fatigueLevel: 0, effectivePower: party.totalPower, provisionsRemaining: 0n };
         const status = partyStatus as any;
-        const cooldownEndsAt = status.cooldownEndsAt ?? 0n;
-        const fatigue = status.fatigueLevel ?? 0;
+        const provisions = status[0] ?? 0n;
+        const cooldownEndsAt = status[1] ?? 0n;
+        const fatigue = status[3] ?? 0;
         const power = BigInt(party.totalPower);
         const effPower = power * (100n - BigInt(fatigue) * 2n) / 100n;
         return {
             isOnCooldown: BigInt(Math.floor(Date.now() / 1000)) < cooldownEndsAt,
             fatigueLevel: fatigue,
-            effectivePower: effPower
+            effectivePower: effPower,
+            provisionsRemaining: provisions
         };
     }, [partyStatus, party.totalPower]);
 
@@ -74,20 +73,17 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
     const renderStatus = () => {
         if (isLoadingStatus) return <span className="text-gray-400">讀取狀態...</span>;
         if (isOnCooldown) return <span className="px-3 py-1 text-sm font-medium text-yellow-300 bg-yellow-900/50 rounded-full">冷卻中...</span>;
+        if (provisionsRemaining === 0n) return <span className="px-3 py-1 text-sm font-medium text-orange-400 bg-orange-900/50 rounded-full">需要儲備</span>;
         if (fatigueLevel > 0) return <span className="px-3 py-1 text-sm font-medium text-blue-300 bg-blue-900/50 rounded-full">需要休息</span>;
         return <span className="px-3 py-1 text-sm font-medium text-green-300 bg-green-900/50 rounded-full">準備就緒</span>;
     };
 
     const renderAction = () => {
-        if (isLoadingStatus || isLoadingCost) return <div className="h-10 w-full rounded-lg bg-gray-700 animate-pulse"></div>;
+        if (isLoadingStatus) return <div className="h-10 w-full rounded-lg bg-gray-700 animate-pulse"></div>;
         if (isOnCooldown) return <ActionButton disabled className="w-full h-10">冷卻中</ActionButton>;
-        if (fatigueLevel > 0) {
-            return (
-                <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10">
-                    休息 (花費 {restCost ? formatEther(restCost) : '...'} BNB)
-                </ActionButton>
-            );
-        }
+        if (provisionsRemaining === 0n) return <ActionButton onClick={() => onBuyProvisions(party.id)} className="w-full h-10 bg-orange-600 hover:bg-orange-500">購買儲備</ActionButton>;
+        if (fatigueLevel > 0) return <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10 bg-blue-600 hover:bg-blue-500">休息</ActionButton>;
+        
         return (
             <ActionButton onClick={() => onStartExpedition(party.id, selectedDungeonId, explorationFee ?? 0n)} isLoading={isTxPending} className="w-full h-10">
                 開始遠征
@@ -101,17 +97,18 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
                 <h4 className="font-bold text-lg text-white truncate pr-2">{party.name}</h4>
                 {renderStatus()}
             </div>
-            <div className="grid grid-cols-3 gap-2 mb-4 text-center">
-                <div><p className="text-sm text-gray-400">最大戰力</p><p className="font-bold text-xl text-gray-500 line-through">{party.totalPower.toString()}</p></div>
+            <div className="grid grid-cols-2 gap-2 mb-4 text-center">
                 <div><p className="text-sm text-gray-400">有效戰力</p><p className="font-bold text-2xl text-indigo-400">{effectivePower.toString()}</p></div>
                 <div><p className="text-sm text-gray-400">疲勞度</p><p className="font-bold text-xl text-red-400">{fatigueLevel} / 45</p></div>
             </div>
+            <p className="text-center text-xs text-gray-400 mb-2">剩餘儲備: {provisionsRemaining.toString()}</p>
             <div className="mb-4">
                 <label className="text-xs text-gray-400">選擇地城:</label>
                 <select 
                     value={selectedDungeonId.toString()} 
                     onChange={(e) => setSelectedDungeonId(BigInt(e.target.value))}
                     className="w-full p-2 border rounded-lg bg-gray-900/80 border-gray-700 text-white mt-1"
+                    disabled={provisionsRemaining === 0n || isOnCooldown}
                 >
                     {dungeons.map(d => <option key={d.id} value={d.id.toString()}>{d.id}. {d.name} (要求: {d.requiredPower.toString()})</option>)}
                 </select>
@@ -137,6 +134,10 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
+
+    // 【新增】管理購買儲備 Modal 的狀態
+    const [isProvisionModalOpen, setIsProvisionModalOpen] = useState(false);
+    const [selectedPartyForProvision, setSelectedPartyForProvision] = useState<bigint | null>(null);
 
     const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
     
@@ -211,6 +212,12 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
         }
     };
 
+    // 【新增】打開購買儲備 Modal 的函式
+    const handleBuyProvisions = (partyId: bigint) => {
+        setSelectedPartyForProvision(partyId);
+        setIsProvisionModalOpen(true);
+    };
+
     const isLoading = isLoadingNfts || isLoadingDungeons;
 
     if (isLoading) {
@@ -219,6 +226,21 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
 
     return (
         <section className="space-y-8">
+            {/* 【新增】購買儲備的 Modal */}
+            <Modal
+                isOpen={isProvisionModalOpen}
+                onClose={() => setIsProvisionModalOpen(false)}
+                title="購買遠征儲備"
+                // 我們讓 ProvisionsPage 自己處理確認和關閉邏輯
+                onConfirm={() => {}} 
+                confirmText="" // 隱藏預設按鈕
+            >
+                <ProvisionsPage 
+                    preselectedPartyId={selectedPartyForProvision} 
+                    onPurchaseSuccess={() => setIsProvisionModalOpen(false)}
+                />
+            </Modal>
+
             <div>
                 <h2 className="page-title">遠征指揮中心</h2>
                 {(!nfts || nfts.parties.length === 0) ? (
@@ -234,6 +256,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
                                 dungeons={dungeons}
                                 onStartExpedition={handleStartExpedition}
                                 onRest={handleRest}
+                                onBuyProvisions={handleBuyProvisions}
                                 isTxPending={isTxPending}
                             />
                         ))}

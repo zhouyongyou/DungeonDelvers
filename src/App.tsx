@@ -1,3 +1,5 @@
+// src/App.tsx
+
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useAccount } from 'wagmi';
 import { Header } from './components/layout/Header';
@@ -18,6 +20,7 @@ const AltarPage = lazy(() => import('./pages/AltarPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const VipPage = lazy(() => import('./pages/VipPage'));
+const ReferralPage = lazy(() => import('./pages/ReferralPage')); // 【新增】導入邀請頁面
 
 const PageLoader: React.FC = () => (
     <div className="flex justify-center items-center h-64">
@@ -29,10 +32,12 @@ const PageLoader: React.FC = () => (
 );
 
 const getPageFromHash = (): Page => {
+    // 【修改】從 hash 中解析頁面和潛在的邀請碼
     const hash = window.location.hash.replace('#/', '');
-    const validPages: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'explorer', 'admin', 'altar', 'profile', 'vip'];
-    if (validPages.includes(hash as Page)) {
-        return hash as Page;
+    const [page] = hash.split('?');
+    const validPages: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'explorer', 'admin', 'altar', 'profile', 'vip', 'referral'];
+    if (validPages.includes(page as Page)) {
+        return page as Page;
     }
     return 'dashboard';
 };
@@ -55,7 +60,7 @@ function App() {
   };
 
   const renderPage = () => {
-    const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'admin', 'altar', 'profile', 'vip'];
+    const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'admin', 'altar', 'profile', 'vip', 'referral'];
     if (!isConnected && pageRequiresWallet.includes(activePage)) {
         return (<div className="mt-10"><EmptyState message="要使用此功能，請先連接您的錢包。" /></div>);
     }
@@ -70,6 +75,7 @@ function App() {
         case 'altar': return <AltarPage />;
         case 'profile': return <ProfilePage setActivePage={handleSetPage} />;
         case 'vip': return <VipPage />;
+        case 'referral': return <ReferralPage />; // 【新增】渲染邀請頁面
         default: return <DashboardPage setActivePage={handleSetPage} />;
     }
   };

@@ -1,3 +1,5 @@
+// src/components/layout/Header.tsx
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAccount, useConnect, useDisconnect, useReadContract } from 'wagmi';
 import { injected } from 'wagmi/connectors';
@@ -71,6 +73,7 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
       { key: 'dungeon', label: '地下城' },
       { key: 'altar', label: '升星祭壇' },
       { key: 'vip', label: 'VIP' },
+      { key: 'referral', label: '邀請' }, // 【新增】邀請頁面導航
       { key: 'explorer', label: '數據查詢' },
   ];
   if (isDeveloper) {

@@ -1,3 +1,5 @@
+// src/pages/MyAssetsPage.tsx
+
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract, usePublicClient } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
@@ -12,7 +14,7 @@ import { useTransactionStore } from '../stores/useTransactionStore';
 import type { AnyNft, HeroNft, RelicNft, NftType, PartyNft } from '../types/nft';
 import { formatEther } from 'viem';
 
-// TeamBuilder 和 NftGrid 元件保持不變...
+// TeamBuilder 元件保持不變...
 interface TeamBuilderProps {
   heroes: HeroNft[];
   relics: RelicNft[];
@@ -109,6 +111,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
                     >
                         創建隊伍
                     </ActionButton>
+                    <p className="text-xs text-yellow-400 mt-1 text-center sm:text-right">注意：創建後資產將被綁定，此操作目前不可逆。</p>
                     <p className="text-xs text-gray-500 mt-1">費用: {formatEther(platformFee)} BNB</p>
                 </div>
             </div>
@@ -173,7 +176,6 @@ const MyAssetsPage: React.FC = () => {
         if (!partyContract || !heroContract || !relicContract || !address || !publicClient) return;
         
         try {
-            // 【核心修改】使用 wagmi 的 readContract 來檢查授權
             const checkAndRequestApproval = async (nftContract: any, type: '英雄' | '聖物') => {
                 const isApproved = await publicClient.readContract({
                     ...nftContract,
@@ -193,7 +195,6 @@ const MyAssetsPage: React.FC = () => {
             if (heroIds.length > 0) await checkAndRequestApproval(heroContract, '英雄');
             if (relicIds.length > 0) await checkAndRequestApproval(relicContract, '聖物');
 
-            // 執行創建
             const hash = await writeContractAsync({
                 ...partyContract,
                 functionName: 'createParty',
