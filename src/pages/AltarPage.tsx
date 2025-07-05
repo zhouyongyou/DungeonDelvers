@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { useAccount, useReadContract, useWriteContract } from 'wagmi';
+import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
-import { formatEther, maxUint256, type Abi } from 'viem';
+import { formatEther, type Abi } from 'viem';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { getContract } from '../config/contracts';
 import { NftCard } from '../components/ui/NftCard';
@@ -11,41 +11,45 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import type { HeroNft, RelicNft, NftType } from '../types/nft';
-import { Icons } from '../components/ui/icons';
 
 // =================================================================
-// Section: 型別定義與輔助 Hook
+// Section: 型別定義與輔助元件
 // =================================================================
 
-type AscensionTarget = HeroNft | RelicNft;
+type UpgradeableNft = HeroNft | RelicNft;
 
-/**
- * @dev 一個自定義 Hook，負責計算升星的成功率和成本。
- */
-const useAscensionLogic = (mainNft: AscensionTarget | null, fodderNfts: AscensionTarget[]) => {
-    const { chainId } = useAccount();
-    const altarContract = getContract(chainId, 'altarOfAscension');
+// 用於顯示升級規則和機率的卡片
+const UpgradeInfoCard: React.FC<{
+  rule: any;
+  isLoading: boolean;
+}> = ({ rule, isLoading }) => {
+  if (isLoading) {
+    return <div className="card-bg p-4 rounded-xl animate-pulse h-48"><LoadingSpinner /></div>;
+  }
+  if (!rule || !rule.materialsRequired) {
+    return (
+      <div className="card-bg p-4 rounded-xl text-center text-gray-500">
+        請先選擇要升級的星級
+      </div>
+    );
+  }
 
-    // 獲取基礎的升星成本
-    const { data: baseCost, isLoading: isLoadingCost } = useReadContract({
-        ...altarContract,
-        functionName: 'ascensionBaseCost',
-        query: { enabled: !!altarContract },
-    });
+  const totalChance = rule.greatSuccessChance + rule.successChance + rule.partialFailChance;
 
-    // 獲取計算出的成功率
-    const { data: successRate, isLoading: isLoadingRate } = useReadContract({
-        ...altarContract,
-        functionName: 'calculateSuccessRate',
-        args: [mainNft?.id ?? 0n, fodderNfts.map(f => f.id)],
-        query: { enabled: !!mainNft && !!altarContract },
-    });
-
-    return {
-        cost: baseCost ?? 0n,
-        successRate: successRate as number | undefined,
-        isLoading: isLoadingCost || (!!mainNft && isLoadingRate),
-    };
+  return (
+    <div className="card-bg p-6 rounded-2xl text-sm">
+      <h4 className="section-title text-xl">升星規則</h4>
+      <div className="space-y-2">
+        <p>所需材料: <span className="font-bold text-white">{rule.materialsRequired.toString()} 個</span></p>
+        <p>所需費用: <span className="font-bold text-yellow-400">{formatEther(rule.nativeFee)} BNB</span></p>
+        <hr className="border-gray-700 my-3" />
+        <p className="text-green-400">⚜️ 大成功 (獲得2個): {rule.greatSuccessChance}%</p>
+        <p className="text-sky-400">✨ 普通成功 (獲得1個): {rule.successChance}%</p>
+        <p className="text-orange-400">💔 一般失敗 (返還部分): {rule.partialFailChance}%</p>
+        <p className="text-red-500">💀 完全失敗 (全部損失): {100 - totalChance}%</p>
+      </div>
+    </div>
+  );
 };
 
 // =================================================================
@@ -57,83 +61,89 @@ const AltarPage: React.FC = () => {
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
 
-    const [mainNft, setMainNft] = useState<AscensionTarget | null>(null);
-    const [fodderNfts, setFodderNfts] = useState<AscensionTarget[]>([]);
-    const [filter, setFilter] = useState<NftType>('hero');
+    const [nftType, setNftType] = useState<NftType>('hero');
+    const [rarity, setRarity] = useState<number>(1);
+    const [selectedNfts, setSelectedNfts] = useState<bigint[]>([]);
 
     const altarContract = getContract(chainId, 'altarOfAscension');
-    const soulShardContract = getContract(chainId, 'soulShard');
+    const heroContract = getContract(chainId, 'hero');
+    const relicContract = getContract(chainId, 'relic');
+
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
+    // 獲取玩家的所有 NFT
     const { data: nfts, isLoading: isLoadingNfts } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
         queryFn: () => fetchAllOwnedNfts(address!, chainId!),
         enabled: !!address && !!chainId,
     });
 
-    const { cost, successRate, isLoading: isLoadingLogic } = useAscensionLogic(mainNft, fodderNfts);
-    
-    const { data: allowance, refetch: refetchAllowance } = useReadContract({
-        ...soulShardContract,
-        functionName: 'allowance',
-        args: [address!, altarContract?.address!],
-        query: { enabled: !!address && !!altarContract }
+    // 一次性讀取所有升級規則
+    const { data: upgradeRulesData, isLoading: isLoadingRules } = useReadContracts({
+        contracts: [1, 2, 3, 4].map(r => ({
+            ...altarContract,
+            functionName: 'upgradeRules',
+            args: [r],
+        })),
+        query: { enabled: !!altarContract },
     });
     
-    const needsApproval = useMemo(() => (allowance ?? 0n) < cost, [allowance, cost]);
+    // 根據當前選擇的稀有度，獲取對應的規則
+    const currentRule = useMemo(() => {
+        if (!upgradeRulesData || rarity < 1 || rarity > 4) return null;
+        const ruleResult = upgradeRulesData[rarity - 1];
+        if (ruleResult.status === 'success') {
+            const [materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance] = ruleResult.result as readonly [number, bigint, number, number, number];
+            return { materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance };
+        }
+        return null;
+    }, [upgradeRulesData, rarity]);
 
+    // 根據選擇的類型和稀有度，過濾出可用的 NFT
     const availableNfts = useMemo(() => {
         if (!nfts) return [];
-        const all = filter === 'hero' ? nfts.heroes : nfts.relics;
-        const fodderIds = fodderNfts.map(f => f.id);
-        return all.filter(n => n.id !== mainNft?.id && !fodderIds.includes(n.id));
-    }, [nfts, filter, mainNft, fodderNfts]);
+        const sourceNfts = nftType === 'hero' ? nfts.heroes : nfts.relics;
+        return sourceNfts.filter(nft => nft.rarity === rarity);
+    }, [nfts, nftType, rarity]);
 
-    const handleSelectMain = (nft: AscensionTarget) => {
-        setMainNft(nft);
-        setFodderNfts([]); // 更換主卡時清空祭品
-    };
-
-    const handleSelectFodder = (nft: AscensionTarget) => {
-        if (fodderNfts.some(f => f.id === nft.id)) {
-            setFodderNfts(fodderNfts.filter(f => f.id !== nft.id));
-        } else {
-            setFodderNfts([...fodderNfts, nft]);
-        }
-    };
-
-    const handleApprove = async () => {
-        if (!altarContract || !soulShardContract) return;
-        try {
-            const hash = await writeContractAsync({
-                address: soulShardContract.address,
-                abi: soulShardContract.abi,
-                functionName: 'approve',
-                args: [altarContract.address, maxUint256]
-            });
-            addTransaction({ hash, description: `批准升星祭壇使用代幣` });
-            setTimeout(() => refetchAllowance(), 2000);
-        } catch (e: any) {
-             if (!e.message.includes('User rejected the request')) {
-                showToast(e.shortMessage || "授權失敗", "error");
+    const handleSelectNft = (id: bigint) => {
+        setSelectedNfts(prev => {
+            if (prev.includes(id)) {
+                return prev.filter(i => i !== id);
             }
-        }
+            if (currentRule && prev.length < currentRule.materialsRequired) {
+                return [...prev, id];
+            }
+            showToast(`最多只能選擇 ${currentRule?.materialsRequired} 個材料`, 'error');
+            return prev;
+        });
     };
+    
+    // 重置選擇
+    const resetSelections = () => {
+        setSelectedNfts([]);
+    };
+    
+    useEffect(resetSelections, [nftType, rarity]);
 
-    const handleAscend = async () => {
-        if (!mainNft || !altarContract) return;
-        if (needsApproval) return showToast('請先完成授權', 'error');
+    const handleUpgrade = async () => {
+        if (!currentRule || !altarContract) return;
+        if (selectedNfts.length !== currentRule.materialsRequired) {
+            return showToast(`需要 ${currentRule.materialsRequired} 個材料`, 'error');
+        }
+
+        const tokenContractAddress = nftType === 'hero' ? heroContract?.address : relicContract?.address;
+        if (!tokenContractAddress) return showToast('合約地址未設定', 'error');
 
         try {
             const hash = await writeContractAsync({
                 ...altarContract,
-                functionName: 'ascend',
-                args: [mainNft.id, fodderNfts.map(f => f.id)],
+                functionName: 'upgradeNFTs',
+                args: [tokenContractAddress, selectedNfts],
+                value: currentRule.nativeFee,
             });
-            addTransaction({ hash, description: `升星 ${mainNft.name}` });
-            // 成功後清空選擇
-            setMainNft(null);
-            setFodderNfts([]);
+            addTransaction({ hash, description: `升星 ${rarity}★ ${nftType === 'hero' ? '英雄' : '聖物'}` });
+            resetSelections();
         } catch (e: any) {
             if (!e.message.includes('User rejected the request')) {
                 showToast(e.shortMessage || "升星失敗", "error");
@@ -141,90 +151,66 @@ const AltarPage: React.FC = () => {
         }
     };
 
-    const renderActionButton = () => {
-        if (!mainNft) return <ActionButton disabled className="w-full h-12">請先選擇主卡</ActionButton>;
-        if (needsApproval) {
-            return <ActionButton onClick={handleApprove} isLoading={isTxPending} className="w-full h-12">授權 {formatEther(cost)} $SoulShard</ActionButton>;
-        }
-        return (
-            <ActionButton onClick={handleAscend} isLoading={isTxPending} className="w-full h-12" confirmVariant="danger">
-                {`開始升星 (成功率: ${successRate ?? '...'}%)`}
-            </ActionButton>
-        );
-    };
-
-    if (isLoadingNfts) {
-        return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
-    }
+    const isLoading = isLoadingNfts || isLoadingRules;
 
     return (
         <section className="space-y-8">
             <h2 className="page-title">升星祭壇</h2>
+            <p className="text-center text-gray-400 max-w-2xl mx-auto -mt-4">
+                將多個同星級的 NFT 作為祭品，有機會合成更高星級的強大資產！結果由鏈上隨機數決定，絕對公平。
+            </p>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* 左側：升星操作區 */}
-                <div className="lg:col-span-1 space-y-6">
-                    <div className="card-bg p-6 rounded-2xl text-center">
-                        <h3 className="section-title">1. 放入主卡</h3>
-                        <div className="w-48 h-48 mx-auto bg-gray-900/50 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-600">
-                            {mainNft ? <NftCard nft={mainNft} /> : <p className="text-gray-500">從右側選擇</p>}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                {/* 左側：操作與資訊區 */}
+                <div className="lg:col-span-1 space-y-6 sticky top-24">
+                    <div className="card-bg p-6 rounded-2xl">
+                        <h3 className="section-title text-xl">1. 選擇升級目標</h3>
+                        <div className="flex items-center gap-2 bg-gray-900/50 p-1 rounded-lg mb-4">
+                            {(['hero', 'relic'] as NftType[]).map(t => (
+                                <button key={t} onClick={() => setNftType(t)} className={`w-full py-2 text-sm font-medium rounded-md transition ${nftType === t ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'}`}>
+                                    {t === 'hero' ? '英雄' : '聖物'}
+                                </button>
+                            ))}
                         </div>
-                        {mainNft && (
-                            <div className="mt-4 text-center">
-                                <p className="text-lg font-bold text-white">{mainNft.name}</p>
-                                <div className="flex justify-center items-center gap-4 text-yellow-400">
-                                    <p>R{mainNft.rarity}</p>
-                                    <Icons.ArrowRight className="w-5 h-5" />
-                                    <p className="text-green-400">R{mainNft.rarity + 1}</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                    
-                    <div className="card-bg p-6 rounded-2xl text-center">
-                        <h3 className="section-title">2. 放入祭品</h3>
-                         <div className="w-full min-h-[80px] p-2 bg-gray-900/50 rounded-xl grid grid-cols-5 gap-2 border-2 border-dashed border-gray-600">
-                            {fodderNfts.map(nft => <NftCard key={`fodder-${nft.id}`} nft={nft} />)}
-                        </div>
-                    </div>
-
-                    <div className="card-bg p-6 rounded-2xl text-center">
-                        <h3 className="section-title">3. 開始儀式</h3>
-                        <div className="my-4">
-                            <p className="text-sm text-gray-400">成功率</p>
-                            <p className="text-4xl font-bold text-green-400">{isLoadingLogic ? '...' : successRate ?? 0}%</p>
-                            <p className="text-sm text-gray-400 mt-2">費用</p>
-                            <p className="text-lg font-semibold text-yellow-400">{formatEther(cost)} $SoulShard</p>
-                        </div>
-                        {renderActionButton()}
-                        <p className="text-xs text-red-500 mt-2">注意：無論成功與否，所有祭品和費用都將被消耗。</p>
-                    </div>
-                </div>
-
-                {/* 右側：NFT 選擇區 */}
-                <div className="lg:col-span-2 card-bg p-6 rounded-2xl">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="section-title">我的收藏</h3>
                         <div className="flex items-center gap-2 bg-gray-900/50 p-1 rounded-lg">
-                            {(['hero', 'relic'] as NftType[]).map(f => (
-                                <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${filter === f ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'}`}>
-                                    {f === 'hero' ? '英雄' : '聖物'}
+                            {[1, 2, 3, 4].map(r => (
+                                <button key={r} onClick={() => setRarity(r)} className={`w-full py-2 text-sm font-medium rounded-md transition ${rarity === r ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'}`}>
+                                    {r} ★
                                 </button>
                             ))}
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        {availableNfts.map(nft => (
-                            <div key={nft.id} className="relative">
-                                <NftCard nft={nft} />
-                                <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2 opacity-0 hover:opacity-100 transition-opacity rounded-xl">
-                                    <button onClick={() => handleSelectMain(nft as AscensionTarget)} className="text-xs bg-green-600 text-white px-3 py-1 rounded-full">設為主卡</button>
-                                    <button onClick={() => handleSelectFodder(nft as AscensionTarget)} disabled={!mainNft || mainNft.type !== nft.type} className="text-xs bg-blue-600 text-white px-3 py-1 rounded-full disabled:bg-gray-500 disabled:cursor-not-allowed">設為祭品</button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    {availableNfts.length === 0 && <EmptyState message={`沒有可用的${filter === 'hero' ? '英雄' : '聖物'}`} />}
+                    
+                    <UpgradeInfoCard rule={currentRule} isLoading={isLoadingRules} />
+
+                    <ActionButton 
+                        onClick={handleUpgrade} 
+                        isLoading={isTxPending} 
+                        disabled={isTxPending || !currentRule || selectedNfts.length !== currentRule.materialsRequired}
+                        className="w-full h-14 text-lg"
+                    >
+                        開始升星
+                    </ActionButton>
+                </div>
+
+                {/* 右側：NFT 選擇區 */}
+                <div className="lg:col-span-2 card-bg p-6 rounded-2xl">
+                    <h3 className="section-title">2. 選擇材料 ({selectedNfts.length} / {currentRule?.materialsRequired ?? '...'})</h3>
+                    {isLoading ? <div className="flex justify-center h-64 items-center"><LoadingSpinner /></div> : 
+                     availableNfts.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            {availableNfts.map(nft => (
+                                <NftCard
+                                    key={nft.id}
+                                    nft={nft}
+                                    onSelect={() => handleSelectNft(nft.id)}
+                                    isSelected={selectedNfts.includes(nft.id)}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <EmptyState message={`沒有可用的 ${rarity}★ ${nftType === 'hero' ? '英雄' : '聖物'}`} />
+                    )}
                 </div>
             </div>
         </section>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchAllOwnedNfts } from '../api/nfts';
@@ -11,7 +11,9 @@ import { getContract } from '../config/contracts';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import type { Page } from '../types/page';
-import type { AnyNft, HeroNft, RelicNft, NftType } from '../types/nft';
+import type { AnyNft, HeroNft, RelicNft, NftType, PartyNft } from '../types/nft';
+import { Icons } from '../components/ui/icons';
+import { formatEther } from 'viem';
 
 // =================================================================
 // Section: TeamBuilder 子元件
@@ -22,16 +24,17 @@ interface TeamBuilderProps {
   relics: RelicNft[];
   onCreateParty: (heroIds: bigint[], relicIds: bigint[]) => void;
   isCreating: boolean;
+  platformFee?: bigint;
 }
 
-const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty, isCreating }) => {
+const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty, isCreating, platformFee = 0n }) => {
     const [selectedHeroes, setSelectedHeroes] = useState<bigint[]>([]);
     const [selectedRelics, setSelectedRelics] = useState<bigint[]>([]);
 
     const toggleSelection = (id: bigint, type: 'hero' | 'relic') => {
         const list = type === 'hero' ? selectedHeroes : selectedRelics;
         const setList = type === 'hero' ? setSelectedHeroes : setSelectedRelics;
-        const limit = type === 'hero' ? 5 : 5;
+        const limit = 5; // Both hero and relic have a limit of 5
 
         if (list.includes(id)) {
             setList(list.filter(i => i !== id));
@@ -52,17 +55,17 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
         return { totalPower: power, totalCapacity: capacity };
     }, [selectedHeroes, selectedRelics, heroes, relics]);
 
-    const canCreate = selectedHeroes.length > 0;
+    const canCreate = selectedHeroes.length > 0 && selectedRelics.length > 0 && selectedHeroes.length <= totalCapacity;
 
     return (
         <div className="card-bg p-6 rounded-2xl shadow-xl">
             <h3 className="section-title">創建新隊伍</h3>
-            <p className="text-sm text-gray-400 mb-4">選擇最多5位英雄和5件聖物來組建你的冒險隊伍。</p>
+            <p className="text-sm text-gray-400 mb-4">選擇英雄和聖物來組建你的冒險隊伍。隊伍的英雄數量不能超過聖物的總容量。</p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                 {/* 英雄選擇區 */}
                 <div>
-                    <h4 className="font-semibold text-lg mb-2 text-white">選擇英雄 ({selectedHeroes.length}/5)</h4>
+                    <h4 className="font-semibold text-lg mb-2 text-white">選擇英雄 ({selectedHeroes.length})</h4>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
                         {heroes.map(hero => (
                             <NftCard 
@@ -72,12 +75,12 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
                                 isSelected={selectedHeroes.includes(hero.id)} 
                             />
                         ))}
-                         {heroes.length === 0 && <div className="col-span-full"><EmptyState message="沒有可用的英雄" small /></div>}
+                         {heroes.length === 0 && <div className="col-span-full"><EmptyState message="沒有可用的英雄" /></div>}
                     </div>
                 </div>
                 {/* 聖物選擇區 */}
                 <div>
-                    <h4 className="font-semibold text-lg mb-2 text-white">選擇聖物 ({selectedRelics.length}/5)</h4>
+                    <h4 className="font-semibold text-lg mb-2 text-white">選擇聖物 ({selectedRelics.length})</h4>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
                         {relics.map(relic => (
                             <NftCard 
@@ -87,7 +90,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
                                 isSelected={selectedRelics.includes(relic.id)} 
                             />
                         ))}
-                        {relics.length === 0 && <div className="col-span-full"><EmptyState message="沒有可用的聖物" small /></div>}
+                        {relics.length === 0 && <div className="col-span-full"><EmptyState message="沒有可用的聖物" /></div>}
                     </div>
                 </div>
             </div>
@@ -100,25 +103,30 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
                         <p className="text-2xl font-bold text-indigo-400">{totalPower}</p>
                     </div>
                     <div>
-                        <p className="text-sm text-gray-400">總容量</p>
-                        <p className="text-2xl font-bold text-teal-400">{totalCapacity}</p>
+                        <p className="text-sm text-gray-400">英雄/容量</p>
+                        <p className={`text-2xl font-bold ${selectedHeroes.length > totalCapacity ? 'text-red-500' : 'text-teal-400'}`}>
+                            {selectedHeroes.length}/{totalCapacity}
+                        </p>
                     </div>
                 </div>
-                <ActionButton 
-                    onClick={() => onCreateParty(selectedHeroes, selectedRelics)} 
-                    isLoading={isCreating}
-                    disabled={!canCreate || isCreating}
-                    className="w-full sm:w-48 h-12 mt-4 sm:mt-0"
-                >
-                    創建隊伍
-                </ActionButton>
+                <div className="flex flex-col items-center sm:items-end">
+                    <ActionButton 
+                        onClick={() => onCreateParty(selectedHeroes, selectedRelics)} 
+                        isLoading={isCreating}
+                        disabled={!canCreate || isCreating}
+                        className="w-full sm:w-48 h-12 mt-4 sm:mt-0"
+                    >
+                        創建隊伍
+                    </ActionButton>
+                    <p className="text-xs text-gray-500 mt-1">費用: {formatEther(platformFee)} BNB</p>
+                </div>
             </div>
         </div>
     );
 };
 
 // =================================================================
-// Section: NftGrid 子元件
+// Section: NftGrid 子元件 (保持不變)
 // =================================================================
 
 interface NftGridProps {
@@ -141,23 +149,32 @@ const NftGrid: React.FC<NftGridProps> = ({ nfts, onDisband }) => {
 // Section: MyAssetsPage 主元件
 // =================================================================
 
-const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setActivePage }) => {
+const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = () => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
-    const queryClient = useQueryClient();
 
     const [filter, setFilter] = useState<NftType>('party');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [partyToDisband, setPartyToDisband] = useState<bigint | null>(null);
 
+    const heroContract = getContract(chainId, 'hero');
+    const relicContract = getContract(chainId, 'relic');
     const partyContract = getContract(chainId, 'party');
+
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
     const { data: nfts, isLoading } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
         queryFn: () => fetchAllOwnedNfts(address!, chainId!),
         enabled: !!address && !!chainId,
+    });
+    
+    // 從 Party 合約讀取平台費用
+    const { data: platformFee } = useReadContract({
+        ...partyContract,
+        functionName: 'platformFee',
+        query: { enabled: !!partyContract }
     });
 
     const filteredNfts = useMemo(() => {
@@ -172,14 +189,37 @@ const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAc
     }, [filter, nfts]);
 
     const handleCreateParty = async (heroIds: bigint[], relicIds: bigint[]) => {
-        if (!partyContract) return;
+        if (!partyContract || !heroContract || !relicContract || !address) return;
+        
         try {
+            // 檢查並請求授權
+            const isHeroApproved = await new (window as any).ethers.Contract(heroContract.address, heroContract.abi, new (window as any).ethers.providers.Web3Provider(window.ethereum).getSigner()).isApprovedForAll(address, partyContract.address);
+            if (!isHeroApproved) {
+                showToast('需要授權英雄合約', 'info');
+                const approveHeroHash = await writeContractAsync({ ...heroContract, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
+                addTransaction({ hash: approveHeroHash, description: '授權隊伍合約使用英雄' });
+                await new (window as any).ethers.providers.Web3Provider(window.ethereum).waitForTransaction(approveHeroHash);
+                showToast('英雄授權成功！', 'success');
+            }
+
+            const isRelicApproved = await new (window as any).ethers.Contract(relicContract.address, relicContract.abi, new (window as any).ethers.providers.Web3Provider(window.ethereum).getSigner()).isApprovedForAll(address, partyContract.address);
+            if (!isRelicApproved) {
+                showToast('需要授權聖物合約', 'info');
+                const approveRelicHash = await writeContractAsync({ ...relicContract, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
+                addTransaction({ hash: approveRelicHash, description: '授權隊伍合約使用聖物' });
+                await new (window as any).ethers.providers.Web3Provider(window.ethereum).waitForTransaction(approveRelicHash);
+                showToast('聖物授權成功！', 'success');
+            }
+
+            // 執行創建
             const hash = await writeContractAsync({
                 ...partyContract,
                 functionName: 'createParty',
                 args: [heroIds, relicIds],
+                value: platformFee, // 【核心修改】附加平台費用
             });
             addTransaction({ hash, description: `創建新隊伍` });
+
         } catch (e: any) {
             if (!e.message.includes('User rejected the request')) {
                 showToast(e.shortMessage || "創建隊伍失敗", "error");
@@ -226,15 +266,14 @@ const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAc
         <section className="space-y-8">
             <h2 className="page-title">我的資產與隊伍</h2>
             
-            {/* 隊伍創建器 */}
             <TeamBuilder 
-                heroes={nfts?.heroes ?? []} 
-                relics={nfts?.relics ?? []}
+                heroes={nfts?.heroes.filter(h => !(nfts.parties.flatMap(p => p.heroIds) as bigint[]).includes(h.id)) ?? []} 
+                relics={nfts?.relics.filter(r => !(nfts.parties.flatMap(p => p.relicIds) as bigint[]).includes(r.id)) ?? []}
                 onCreateParty={handleCreateParty}
                 isCreating={isTxPending}
+                platformFee={platformFee}
             />
 
-            {/* 我的收藏 */}
             <div className="card-bg p-6 rounded-2xl shadow-xl">
                 <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
                     <h3 className="section-title">我的收藏</h3>
@@ -253,7 +292,6 @@ const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAc
                 <NftGrid nfts={filteredNfts} onDisband={openDisbandModal} />
             </div>
 
-            {/* 解散確認對話方塊 */}
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}

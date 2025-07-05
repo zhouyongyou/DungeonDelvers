@@ -10,7 +10,10 @@ import {
   partyABI,
   altarOfAscensionABI,
   playerProfileABI,
-  vipStakingABI
+  vipStakingABI,
+  playerVaultABI,
+  dungeonMasterABI, // 新增：導入 DungeonMaster 的 ABI
+  oracleABI, // 新增：導入 Oracle 的 ABI
 } from './abis';
 
 // 重新匯出 ABIs，方便其他地方統一導入
@@ -29,6 +32,9 @@ export const contracts = {
     altarOfAscension: { address: '0x278fb199c83c26c1fA263CcB5C0da624980910Fd', abi: altarOfAscensionABI },
     playerProfile: { address: '0x888cAf0c7C963800C6c3c71D4cC7cc4e086a78f6', abi: playerProfileABI },
     vipStaking: { address: '0x5ed023caD3218727d81636c3dDF3A764920Ce66a', abi: vipStakingABI },
+    playerVault: { address: '0x1bB582739D5C18547F4B785aA1A85180AE9a22a9', abi: playerVaultABI },
+    dungeonMaster: { address: '0xFB7229320C6B3d19D62D7dfCb4498BC1fCB5fE92', abi: dungeonMasterABI },
+    oracle: { address: '0xfD9Df1Df0C8c47F04305AB594CcEfA0D1A6A54BF', abi: oracleABI },
   },
   [bsc.id]: {
     soulShard: { address: '0xYOUR_MAINNET_SOULSHARD_ADDRESS', abi: soulShardTokenABI },
@@ -39,19 +45,22 @@ export const contracts = {
     altarOfAscension: { address: '0xYOUR_MAINNET_ALTAR_ADDRESS', abi: altarOfAscensionABI },
     playerProfile: { address: '0xYOUR_MAINNET_PLAYERPROFILE_ADDRESS', abi: playerProfileABI },
     vipStaking: { address: '0xYOUR_MAINNET_VIPSTAKING_ADDRESS', abi: vipStakingABI },
+    playerVault: { address: '0xYOUR_MAINNET_PLAYERVAULT_ADDRESS', abi: playerVaultABI },
+    dungeonMaster: { address: '0xYOUR_MAINNET_DUNGEONMASTER_ADDRESS', abi: dungeonMasterABI },
+    oracle: { address: '0xYOUR_MAINNET_ORACLE_ADDRESS', abi: oracleABI },
   },
 } as const;
 
 
 // =================================================================
-// 2. 自動推斷型別
+// 2. 自動推斷型別 (保持不變)
 // =================================================================
 type SupportedChainId = keyof typeof contracts;
 export type ContractName = keyof (typeof contracts)[SupportedChainId];
 
 
 // =================================================================
-// 3. 重構 getContract 函式
+// 3. getContract 函式 (保持不變)
 // =================================================================
 export function getContract<
   TChainId extends SupportedChainId,
@@ -68,6 +77,7 @@ export function getContract<
   
   // 檢查合約地址是否為預留位置
   if (!contractConfig || (contractConfig.address as string).includes('YOUR_')) {
+    // console.warn(`合約 "${String(name)}" 在 chainId ${chainId} 的地址尚未設定。`);
     return null;
   }
   

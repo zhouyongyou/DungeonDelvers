@@ -16,7 +16,6 @@ type PaymentSource = 'wallet' | 'vault';
 
 /**
  * @dev 一個自定義 Hook，專門負責計算鑄造所需的成本和檢查用戶的授權狀態。
- * 它只關心「計算」和「檢查」，不處理實際的交易發送。
  * @returns {object} 包含所需代幣數量、用戶餘額、是否需要授權等資訊的物件。
  */
 const useMintLogic = (type: NftType, quantity: number, paymentSource: PaymentSource) => {
@@ -25,6 +24,7 @@ const useMintLogic = (type: NftType, quantity: number, paymentSource: PaymentSou
     const contractConfig = getContract(chainId, type);
     const soulShardContract = getContract(chainId, 'soulShard');
     const dungeonCoreContract = getContract(chainId, 'dungeonCore');
+    const playerVaultContract = getContract(chainId, 'playerVault');
 
     // 獲取鑄造價格 (USD)
     const { data: mintPriceUSD, isLoading: isLoadingPrice } = useReadContract({
@@ -47,15 +47,17 @@ const useMintLogic = (type: NftType, quantity: number, paymentSource: PaymentSou
         return requiredAmountPerUnit * BigInt(quantity);
     }, [requiredAmountPerUnit, quantity]);
 
-    // 獲取用戶的錢包餘額和金庫餘額
+    // 獲取用戶的錢包餘額
     const { data: walletBalance } = useBalance({ address, token: soulShardContract?.address });
-    const { data: vaultData } = useReadContract({
-        ...dungeonCoreContract,
+    
+    // 獲取用戶的金庫餘額
+    const { data: vaultInfo } = useReadContract({
+        ...playerVaultContract,
         functionName: 'playerInfo',
         args: [address!],
-        query: { enabled: !!address && !!dungeonCoreContract, refetchInterval: 5000 },
+        query: { enabled: !!address && !!playerVaultContract, refetchInterval: 5000 },
     });
-    const vaultBalance = useMemo(() => (Array.isArray(vaultData) ? vaultData[0] as bigint : 0n), [vaultData]);
+    const vaultBalance = useMemo(() => (Array.isArray(vaultInfo) ? vaultInfo[0] as bigint : 0n), [vaultInfo]);
 
     // 根據支付方式，檢查是否需要授權
     const { data: allowance, refetch: refetchAllowance } = useReadContract({
@@ -76,6 +78,7 @@ const useMintLogic = (type: NftType, quantity: number, paymentSource: PaymentSou
         needsApproval,
         refetchAllowance,
         isLoading: isLoadingPrice || isLoadingConversion,
+        platformFee: type === 'hero' ? 300000000000000n : 300000000000000n, // 0.0003 BNB for both
     };
 };
 
@@ -96,7 +99,7 @@ const MintCard: React.FC<MintCardProps> = ({ type, options }) => {
     const [quantity, setQuantity] = useState(1);
     const [paymentSource, setPaymentSource] = useState<PaymentSource>('wallet');
 
-    const { requiredAmount, balance, needsApproval, refetchAllowance, isLoading: isLoadingPrice } = useMintLogic(type, quantity, paymentSource);
+    const { requiredAmount, balance, needsApproval, refetchAllowance, isLoading: isLoadingPrice, platformFee } = useMintLogic(type, quantity, paymentSource);
     const { writeContractAsync, isPending: isMinting } = useWriteContract();
     
     const title = type === 'hero' ? '英雄' : '聖物';
@@ -125,19 +128,18 @@ const MintCard: React.FC<MintCardProps> = ({ type, options }) => {
     const handleMint = async () => {
         if (!contractConfig) return;
         if (balance < requiredAmount) return showToast(`${paymentSource === 'wallet' ? '錢包' : '金庫'}餘額不足`, 'error');
-        if (needsApproval) return showToast(`請先完成授權`, 'error');
+        if (paymentSource === 'wallet' && needsApproval) return showToast(`請先完成授權`, 'error');
 
         try {
             const description = `從${paymentSource === 'wallet' ? '錢包' : '金庫'}鑄造 ${quantity} 個${title}`;
-            // 根據支付方式和數量選擇正確的函式
-            const functionName = paymentSource === 'wallet' ? (quantity === 1 ? 'mintSingle' : 'mintBatch') : 'mintWithVault';
-            const args = quantity > 1 ? [BigInt(quantity)] : [];
-
+            const functionName = paymentSource === 'wallet' ? 'mintFromWallet' : 'mintFromVault';
+            
             const hash = await writeContractAsync({
                 address: contractConfig.address,
                 abi: contractConfig.abi as Abi,
                 functionName,
-                args,
+                args: [BigInt(quantity)],
+                value: platformFee * BigInt(quantity), // 附加平台費用
             });
             addTransaction({ hash, description });
         } catch (error: any) {
@@ -147,7 +149,7 @@ const MintCard: React.FC<MintCardProps> = ({ type, options }) => {
         }
     };
     
-    const actionButton = needsApproval 
+    const actionButton = (paymentSource === 'wallet' && needsApproval)
         ? <ActionButton onClick={handleApprove} isLoading={isMinting} className="w-48 h-12">授權</ActionButton>
         : <ActionButton onClick={handleMint} isLoading={isMinting || isLoadingPrice} disabled={isLoadingPrice || balance < requiredAmount} className="w-48 h-12">
             {isMinting ? '請在錢包確認' : `招募 ${quantity} 個`}
@@ -180,14 +182,14 @@ const MintCard: React.FC<MintCardProps> = ({ type, options }) => {
                     <div>
                         <p className="text-lg text-gray-400">總價:</p>
                         <p className="font-bold text-yellow-400 text-2xl">{parseFloat(formatEther(requiredAmount)).toFixed(4)}</p>
-                        <p className="text-xs text-gray-500">$SoulShard</p>
+                        <p className="text-xs text-gray-500">$SoulShard + {formatEther(platformFee * BigInt(quantity))} BNB</p>
                     </div>
                 }
             </div>
             
             {actionButton}
             <p className="text-xs text-center text-gray-500 mt-2 px-2 h-8">
-                {quantity > 1 && `您的本次批量鑄造將為社群更新隨機數種子！`}
+                {`每次鑄造都會為社群更新隨機數種子！`}
             </p>
         </div>
     );
@@ -199,7 +201,7 @@ const MintCard: React.FC<MintCardProps> = ({ type, options }) => {
 
 const MintPage: React.FC = () => {
     const heroMintOptions = [1, 5, 10, 20, 50];
-    const relicMintOptions = [1, 5, 10, 20];
+    const relicMintOptions = [1, 5, 10, 20, 50];
 
     return (
         <section>

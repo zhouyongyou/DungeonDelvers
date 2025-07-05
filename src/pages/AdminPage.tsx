@@ -1,12 +1,11 @@
 import React, { useState, type ReactNode } from 'react';
-import { useAccount, useReadContract, useWriteContract } from 'wagmi';
+import { useAccount, useReadContract, useReadContracts, useWriteContract } from 'wagmi';
 import { parseEther, formatEther, type Address, type Abi } from 'viem';
 import { getContract } from '../config/contracts';
 import { useAppToast } from '../hooks/useAppToast';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
-import { Icons } from '../components/ui/icons';
 
 // =================================================================
 // Section: 可重用的管理介面子元件
@@ -25,29 +24,34 @@ interface SettingRowProps {
   label: string;
   contract: ReturnType<typeof getContract>;
   functionName: string;
-  currentValue: any;
+  currentValue?: any;
   isLoading: boolean;
   isAddress?: boolean;
   isEther?: boolean;
+  isBasisPoints?: boolean; // 用於顯示萬分位 (%)
+  args?: any[]; // 支援多參數的函式
 }
 
-const SettingRow: React.FC<SettingRowProps> = ({ label, contract, functionName, currentValue, isLoading, isAddress = false, isEther = false }) => {
-    const [inputValue, setInputValue] = useState('');
+const SettingRow: React.FC<SettingRowProps> = ({ label, contract, functionName, currentValue, isLoading, isAddress = false, isEther = false, isBasisPoints = false, args = [] }) => {
+    const [inputValues, setInputValues] = useState<string[]>(new Array(args.length || 1).fill(''));
     const { showToast } = useAppToast();
     const { writeContractAsync, isPending } = useWriteContract();
 
     const handleUpdate = async () => {
-        if (!inputValue || !contract) return;
+        if (inputValues.some(v => !v) || !contract) return;
         try {
-            let valueToSet: any = inputValue;
-            if (isEther) valueToSet = parseEther(inputValue);
-            else if (!isAddress) valueToSet = BigInt(inputValue);
+            const valuesToSet = inputValues.map((val, index) => {
+                const argType = (isAddress && index === 0) ? 'address' : (isEther && index === 0) ? 'ether' : 'bigint';
+                if (argType === 'ether') return parseEther(val);
+                if (argType === 'bigint') return BigInt(val);
+                return val; // address
+            });
 
             await writeContractAsync({
                 address: contract.address,
                 abi: contract.abi as Abi,
                 functionName,
-                args: [valueToSet],
+                args: valuesToSet,
             });
             showToast(`${label} 更新成功！`, 'success');
         } catch (e: any) {
@@ -57,7 +61,9 @@ const SettingRow: React.FC<SettingRowProps> = ({ label, contract, functionName, 
     
     const displayValue = isLoading
         ? <LoadingSpinner size="h-4 w-4" />
-        : isEther ? `${formatEther(currentValue ?? 0n)} BNB` : (currentValue?.toString() ?? 'N/A');
+        : isEther ? `${formatEther(currentValue ?? 0n)} BNB` 
+        : isBasisPoints ? `${(Number(currentValue ?? 0n) / 100).toFixed(2)}%`
+        : (currentValue?.toString() ?? 'N/A');
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
@@ -66,13 +72,20 @@ const SettingRow: React.FC<SettingRowProps> = ({ label, contract, functionName, 
                 當前值: <span className="text-yellow-400">{displayValue}</span>
             </div>
             <div className="flex gap-2 md:col-span-1">
-                <input
-                    type="text"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    className="input-field w-full"
-                    placeholder={`輸入新的 ${label}`}
-                />
+                {inputValues.map((val, index) => (
+                    <input
+                        key={index}
+                        type="text"
+                        value={val}
+                        onChange={(e) => {
+                            const newValues = [...inputValues];
+                            newValues[index] = e.target.value;
+                            setInputValues(newValues);
+                        }}
+                        className="input-field w-full"
+                        placeholder={args[index] || `輸入新值`}
+                    />
+                ))}
                 <ActionButton onClick={handleUpdate} isLoading={isPending} className="h-10 w-24">更新</ActionButton>
             </div>
         </div>
@@ -90,55 +103,64 @@ const AdminPage: React.FC = () => {
     const relicContract = getContract(chainId, 'relic');
     const partyContract = getContract(chainId, 'party');
     const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
+    const playerVaultContract = getContract(chainId, 'playerVault');
 
-    // 檢查當前用戶是否為合約擁有者
     const { data: owner, isLoading: isLoadingOwner } = useReadContract({
         ...dungeonCoreContract,
         functionName: 'owner',
         query: { enabled: !!dungeonCoreContract },
     });
 
-    // 讀取所有需要管理的參數
-    const { data: heroFee } = useReadContract({ ...heroContract, functionName: 'platformFee' });
-    const { data: relicFee } = useReadContract({ ...relicContract, functionName: 'platformFee' });
-    const { data: partyFee } = useReadContract({ ...partyContract, functionName: 'platformFee' });
-    const { data: restCostDivisor } = useReadContract({ ...dungeonMasterContract, functionName: 'restCostPowerDivisor' });
+    const { data: params, isLoading: isLoadingParams } = useReadContracts({
+        contracts: [
+            { ...heroContract, functionName: 'platformFee' },
+            { ...relicContract, functionName: 'platformFee' },
+            { ...partyContract, functionName: 'platformFee' },
+            { ...dungeonMasterContract, functionName: 'restCostPowerDivisor' },
+            { ...playerVaultContract, functionName: 'standardInitialRate' },
+            { ...playerVaultContract, functionName: 'largeWithdrawInitialRate' },
+            { ...playerVaultContract, functionName: 'decreaseRatePerPeriod' },
+            { ...playerVaultContract, functionName: 'commissionRate' },
+        ],
+        query: { enabled: !!address && owner === address }
+    });
 
     if (isLoadingOwner) {
         return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
     }
 
     if (owner?.toLowerCase() !== address?.toLowerCase()) {
-        return <EmptyState message="權限不足" description="只有合約擁有者才能訪問此頁面。" />;
+        return <EmptyState message="權限不足" />;
     }
+
+    const [heroFee, relicFee, partyFee, restDivisor, standardRate, largeRate, decreaseRate, commissionRate] = params?.map(p => p.result) ?? [];
 
     return (
         <section className="space-y-8">
             <h2 className="page-title">遊戲管理控制台</h2>
             
             <AdminSection title="費用管理">
-                <SettingRow label="英雄鑄造費" contract={heroContract} functionName="setPlatformFee" currentValue={heroFee} isLoading={!heroFee} isEther />
-                <SettingRow label="聖物鑄造費" contract={relicContract} functionName="setPlatformFee" currentValue={relicFee} isLoading={!relicFee} isEther />
-                <SettingRow label="隊伍創建費" contract={partyContract} functionName="setPlatformFee" currentValue={partyFee} isLoading={!partyFee} isEther />
+                <SettingRow label="英雄鑄造費" contract={heroContract} functionName="setPlatformFee" currentValue={heroFee} isLoading={isLoadingParams} isEther args={['新費用 (BNB)']} />
+                <SettingRow label="聖物鑄造費" contract={relicContract} functionName="setPlatformFee" currentValue={relicFee} isLoading={isLoadingParams} isEther args={['新費用 (BNB)']} />
+                <SettingRow label="隊伍創建費" contract={partyContract} functionName="setPlatformFee" currentValue={partyFee} isLoading={isLoadingParams} isEther args={['新費用 (BNB)']} />
             </AdminSection>
 
             <AdminSection title="遊戲參數管理">
-                <SettingRow label="休息成本係數" contract={dungeonMasterContract} functionName="setRestCostPowerDivisor" currentValue={restCostDivisor} isLoading={!restCostDivisor} />
+                <SettingRow label="休息成本係數" contract={dungeonMasterContract} functionName="setRestCostPowerDivisor" currentValue={restDivisor} isLoading={isLoadingParams} args={['新係數']} />
+            </AdminSection>
+            
+            <AdminSection title="稅務系統管理">
+                <SettingRow label="標準初始稅率" contract={playerVaultContract} functionName="setStandardInitialRate" currentValue={standardRate} isLoading={isLoadingParams} isBasisPoints args={['新稅率 (萬分位)']} />
+                <SettingRow label="大額初始稅率" contract={playerVaultContract} functionName="setLargeWithdrawInitialRate" currentValue={largeRate} isLoading={isLoadingParams} isBasisPoints args={['新稅率 (萬分位)']} />
+                <SettingRow label="每日衰減率" contract={playerVaultContract} functionName="setDecreaseRatePerPeriod" currentValue={decreaseRate} isLoading={isLoadingParams} isBasisPoints args={['新衰減率 (萬分位)']} />
+                <SettingRow label="邀請佣金率" contract={playerVaultContract} functionName="setCommissionRate" currentValue={commissionRate} isLoading={isLoadingParams} isBasisPoints args={['新佣金率 (萬分位)']} />
             </AdminSection>
 
-            <AdminSection title="合約地址管理 (DungeonCore)">
+             <AdminSection title="合約地址管理 (DungeonCore)">
                 <p className="text-sm text-gray-500 -mt-2 mb-4">管理 DungeonCore 所依賴的其他合約地址。</p>
-                <SettingRow label="Oracle 地址" contract={dungeonCoreContract} functionName="setOracle" currentValue={undefined} isLoading={false} isAddress />
-                <SettingRow label="PlayerVault 地址" contract={dungeonCoreContract} functionName="setPlayerVault" currentValue={undefined} isLoading={false} isAddress />
-                <SettingRow label="DungeonMaster 地址" contract={dungeonCoreContract} functionName="setDungeonMaster" currentValue={undefined} isLoading={false} isAddress />
-                {/* ...可以按需添加更多地址管理... */}
-            </AdminSection>
-
-             <AdminSection title="危險區域">
-                <p className="text-sm text-yellow-500 -mt-2 mb-4">此區域的操作將直接影響遊戲經濟，請謹慎操作。</p>
-                <div className="p-4 border border-red-500/50 rounded-lg">
-                    <SettingRow label="更新隨機種子" contract={heroContract} functionName="updateSeasonSeed" currentValue={'N/A'} isLoading={false} />
-                </div>
+                <SettingRow label="設定 Oracle 地址" contract={dungeonCoreContract} functionName="setOracle" isLoading={false} isAddress args={['新地址']} />
+                <SettingRow label="設定 PlayerVault 地址" contract={dungeonCoreContract} functionName="setPlayerVault" isLoading={false} isAddress args={['新地址']} />
+                <SettingRow label="設定 DungeonMaster 地址" contract={dungeonCoreContract} functionName="setDungeonMaster" isLoading={false} isAddress args={['新地址']} />
             </AdminSection>
 
         </section>
