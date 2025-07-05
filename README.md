@@ -9,7 +9,7 @@
 
 玩家可以招募英雄、鑄造聖物、組建獨一無二的冒險隊伍，深入充滿挑戰的地下城，尋找傳說中的「魂晶」($SoulShard)。
 
-**[➡️ 前往體驗 DApp](https://www.soulshard.fun/) | [➡️ 閱讀我們的白皮書](https://soulshard.gitbook.io/dungeon-delvers/)**
+**[➡️ 前往體驗 DApp](https://www.dungeondelvers.xyz/) | [➡️ 閱讀我們的白皮書](https://soulshard.gitbook.io/dungeon-delvers/)**
 
 ---
 
