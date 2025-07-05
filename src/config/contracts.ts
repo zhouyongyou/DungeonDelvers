@@ -13,7 +13,8 @@ import {
   vipStakingABI,
   playerVaultABI,
   dungeonMasterABI, // 新增：導入 DungeonMaster 的 ABI
-  oracleABI, // 新增：導入 Oracle 的 ABI
+  oracleABI,
+  dungeonStorageABI, // 新增：導入 Oracle 的 ABI
 } from './abis';
 
 // 重新匯出 ABIs，方便其他地方統一導入
@@ -32,11 +33,10 @@ export const contracts = {
     altarOfAscension: { address: '0x278fb199c83c26c1fA263CcB5C0da624980910Fd', abi: altarOfAscensionABI },
     playerProfile: { address: '0x888cAf0c7C963800C6c3c71D4cC7cc4e086a78f6', abi: playerProfileABI },
     vipStaking: { address: '0x5ed023caD3218727d81636c3dDF3A764920Ce66a', abi: vipStakingABI },
-    playerVault: { address: '0x1bB582739D5C18547F4B785aA1A85180AE9a22a9', abi: playerVaultABI },
+    playerVault: { address: '0x1aC675574baeB3ec99299E84b70B19325fa337b3', abi: playerVaultABI },
     dungeonMaster: { address: '0xFB7229320C6B3d19D62D7dfCb4498BC1fCB5fE92', abi: dungeonMasterABI },
     oracle: { address: '0xfD9Df1Df0C8c47F04305AB594CcEfA0D1A6A54BF', abi: oracleABI },
-        // 【新增】為 dungeonStorage 新增一個條目
-    dungeonStorage: { address: '0x488390461f7720A8a439a78Ad815Eb58706ccDea', abi: dungeonStorageABI },
+    dungeonStorage: { address: '0x6606bABeE8C1Cd2513F048eFC0037dFFEF33A31e', abi: dungeonStorageABI },
   },
   [bsc.id]: {
     soulShard: { address: '0xYOUR_MAINNET_SOULSHARD_ADDRESS', abi: soulShardTokenABI },
@@ -50,7 +50,6 @@ export const contracts = {
     playerVault: { address: '0xYOUR_MAINNET_PLAYERVAULT_ADDRESS', abi: playerVaultABI },
     dungeonMaster: { address: '0xYOUR_MAINNET_DUNGEONMASTER_ADDRESS', abi: dungeonMasterABI },
     oracle: { address: '0xYOUR_MAINNET_ORACLE_ADDRESS', abi: oracleABI },
-        // 【新增】為 dungeonStorage 新增一個條目
     dungeonStorage: { address: 'YOUR_MAINNET_DUNGEONSTORAGE_ADDRESS', abi: dungeonStorageABI },
   },
 } as const;

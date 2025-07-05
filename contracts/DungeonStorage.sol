@@ -1,4 +1,4 @@
-// DungeonStorage.sol
+// DungeonStorage.sol (已修正)
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -23,10 +23,14 @@ contract DungeonStorage is Ownable {
     }
     mapping(uint256 => Dungeon) public dungeons;
 
+    // =================================================================
+    // ★★★ 核心修改 #1：在 PartyStatus 結構體中新增 fatigueLevel ★★★
+    // =================================================================
     struct PartyStatus {
         uint256 provisionsRemaining;
         uint256 cooldownEndsAt;
         uint256 unclaimedRewards;
+        uint8 fatigueLevel; // <--- 新增欄位
     }
     mapping(uint256 => PartyStatus) public partyStatuses;
 
@@ -60,6 +64,9 @@ contract DungeonStorage is Ownable {
         return dungeons[_dungeonId];
     }
 
+    // =================================================================
+    // ★★★ 核心修改 #2：更新 getPartyStatus 的回傳值 ★★★
+    // =================================================================
     function getPartyStatus(uint256 _partyId) external view returns (PartyStatus memory) {
         return partyStatuses[_partyId];
     }
@@ -73,6 +80,9 @@ contract DungeonStorage is Ownable {
         dungeons[id] = data;
     }
 
+    // =================================================================
+    // ★★★ 核心修改 #3：更新 setPartyStatus 的參數 ★★★
+    // =================================================================
     function setPartyStatus(uint256 id, PartyStatus calldata data) external onlyLogicContract {
         partyStatuses[id] = data;
     }
