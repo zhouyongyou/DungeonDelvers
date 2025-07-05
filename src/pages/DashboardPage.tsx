@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatEther } from 'viem';
-import { getContract, contracts } from '../../config/contracts';
+import { getContract, contracts } from '../config/contracts';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
