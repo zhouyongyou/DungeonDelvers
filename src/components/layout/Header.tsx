@@ -8,7 +8,7 @@ import logoUrl from '/logo-192x192.png';
 import { DEVELOPER_ADDRESS } from '../../config/constants';
 import { getContract } from '../../config/contracts';
 import { RecentTransactions } from '../ui/RecentTransactions'; 
-import { HistoryIcon } from '../ui/icons';
+import { Icons } from '../ui/icons';
 
 const ThemeToggleButton: React.FC = () => {
     const { theme, setTheme, effectiveTheme } = useTheme();
@@ -62,6 +62,7 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
   }, [experience]);
 
   const isDeveloper = isConnected && address?.toLowerCase() === DEVELOPER_ADDRESS.toLowerCase();
+  
   const navItems: { key: Page; label: string }[] = [
       { key: 'dashboard', label: '儀表板' },
       { key: 'profile', label: '個人檔案' },
@@ -113,7 +114,7 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
                           className="p-2 rounded-full text-gray-300 hover:bg-white/20 transition-colors"
                           aria-label="顯示最近交易"
                         >
-                          <HistoryIcon className="h-5 w-5" />
+                          <Icons.History className="h-5 w-5" />
                         </button>
                         {isTxPopoverOpen && <RecentTransactions />}
                       </div>
@@ -127,7 +128,7 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
           {navItems.map(item => (
               <a 
                  key={item.key} 
-                 href={`#${item.key}`} 
+                 href={`#/${item.key}`} 
                  className={`nav-item ${activePage === item.key ? 'active' : ''}`} 
                  onClick={(e) => { e.preventDefault(); setActivePage(item.key); }}
               >

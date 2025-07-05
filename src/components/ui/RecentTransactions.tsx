@@ -2,7 +2,7 @@ import React from 'react';
 import { useAccount } from 'wagmi';
 import { useTransactionStore, type Transaction, type TransactionStatus } from '../../stores/useTransactionStore';
 import { LoadingSpinner } from './LoadingSpinner';
-import { ExternalLinkIcon } from './icons';
+import { Icons } from './icons'; // 【修正】導入整個 Icons 物件
 
 // 交易狀態對應的圖示和顏色
 const statusInfo: Record<TransactionStatus, { icon: React.ReactNode; color: string }> = {
@@ -34,7 +34,7 @@ const TransactionItem: React.FC<{ tx: Transaction; explorerUrl?: string }> = ({ 
           className="p-1 text-gray-400 hover:text-indigo-500"
           aria-label="View on explorer"
         >
-          <ExternalLinkIcon className="w-4 h-4" />
+          <Icons.ExternalLink className="w-4 h-4" /> {/* 【修正】使用 Icons.ExternalLink */}
         </a>
       )}
     </li>

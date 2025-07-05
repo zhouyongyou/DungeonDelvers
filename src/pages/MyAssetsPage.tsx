@@ -1,24 +1,18 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useAccount, useReadContract, useWriteContract } from 'wagmi';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useState, useMemo } from 'react';
+import { useAccount, useReadContract, useWriteContract, usePublicClient } from 'wagmi';
+import { useQuery } from '@tanstack/react-query';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { NftCard } from '../components/ui/NftCard';
-import { Modal } from '../components/ui/Modal';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { getContract } from '../config/contracts';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
-import type { Page } from '../types/page';
 import type { AnyNft, HeroNft, RelicNft, NftType, PartyNft } from '../types/nft';
-import { Icons } from '../components/ui/icons';
 import { formatEther } from 'viem';
 
-// =================================================================
-// Section: TeamBuilder 子元件
-// =================================================================
-
+// TeamBuilder 和 NftGrid 元件保持不變...
 interface TeamBuilderProps {
   heroes: HeroNft[];
   relics: RelicNft[];
@@ -34,7 +28,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
     const toggleSelection = (id: bigint, type: 'hero' | 'relic') => {
         const list = type === 'hero' ? selectedHeroes : selectedRelics;
         const setList = type === 'hero' ? setSelectedHeroes : setSelectedRelics;
-        const limit = 5; // Both hero and relic have a limit of 5
+        const limit = 5;
 
         if (list.includes(id)) {
             setList(list.filter(i => i !== id));
@@ -63,9 +57,8 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
             <p className="text-sm text-gray-400 mb-4">選擇英雄和聖物來組建你的冒險隊伍。隊伍的英雄數量不能超過聖物的總容量。</p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                {/* 英雄選擇區 */}
                 <div>
-                    <h4 className="font-semibold text-lg mb-2 text-white">選擇英雄 ({selectedHeroes.length})</h4>
+                    <h4 className="font-semibold text-lg mb-2 text-white">選擇英雄 ({selectedHeroes.length}/5)</h4>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
                         {heroes.map(hero => (
                             <NftCard 
@@ -78,9 +71,8 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
                          {heroes.length === 0 && <div className="col-span-full"><EmptyState message="沒有可用的英雄" /></div>}
                     </div>
                 </div>
-                {/* 聖物選擇區 */}
                 <div>
-                    <h4 className="font-semibold text-lg mb-2 text-white">選擇聖物 ({selectedRelics.length})</h4>
+                    <h4 className="font-semibold text-lg mb-2 text-white">選擇聖物 ({selectedRelics.length}/5)</h4>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
                         {relics.map(relic => (
                             <NftCard 
@@ -95,7 +87,6 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
                 </div>
             </div>
 
-            {/* 隊伍總結與創建按鈕 */}
             <div className="flex flex-col sm:flex-row justify-between items-center bg-gray-900/50 p-4 rounded-lg">
                 <div className="flex gap-6 text-center">
                     <div>
@@ -125,38 +116,29 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
     );
 };
 
-// =================================================================
-// Section: NftGrid 子元件 (保持不變)
-// =================================================================
-
 interface NftGridProps {
     nfts: AnyNft[];
-    onDisband?: (id: bigint) => void;
 }
 
-const NftGrid: React.FC<NftGridProps> = ({ nfts, onDisband }) => {
+const NftGrid: React.FC<NftGridProps> = ({ nfts }) => {
     if (nfts.length === 0) {
         return <EmptyState message="這裡空空如也..." />;
     }
     return (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {nfts.map(nft => <NftCard key={nft.id} nft={nft} onDisband={onDisband} />)}
+            {nfts.map(nft => <NftCard key={nft.id} nft={nft} />)}
         </div>
     );
 };
 
-// =================================================================
-// Section: MyAssetsPage 主元件
-// =================================================================
 
-const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = () => {
+const MyAssetsPage: React.FC = () => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
+    const publicClient = usePublicClient();
 
     const [filter, setFilter] = useState<NftType>('party');
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [partyToDisband, setPartyToDisband] = useState<bigint | null>(null);
 
     const heroContract = getContract(chainId, 'hero');
     const relicContract = getContract(chainId, 'relic');
@@ -170,7 +152,6 @@ const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = () => {
         enabled: !!address && !!chainId,
     });
     
-    // 從 Party 合約讀取平台費用
     const { data: platformFee } = useReadContract({
         ...partyContract,
         functionName: 'platformFee',
@@ -189,34 +170,35 @@ const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = () => {
     }, [filter, nfts]);
 
     const handleCreateParty = async (heroIds: bigint[], relicIds: bigint[]) => {
-        if (!partyContract || !heroContract || !relicContract || !address) return;
+        if (!partyContract || !heroContract || !relicContract || !address || !publicClient) return;
         
         try {
-            // 檢查並請求授權
-            const isHeroApproved = await new (window as any).ethers.Contract(heroContract.address, heroContract.abi, new (window as any).ethers.providers.Web3Provider(window.ethereum).getSigner()).isApprovedForAll(address, partyContract.address);
-            if (!isHeroApproved) {
-                showToast('需要授權英雄合約', 'info');
-                const approveHeroHash = await writeContractAsync({ ...heroContract, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
-                addTransaction({ hash: approveHeroHash, description: '授權隊伍合約使用英雄' });
-                await new (window as any).ethers.providers.Web3Provider(window.ethereum).waitForTransaction(approveHeroHash);
-                showToast('英雄授權成功！', 'success');
-            }
+            // 【核心修改】使用 wagmi 的 readContract 來檢查授權
+            const checkAndRequestApproval = async (nftContract: any, type: '英雄' | '聖物') => {
+                const isApproved = await publicClient.readContract({
+                    ...nftContract,
+                    functionName: 'isApprovedForAll',
+                    args: [address, partyContract.address],
+                });
 
-            const isRelicApproved = await new (window as any).ethers.Contract(relicContract.address, relicContract.abi, new (window as any).ethers.providers.Web3Provider(window.ethereum).getSigner()).isApprovedForAll(address, partyContract.address);
-            if (!isRelicApproved) {
-                showToast('需要授權聖物合約', 'info');
-                const approveRelicHash = await writeContractAsync({ ...relicContract, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
-                addTransaction({ hash: approveRelicHash, description: '授權隊伍合約使用聖物' });
-                await new (window as any).ethers.providers.Web3Provider(window.ethereum).waitForTransaction(approveRelicHash);
-                showToast('聖物授權成功！', 'success');
-            }
+                if (!isApproved) {
+                    showToast(`需要授權${type}合約`, 'info');
+                    const approveHash = await writeContractAsync({ ...nftContract, functionName: 'setApprovalForAll', args: [partyContract.address, true] });
+                    addTransaction({ hash: approveHash, description: `授權隊伍合約使用${type}` });
+                    await publicClient.waitForTransactionReceipt({ hash: approveHash });
+                    showToast(`${type}授權成功！`, 'success');
+                }
+            };
+            
+            if (heroIds.length > 0) await checkAndRequestApproval(heroContract, '英雄');
+            if (relicIds.length > 0) await checkAndRequestApproval(relicContract, '聖物');
 
             // 執行創建
             const hash = await writeContractAsync({
                 ...partyContract,
                 functionName: 'createParty',
                 args: [heroIds, relicIds],
-                value: platformFee, // 【核心修改】附加平台費用
+                value: platformFee,
             });
             addTransaction({ hash, description: `創建新隊伍` });
 
@@ -227,30 +209,6 @@ const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = () => {
         }
     };
     
-    const handleDisbandParty = async () => {
-        if (!partyContract || partyToDisband === null) return;
-        try {
-            const hash = await writeContractAsync({
-                ...partyContract,
-                functionName: 'disbandParty',
-                args: [partyToDisband],
-            });
-            addTransaction({ hash, description: `解散隊伍 #${partyToDisband.toString()}` });
-        } catch (e: any) {
-            if (!e.message.includes('User rejected the request')) {
-                showToast(e.shortMessage || "解散隊伍失敗", "error");
-            }
-        } finally {
-            setIsModalOpen(false);
-            setPartyToDisband(null);
-        }
-    };
-
-    const openDisbandModal = (id: bigint) => {
-        setPartyToDisband(id);
-        setIsModalOpen(true);
-    };
-
     const filterOptions: { key: NftType; label: string }[] = [
         { key: 'party', label: '我的隊伍' },
         { key: 'hero', label: '我的英雄' },
@@ -289,21 +247,8 @@ const MyAssetsPage: React.FC<{ setActivePage: (page: Page) => void }> = () => {
                         ))}
                     </div>
                 </div>
-                <NftGrid nfts={filteredNfts} onDisband={openDisbandModal} />
+                <NftGrid nfts={filteredNfts} />
             </div>
-
-            <Modal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onConfirm={handleDisbandParty}
-                title="確認解散隊伍"
-                confirmText="確認解散"
-                isConfirming={isTxPending}
-                confirmVariant="danger"
-            >
-                <p>您確定要解散隊伍 #{partyToDisband?.toString()} 嗎？</p>
-                <p className="mt-2 text-sm text-yellow-500">解散後，隊伍中的所有英雄和聖物將會返回您的收藏，但隊伍本身將被銷毀。</p>
-            </Modal>
         </section>
     );
 };

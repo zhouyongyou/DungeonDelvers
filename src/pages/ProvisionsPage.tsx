@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useAccount, useReadContracts, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
-import { formatEther, maxUint256, type Hash } from 'viem';
+import { formatEther, type Hash } from 'viem';
 import { useAppToast } from '../hooks/useAppToast';
 import { getContract } from '../config/contracts';
 import { fetchAllOwnedNfts } from '../api/nfts';
@@ -13,118 +13,85 @@ import type { Page } from '../types/page';
 import type { PartyNft } from '../types/nft';
 import { useTransactionStore } from '../stores/useTransactionStore';
 
-// 購買儲備的核心邏輯 Hook
+// =================================================================
+// Section: 購買儲備的核心邏輯 Hook
+// =================================================================
 const useBuyProvisionsLogic = (quantity: number) => {
     const { address, chainId } = useAccount();
-    const { showToast } = useAppToast();
     
-    const [approvalTxHash, setApprovalTxHash] = useState<Hash | undefined>();
-
+    const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
     const dungeonCoreContract = getContract(chainId, 'dungeonCore');
-    const soulShardContract = getContract(chainId, 'soulShard');
+    const playerVaultContract = getContract(chainId, 'playerVault');
 
+    // 1. 從 DungeonMaster 獲取儲備的單價 (USD)
     const { data: provisionPriceUSD, isLoading: isLoadingPrice } = useReadContract({ 
-        ...dungeonCoreContract, 
+        ...dungeonMasterContract, 
         functionName: 'provisionPriceUSD', 
-        query: { enabled: !!dungeonCoreContract } 
+        query: { enabled: !!dungeonMasterContract } 
     });
     
-    const { data: singleUnitPrice } = useReadContract({ 
+    // 2. 獲取 PlayerVault 合約地址，以便後續查詢
+    const { data: playerVaultAddress } = useReadContract({
+        ...dungeonCoreContract,
+        functionName: 'playerVaultAddress',
+        query: { enabled: !!dungeonCoreContract }
+    });
+    
+    // 3. 獲取 PlayerVault 合約中的 SoulShard 代幣地址
+    const { data: soulShardTokenAddress } = useReadContract({
+        address: playerVaultAddress,
+        abi: playerVaultContract?.abi,
+        functionName: 'soulShardToken',
+        query: { enabled: !!playerVaultAddress && !!playerVaultContract }
+    });
+
+    // 4. 根據 USD 價格，計算需要多少 SoulShard
+    const { data: singleUnitPrice, isLoading: isLoadingConversion } = useReadContract({ 
         ...dungeonCoreContract, 
         functionName: 'getSoulShardAmountForUSD', 
         args: [provisionPriceUSD || 0n], 
         query: { enabled: !!dungeonCoreContract && typeof provisionPriceUSD === 'bigint' } 
     });
     
-    // 【優化】根據新的折扣力度更新前端函式
-    const getDiscountRate = (q: number): number => {
-        if (q >= 30) return 50; // 5折
-        if (q >= 14) return 70; // 7折
-        if (q >= 7) return 90;  // 9折
-        return 100; // 無折扣
-    };
-
+    // 5. 計算總價
     const totalRequiredAmount = useMemo(() => {
-        if (typeof singleUnitPrice !== 'bigint' || singleUnitPrice === 0n) return 0n;
-        const discountRate = getDiscountRate(quantity);
-        // 使用 BigInt 進行整數運算，避免精度問題
-        return (singleUnitPrice * BigInt(quantity) * BigInt(discountRate)) / 100n;
-    }, [singleUnitPrice, quantity]);
-    
-    const originalTotalAmount = useMemo(() => {
-        if (typeof singleUnitPrice !== 'bigint' || singleUnitPrice === 0n) return 0n;
+        if (typeof singleUnitPrice !== 'bigint') return 0n;
         return singleUnitPrice * BigInt(quantity);
     }, [singleUnitPrice, quantity]);
-
-
-    const { data: allowance, refetch: refetchAllowance } = useReadContract({ 
-        ...soulShardContract, 
-        functionName: 'allowance', 
-        args: [address!, dungeonCoreContract?.address!], 
-        query: { enabled: !!address && !!dungeonCoreContract && !!soulShardContract } 
-    });
-    
-    const { writeContractAsync: approveAsync, isPending: isApproving } = useWriteContract();
-    const { isLoading: isConfirmingApproval, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({ hash: approvalTxHash });
-
-    useEffect(() => {
-        if (isApprovalSuccess) {
-            showToast('授權成功！', 'success');
-            refetchAllowance();
-            setApprovalTxHash(undefined);
-        }
-    }, [isApprovalSuccess, refetchAllowance, showToast]);
-    
-    const needsApproval = useMemo(() => {
-        return typeof allowance === 'bigint' && allowance < totalRequiredAmount;
-    }, [allowance, totalRequiredAmount]);
-
-    const handleApprove = async () => {
-        if (!needsApproval || !dungeonCoreContract || !soulShardContract) return;
-        try {
-            const hash = await approveAsync({ ...soulShardContract, functionName: 'approve', args: [dungeonCoreContract.address, maxUint256] });
-            setApprovalTxHash(hash);
-        } catch (err: any) {
-            showToast(err.message.split('\n')[0] || '授權失敗', 'error');
-        }
-    };
     
     return { 
-        step: needsApproval ? 'needsApproval' : 'readyToPurchase',
         totalRequiredAmount,
-        originalTotalAmount, 
-        handleApprove, 
-        isLoading: isApproving || isConfirmingApproval || isLoadingPrice,
-        discountApplied: getDiscountRate(quantity) < 100,
+        isLoading: isLoadingPrice || isLoadingConversion,
     };
 };
 
+// =================================================================
+// Section: 購買介面子元件
+// =================================================================
 const PurchaseInterface: React.FC<{ selectedParty: PartyNft | null }> = ({ selectedParty }) => {
     const { chainId } = useAccount();
     const { showToast } = useAppToast();
-    // 【錯誤修復】移除未被使用的 queryClient
     const { addTransaction } = useTransactionStore();
     const [quantity, setQuantity] = useState(1);
-    // 【優化】更新快速選擇按鈕
     const purchaseOptions = [1, 7, 14, 30];
 
-    const { step, totalRequiredAmount, originalTotalAmount, handleApprove, isLoading: isLogicLoading, discountApplied } = useBuyProvisionsLogic(quantity);
+    const { totalRequiredAmount, isLoading: isLogicLoading } = useBuyProvisionsLogic(quantity);
     const { writeContractAsync, isPending: isPurchasing } = useWriteContract();
 
-    const dungeonCoreContract = getContract(chainId, 'dungeonCore');
+    const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
 
     const handlePurchase = async () => {
-        if (step !== 'readyToPurchase' || !dungeonCoreContract || !selectedParty) return;
+        if (!dungeonMasterContract || !selectedParty) return;
         try {
             const hash = await writeContractAsync({
-                ...dungeonCoreContract,
+                ...dungeonMasterContract,
                 functionName: 'buyProvisions',
                 args: [selectedParty.id, BigInt(quantity)],
             });
             addTransaction({ hash, description: `為隊伍 #${selectedParty.id} 購買 ${quantity} 次儲備` });
         } catch (err: any) {
             if (!err.message.includes('User rejected the request')) {
-                showToast(err.message.split('\n')[0] || '購買失敗', 'error');
+                showToast(err.shortMessage || '購買失敗', 'error');
             }
         }
     };
@@ -133,21 +100,15 @@ const PurchaseInterface: React.FC<{ selectedParty: PartyNft | null }> = ({ selec
         return <div className="card-bg p-8 rounded-xl h-full flex items-center justify-center"><p className="text-gray-500">請先從左側選擇一個隊伍</p></div>;
     }
 
-    const renderButton = () => {
-        const isLoading = isLogicLoading || isPurchasing;
-        if (step === 'needsApproval') return <ActionButton onClick={handleApprove} isLoading={isLoading} className="w-full h-12">批准代幣</ActionButton>;
-        return <ActionButton onClick={handlePurchase} isLoading={isLoading} disabled={isLoading || step !== 'readyToPurchase'} className="w-full h-12">購買儲備</ActionButton>;
-    };
-
     return (
         <div className="card-bg p-8 rounded-xl h-full flex flex-col">
             <h3 className="section-title text-2xl">為「{selectedParty.name || `隊伍 #${selectedParty.id}`}」購買儲備</h3>
-            <p className="text-sm text-gray-500 mb-6">儲備是進行地下城遠征的必要物資。價格固定為每次 5 USD 等值的 $SoulShard。</p>
+            <p className="text-sm text-gray-500 mb-6">儲備是進行地下城遠征的必要物資。每次購買都將從您的**遊戲內金庫**扣款。</p>
             
             <div className="mb-6">
-                <label className="block text-sm font-bold mb-2">選擇數量 (批量購買享超值折扣！)</label>
+                <label className="block text-sm font-bold mb-2">選擇數量</label>
                 <div className="flex flex-wrap gap-2">
-                    {purchaseOptions.map(q => <button key={q} onClick={() => setQuantity(q)} className={`px-4 py-2 rounded-full font-bold transition ${quantity === q ? 'bg-indigo-500 text-white' : 'bg-white/50 hover:bg-white'}`}>{q} 次</button>)}
+                    {purchaseOptions.map(q => <button key={q} onClick={() => setQuantity(q)} className={`px-4 py-2 rounded-full font-bold transition ${quantity === q ? 'bg-indigo-500 text-white' : 'bg-white/10 hover:bg-white/20'}`}>{q} 次</button>)}
                 </div>
             </div>
 
@@ -155,43 +116,37 @@ const PurchaseInterface: React.FC<{ selectedParty: PartyNft | null }> = ({ selec
                 {isLogicLoading ? <LoadingSpinner/> : (
                     <div>
                         <p className="text-lg">總價:</p>
-                        {discountApplied && (
-                             <p className="font-bold text-gray-400 text-xl line-through">{parseFloat(formatEther(originalTotalAmount)).toFixed(4)}</p>
-                        )}
                         <p className="font-bold text-yellow-500 text-3xl">{parseFloat(formatEther(totalRequiredAmount)).toFixed(4)}</p>
                         <p className="text-xs text-gray-500">$SoulShard</p>
                     </div>
                 )}
             </div>
-            {renderButton()}
+            <ActionButton onClick={handlePurchase} isLoading={isPurchasing || isLogicLoading} className="w-full h-12">確認購買</ActionButton>
         </div>
     );
 };
 
-interface ProvisionsPageProps {
+// =================================================================
+// Section: ProvisionsPage 主元件
+// =================================================================
+const ProvisionsPage: React.FC<{
     preselectedPartyId: bigint | null;
     setActivePage: (page: Page) => void;
-}
-
-
-const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, setActivePage }) => {
+}> = ({ preselectedPartyId, setActivePage }) => {
     const { address, chainId } = useAccount();
     const [selectedPartyId, setSelectedPartyId] = useState<bigint | null>(preselectedPartyId);
 
     const { data: ownedParties, isLoading: isLoadingParties } = useQuery({
         queryKey: ['ownedNfts', address, chainId, 'partiesOnly'],
-        queryFn: async () => {
-            if (!address || !chainId) return [];
-            return (await fetchAllOwnedNfts(address, chainId)).parties as PartyNft[];
-        },
+        queryFn: async () => (await fetchAllOwnedNfts(address!, chainId!)).parties as PartyNft[],
         enabled: !!address && !!chainId,
     });
     
-    const dungeonCoreContract = getContract(chainId, 'dungeonCore');
+    const dungeonStorageContract = getContract(chainId, 'dungeonStorage');
     const { data: statuses } = useReadContracts({
-        contracts: ownedParties?.map(p => ({ ...dungeonCoreContract, functionName: 'partyStatuses', args: [p.id] })) ?? [],
+        contracts: ownedParties?.map(p => ({ ...dungeonStorageContract, functionName: 'getPartyStatus', args: [p.id] })) ?? [],
         query: { 
-            enabled: !!ownedParties && ownedParties.length > 0,
+            enabled: !!ownedParties && ownedParties.length > 0 && !!dungeonStorageContract,
             refetchInterval: 10000,
         }
     });
@@ -207,10 +162,6 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, set
         });
     }, [ownedParties, statuses]);
     
-    const handlePartySelection = (partyId: bigint) => {
-        setSelectedPartyId(partyId);
-    };
-
     useEffect(() => {
         if (preselectedPartyId && partiesWithStatus.some(p => p.id === preselectedPartyId)) {
             setSelectedPartyId(preselectedPartyId);
@@ -220,7 +171,6 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, set
     }, [preselectedPartyId, partiesWithStatus, selectedPartyId]);
     
     const selectedParty = useMemo(() => partiesWithStatus.find(p => p.id === selectedPartyId) || null, [partiesWithStatus, selectedPartyId]);
-
 
     return (
         <section>
@@ -232,7 +182,7 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, set
                         partiesWithStatus.length > 0 ? (
                             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                                 {partiesWithStatus.map(party => (
-                                    <div key={party.id.toString()} onClick={() => handlePartySelection(party.id)} className="cursor-pointer">
+                                    <div key={party.id.toString()} onClick={() => setSelectedPartyId(party.id)} className="cursor-pointer">
                                         <NftCard nft={party} isSelected={selectedPartyId === party.id} />
                                         <p className="text-center text-xs mt-1 font-bold">儲備: {party.provisionsRemaining.toString()}</p>
                                     </div>

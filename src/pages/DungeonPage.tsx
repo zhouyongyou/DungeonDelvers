@@ -10,15 +10,13 @@ import { ActionButton } from '../components/ui/ActionButton';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import type { Page } from '../types/page';
-import type { PartyNft, HeroNft, RelicNft } from '../types/nft';
+import type { PartyNft } from '../types/nft';
 import { Icons } from '../components/ui/icons';
 
-// =================================================================
-// Section: 型別定義與子元件
-// =================================================================
-
+// ... 子元件保持不變 ...
 interface Dungeon {
   id: number;
+  name: string;
   requiredPower: bigint;
   rewardAmountUSD: bigint;
   baseSuccessRate: number;
@@ -104,7 +102,7 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
                 {renderStatus()}
             </div>
             <div className="grid grid-cols-3 gap-2 mb-4 text-center">
-                <div><p className="text-sm text-gray-400">最大戰力</p><p className="font-bold text-xl text-gray-500 line-through">{party.totalPower}</p></div>
+                <div><p className="text-sm text-gray-400">最大戰力</p><p className="font-bold text-xl text-gray-500 line-through">{party.totalPower.toString()}</p></div>
                 <div><p className="text-sm text-gray-400">有效戰力</p><p className="font-bold text-2xl text-indigo-400">{effectivePower.toString()}</p></div>
                 <div><p className="text-sm text-gray-400">疲勞度</p><p className="font-bold text-xl text-red-400">{fatigueLevel} / 45</p></div>
             </div>
@@ -123,7 +121,6 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
     );
 };
 
-// 地下城資訊卡片子元件
 const DungeonInfoCard: React.FC<{ dungeon: Dungeon }> = ({ dungeon }) => (
     <div className="card-bg p-4 rounded-xl shadow-lg flex flex-col bg-gray-800/50">
         <h4 className="text-lg font-bold font-serif text-yellow-300">{dungeon.name}</h4>
@@ -136,10 +133,6 @@ const DungeonInfoCard: React.FC<{ dungeon: Dungeon }> = ({ dungeon }) => (
     </div>
 );
 
-// =================================================================
-// Section: DungeonPage 主元件
-// =================================================================
-
 const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setActivePage }) => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
@@ -147,7 +140,6 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
 
     const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
     
-    // 從 DungeonMaster 讀取 DungeonStorage 的地址
     const { data: dungeonStorageAddress } = useReadContract({
         ...dungeonMasterContract,
         functionName: 'dungeonStorage',
