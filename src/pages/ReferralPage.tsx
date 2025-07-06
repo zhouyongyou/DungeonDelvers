@@ -7,7 +7,7 @@ import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { ActionButton } from '../components/ui/ActionButton';
 import { isAddress, formatEther } from 'viem';
-import { bsc, bscTestnet } from 'wagmi/chains';
+import { bsc } from 'wagmi/chains';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Icons } from '../components/ui/icons';
 
@@ -19,11 +19,12 @@ const ReferralPage: React.FC = () => {
     const [referrerInput, setReferrerInput] = useState('');
     const [copied, setCopied] = useState(false);
 
-    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+    // 僅支援主網
+    if (!chainId || chainId !== bsc.id) {
         return <div className="p-4 text-center text-gray-400">請連接到支援的網路以使用邀請功能。</div>;
     }
 
-    const playerVaultContract = getContract(chainId, 'playerVault');
+    const playerVaultContract = getContract(bsc.id, 'playerVault');
 
     const { data: currentReferrer, isLoading: isLoadingReferrer, refetch: refetchReferrer } = useReadContract({
         ...playerVaultContract,
@@ -49,7 +50,6 @@ const ReferralPage: React.FC = () => {
             setReferrerInput(ref);
         }
     }, []);
-
 
     const handleSetReferrer = async () => {
         if (!isAddress(referrerInput)) {
@@ -113,7 +113,11 @@ const ReferralPage: React.FC = () => {
                 </div>
                 <div className="mt-4 text-center">
                     <p className="text-gray-400">我賺取的總佣金</p>
-                    {isLoadingCommission ? <LoadingSpinner size="h-8 w-8" /> : <p className="text-3xl font-bold text-yellow-400">{parseFloat(formatEther(totalCommission ?? 0n)).toFixed(4)} $SoulShard</p>}
+                    {isLoadingCommission ? <LoadingSpinner size="h-8 w-8" /> : (
+                        <p className="text-3xl font-bold text-yellow-400">
+                            {typeof totalCommission === 'bigint' ? parseFloat(formatEther(totalCommission)).toFixed(4) : '0.0000'} $SoulShard
+                        </p>
+                    )}
                 </div>
             </div>
 
@@ -123,7 +127,9 @@ const ReferralPage: React.FC = () => {
                     hasReferrer ? (
                         <div>
                             <p className="text-gray-400">您目前的邀請人是:</p>
-                            <p className="font-mono text-lg text-green-400 bg-black/20 p-2 rounded break-all">{currentReferrer}</p>
+                            <p className="font-mono text-lg text-green-400 bg-black/20 p-2 rounded break-all">
+                                {typeof currentReferrer === 'string' ? currentReferrer : ''}
+                            </p>
                             <p className="text-xs text-gray-500 mt-2">注意：邀請人一經設定，便無法更改。</p>
                         </div>
                     ) : (

@@ -11,9 +11,9 @@ import { DEVELOPER_ADDRESS } from '../../config/constants';
 import { getContract } from '../../config/contracts';
 import { RecentTransactions } from '../ui/RecentTransactions';
 import { Icons } from '../ui/icons';
-import { bsc, bscTestnet } from 'wagmi/chains';
+import { bsc } from 'wagmi/chains';
 
-// (此處省略未變更的 ThemeToggleButton, usePlayerLevel, MenuIcon, XIcon 元件程式碼)
+// (此處省略未變更的 ThemeToggleButton, MenuIcon, XIcon 元件程式碼)
 const ThemeToggleButton: React.FC = () => {
     const { theme, setTheme, effectiveTheme } = useTheme();
     const toggleTheme = () => {
@@ -34,7 +34,7 @@ const ThemeToggleButton: React.FC = () => {
 
 const usePlayerLevel = () => {
     const { address, chainId } = useAccount();
-    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) return { level: null };
+    if (!chainId || chainId !== bsc.id) return { level: null };
     const playerProfileContract = getContract(chainId, 'playerProfile');
     const { data: tokenId } = useReadContract({ ...playerProfileContract, functionName: 'profileTokenOf', args: [address!], query: { enabled: !!address && !!playerProfileContract } });
     const { data: experience } = useReadContract({ ...playerProfileContract, functionName: 'playerExperience', args: [tokenId!], query: { enabled: typeof tokenId === 'bigint' && tokenId > 0n } });

@@ -11,7 +11,7 @@ import { useTransactionStore } from '../stores/useTransactionStore';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
-import { bsc, bscTestnet } from 'wagmi/chains';
+import { bsc } from 'wagmi/chains';
 
 interface ProvisionsPageProps {
     preselectedPartyId?: bigint | null;
@@ -27,15 +27,15 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
     const [quantity, setQuantity] = useState<number>(1);
     const [paymentSource, setPaymentSource] = useState<'wallet' | 'vault'>('wallet');
 
-    // ★ 核心修正 #1：在元件的開頭加入型別防衛
-    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+    // 僅支援主網
+    if (!chainId || chainId !== bsc.id) {
         return <div className="p-4 text-center text-gray-400">請連接到支援的網路。</div>;
     }
 
-    const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
-    const dungeonCoreContract = getContract(chainId, 'dungeonCore');
-    const soulShardContract = getContract(chainId, 'soulShard');
-    const playerVaultContract = getContract(chainId, 'playerVault');
+    const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
+    const dungeonCoreContract = getContract(bsc.id, 'dungeonCore');
+    const soulShardContract = getContract(bsc.id, 'soulShard');
+    const playerVaultContract = getContract(bsc.id, 'playerVault');
 
     const { data: provisionPriceUSD, isLoading: isLoadingPrice } = useReadContract({
         ...dungeonMasterContract,

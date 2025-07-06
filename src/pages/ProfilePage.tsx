@@ -1,4 +1,4 @@
-// src/pages/ProfilePage.tsx (引導優化版)
+// src/pages/ProfilePage.tsx (RPC 優化版)
 
 import React, { useMemo } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
@@ -11,7 +11,7 @@ import type { Page } from '../types/page';
 import { bsc, bscTestnet } from 'wagmi/chains';
 import { isAddress, type Address } from 'viem';
 
-// ★ 新增：一個自定義 Hook，用於從 URL 獲取要顯示的地址
+// 從 URL 獲取要顯示的地址
 const useTargetAddress = () => {
     const { address: connectedAddress } = useAccount();
     
@@ -26,15 +26,8 @@ const useTargetAddress = () => {
     }, [queryAddress, connectedAddress]);
 };
 
-
-// =================================================================
-// Section: ProfilePage 主元件
-// =================================================================
-
 const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setActivePage }) => {
     const { address: connectedAddress, chainId } = useAccount();
-    
-    // ★ 修改：使用自定義 Hook 獲取目標地址
     const targetAddress = useTargetAddress();
     const isMyProfile = targetAddress?.toLowerCase() === connectedAddress?.toLowerCase();
 
@@ -49,15 +42,17 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
         );
     }
 
-    const playerProfileContract = getContract(chainId, 'playerProfile');
+    // 型別安全呼叫 getContract
+    const playerProfileContract = chainId === bsc.id ? getContract(bsc.id, 'playerProfile') : chainId === bscTestnet.id ? getContract(bscTestnet.id as any, 'playerProfile') : null;
 
+    // ★ 核心優化：移除 refetchInterval，改為由 useContractEvents 中的事件監聽來觸發更新。
+    // 這將大幅減少不必要的 RPC 請求。
     const { data: tokenId, isLoading: isLoadingTokenId } = useReadContract({
         ...playerProfileContract,
         functionName: 'profileTokenOf',
-        args: [targetAddress!], // ★ 修改：使用目標地址查詢
+        args: [targetAddress!],
         query: { 
             enabled: !!targetAddress && !!playerProfileContract,
-            refetchInterval: 10000,
         },
     });
 
@@ -65,23 +60,25 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
         ...playerProfileContract,
         functionName: 'tokenURI',
         args: [tokenId!],
-        query: { enabled: !!tokenId && tokenId > 0n && !!playerProfileContract },
+        query: { enabled: typeof tokenId === 'bigint' && tokenId > 0n && !!playerProfileContract },
     });
 
     const renderContent = () => {
-        if (isLoadingTokenId || (tokenId && tokenId > 0n && isLoadingUri)) {
+        if (isLoadingTokenId || (typeof tokenId === 'bigint' && tokenId > 0n && isLoadingUri)) {
             return <div className="flex justify-center items-center h-96"><LoadingSpinner /></div>;
         }
 
-        if (tokenId && tokenId > 0n && tokenURI) {
+        if (typeof tokenId === 'bigint' && tokenId > 0n && tokenURI) {
             try {
                 const decodedUri = Buffer.from((tokenURI as string).substring('data:application/json;base64,'.length), 'base64').toString();
                 const metadata = JSON.parse(decodedUri);
-                const svgImage = metadata.image ? Buffer.from(metadata.image.substring('data:image/svg+xml;base64,'.length), 'base64').toString() : '';
+                // 確保 image 欄位存在且為 SVG 格式
+                const svgImage = metadata.image && metadata.image.startsWith('data:image/svg+xml;base64,') 
+                    ? Buffer.from(metadata.image.substring('data:image/svg+xml;base64,'.length), 'base64').toString() 
+                    : '';
                 
                 return (
                     <div className="card-bg p-6 rounded-2xl shadow-xl flex flex-col items-center">
-                        {/* ★ 修改：動態顯示標題 */}
                         <h3 className="section-title">{isMyProfile ? '我的玩家徽章' : '玩家徽章'}</h3>
                         <p className="font-mono text-xs break-all bg-black/20 p-2 rounded text-gray-400 mb-4">{targetAddress}</p>
                         <div 
@@ -103,7 +100,6 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                     <p className="text-gray-400 mb-4 max-w-md text-center">
                         您的玩家檔案是一個獨一無二的靈魂綁定代幣 (SBT)，它將在您**首次成功完成地下城遠征**後由系統自動為您鑄造。
                     </p>
-                    {/* ★ 新增：引導按鈕 */}
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <ActionButton onClick={() => setActivePage('dungeon')} className="w-48 h-12">
                             前往地下城
@@ -121,7 +117,6 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
 
     return (
         <section>
-            {/* ★ 修改：動態顯示頁面大標題 */}
             <h2 className="page-title">{isMyProfile ? '我的個人檔案' : '玩家檔案查詢'}</h2>
             {renderContent()}
         </section>

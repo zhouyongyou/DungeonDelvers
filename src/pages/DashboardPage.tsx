@@ -12,11 +12,9 @@ import type { Page } from '../types/page';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { useAppToast } from '../hooks/useAppToast';
 import { Icons } from '../components/ui/icons';
-import { bsc, bscTestnet } from 'wagmi/chains';
-// ★ 新增：導入城鎮告示板元件
+import { bsc } from 'wagmi/chains';
 import { TownBulletin } from '../components/ui/TownBulletin';
 
-// (此處省略未變更的 getLevelFromExp, StatCard, QuickActionButton, ExternalLinkButton, useVaultAndTax 元件程式碼)
 const getLevelFromExp = (exp: bigint): number => {
     if (exp < 100n) return 1;
     return Math.floor(Math.sqrt(Number(exp) / 100)) + 1;
@@ -55,50 +53,74 @@ const ExternalLinkButton: React.FC<{ title: string; url: string; icon: React.Rea
 
 const useVaultAndTax = () => {
     const { address, chainId } = useAccount();
-    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) return { playerVaultContract: null, vaultInfo: undefined, currentTaxRate: 0, isLoading: true, };
-    const dungeonCoreContract = getContract(chainId, 'dungeonCore');
-    const playerProfileContract = getContract(chainId, 'playerProfile');
-    const vipStakingContract = getContract(chainId, 'vipStaking');
+    if (!chainId || chainId !== bsc.id) return { playerVaultContract: undefined, vaultInfo: undefined, currentTaxRate: 0, isLoading: true };
+    const dungeonCoreContract = getContract(bsc.id, 'dungeonCore');
+    const playerProfileContract = getContract(bsc.id, 'playerProfile');
+    const vipStakingContract = getContract(bsc.id, 'vipStaking');
     const { data: playerVaultAddress } = useReadContract({ ...dungeonCoreContract, functionName: 'playerVaultAddress', query: { enabled: !!dungeonCoreContract }, });
-    const playerVaultContract = useMemo(() => { if (!playerVaultAddress) return null; return { address: playerVaultAddress, abi: playerVaultABI }; }, [playerVaultAddress]);
-    const { data: taxParams, isLoading: isLoadingTaxParams } = useReadContracts({
-        contracts: [
-            { ...playerVaultContract, functionName: 'playerInfo', args: [address!] },
+    const playerVaultContract = useMemo(() => {
+        if (typeof playerVaultAddress === 'string') return { address: playerVaultAddress as `0x${string}`, abi: playerVaultABI };
+        return undefined;
+    }, [playerVaultAddress]);
+    const contractsArr = useMemo(() => {
+        if (!playerVaultContract || !vipStakingContract || !playerProfileContract || !address) return [];
+        return [
+            { ...playerVaultContract, functionName: 'playerInfo', args: [address] },
             { ...playerVaultContract, functionName: 'smallWithdrawThresholdUSD' },
             { ...playerVaultContract, functionName: 'largeWithdrawThresholdUSD' },
             { ...playerVaultContract, functionName: 'standardInitialRate' },
             { ...playerVaultContract, functionName: 'largeWithdrawInitialRate' },
             { ...playerVaultContract, functionName: 'decreaseRatePerPeriod' },
             { ...playerVaultContract, functionName: 'periodDuration' },
-            { ...vipStakingContract, functionName: 'getVipTaxReduction', args: [address!] },
-            { ...playerProfileContract, functionName: 'getLevel', args: [address!] },
-        ],
-        query: { enabled: !!address && !!playerVaultContract && !!vipStakingContract && !!playerProfileContract }
+            { ...vipStakingContract, functionName: 'getVipTaxReduction', args: [address] },
+            { ...playerProfileContract, functionName: 'getLevel', args: [address] },
+        ];
+    }, [playerVaultContract, vipStakingContract, playerProfileContract, address]);
+    const { data: taxParams, isLoading: isLoadingTaxParams } = useReadContracts({
+        contracts: contractsArr,
+        query: { enabled: contractsArr.length > 0 }
     });
     const [ playerInfo, smallWithdrawThresholdUSD, largeWithdrawThresholdUSD, standardInitialRate, largeWithdrawInitialRate, decreaseRatePerPeriod, periodDuration, vipTaxReduction, playerLevel ] = useMemo(() => taxParams?.map(item => item.result) ?? [], [taxParams]);
-    const withdrawableBalance = useMemo(() => (playerInfo as any)?.[0] as bigint | 0n, [playerInfo]);
+    const withdrawableBalance = useMemo(() => {
+        if (Array.isArray(playerInfo) && playerInfo.length >= 3 && typeof playerInfo[0] === 'bigint' && typeof playerInfo[1] === 'bigint' && typeof playerInfo[2] === 'bigint') {
+            return playerInfo[0] as bigint;
+        }
+        return 0n;
+    }, [playerInfo]);
     const { data: withdrawableBalanceInUSD, isLoading: isLoadingUsdValue } = useReadContract({ ...dungeonCoreContract, functionName: 'getSoulShardAmountForUSD', args: [withdrawableBalance], query: { enabled: !!dungeonCoreContract && withdrawableBalance > 0n } });
     const currentTaxRate = useMemo(() => {
-        if (!taxParams || !playerInfo) return 0;
-        const info = playerInfo as readonly [bigint, bigint, bigint];
-        const lastWithdrawTimestamp = info[1];
-        const lastFreeWithdrawTimestamp = info[2];
-        const amountUSD = withdrawableBalanceInUSD ?? 0n;
+        if (!taxParams || !Array.isArray(playerInfo) || playerInfo.length < 3) return 0;
+        const lastWithdrawTimestamp = typeof playerInfo[1] === 'bigint' ? playerInfo[1] : 0n;
+        const lastFreeWithdrawTimestamp = typeof playerInfo[2] === 'bigint' ? playerInfo[2] : 0n;
+        const amountUSD = typeof withdrawableBalanceInUSD === 'bigint' ? withdrawableBalanceInUSD : 0n;
+        const smallUSD = typeof smallWithdrawThresholdUSD === 'bigint' ? smallWithdrawThresholdUSD : 0n;
+        const largeUSD = typeof largeWithdrawThresholdUSD === 'bigint' ? largeWithdrawThresholdUSD : 0n;
+        const stdInit = typeof standardInitialRate === 'bigint' ? standardInitialRate : 0n;
+        const largeInit = typeof largeWithdrawInitialRate === 'bigint' ? largeWithdrawInitialRate : 0n;
+        const decRate = typeof decreaseRatePerPeriod === 'bigint' ? decreaseRatePerPeriod : 0n;
+        const period = typeof periodDuration === 'bigint' ? periodDuration : 1n;
+        const vipRed = typeof vipTaxReduction === 'bigint' ? vipTaxReduction : 0n;
+        const lvl = typeof playerLevel === 'bigint' ? playerLevel : 0n;
         const oneDay = 24n * 60n * 60n;
-        if (amountUSD <= (smallWithdrawThresholdUSD as bigint) && BigInt(Math.floor(Date.now() / 1000)) >= lastFreeWithdrawTimestamp + oneDay) return 0;
-        let initialRate = (amountUSD > (largeWithdrawThresholdUSD as bigint)) ? (largeWithdrawInitialRate as bigint) : (standardInitialRate as bigint);
+        if (amountUSD <= smallUSD && BigInt(Math.floor(Date.now() / 1000)) >= lastFreeWithdrawTimestamp + oneDay) return 0;
+        let initialRate = (amountUSD > largeUSD) ? largeInit : stdInit;
         const timeSinceLast = BigInt(Math.floor(Date.now() / 1000)) - lastWithdrawTimestamp;
-        const periodsPassed = timeSinceLast / (periodDuration as bigint);
-        const timeDecay = periodsPassed * (decreaseRatePerPeriod as bigint);
-        const vipReduction = vipTaxReduction as bigint ?? 0n;
-        const levelReduction = (playerLevel ? BigInt(Math.floor(Number(playerLevel) / 10)) : 0n) * 100n;
-        const totalReduction = timeDecay + vipReduction + levelReduction;
+        const periodsPassed = timeSinceLast / period;
+        const timeDecay = periodsPassed * decRate;
+        const levelReduction = (lvl ? BigInt(Math.floor(Number(lvl) / 10)) : 0n) * 100n;
+        const totalReduction = timeDecay + vipRed + levelReduction;
         if (totalReduction >= initialRate) return 0;
         return Number(initialRate - totalReduction) / 100;
-    }, [taxParams, playerInfo, withdrawableBalanceInUSD]);
-    return { playerVaultContract, vaultInfo: playerInfo as readonly [bigint, bigint, bigint] | undefined, currentTaxRate, isLoading: isLoadingTaxParams || isLoadingUsdValue, };
+    }, [taxParams, playerInfo, withdrawableBalanceInUSD, smallWithdrawThresholdUSD, largeWithdrawThresholdUSD, standardInitialRate, largeWithdrawInitialRate, decreaseRatePerPeriod, periodDuration, vipTaxReduction, playerLevel]);
+    return { 
+        playerVaultContract, 
+        vaultInfo: (Array.isArray(playerInfo) && playerInfo.length >= 3 && typeof playerInfo[0] === 'bigint' && typeof playerInfo[1] === 'bigint' && typeof playerInfo[2] === 'bigint')
+            ? playerInfo as unknown as readonly [bigint, bigint, bigint]
+            : undefined, 
+        currentTaxRate, 
+        isLoading: isLoadingTaxParams || isLoadingUsdValue 
+    };
 };
-
 
 const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setActivePage }) => {
     const { address, chainId } = useAccount();
@@ -106,10 +128,10 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     const { addTransaction } = useTransactionStore();
     const { showToast } = useAppToast();
 
-    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+    if (!chainId || chainId !== bsc.id) {
         return (
             <div className="flex justify-center items-center h-64">
-                <p className="text-lg text-gray-500">請連接到支援的網路 (BSC 或 BSC 測試網) 以檢視儀表板。</p>
+                <p className="text-lg text-gray-500">請連接到支援的網路 (BSC) 以檢視儀表板。</p>
             </div>
         );
     }
@@ -117,8 +139,8 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     const { playerVaultContract, vaultInfo, currentTaxRate, isLoading: isLoadingVaultAndTax } = useVaultAndTax();
     const withdrawableBalance = vaultInfo?.[0] ?? 0n;
 
-    const playerProfileContract = getContract(chainId, 'playerProfile');
-    const vipStakingContract = getContract(chainId, 'vipStaking');
+    const playerProfileContract = getContract(bsc.id, 'playerProfile');
+    const vipStakingContract = getContract(bsc.id, 'vipStaking');
 
     const { data: profileTokenId } = useReadContract({ ...playerProfileContract, functionName: 'profileTokenOf', args: [address!], query: { enabled: !!address && !!playerProfileContract }, });
     const { data: experience, isLoading: isLoadingProfile } = useReadContract({ ...playerProfileContract, functionName: 'playerExperience', args: [profileTokenId!], query: { enabled: !!profileTokenId && typeof profileTokenId === 'bigint' && profileTokenId > 0n }, });
@@ -126,16 +148,16 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     const { data: vipStake, isLoading: isLoadingVip } = useReadContract({ ...vipStakingContract, functionName: 'userStakes', args: [address!], query: { enabled: !!address && !!vipStakingContract, select: (data: unknown) => (Array.isArray(data) && (data[0] as bigint) > 0n) ? '質押中' : '未質押', }, });
     
     const { writeContractAsync, isPending: isWithdrawing } = useWriteContract();
-    const level = useMemo(() => experience ? getLevelFromExp(experience) : 1, [experience]);
+    const level = useMemo(() => typeof experience === 'bigint' ? getLevelFromExp(experience) : 1, [experience]);
     const externalMarkets = useMemo(() => {
-        const currentContracts = contracts[chainId];
+        const currentContracts = contracts[bsc.id];
         if (!currentContracts) return [];
         return [
-            { title: '英雄市場', address: currentContracts.hero.address, icon: <Icons.Hero className="w-8 h-8"/> },
-            { title: '聖物市場', address: currentContracts.relic.address, icon: <Icons.Relic className="w-8 h-8"/> },
-            { title: '隊伍市場', address: currentContracts.party.address, icon: <Icons.Party className="w-8 h-8"/> },
-            { title: 'VIP 市場', address: currentContracts.vipStaking.address, icon: <Icons.Vip className="w-8 h-8"/> },
-        ];
+            { title: '英雄市場', address: currentContracts.hero?.address ?? '', icon: <Icons.Hero className="w-8 h-8"/> },
+            { title: '聖物市場', address: currentContracts.relic?.address ?? '', icon: <Icons.Relic className="w-8 h-8"/> },
+            { title: '隊伍市場', address: currentContracts.party?.address ?? '', icon: <Icons.Party className="w-8 h-8"/> },
+            { title: 'VIP 市場', address: currentContracts.vipStaking?.address ?? '', icon: <Icons.Vip className="w-8 h-8"/> },
+        ].filter(m => m.address && typeof m.address === 'string' && m.address.length === 42);
     }, [chainId]);
 
     const handleWithdraw = async () => {

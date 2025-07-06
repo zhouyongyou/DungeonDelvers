@@ -161,9 +161,10 @@ const MyAssetsPage: React.FC = () => {
         );
     }
 
-    const heroContract = getContract(chainId, 'hero');
-    const relicContract = getContract(chainId, 'relic');
-    const partyContract = getContract(chainId, 'party');
+    // 型別安全呼叫 getContract
+    const heroContract = chainId === bsc.id ? getContract(bsc.id, 'hero') : chainId === bscTestnet.id ? getContract(bscTestnet.id as any, 'hero') : null;
+    const relicContract = chainId === bsc.id ? getContract(bsc.id, 'relic') : chainId === bscTestnet.id ? getContract(bscTestnet.id as any, 'relic') : null;
+    const partyContract = chainId === bsc.id ? getContract(bsc.id, 'party') : chainId === bscTestnet.id ? getContract(bscTestnet.id as any, 'party') : null;
 
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
@@ -173,11 +174,12 @@ const MyAssetsPage: React.FC = () => {
         enabled: !!address && !!chainId,
     });
     
-    const { data: platformFee } = useReadContract({
+    const { data: platformFeeRaw } = useReadContract({
         ...partyContract,
         functionName: 'platformFee',
         query: { enabled: !!partyContract }
     });
+    const platformFee = typeof platformFeeRaw === 'bigint' ? platformFeeRaw : undefined;
 
     const filteredNfts = useMemo(() => {
         if (!nfts) return [];

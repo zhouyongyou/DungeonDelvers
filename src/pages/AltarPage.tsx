@@ -13,7 +13,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import type { AnyNft, HeroNft, NftAttribute, RelicNft, NftType } from '../types/nft';
-import { bsc, bscTestnet } from 'wagmi/chains';
+import { bsc } from 'wagmi/chains';
 import { Modal } from '../components/ui/Modal';
 
 // =================================================================
@@ -109,20 +109,20 @@ const AltarPage: React.FC = () => {
     const [upgradeResult, setUpgradeResult] = useState<UpgradeOutcome | null>(null);
 
 
-    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+    if (!chainId || chainId !== bsc.id) {
         return (
             <section>
                 <h2 className="page-title">升星祭壇</h2>
                 <div className="card-bg p-10 rounded-xl text-center text-gray-400">
-                    <p>請先連接到支援的網路 (BSC 或 BSC 測試網) 以使用升星祭壇。</p>
+                    <p>請先連接到支援的網路 (BSC) 以使用升星祭壇。</p>
                 </div>
             </section>
         );
     }
 
-    const altarContract = getContract(chainId, 'altarOfAscension');
-    const heroContract = getContract(chainId, 'hero');
-    const relicContract = getContract(chainId, 'relic');
+    const altarContract = getContract(bsc.id, 'altarOfAscension');
+    const heroContract = getContract(bsc.id, 'hero');
+    const relicContract = getContract(bsc.id, 'relic');
 
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 

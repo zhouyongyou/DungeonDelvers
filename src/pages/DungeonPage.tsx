@@ -1,11 +1,11 @@
-// src/pages/DungeonPage.tsx (引導優化版)
+// src/pages/DungeonPage.tsx (RPC 優化版)
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContracts, useReadContract, useWriteContract } from 'wagmi';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { formatEther } from 'viem';
 import { fetchAllOwnedNfts } from '../api/nfts';
-import { getContract, dungeonStorageABI, type contracts } from '../config/contracts';
+import { getContract, dungeonStorageABI } from '../config/contracts';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ActionButton } from '../components/ui/ActionButton';
@@ -15,9 +15,11 @@ import type { Page } from '../types/page';
 import type { PartyNft } from '../types/nft';
 import { Modal } from '../components/ui/Modal';
 import ProvisionsPage from './ProvisionsPage';
-import { bsc, bscTestnet } from 'wagmi/chains';
+import { bsc } from 'wagmi/chains';
 
-type SupportedChainId = keyof typeof contracts;
+// 僅支援主網 chainId 型別
+
+type SupportedChainId = typeof bsc.id; // 56
 
 interface Dungeon {
   id: number;
@@ -42,24 +44,17 @@ interface PartyStatusCardProps {
 const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onStartExpedition, onRest, onBuyProvisions, isTxPending, isAnyTxPendingForThisParty, chainId }) => {
     const [selectedDungeonId, setSelectedDungeonId] = useState<bigint>(1n);
 
-    const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
-    const dungeonStorageContract = getContract(chainId, 'dungeonStorage');
+    // 僅在 chainId === bsc.id 時才呼叫 getContract
+    const dungeonMasterContract = chainId === bsc.id ? getContract(bsc.id, 'dungeonMaster') : null;
+    const dungeonStorageContract = chainId === bsc.id ? getContract(bsc.id, 'dungeonStorage') : null;
 
-    const { data: partyStatus, isLoading: isLoadingStatus, refetch: refetchPartyStatus } = useReadContract({
+    const { data: partyStatus, isLoading: isLoadingStatus } = useReadContract({
         ...dungeonStorageContract,
         functionName: 'getPartyStatus',
         args: [party.id],
-        query: { enabled: !!dungeonStorageContract, refetchInterval: 5000 }
+        query: { enabled: !!dungeonStorageContract }
     });
     
-    const queryClient = useQueryClient();
-    useEffect(() => {
-        if (!isAnyTxPendingForThisParty) {
-            refetchPartyStatus();
-            queryClient.invalidateQueries({ queryKey: ['ownedNfts', party.contractAddress, chainId] });
-        }
-    }, [isAnyTxPendingForThisParty, refetchPartyStatus, queryClient, party.contractAddress, chainId]);
-
     const { data: explorationFee } = useReadContract({
         ...dungeonMasterContract,
         functionName: 'explorationFee',
@@ -145,18 +140,19 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
     const [isProvisionModalOpen, setIsProvisionModalOpen] = useState(false);
     const [selectedPartyForProvision, setSelectedPartyForProvision] = useState<bigint | null>(null);
 
-    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+    // 僅支援主網
+    if (chainId !== bsc.id) {
         return <div className="flex justify-center items-center h-64"><p className="text-lg text-gray-500">請連接到支援的網路</p></div>;
     }
 
-    const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
+    const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
     
     const { data: dungeonStorageAddress } = useReadContract({ ...dungeonMasterContract, functionName: 'dungeonStorage', query: { enabled: !!dungeonMasterContract } });
 
     const dungeonStorageContract = useMemo(() => {
         if (!dungeonStorageAddress) return null;
-        return { address: dungeonStorageAddress, abi: dungeonStorageABI, chainId };
-    }, [dungeonStorageAddress, chainId]);
+        return { address: dungeonStorageAddress as `0x${string}`, abi: dungeonStorageABI, chainId: bsc.id };
+    }, [dungeonStorageAddress]);
     
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
@@ -167,7 +163,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
     });
 
     const { data: dungeonsData, isLoading: isLoadingDungeons } = useReadContracts({
-        contracts: Array.from({ length: 10 }, (_, i) => ({ ...dungeonStorageContract, functionName: 'getDungeon', args: [BigInt(i + 1)], })),
+        contracts: dungeonStorageContract ? Array.from({ length: 10 }, (_, i) => ({ ...dungeonStorageContract, functionName: 'getDungeon', args: [BigInt(i + 1)] })) : [],
         query: { enabled: !!dungeonStorageContract }
     });
 
@@ -176,7 +172,8 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
         if (!dungeonsData) return [];
         return dungeonsData.map((d, i) => {
             if (d.status !== 'success' || !Array.isArray(d.result)) return null;
-            const [requiredPower, rewardAmountUSD, baseSuccessRate, isInitialized] = d.result as [bigint, bigint, number, boolean];
+            // 型別轉換加嚴: 先 unknown 再 as
+            const [requiredPower, rewardAmountUSD, baseSuccessRate, isInitialized] = d.result as unknown as [bigint, bigint, number, boolean];
             return { id: i + 1, name: getDungeonName(i + 1), requiredPower, rewardAmountUSD, baseSuccessRate, isInitialized };
         }).filter((d): d is Dungeon => d !== null && d.isInitialized);
     }, [dungeonsData]);
@@ -219,7 +216,6 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
                 <h2 className="page-title">遠征指揮中心</h2>
                 {(!nfts || nfts.parties.length === 0) ? (
                     <EmptyState message="您還沒有任何隊伍可以派遣。">
-                        {/* ★ 新增：引導按鈕 */}
                         <div className="flex flex-col sm:flex-row gap-4 justify-center mt-4">
                             <ActionButton onClick={() => setActivePage('party')} className="w-48 h-12">
                                 前往創建隊伍
@@ -241,7 +237,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
                                 onBuyProvisions={handleBuyProvisions}
                                 isTxPending={isTxPending}
                                 isAnyTxPendingForThisParty={checkPendingTxForParty(party.id)}
-                                chainId={chainId}
+                                chainId={bsc.id}
                             />
                         ))}
                     </div>

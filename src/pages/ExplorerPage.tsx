@@ -6,7 +6,7 @@ import { getContract } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { formatEther, type Address, isAddress } from 'viem';
-import { bsc, bscTestnet } from 'wagmi/chains';
+import { bsc } from 'wagmi/chains';
 
 // =================================================================
 // Section: 可重用的查詢元件
@@ -71,11 +71,12 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
     const { chainId } = useAccount();
     const [submittedId, setSubmittedId] = useState<bigint | null>(null);
 
-    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+    if (!chainId || chainId !== bsc.id) {
         return <p className="text-gray-500">請連接到支援的網路。</p>;
     }
 
-    const contract = getContract(chainId, type);
+    // 僅支援主網 getContract
+    const contract = getContract(bsc.id, type);
     const title = { hero: '英雄', relic: '聖物', party: '隊伍' }[type];
 
     const contractsToQuery = useMemo(() => {
@@ -132,10 +133,11 @@ const PartyStatusQuery: React.FC = () => {
     const { chainId } = useAccount();
     const [submittedId, setSubmittedId] = useState<bigint | null>(null);
 
-    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+    if (!chainId || chainId !== bsc.id) {
         return <p className="text-gray-500">請連接到支援的網路。</p>;
     }
-    const contract = getContract(chainId, 'dungeonStorage');
+    // 僅支援主網 getContract
+    const contract = getContract(bsc.id, 'dungeonStorage');
 
     const { data, isLoading, isError, refetch } = useReadContract({
         ...contract,

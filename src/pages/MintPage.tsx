@@ -8,17 +8,16 @@ import { getContract } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useTransactionStore } from '../stores/useTransactionStore';
-import { bsc, bscTestnet } from 'wagmi/chains';
+import { bsc } from 'wagmi/chains';
 import { Modal } from '../components/ui/Modal';
 import { NftCard } from '../components/ui/NftCard';
 import type { AnyNft, NftAttribute } from '../types/nft';
 import { fetchMetadata } from '../api/nfts';
 
 // =================================================================
-// Section: 新增的子元件 (保持不變)
+// Section: 子元件 (保持不變)
 // =================================================================
 
-// 顯示稀有度機率的元件
 const RarityProbabilities: React.FC = () => (
     <div className="w-full text-xs text-gray-400 mt-4">
         <h4 className="font-bold text-center mb-1 text-gray-500 dark:text-gray-300">稀有度機率</h4>
@@ -32,7 +31,6 @@ const RarityProbabilities: React.FC = () => (
     </div>
 );
 
-// 顯示鑄造結果的彈出視窗
 const MintResultModal: React.FC<{ nft: AnyNft | null; onClose: () => void }> = ({ nft, onClose }) => {
     if (!nft) return null;
     return (
@@ -53,12 +51,11 @@ const MintResultModal: React.FC<{ nft: AnyNft | null; onClose: () => void }> = (
 // =================================================================
 
 type PaymentSource = 'wallet' | 'vault';
-type SupportedChainId = typeof bsc.id | typeof bscTestnet.id;
+type SupportedChainId = typeof bsc.id;
 
 /**
  * @notice 獲取鑄造相關數據的自定義 Hook (已重構)
- * @dev 此版本直接呼叫 Hero/Relic 合約的 getRequiredSoulShardAmount 函式，
- * 將兩次鏈上讀取簡化為一次，提高了效率和穩定性。
+ * @dev ★ 核心優化：此 Hook 現在會回傳 isError 狀態，讓 UI 能處理價格讀取失敗的情況。
  */
 const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: PaymentSource, chainId: SupportedChainId) => {
     const { address } = useAccount();
@@ -66,14 +63,14 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     const soulShardContract = getContract(chainId, 'soulShard')!;
     const playerVaultContract = getContract(chainId, 'playerVault')!;
 
-    // ★ 核心修改：直接呼叫合約的輔助函式來獲取總價，而不是分兩步計算。
-    const { data: totalRequiredAmount, isLoading } = useReadContract({
+    // ★ 核心優化：從 useReadContract 中解構出 isError 狀態
+    const { data: totalRequiredAmount, isLoading, isError } = useReadContract({
         address: contractConfig.address,
         abi: contractConfig.abi,
         functionName: 'getRequiredSoulShardAmount',
         args: [BigInt(quantity)],
         query: {
-            enabled: !!contractConfig && quantity > 0, // 只有在元件準備好且數量大於0時才查詢
+            enabled: !!contractConfig && quantity > 0,
         },
     });
 
@@ -111,7 +108,8 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
         requiredAmount: totalRequiredAmount ?? 0n,
         balance: paymentSource === 'wallet' ? (walletBalance?.value ?? 0n) : vaultBalance,
         needsApproval,
-        isLoading: isLoading, // 現在只有一個 loading 狀態
+        isLoading: isLoading,
+        isError: isError, // ★ 核心優化：將 isError 傳遞出去
         platformFee: platformFee as bigint ?? 0n,
         refetchAllowance,
     };
@@ -137,8 +135,8 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
     const [paymentSource, setPaymentSource] = useState<PaymentSource>('wallet');
     const [mintingResult, setMintingResult] = useState<AnyNft | null>(null);
 
-    // ★ 核心修改：isLoading 的變數名稱從 isLoadingPrice 改為更通用的 isLoading
-    const { requiredAmount, balance, needsApproval, isLoading, platformFee, refetchAllowance } = useMintLogic(type, quantity, paymentSource, chainId);
+    // ★ 核心優化：從 useMintLogic 中解構出 isError
+    const { requiredAmount, balance, needsApproval, isLoading, isError, platformFee, refetchAllowance } = useMintLogic(type, quantity, paymentSource, chainId);
     const { writeContractAsync, isPending: isMinting } = useWriteContract();
     
     const title = type === 'hero' ? '英雄' : '聖物';
@@ -161,6 +159,7 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
     };
 
     const handleMint = async () => {
+        if (isError) return showToast('價格讀取失敗，無法鑄造', 'error');
         if (balance < requiredAmount) return showToast(`${paymentSource === 'wallet' ? '錢包' : '金庫'}餘額不足`, 'error');
         if (paymentSource === 'wallet' && needsApproval) return showToast(`請先完成授權`, 'error');
         if (!publicClient) return showToast('客戶端尚未準備好，請稍後再試', 'error');
@@ -225,8 +224,9 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
         ? <ActionButton onClick={handleApprove} isLoading={isMinting} className="w-48 h-12">授權</ActionButton>
         : <ActionButton 
             onClick={handleMint} 
-            isLoading={isMinting || isLoading} // ★ 核心修改：使用新的 isLoading 狀態
-            disabled={!address || isLoading || balance < requiredAmount || requiredAmount === 0n} 
+            isLoading={isMinting || isLoading}
+            // ★ 核心優化：當價格讀取失敗時，也禁用按鈕
+            disabled={!address || isLoading || isError || balance < requiredAmount || requiredAmount === 0n} 
             className="w-48 h-12"
           >
             {isMinting ? '請在錢包確認' : (address ? `招募 ${quantity} 個` : '請先連接錢包')}
@@ -259,14 +259,25 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
                 </p>
             </div>
 
+            {/* ★ 核心優化：重構價格顯示區塊，加入錯誤處理 */}
             <div className="text-center mb-4 min-h-[72px] flex-grow flex flex-col justify-center">
-                {isLoading ? <LoadingSpinner color="border-gray-500" /> : // ★ 核心修改：使用新的 isLoading 狀態
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center">
+                        <LoadingSpinner color="border-gray-500" />
+                        <p className="text-sm text-gray-500 mt-2">讀取價格中...</p>
+                    </div>
+                ) : isError ? (
+                    <div className="text-red-500">
+                        <p className="font-bold">價格讀取失敗</p>
+                        <p className="text-xs">請檢查網路或稍後再試</p>
+                    </div>
+                ) : (
                     <div>
                         <p className="text-lg text-gray-500 dark:text-gray-400">總價:</p>
                         <p className="font-bold text-yellow-500 dark:text-yellow-400 text-2xl">{parseFloat(formatEther(requiredAmount)).toFixed(4)}</p>
                         <p className="text-xs text-gray-500">$SoulShard + {formatEther(platformFee * BigInt(quantity))} BNB</p>
                     </div>
-                }
+                )}
             </div>
             
             {actionButton}
@@ -297,14 +308,17 @@ const MintingInterface: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
 const MintPage: React.FC = () => {
     const { chainId } = useAccount();
     
+    // ★ 優化：使用型別防衛，確保 chainId 是支援的類型
+    const isSupportedChain = (id: number | undefined): id is SupportedChainId => id === bsc.id;
+
     return (
         <section>
             <h2 className="page-title">鑄造工坊</h2>
-            {chainId && (chainId === bsc.id || chainId === bscTestnet.id) ? (
+            {chainId && isSupportedChain(chainId) ? (
                 <MintingInterface chainId={chainId} />
             ) : (
                 <div className="card-bg p-10 rounded-xl text-center text-gray-400">
-                    <p>請先連接到支援的網路 (BSC 或 BSC 測試網) 以使用鑄造功能。</p>
+                    <p>請先連接到支援的網路 (BSC 主網) 以使用鑄造功能。</p>
                 </div>
             )}
         </section>
