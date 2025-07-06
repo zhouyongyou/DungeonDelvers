@@ -24,7 +24,7 @@ const StarRating: React.FC<{ rating: number }> = memo(({ rating }) => (
 const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected }) => {
   const { id, name, image, type } = nft;
   const fallbackImage = `https://placehold.co/200x200/1F1D36/C0A573?text=${type}+%23${id}`;
-  const imageUrl = image?.replace('ipfs://', '[https://ipfs.io/ipfs/](https://ipfs.io/ipfs/)');
+  const imageUrl = image?.replace('ipfs://', 'https://ipfs.io/ipfs/');
 
   // 根據不同的 NFT 種類，渲染對應的屬性
   const renderAttributes = () => {
@@ -73,7 +73,7 @@ const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected })
 
   return (
     <div 
-        className={`card-bg p-3 rounded-xl text-center border-2 transition-all duration-300 ease-in-out flex flex-col overflow-hidden hover:shadow-2xl hover:-translate-y-1 ${isSelected ? 'ring-4 ring-indigo-500 ring-offset-2 ring-offset-gray-800 border-indigo-500' : 'border-transparent'}`}
+        className={`card-bg p-3 rounded-xl text-center border-2 transition-all duration-300 ease-in-out flex flex-col overflow-hidden hover:shadow-2xl hover:-translate-y-1 active:scale-95 ${isSelected ? 'ring-4 ring-indigo-500 ring-offset-2 ring-offset-gray-800 border-indigo-500' : 'border-transparent'}`}
     >
       <div className={`flex-grow ${onSelect ? 'cursor-pointer' : ''}`} onClick={() => onSelect && onSelect(id, type)}>
         <div className="aspect-square w-full mb-2 overflow-hidden rounded-lg">

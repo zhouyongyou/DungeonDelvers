@@ -54,11 +54,12 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
     const canCreate = selectedHeroes.length > 0 && selectedRelics.length > 0 && selectedHeroes.length <= totalCapacity;
 
     return (
-        <div className="card-bg p-6 rounded-2xl shadow-xl">
+        <div className="card-bg p-4 md:p-6 rounded-2xl shadow-xl">
             <h3 className="section-title">創建新隊伍</h3>
             <p className="text-sm text-gray-400 mb-4">選擇英雄和聖物來組建你的冒險隊伍。隊伍的英雄數量不能超過聖物的總容量。</p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+            {/* ★ 修改：在 md 以下螢幕寬度時，英雄和聖物選擇區塊會垂直堆疊 */}
+            <div className="flex flex-col md:grid md:grid-cols-2 gap-6 mb-4">
                 <div>
                     <h4 className="font-semibold text-lg mb-2 text-white">選擇英雄 ({selectedHeroes.length}/5)</h4>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
@@ -89,6 +90,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
                 </div>
             </div>
 
+            {/* ★ 修改：在 sm 以下螢幕寬度時，統計數據和創建按鈕會垂直堆疊 */}
             <div className="flex flex-col sm:flex-row justify-between items-center bg-gray-900/50 p-4 rounded-lg">
                 <div className="flex gap-6 text-center">
                     <div>
@@ -102,12 +104,12 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
                         </p>
                     </div>
                 </div>
-                <div className="flex flex-col items-center sm:items-end">
+                <div className="flex flex-col items-center sm:items-end mt-4 sm:mt-0">
                     <ActionButton 
                         onClick={() => onCreateParty(selectedHeroes, selectedRelics)} 
                         isLoading={isCreating}
                         disabled={!canCreate || isCreating}
-                        className="w-full sm:w-48 h-12 mt-4 sm:mt-0"
+                        className="w-full sm:w-48 h-12"
                     >
                         創建隊伍
                     </ActionButton>
@@ -119,14 +121,9 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
     );
 };
 
-interface NftGridProps {
-    nfts: AnyNft[];
-}
-
-const NftGrid: React.FC<NftGridProps> = ({ nfts }) => {
-    if (nfts.length === 0) {
-        return <EmptyState message="這裡空空如也..." />;
-    }
+// NftGrid 元件 (無變更)
+const NftGrid: React.FC<{ nfts: AnyNft[] }> = ({ nfts }) => {
+    if (nfts.length === 0) return <EmptyState message="這裡空空如也..." />;
     return (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {nfts.map(nft => <NftCard key={nft.id.toString()} nft={nft} />)}
@@ -143,7 +140,6 @@ const MyAssetsPage: React.FC = () => {
 
     const [filter, setFilter] = useState<NftType>('party');
 
-    // ★★★ 核心修正：在元件渲染的開頭加入型別防衛 ★★★
     if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
         return (
             <div className="flex justify-center items-center h-64">
@@ -242,15 +238,16 @@ const MyAssetsPage: React.FC = () => {
                 platformFee={platformFee}
             />
 
-            <div className="card-bg p-6 rounded-2xl shadow-xl">
+            <div className="card-bg p-4 md:p-6 rounded-2xl shadow-xl">
+                 {/* ★ 修改：在小螢幕上，標題和篩選器會垂直堆疊 */}
                 <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
                     <h3 className="section-title">我的收藏</h3>
-                    <div className="flex items-center gap-2 bg-gray-900/50 p-1 rounded-lg mt-2 sm:mt-0">
+                    <div className="flex items-center gap-1 sm:gap-2 bg-gray-900/50 p-1 rounded-lg mt-2 sm:mt-0">
                         {filterOptions.map(({ key, label }) => (
                             <button 
                                 key={key}
                                 onClick={() => setFilter(key)}
-                                className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${filter === key ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'}`}
+                                className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition ${filter === key ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'}`}
                             >
                                 {label}
                             </button>

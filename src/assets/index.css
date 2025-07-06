@@ -33,11 +33,11 @@
       @apply bg-white/20 font-semibold text-white;
   }
   .page-title {
-      /* 深色模式下，頁面標題改為淺灰色以提高可讀性 */
-      @apply text-4xl font-bold text-center mb-8 text-[#2D2A4A] dark:text-gray-200 font-serif tracking-wide;
+      /* ★ 修改：頁面標題在小螢幕上為 3xl，在 md 螢幕及以上為 4xl */
+      @apply text-3xl md:text-4xl font-bold text-center mb-8 text-[#2D2A4A] dark:text-gray-200 font-serif tracking-wide;
   }
   .section-title {
-      /* 深色模式下，區塊標題改為淺灰色 */
-      @apply text-2xl font-bold mb-4 text-[#2D2A4A] dark:text-gray-300;
+      /* ★ 修改：區塊標題在小螢幕上為 xl，在 md 螢幕及以上為 2xl */
+      @apply text-xl md:text-2xl font-bold mb-4 text-[#2D2A4A] dark:text-gray-300;
   }
 }

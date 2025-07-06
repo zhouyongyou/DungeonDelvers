@@ -1,8 +1,8 @@
 // src/pages/DungeonPage.tsx
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useReadContracts, useReadContract, useWriteContract } from 'wagmi';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatEther } from 'viem';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { getContract, dungeonStorageABI, type contracts } from '../config/contracts';
@@ -17,10 +17,8 @@ import { Modal } from '../components/ui/Modal';
 import ProvisionsPage from './ProvisionsPage';
 import { bsc, bscTestnet } from 'wagmi/chains';
 
-// 定義支援的鏈 ID 型別
 type SupportedChainId = keyof typeof contracts;
 
-// 地城資訊的型別定義
 interface Dungeon {
   id: number;
   name: string;
@@ -30,7 +28,6 @@ interface Dungeon {
   isInitialized: boolean;
 }
 
-// 單個隊伍卡片的 Props 型別
 interface PartyStatusCardProps {
   party: PartyNft;
   dungeons: Dungeon[];
@@ -38,27 +35,32 @@ interface PartyStatusCardProps {
   onRest: (partyId: bigint) => void;
   onBuyProvisions: (partyId: bigint) => void;
   isTxPending: boolean;
-  chainId: SupportedChainId; // 傳入 chainId
+  isAnyTxPendingForThisParty: boolean; // ★ 新增：判斷此卡片是否有待處理交易
+  chainId: SupportedChainId;
 }
 
-/**
- * 隊伍狀態卡片元件
- * 負責顯示單一隊伍的狀態，並提供相應的操作按鈕。
- */
-const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onStartExpedition, onRest, onBuyProvisions, isTxPending, chainId }) => {
+const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onStartExpedition, onRest, onBuyProvisions, isTxPending, isAnyTxPendingForThisParty, chainId }) => {
     const [selectedDungeonId, setSelectedDungeonId] = useState<bigint>(1n);
 
-    // 從 props 獲取 chainId，確保型別正確
     const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
     const dungeonStorageContract = getContract(chainId, 'dungeonStorage');
 
-    const { data: partyStatus, isLoading: isLoadingStatus } = useReadContract({
+    const { data: partyStatus, isLoading: isLoadingStatus, refetch: refetchPartyStatus } = useReadContract({
         ...dungeonStorageContract,
         functionName: 'getPartyStatus',
         args: [party.id],
         query: { enabled: !!dungeonStorageContract, refetchInterval: 5000 }
     });
     
+    // ★ 新增：交易成功後刷新狀態
+    const queryClient = useQueryClient();
+    useEffect(() => {
+        if (!isAnyTxPendingForThisParty) {
+            refetchPartyStatus();
+            queryClient.invalidateQueries({ queryKey: ['ownedNfts', party.contractAddress, chainId] });
+        }
+    }, [isAnyTxPendingForThisParty, refetchPartyStatus, queryClient, party.contractAddress, chainId]);
+
     const { data: explorationFee } = useReadContract({
         ...dungeonMasterContract,
         functionName: 'explorationFee',
@@ -67,12 +69,9 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
 
     const { isOnCooldown, fatigueLevel, effectivePower, provisionsRemaining } = useMemo(() => {
         if (!partyStatus) return { isOnCooldown: false, fatigueLevel: 0, effectivePower: BigInt(party.totalPower), provisionsRemaining: 0n };
-        
         const [provisions, cooldownEndsAt, , fatigue] = partyStatus as unknown as readonly [bigint, bigint, bigint, number];
-        
         const power = BigInt(party.totalPower);
         const effPower = power * (100n - BigInt(fatigue) * 2n) / 100n;
-
         return {
             isOnCooldown: BigInt(Math.floor(Date.now() / 1000)) < cooldownEndsAt,
             fatigueLevel: fatigue,
@@ -83,6 +82,8 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
 
     const renderStatus = () => {
         if (isLoadingStatus) return <span className="text-gray-400">讀取狀態...</span>;
+        // ★ 修改：增加「遠征中」的狀態顯示
+        if (isAnyTxPendingForThisParty) return <span className="px-3 py-1 text-sm font-medium text-purple-300 bg-purple-900/50 rounded-full flex items-center gap-2"><LoadingSpinner size="h-3 w-3" />遠征中</span>;
         if (isOnCooldown) return <span className="px-3 py-1 text-sm font-medium text-yellow-300 bg-yellow-900/50 rounded-full">冷卻中...</span>;
         if (provisionsRemaining === 0n) return <span className="px-3 py-1 text-sm font-medium text-orange-400 bg-orange-900/50 rounded-full">需要儲備</span>;
         if (fatigueLevel > 0) return <span className="px-3 py-1 text-sm font-medium text-blue-300 bg-blue-900/50 rounded-full">需要休息</span>;
@@ -91,22 +92,16 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
 
     const renderAction = () => {
         if (isLoadingStatus) return <div className="h-10 w-full rounded-lg bg-gray-700 animate-pulse"></div>;
-        if (isOnCooldown) return <ActionButton disabled className="w-full h-10">冷卻中</ActionButton>;
+        if (isOnCooldown || isAnyTxPendingForThisParty) return <ActionButton disabled className="w-full h-10">{isAnyTxPendingForThisParty ? '遠征中' : '冷卻中'}</ActionButton>;
         if (provisionsRemaining === 0n) return <ActionButton onClick={() => onBuyProvisions(party.id)} className="w-full h-10 bg-orange-600 hover:bg-orange-500">購買儲備</ActionButton>;
         if (fatigueLevel > 0) return <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10 bg-blue-600 hover:bg-blue-500">休息</ActionButton>;
         
-        // 確保 explorationFee 是 bigint
         const fee = typeof explorationFee === 'bigint' ? explorationFee : 0n;
-
-        return (
-            <ActionButton onClick={() => onStartExpedition(party.id, selectedDungeonId, fee)} isLoading={isTxPending} className="w-full h-10">
-                開始遠征
-            </ActionButton>
-        );
+        return <ActionButton onClick={() => onStartExpedition(party.id, selectedDungeonId, fee)} isLoading={isTxPending} className="w-full h-10">開始遠征</ActionButton>;
     };
 
     return (
-        <div className={`card-bg p-4 rounded-2xl flex flex-col h-full border-2 ${isOnCooldown ? 'border-yellow-500/50' : 'border-transparent'}`}>
+        <div className={`card-bg p-4 rounded-2xl flex flex-col h-full border-2 transition-all ${isAnyTxPendingForThisParty ? 'border-purple-500/50' : isOnCooldown ? 'border-yellow-500/50' : 'border-transparent'}`}>
             <div className="flex justify-between items-start mb-3">
                 <h4 className="font-bold text-lg text-white truncate pr-2">{party.name}</h4>
                 {renderStatus()}
@@ -122,7 +117,7 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
                     value={selectedDungeonId.toString()} 
                     onChange={(e) => setSelectedDungeonId(BigInt(e.target.value))}
                     className="w-full p-2 border rounded-lg bg-gray-900/80 border-gray-700 text-white mt-1"
-                    disabled={provisionsRemaining === 0n || isOnCooldown}
+                    disabled={provisionsRemaining === 0n || isOnCooldown || isAnyTxPendingForThisParty}
                 >
                     {dungeons.map(d => <option key={d.id} value={d.id.toString()}>{d.id}. {d.name} (要求: {d.requiredPower.toString()})</option>)}
                 </select>
@@ -144,29 +139,21 @@ const DungeonInfoCard: React.FC<{ dungeon: Dungeon }> = ({ dungeon }) => (
     </div>
 );
 
-/**
- * 地下城頁面主元件
- */
 const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setActivePage }) => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
-    const { addTransaction } = useTransactionStore();
+    const { addTransaction, transactions } = useTransactionStore();
 
     const [isProvisionModalOpen, setIsProvisionModalOpen] = useState(false);
     const [selectedPartyForProvision, setSelectedPartyForProvision] = useState<bigint | null>(null);
 
-    // ★ 核心修正：在元件的開頭加入型別防衛
     if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
         return <div className="flex justify-center items-center h-64"><p className="text-lg text-gray-500">請連接到支援的網路</p></div>;
     }
 
     const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
     
-    const { data: dungeonStorageAddress } = useReadContract({
-        ...dungeonMasterContract,
-        functionName: 'dungeonStorage',
-        query: { enabled: !!dungeonMasterContract }
-    });
+    const { data: dungeonStorageAddress } = useReadContract({ ...dungeonMasterContract, functionName: 'dungeonStorage', query: { enabled: !!dungeonMasterContract } });
 
     const dungeonStorageContract = useMemo(() => {
         if (!dungeonStorageAddress) return null;
@@ -182,11 +169,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
     });
 
     const { data: dungeonsData, isLoading: isLoadingDungeons } = useReadContracts({
-        contracts: Array.from({ length: 10 }, (_, i) => ({
-            ...dungeonStorageContract,
-            functionName: 'getDungeon',
-            args: [BigInt(i + 1)],
-        })),
+        contracts: Array.from({ length: 10 }, (_, i) => ({ ...dungeonStorageContract, functionName: 'getDungeon', args: [BigInt(i + 1)], })),
         query: { enabled: !!dungeonStorageContract }
     });
 
@@ -199,40 +182,26 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
             return { id: i + 1, name: getDungeonName(i + 1), requiredPower, rewardAmountUSD, baseSuccessRate, isInitialized };
         }).filter((d): d is Dungeon => d !== null && d.isInitialized);
     }, [dungeonsData]);
+    
+    // ★ 新增：檢查特定隊伍是否有待處理的交易
+    const checkPendingTxForParty = (partyId: bigint) => {
+        return transactions.some(tx => tx.status === 'pending' && tx.description.includes(`隊伍 #${partyId.toString()}`));
+    };
 
     const handleStartExpedition = async (partyId: bigint, dungeonId: bigint, fee: bigint) => {
         if (!dungeonMasterContract) return;
         try {
-            const hash = await writeContractAsync({
-                address: dungeonMasterContract.address,
-                abi: dungeonMasterContract.abi,
-                functionName: 'requestExpedition',
-                args: [partyId, dungeonId],
-                value: fee,
-            });
+            const hash = await writeContractAsync({ ...dungeonMasterContract, functionName: 'requestExpedition', args: [partyId, dungeonId], value: fee, });
             addTransaction({ hash, description: `隊伍 #${partyId.toString()} 遠征地城 #${dungeonId}` });
-        } catch (e: any) {
-            if (!e.message.includes('User rejected the request')) {
-                showToast(e.shortMessage || "遠征請求失敗", "error");
-            }
-        }
+        } catch (e: any) { if (!e.message.includes('User rejected the request')) { showToast(e.shortMessage || "遠征請求失敗", "error"); } }
     };
 
     const handleRest = async (partyId: bigint) => {
         if (!dungeonMasterContract) return;
         try {
-            const hash = await writeContractAsync({
-                address: dungeonMasterContract.address,
-                abi: dungeonMasterContract.abi,
-                functionName: 'restParty',
-                args: [partyId],
-            });
+            const hash = await writeContractAsync({ ...dungeonMasterContract, functionName: 'restParty', args: [partyId], });
             addTransaction({ hash, description: `隊伍 #${partyId.toString()} 正在休息` });
-        } catch (e: any) {
-            if (!e.message.includes('User rejected the request')) {
-                showToast(e.shortMessage || "休息失敗", "error");
-            }
-        }
+        } catch (e: any) { if (!e.message.includes('User rejected the request')) { showToast(e.shortMessage || "休息失敗", "error"); } }
     };
 
     const handleBuyProvisions = (partyId: bigint) => {
@@ -242,25 +211,13 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
 
     const isLoading = isLoadingNfts || isLoadingDungeons;
 
-    if (isLoading) {
-        return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
-    }
+    if (isLoading) return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
 
     return (
         <section className="space-y-8">
-            <Modal
-                isOpen={isProvisionModalOpen}
-                onClose={() => setIsProvisionModalOpen(false)}
-                title="購買遠征儲備"
-                onConfirm={() => {}} // This modal is now just a container, logic is in ProvisionsPage
-                confirmText="關閉" // Or hide buttons
-            >
-                <ProvisionsPage 
-                    preselectedPartyId={selectedPartyForProvision} 
-                    onPurchaseSuccess={() => setIsProvisionModalOpen(false)}
-                />
+            <Modal isOpen={isProvisionModalOpen} onClose={() => setIsProvisionModalOpen(false)} title="購買遠征儲備" onConfirm={() => {}} confirmText="關閉">
+                <ProvisionsPage preselectedPartyId={selectedPartyForProvision} onPurchaseSuccess={() => setIsProvisionModalOpen(false)} />
             </Modal>
-
             <div>
                 <h2 className="page-title">遠征指揮中心</h2>
                 {(!nfts || nfts.parties.length === 0) ? (
@@ -278,19 +235,17 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
                                 onRest={handleRest}
                                 onBuyProvisions={handleBuyProvisions}
                                 isTxPending={isTxPending}
+                                isAnyTxPendingForThisParty={checkPendingTxForParty(party.id)}
                                 chainId={chainId}
                             />
                         ))}
                     </div>
                 )}
             </div>
-
             <div>
                 <h2 className="page-title">可挑戰的地下城</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {dungeons.map(dungeon => (
-                        <DungeonInfoCard key={dungeon.id} dungeon={dungeon} />
-                    ))}
+                    {dungeons.map(dungeon => ( <DungeonInfoCard key={dungeon.id} dungeon={dungeon} /> ))}
                 </div>
             </div>
         </section>
