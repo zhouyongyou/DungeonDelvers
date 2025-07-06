@@ -1,6 +1,7 @@
 // src/config/contracts.ts
 
 import { bsc, bscTestnet } from 'wagmi/chains';
+import { type Address } from 'viem';
 import {
   soulShardTokenABI,
   heroABI,
@@ -21,35 +22,36 @@ export * from './abis';
 
 // =================================================================
 // 1. 定義所有合約的地址和 ABI
+// ★ 核心修改：所有地址現在都直接從 Vite 的環境變數動態讀取
 // =================================================================
 export const contracts = {
   [bscTestnet.id]: {
-    soulShard: { address: '0x89AF1ab41C685cDe2332C72f116751d74F49Bc3c', abi: soulShardTokenABI },
-    hero: { address: '0x3eF0465a44cBfd9dCD0C171Db4a5E4E18b8B44C6', abi: heroABI },
-    relic: { address: '0x3A7ad003398FF2992c8593D22B8dfc2dE83d849B', abi: relicABI },
-    dungeonCore: { address: '0x4e771432EB5dDBe15B08A6D3FF518F37c6C66008', abi: dungeonCoreABI },
-    party: { address: '0x6b12A3Ae454c159b2aEef6A6F8AB0A78e0f73424', abi: partyABI },
-    altarOfAscension: { address: '0x278fb199c83c26c1fA263CcB5C0da624980910Fd', abi: altarOfAscensionABI },
-    playerProfile: { address: '0x888cAf0c7C963800C6c3c71D4cC7cc4e086a78f6', abi: playerProfileABI },
-    vipStaking: { address: '0x5ed023caD3218727d81636c3dDF3A764920Ce66a', abi: vipStakingABI },
-    playerVault: { address: '0x7D9814790e57cF13941a6cc58652627e8c6B1fC2', abi: playerVaultABI },
-    dungeonMaster: { address: '0xFB7229320C6B3d19D62D7dfCb4498BC1fCB5fE92', abi: dungeonMasterABI },
-    dungeonStorage: { address: '0x6606bABeE8C1Cd2513F048eFC0037dFFEF33A31e', abi: dungeonStorageABI },
-    oracle: { address: '0xfD9Df1Df0C8c47F04305AB594CcEfA0D1A6A54BF', abi: oracleABI },
+    soulShard: { address: import.meta.env.VITE_SOUL_SHARD_TOKEN_ADDRESS as Address, abi: soulShardTokenABI },
+    hero: { address: import.meta.env.VITE_TESTNET_HERO_ADDRESS as Address, abi: heroABI },
+    relic: { address: import.meta.env.VITE_TESTNET_RELIC_ADDRESS as Address, abi: relicABI },
+    dungeonCore: { address: import.meta.env.VITE_TESTNET_DUNGEONCORE_ADDRESS as Address, abi: dungeonCoreABI },
+    party: { address: import.meta.env.VITE_TESTNET_PARTY_ADDRESS as Address, abi: partyABI },
+    altarOfAscension: { address: import.meta.env.VITE_TESTNET_ALTAROFASCENSION_ADDRESS as Address, abi: altarOfAscensionABI },
+    playerProfile: { address: import.meta.env.VITE_TESTNET_PLAYERPROFILE_ADDRESS as Address, abi: playerProfileABI },
+    vipStaking: { address: import.meta.env.VITE_TESTNET_VIPSTAKING_ADDRESS as Address, abi: vipStakingABI },
+    playerVault: { address: import.meta.env.VITE_TESTNET_PLAYERVAULT_ADDRESS as Address, abi: playerVaultABI },
+    dungeonMaster: { address: import.meta.env.VITE_TESTNET_DUNGEONMASTER_ADDRESS as Address, abi: dungeonMasterABI },
+    dungeonStorage: { address: import.meta.env.VITE_TESTNET_DUNGEONSTORAGE_ADDRESS as Address, abi: dungeonStorageABI },
+    oracle: { address: import.meta.env.VITE_TESTNET_ORACLE_ADDRESS as Address, abi: oracleABI },
   },
   [bsc.id]: {
-    soulShard: { address: '0xYOUR_MAINNET_SOULSHARD_ADDRESS', abi: soulShardTokenABI },
-    hero: { address: '0xYOUR_MAINNET_HERO_ADDRESS', abi: heroABI },
-    relic: { address: '0xYOUR_MAINNET_RELIC_ADDRESS', abi: relicABI },
-    dungeonCore: { address: '0xYOUR_MAINNET_DUNGEONCORE_ADDRESS', abi: dungeonCoreABI },
-    party: { address: '0xYOUR_MAINNET_PARTY_ADDRESS', abi: partyABI },
-    altarOfAscension: { address: '0xYOUR_MAINNET_ALTAR_ADDRESS', abi: altarOfAscensionABI },
-    playerProfile: { address: '0xYOUR_MAINNET_PLAYERPROFILE_ADDRESS', abi: playerProfileABI },
-    vipStaking: { address: '0xYOUR_MAINNET_VIPSTAKING_ADDRESS', abi: vipStakingABI },
-    playerVault: { address: '0xYOUR_MAINNET_PLAYERVAULT_ADDRESS', abi: playerVaultABI },
-    dungeonMaster: { address: '0xYOUR_MAINNET_DUNGEONMASTER_ADDRESS', abi: dungeonMasterABI },
-    dungeonStorage: { address: '0xYOUR_MAINNET_DUNGEONSTORAGE_ADDRESS', abi: dungeonStorageABI },
-    oracle: { address: '0xYOUR_MAINNET_ORACLE_ADDRESS', abi: oracleABI },
+    soulShard: { address: import.meta.env.VITE_SOUL_SHARD_TOKEN_ADDRESS as Address, abi: soulShardTokenABI },
+    hero: { address: import.meta.env.VITE_MAINNET_HERO_ADDRESS as Address, abi: heroABI },
+    relic: { address: import.meta.env.VITE_MAINNET_RELIC_ADDRESS as Address, abi: relicABI },
+    dungeonCore: { address: import.meta.env.VITE_MAINNET_DUNGEONCORE_ADDRESS as Address, abi: dungeonCoreABI },
+    party: { address: import.meta.env.VITE_MAINNET_PARTY_ADDRESS as Address, abi: partyABI },
+    altarOfAscension: { address: import.meta.env.VITE_MAINNET_ALTAROFASCENSION_ADDRESS as Address, abi: altarOfAscensionABI },
+    playerProfile: { address: import.meta.env.VITE_MAINNET_PLAYERPROFILE_ADDRESS as Address, abi: playerProfileABI },
+    vipStaking: { address: import.meta.env.VITE_MAINNET_VIPSTAKING_ADDRESS as Address, abi: vipStakingABI },
+    playerVault: { address: import.meta.env.VITE_MAINNET_PLAYERVAULT_ADDRESS as Address, abi: playerVaultABI },
+    dungeonMaster: { address: import.meta.env.VITE_MAINNET_DUNGEONMASTER_ADDRESS as Address, abi: dungeonMasterABI },
+    dungeonStorage: { address: import.meta.env.VITE_MAINNET_DUNGEONSTORAGE_ADDRESS as Address, abi: dungeonStorageABI },
+    oracle: { address: import.meta.env.VITE_MAINNET_ORACLE_ADDRESS as Address, abi: oracleABI },
   },
 } as const;
 
@@ -81,7 +83,8 @@ export function getContract<
   
   const contractConfig = contracts[chainId][name];
   
-  if (!contractConfig || typeof (contractConfig as any).address !== 'string' || (contractConfig as any).address.includes('YOUR_')) {
+  // 這裡的檢查現在變得更重要，如果 .env 檔案中沒有填寫地址，它會是 undefined 或空字串
+  if (!contractConfig || !(contractConfig as any).address) {
     return null;
   }
   
