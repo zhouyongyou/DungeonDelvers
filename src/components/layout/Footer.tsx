@@ -1,3 +1,5 @@
+// src/components/layout/Footer.tsx
+
 import React, { useState, useEffect } from 'react';
 import { useAccount, useClient } from 'wagmi';
 import { bsc, bscTestnet } from 'wagmi/chains';
@@ -5,6 +7,43 @@ import { getBlockNumber } from '@wagmi/core';
 import { wagmiConfig } from '../../wagmi';
 import fourLogoUrl from '/assets/images/FOUR-logo4.png';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
+
+// 新增：複製圖示元件
+const CopyIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+  </svg>
+);
+
+// 新增：合約地址顯示元件
+const ContractAddressItem: React.FC<{ name: string; address?: string }> = ({ name, address }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (!address) return;
+    navigator.clipboard.writeText(address);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (!address || address.includes('YOUR_')) {
+    return null; // 如果地址未設定，則不顯示
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-2 text-xs py-1">
+      <span className="text-gray-400">{name}:</span>
+      <div className="flex items-center gap-2 font-mono text-gray-300 bg-black/20 px-2 py-1 rounded">
+        <span>{`${address.substring(0, 6)}...${address.substring(address.length - 4)}`}</span>
+        <button onClick={handleCopy} className="text-gray-400 hover:text-white transition-colors" title="複製地址">
+          {copied ? '已複製!' : <CopyIcon className="w-3 h-3" />}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 
 export const Footer: React.FC = () => {
   const { chain } = useAccount();
@@ -18,7 +57,7 @@ export const Footer: React.FC = () => {
   useEffect(() => {
     const checkRpcHealth = async () => {
       if (!client) {
-      setRpcStatus({ isHealthy: null, endpoint: '錢包未連接' });
+        setRpcStatus({ isHealthy: null, endpoint: '錢包未連接' });
         return;
       }
       const currentChainId = client.chain.id;
@@ -49,10 +88,11 @@ export const Footer: React.FC = () => {
   
   const { color: statusColor, text: statusText } = getStatusIndicator();
 
-  const isTestnet = typeof window !== 'undefined' && (window.location.hostname.includes('test') || window.location.pathname.startsWith('/test'));
+  // 從環境變數讀取 URL
+  const mainnetUrl = import.meta.env.VITE_MAINNET_URL || "https://dungeondelvers.xyz";
+  const testnetUrl = import.meta.env.VITE_TESTNET_URL || "https://test.dungeondelvers.xyz";
+  const isTestnet = typeof window !== 'undefined' && window.location.href.includes('test');
   const isMainnet = !isTestnet;
-  const mainnetUrl = "https://www.soulshard.fun/";
-  const testnetUrl = "https://test.soulshard.fun/"; 
   const [isNavigating, setIsNavigating] = React.useState(false);
 
   const handleGoToMainnet = () => {
@@ -87,7 +127,16 @@ export const Footer: React.FC = () => {
         </div>
       </div>
 
-      <div className="container mx-auto text-center py-4">
+      <div className="container mx-auto text-center py-6 px-4">
+        {/* 新增：合約地址區域 */}
+        <div className="max-w-md mx-auto mb-6">
+            <h4 className="text-sm font-bold text-gray-400 mb-2 border-b border-gray-700 pb-1">核心合約地址</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                <ContractAddressItem name="$SoulShard" address={import.meta.env.VITE_SOUL_SHARD_TOKEN_ADDRESS} />
+                <ContractAddressItem name="USD Token" address={import.meta.env.VITE_USD_TOKEN_ADDRESS} />
+            </div>
+        </div>
+
         <div className="flex justify-center items-center text-sm gap-2 mb-4">
           <span className="text-gray-400 text-xs">伺服器:</span>
           <button 

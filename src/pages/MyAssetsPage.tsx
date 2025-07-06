@@ -11,8 +11,9 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { getContract } from '../config/contracts';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
-import type { AnyNft, HeroNft, RelicNft, NftType, PartyNft } from '../types/nft';
+import type { AnyNft, HeroNft, RelicNft, NftType } from '../types/nft'; // ★ 修正：移除未使用的 'PartyNft'
 import { formatEther } from 'viem';
+import { bsc, bscTestnet } from 'wagmi/chains'; // ★ 新增：導入 bsc 和 bscTestnet 以便進行型別防衛
 
 // TeamBuilder 元件保持不變...
 interface TeamBuilderProps {
@@ -143,15 +144,25 @@ const MyAssetsPage: React.FC = () => {
 
     const [filter, setFilter] = useState<NftType>('party');
 
+    // ★★★ 核心修正：在元件渲染的開頭加入型別防衛 ★★★
+    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+        return (
+            <div className="flex justify-center items-center h-64">
+                <p className="text-lg text-gray-500">請連接到支援的網路 (BSC 或 BSC 測試網) 以檢視您的資產。</p>
+            </div>
+        );
+    }
+
     const heroContract = getContract(chainId, 'hero');
     const relicContract = getContract(chainId, 'relic');
     const partyContract = getContract(chainId, 'party');
 
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
+    // 現在這個呼叫是型別安全的，因為上面的防衛確保了 chainId 是 56 或 97
     const { data: nfts, isLoading } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
-        queryFn: () => fetchAllOwnedNfts(address!, chainId!),
+        queryFn: () => fetchAllOwnedNfts(address!, chainId),
         enabled: !!address && !!chainId,
     });
     

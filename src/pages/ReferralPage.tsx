@@ -1,114 +1,142 @@
-// src/pages/ReferralPage.tsx (新檔案)
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract } from 'wagmi';
-import { type Address } from 'viem';
 import { getContract } from '../config/contracts';
-import { ActionButton } from '../components/ui/ActionButton';
-import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
-import { Icons } from '../components/ui/icons';
+import { ActionButton } from '../components/ui/ActionButton';
+import { isAddress, formatEther } from 'viem';
+import { bsc, bscTestnet } from 'wagmi/chains';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'; // ★ 新增：導入 LoadingSpinner
 
 const ReferralPage: React.FC = () => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
+
     const [referrerInput, setReferrerInput] = useState('');
     const [copied, setCopied] = useState(false);
 
+    // ★ 核心修正 #1：在元件的開頭加入型別防衛
+    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+        return <div className="p-4 text-center text-gray-400">請連接到支援的網路以使用邀請功能。</div>;
+    }
+
+    // ★ 修正：移除未使用的 dungeonCoreContract
     const playerVaultContract = getContract(chainId, 'playerVault');
 
-    const { data: userReferrer, isLoading: isLoadingReferrer, refetch } = useReadContract({
-        ...playerVaultContract,
+    // ★ 核心修正 #2：確保 wagmi hook 的參數是型別安全的
+    const { data: currentReferrer, isLoading: isLoadingReferrer, refetch: refetchReferrer } = useReadContract({
+        address: playerVaultContract?.address,
+        abi: playerVaultContract?.abi,
         functionName: 'referrers',
         args: [address!],
-        query: { enabled: !!address && !!playerVaultContract },
+        query: { enabled: !!address && !!playerVaultContract && playerVaultContract.address.startsWith('0x') },
     });
 
-    const { writeContractAsync, isPending } = useWriteContract();
+    const { data: totalCommission, isLoading: isLoadingCommission } = useReadContract({
+        address: playerVaultContract?.address,
+        abi: playerVaultContract?.abi,
+        functionName: 'totalCommissionPaid',
+        args: [address!],
+        query: { enabled: !!address && !!playerVaultContract && playerVaultContract.address.startsWith('0x') },
+    });
 
-    const myReferralLink = `${window.location.origin}${window.location.pathname}#/dashboard?ref=${address}`;
+    const { writeContractAsync, isPending: isSettingReferrer } = useWriteContract();
 
     const handleSetReferrer = async () => {
-        if (!referrerInput || !playerVaultContract) return;
+        if (!isAddress(referrerInput)) {
+            return showToast('請輸入有效的錢包地址', 'error');
+        }
+        if (!playerVaultContract || !playerVaultContract.address.startsWith('0x')) {
+            return showToast('合約尚未準備好', 'error');
+        }
+
         try {
             const hash = await writeContractAsync({
-                ...playerVaultContract,
+                address: playerVaultContract.address,
+                abi: playerVaultContract.abi,
                 functionName: 'setReferrer',
-                args: [referrerInput as Address],
+                args: [referrerInput],
             });
-            addTransaction({ hash, description: `設定邀請人` });
-            refetch();
+            addTransaction({ hash, description: `設定邀請人為 ${referrerInput.substring(0, 6)}...` });
+            setTimeout(() => refetchReferrer(), 2000);
         } catch (e: any) {
             if (!e.message.includes('User rejected the request')) {
-                showToast(e.shortMessage || "設定失敗", "error");
+                showToast(e.shortMessage || "設定邀請人失敗", "error");
             }
         }
     };
 
+    const referralLink = useMemo(() => {
+        if (typeof window === 'undefined' || !address) return '';
+        return `${window.location.origin}?ref=${address}`;
+    }, [address]);
+
     const handleCopyLink = () => {
-        navigator.clipboard.writeText(myReferralLink).then(() => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        });
+        navigator.clipboard.writeText(referralLink);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
     };
-    
-    // 【新增】檢查 URL 中是否有邀請碼，並自動填入
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.hash.split('?')[1]);
-        const ref = params.get('ref');
-        if (ref) {
-            setReferrerInput(ref);
-        }
-    }, []);
+
+    const hasReferrer = useMemo(() => {
+        return currentReferrer && currentReferrer !== '0x0000000000000000000000000000000000000000';
+    }, [currentReferrer]);
 
     return (
-        <section className="space-y-8 max-w-2xl mx-auto">
-            <h2 className="page-title">邀請中心</h2>
+        <section className="space-y-8 max-w-3xl mx-auto">
+            <h2 className="page-title">邀請與佣金中心</h2>
 
-            <div className="card-bg p-6 rounded-2xl shadow-lg">
-                <h3 className="section-title">我的邀請資訊</h3>
-                <p className="text-sm text-gray-400 mb-4">邀請朋友加入 Dungeon Delvers，當他們從金庫提領獎勵時，您將獲得佣金作為回報！</p>
-                <div className="flex items-center gap-2 p-2 bg-gray-900/50 rounded-lg">
+            <div className="card-bg p-6 rounded-xl shadow-lg">
+                <h3 className="section-title">我的邀請連結</h3>
+                <p className="text-sm text-gray-400 mb-4">分享您的專屬連結，當被邀請的好友從金庫提領獎勵時，您將獲得他們提領金額 5% 的佣金作為獎勵！</p>
+                <div className="flex flex-col sm:flex-row items-center gap-2 bg-black/20 p-2 rounded-lg">
                     <input
                         type="text"
                         readOnly
-                        value={myReferralLink}
-                        className="w-full bg-transparent border-none text-gray-300 text-sm"
+                        value={referralLink}
+                        className="w-full bg-transparent text-gray-300 font-mono text-sm p-2"
                     />
-                    <button onClick={handleCopyLink} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-md text-sm whitespace-nowrap">
+                    <ActionButton onClick={handleCopyLink} className="w-full sm:w-auto flex-shrink-0">
                         {copied ? '已複製!' : '複製連結'}
-                    </button>
+                    </ActionButton>
+                </div>
+                <div className="mt-4 text-center">
+                    <p className="text-gray-400">我賺取的總佣金</p>
+                    {isLoadingCommission ? <LoadingSpinner size="h-8 w-8" /> : <p className="text-3xl font-bold text-yellow-400">{parseFloat(formatEther(typeof totalCommission === 'bigint' ? totalCommission : 0n)).toFixed(4)} $SoulShard</p>}
                 </div>
             </div>
 
-            <div className="card-bg p-6 rounded-2xl shadow-lg">
-                <h3 className="section-title">綁定邀請人</h3>
-                {isLoadingReferrer ? (
-                    <LoadingSpinner />
-                ) : userReferrer && userReferrer !== '0x0000000000000000000000000000000000000000' ? (
-                    <div>
-                        <p className="text-gray-400">您已綁定邀請人：</p>
-                        <p className="font-mono text-green-400 bg-black/20 p-2 rounded break-all">{userReferrer}</p>
-                        <p className="text-xs text-gray-500 mt-2">邀請關係一旦設定便無法更改。</p>
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        <p className="text-sm text-gray-400">如果您是經由他人邀請加入，請在此處輸入他們的錢包地址。此操作只能進行一次。</p>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                value={referrerInput}
-                                onChange={(e) => setReferrerInput(e.target.value)}
-                                placeholder="貼上邀請人的錢包地址"
-                                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none h-10 bg-gray-800 border-gray-700"
-                            />
-                            <ActionButton onClick={handleSetReferrer} isLoading={isPending} className="h-10 w-28">
-                                綁定
-                            </ActionButton>
+            <div className="card-bg p-6 rounded-xl shadow-lg">
+                <h3 className="section-title">設定我的邀請人</h3>
+                {isLoadingReferrer ? <LoadingSpinner /> : (
+                    hasReferrer ? (
+                        <div>
+                            <p className="text-gray-400">您目前的邀請人是:</p>
+                            <p className="font-mono text-lg text-green-400 bg-black/20 p-2 rounded break-all">{currentReferrer}</p>
+                            <p className="text-xs text-gray-500 mt-2">注意：邀請人一經設定，便無法更改。</p>
                         </div>
-                    </div>
+                    ) : (
+                        <div>
+                            <p className="text-sm text-gray-400 mb-4">如果您是透過好友的連結來到這裡，請在此輸入他的錢包地址以綁定邀請關係。此操作只能進行一次。</p>
+                            <div className="flex flex-col sm:flex-row items-center gap-2">
+                                <input
+                                    type="text"
+                                    value={referrerInput}
+                                    onChange={(e) => setReferrerInput(e.target.value)}
+                                    placeholder="貼上邀請人的錢包地址"
+                                    className="w-full p-2 border rounded-lg bg-gray-800 border-gray-600 text-white font-mono"
+                                />
+                                <ActionButton
+                                    onClick={handleSetReferrer}
+                                    isLoading={isSettingReferrer}
+                                    disabled={!isAddress(referrerInput)}
+                                    className="w-full sm:w-auto flex-shrink-0"
+                                >
+                                    確認綁定
+                                </ActionButton>
+                            </div>
+                        </div>
+                    )
                 )}
             </div>
         </section>

@@ -1,6 +1,6 @@
 // src/config/contracts.ts
 
-import { type Address } from 'viem';
+// ★ 修正：移除未使用的 'Address' 型別導入
 import { bsc, bscTestnet } from 'wagmi/chains';
 import {
   soulShardTokenABI,
@@ -12,9 +12,9 @@ import {
   playerProfileABI,
   vipStakingABI,
   playerVaultABI,
-  dungeonMasterABI, // 新增：導入 DungeonMaster 的 ABI
+  dungeonMasterABI,
+  dungeonStorageABI,
   oracleABI,
-  dungeonStorageABI, // 新增：導入 Oracle 的 ABI
 } from './abis';
 
 // 重新匯出 ABIs，方便其他地方統一導入
@@ -35,8 +35,8 @@ export const contracts = {
     vipStaking: { address: '0x5ed023caD3218727d81636c3dDF3A764920Ce66a', abi: vipStakingABI },
     playerVault: { address: '0x1aC675574baeB3ec99299E84b70B19325fa337b3', abi: playerVaultABI },
     dungeonMaster: { address: '0xFB7229320C6B3d19D62D7dfCb4498BC1fCB5fE92', abi: dungeonMasterABI },
-    oracle: { address: '0xfD9Df1Df0C8c47F04305AB594CcEfA0D1A6A54BF', abi: oracleABI },
     dungeonStorage: { address: '0x6606bABeE8C1Cd2513F048eFC0037dFFEF33A31e', abi: dungeonStorageABI },
+    oracle: { address: '0xfD9Df1Df0C8c47F04305AB594CcEfA0D1A6A54BF', abi: oracleABI },
   },
   [bsc.id]: {
     soulShard: { address: '0xYOUR_MAINNET_SOULSHARD_ADDRESS', abi: soulShardTokenABI },
@@ -47,10 +47,10 @@ export const contracts = {
     altarOfAscension: { address: '0xYOUR_MAINNET_ALTAR_ADDRESS', abi: altarOfAscensionABI },
     playerProfile: { address: '0xYOUR_MAINNET_PLAYERPROFILE_ADDRESS', abi: playerProfileABI },
     vipStaking: { address: '0xYOUR_MAINNET_VIPSTAKING_ADDRESS', abi: vipStakingABI },
-    playerVault: { address: '0xYOUR_MAINNET_PLAYERVAULT_ADDRESS', abi: playerVaultABI },
-    dungeonMaster: { address: '0xYOUR_MAINNET_DUNGEONMASTER_ADDRESS', abi: dungeonMasterABI },
-    oracle: { address: '0xYOUR_MAINNET_ORACLE_ADDRESS', abi: oracleABI },
+    playerVault: { address: 'YOUR_MAINNET_PLAYERVAULT_ADDRESS', abi: playerVaultABI },
+    dungeonMaster: { address: 'YOUR_MAINNET_DUNGEONMASTER_ADDRESS', abi: dungeonMasterABI },
     dungeonStorage: { address: 'YOUR_MAINNET_DUNGEONSTORAGE_ADDRESS', abi: dungeonStorageABI },
+    oracle: { address: 'YOUR_MAINNET_ORACLE_ADDRESS', abi: oracleABI },
   },
 } as const;
 
@@ -78,8 +78,14 @@ export function getContract<
   
   const contractConfig = contracts[chainId][name];
   
+  // ★★★ 核心修正 ★★★
+  // 我們在這裡進行一個型別斷言 (type assertion)，明確告訴 TypeScript
+  // `contractConfig` 這個物件一定會有一個 `address` 屬性，其型別為 string。
+  // 這解決了 TypeScript 在處理泛型時無法準確推斷型別的問題。
+  const address = (contractConfig as { address: string }).address;
+
   // 檢查合約地址是否為預留位置
-  if (!contractConfig || (contractConfig.address as string).includes('YOUR_')) {
+  if (!contractConfig || address.includes('YOUR_')) {
     // console.warn(`合約 "${String(name)}" 在 chainId ${chainId} 的地址尚未設定。`);
     return null;
   }

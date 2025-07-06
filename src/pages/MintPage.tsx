@@ -6,7 +6,7 @@ import { getContract } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useTransactionStore } from '../stores/useTransactionStore';
-import type { NftType } from '../types/nft';
+import { bsc, bscTestnet } from 'wagmi/chains';
 
 // =================================================================
 // Section: 型別定義與輔助 Hook
@@ -18,57 +18,77 @@ type PaymentSource = 'wallet' | 'vault';
  * @dev 一個自定義 Hook，專門負責計算鑄造所需的成本和檢查用戶的授權狀態。
  * @returns {object} 包含所需代幣數量、用戶餘額、是否需要授權等資訊的物件。
  */
-const useMintLogic = (type: NftType, quantity: number, paymentSource: PaymentSource) => {
+const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: PaymentSource) => {
     const { address, chainId } = useAccount();
+
+    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+        return {
+            requiredAmount: 0n,
+            balance: 0n,
+            needsApproval: false,
+            refetchAllowance: () => {},
+            isLoading: true,
+            platformFee: 0n,
+        };
+    }
 
     const contractConfig = getContract(chainId, type);
     const soulShardContract = getContract(chainId, 'soulShard');
     const dungeonCoreContract = getContract(chainId, 'dungeonCore');
     const playerVaultContract = getContract(chainId, 'playerVault');
 
-    // 獲取鑄造價格 (USD)
     const { data: mintPriceUSD, isLoading: isLoadingPrice } = useReadContract({
-        ...contractConfig,
+        address: contractConfig?.address,
+        abi: contractConfig?.abi,
         functionName: 'mintPriceUSD',
-        query: { enabled: !!contractConfig },
+        query: { enabled: !!contractConfig && contractConfig.address.startsWith('0x') },
     });
 
-    // 將 USD 價格轉換為 SoulShard 代幣數量
     const { data: requiredAmountPerUnit, isLoading: isLoadingConversion } = useReadContract({
         ...dungeonCoreContract,
         functionName: 'getSoulShardAmountForUSD',
-        args: [mintPriceUSD || 0n],
+        args: [(mintPriceUSD as bigint) || 0n],
         query: { enabled: !!dungeonCoreContract && typeof mintPriceUSD === 'bigint' },
     });
     
-    // 根據數量計算總價
     const totalRequiredAmount = useMemo(() => {
         if (!requiredAmountPerUnit) return 0n;
         return requiredAmountPerUnit * BigInt(quantity);
     }, [requiredAmountPerUnit, quantity]);
 
-    // 獲取用戶的錢包餘額
-    const { data: walletBalance } = useBalance({ address, token: soulShardContract?.address });
+    const { data: walletBalance } = useBalance({ 
+        address, 
+        token: soulShardContract?.address,
+        query: { enabled: !!address && !!soulShardContract && soulShardContract.address.startsWith('0x') }
+    });
     
-    // 獲取用戶的金庫餘額
+    // ★ 核心修正 #1：確保傳遞給 useReadContract 的物件是有效的
+    // 只有當 playerVaultContract 存在且其地址是有效的 '0x...' 地址時，才啟用這個 hook
     const { data: vaultInfo } = useReadContract({
-        ...playerVaultContract,
+        address: playerVaultContract?.address,
+        abi: playerVaultContract?.abi,
         functionName: 'playerInfo',
         args: [address!],
-        query: { enabled: !!address && !!playerVaultContract, refetchInterval: 5000 },
+        query: { 
+            enabled: !!address && !!playerVaultContract && playerVaultContract.address.startsWith('0x'),
+            refetchInterval: 5000 
+        },
     });
     const vaultBalance = useMemo(() => (Array.isArray(vaultInfo) ? vaultInfo[0] as bigint : 0n), [vaultInfo]);
 
-    // 根據支付方式，檢查是否需要授權
     const { data: allowance, refetch: refetchAllowance } = useReadContract({
-        ...soulShardContract,
+        address: soulShardContract?.address,
+        abi: soulShardContract?.abi,
         functionName: 'allowance',
         args: [address!, contractConfig?.address!],
-        query: { enabled: !!address && !!contractConfig && paymentSource === 'wallet' },
+        query: { enabled: !!address && !!soulShardContract && soulShardContract.address.startsWith('0x') && !!contractConfig && contractConfig.address.startsWith('0x') && paymentSource === 'wallet' },
     });
 
+    // ★ 核心修正 #2：在比較前，先確保 allowance 是一個 bigint 型別
     const needsApproval = useMemo(() => {
-        if (paymentSource !== 'wallet' || !allowance || !totalRequiredAmount) return false;
+        if (paymentSource !== 'wallet' || typeof allowance !== 'bigint' || !totalRequiredAmount) {
+            return false;
+        }
         return allowance < totalRequiredAmount;
     }, [paymentSource, allowance, totalRequiredAmount]);
 
@@ -78,7 +98,7 @@ const useMintLogic = (type: NftType, quantity: number, paymentSource: PaymentSou
         needsApproval,
         refetchAllowance,
         isLoading: isLoadingPrice || isLoadingConversion,
-        platformFee: type === 'hero' ? 300000000000000n : 300000000000000n, // 0.0003 BNB for both
+        platformFee: type === 'hero' ? 300000000000000n : 300000000000000n,
     };
 };
 
@@ -103,6 +123,11 @@ const MintCard: React.FC<MintCardProps> = ({ type, options }) => {
     const { writeContractAsync, isPending: isMinting } = useWriteContract();
     
     const title = type === 'hero' ? '英雄' : '聖物';
+    
+    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+        return <div className="card-bg p-6 rounded-xl shadow-lg flex flex-col items-center h-full justify-center"><p className="text-gray-400">請先連接到支援的網路</p></div>;
+    }
+
     const contractConfig = getContract(chainId, type);
     const soulShardContract = getContract(chainId, 'soulShard');
 
@@ -116,7 +141,6 @@ const MintCard: React.FC<MintCardProps> = ({ type, options }) => {
                 args: [contractConfig.address, maxUint256]
             });
             addTransaction({ hash, description: `批准 ${title} 合約使用代幣` });
-            // 等待交易確認後再刷新授權狀態
             setTimeout(() => refetchAllowance(), 2000); 
         } catch (e: any) {
              if (!e.message.includes('User rejected the request')) {
@@ -139,7 +163,7 @@ const MintCard: React.FC<MintCardProps> = ({ type, options }) => {
                 abi: contractConfig.abi as Abi,
                 functionName,
                 args: [BigInt(quantity)],
-                value: platformFee * BigInt(quantity), // 附加平台費用
+                value: platformFee * BigInt(quantity),
             });
             addTransaction({ hash, description });
         } catch (error: any) {

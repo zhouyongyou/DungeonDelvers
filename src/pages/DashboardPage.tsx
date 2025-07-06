@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useAccount, useReadContract, useReadContracts, useWriteContract } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { formatEther, type Address } from 'viem';
+import { formatEther } from 'viem'; // ★ 修正：移除未使用的 'Address'
 import { getContract, contracts, playerVaultABI } from '../config/contracts';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { ActionButton } from '../components/ui/ActionButton';
@@ -10,6 +10,7 @@ import type { Page } from '../types/page';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { useAppToast } from '../hooks/useAppToast';
 import { Icons } from '../components/ui/icons';
+import { bsc, bscTestnet } from 'wagmi/chains'; // ★ 新增：導入 bsc 和 bscTestnet 以便進行型別防衛
 
 // =================================================================
 // Section: 輔助函式與子元件 (保持不變)
@@ -17,8 +18,6 @@ import { Icons } from '../components/ui/icons';
 
 const getLevelFromExp = (exp: bigint): number => {
     if (exp < 100n) return 1;
-    // 注意：JavaScript 的 Math.sqrt 對於超大數可能會有精度問題，
-    // 但對於合理的經驗值範圍是足夠的。
     return Math.floor(Math.sqrt(Number(exp) / 100)) + 1;
 };
 
@@ -60,25 +59,31 @@ const ExternalLinkButton: React.FC<{ title: string; url: string; icon: React.Rea
 const useVaultAndTax = () => {
     const { address, chainId } = useAccount();
 
-    // 獲取所有需要的合約配置
+    // 再次加入型別防衛，確保此 Hook 內部也是型別安全的
+    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+        return {
+            playerVaultContract: null,
+            vaultInfo: undefined,
+            currentTaxRate: 0,
+            isLoading: true,
+        };
+    }
+
     const dungeonCoreContract = getContract(chainId, 'dungeonCore');
     const playerProfileContract = getContract(chainId, 'playerProfile');
     const vipStakingContract = getContract(chainId, 'vipStaking');
 
-    // 1. 從 DungeonCore 獲取 PlayerVault 的地址
     const { data: playerVaultAddress } = useReadContract({
         ...dungeonCoreContract,
         functionName: 'playerVaultAddress',
         query: { enabled: !!dungeonCoreContract },
     });
     
-    // 建立 PlayerVault 合約的實例以供後續使用
     const playerVaultContract = useMemo(() => {
         if (!playerVaultAddress) return null;
         return { address: playerVaultAddress, abi: playerVaultABI };
     }, [playerVaultAddress]);
 
-    // 2. 一次性獲取所有與稅率計算相關的參數
     const { data: taxParams, isLoading: isLoadingTaxParams } = useReadContracts({
         contracts: [
             { ...playerVaultContract, functionName: 'playerInfo', args: [address!] },
@@ -94,7 +99,6 @@ const useVaultAndTax = () => {
         query: { enabled: !!address && !!playerVaultContract && !!vipStakingContract && !!playerProfileContract }
     });
 
-    // 3. 將獲取的數據解構並賦予有意義的名稱
     const [
         playerInfo,
         smallWithdrawThresholdUSD,
@@ -109,15 +113,13 @@ const useVaultAndTax = () => {
     
     const withdrawableBalance = useMemo(() => (playerInfo as any)?.[0] as bigint | 0n, [playerInfo]);
 
-    // 4. 計算提領金額的 USD 價值 (這是計算稅率的關鍵一步)
     const { data: withdrawableBalanceInUSD, isLoading: isLoadingUsdValue } = useReadContract({
         ...dungeonCoreContract,
-        functionName: 'getSoulShardAmountForUSD', // 注意：這裡應該是反向查詢，但為簡化，我們先假設有 getUsdValueForSoulShard
+        functionName: 'getSoulShardAmountForUSD',
         args: [withdrawableBalance],
         query: { enabled: !!dungeonCoreContract && withdrawableBalance > 0n }
     });
     
-    // 5. 在 useMemo 中實現完整的稅率計算邏輯
     const currentTaxRate = useMemo(() => {
         if (!taxParams || !playerInfo) return 0;
         
@@ -126,31 +128,25 @@ const useVaultAndTax = () => {
         const lastFreeWithdrawTimestamp = info[2];
         const amountUSD = withdrawableBalanceInUSD ?? 0n;
 
-        // 檢查小額免稅
         const oneDay = 24n * 60n * 60n;
         if (amountUSD <= (smallWithdrawThresholdUSD as bigint) && BigInt(Math.floor(Date.now() / 1000)) >= lastFreeWithdrawTimestamp + oneDay) {
             return 0;
         }
         
-        // 確定基礎稅率
         let initialRate = (amountUSD > (largeWithdrawThresholdUSD as bigint)) ? (largeWithdrawInitialRate as bigint) : (standardInitialRate as bigint);
 
-        // 計算時間衰減
         const timeSinceLast = BigInt(Math.floor(Date.now() / 1000)) - lastWithdrawTimestamp;
         const periodsPassed = timeSinceLast / (periodDuration as bigint);
         const timeDecay = periodsPassed * (decreaseRatePerPeriod as bigint);
 
-        // VIP 等級減免 (已在合約中計算好)
         const vipReduction = vipTaxReduction as bigint ?? 0n;
-
-        // 玩家等級減免
-        const levelReduction = (playerLevel ? BigInt(Math.floor(Number(playerLevel) / 10)) : 0n) * 100n; // 每10級減1% (100/10000)
+        const levelReduction = (playerLevel ? BigInt(Math.floor(Number(playerLevel) / 10)) : 0n) * 100n;
 
         const totalReduction = timeDecay + vipReduction + levelReduction;
         
         if (totalReduction >= initialRate) return 0;
 
-        return Number(initialRate - totalReduction) / 100; // 轉換為百分比顯示
+        return Number(initialRate - totalReduction) / 100;
 
     }, [taxParams, playerInfo, withdrawableBalanceInUSD]);
 
@@ -173,11 +169,18 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     const { addTransaction } = useTransactionStore();
     const { showToast } = useAppToast();
 
-    // --- 使用新的自定義 Hook ---
+    // ★★★ 核心修正：在元件渲染的開頭加入型別防衛 ★★★
+    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+        return (
+            <div className="flex justify-center items-center h-64">
+                <p className="text-lg text-gray-500">請連接到支援的網路 (BSC 或 BSC 測試網) 以檢視儀表板。</p>
+            </div>
+        );
+    }
+
     const { playerVaultContract, vaultInfo, currentTaxRate, isLoading: isLoadingVaultAndTax } = useVaultAndTax();
     const withdrawableBalance = vaultInfo?.[0] ?? 0n;
 
-    // --- 其他數據獲取 (保持不變) ---
     const playerProfileContract = getContract(chainId, 'playerProfile');
     const vipStakingContract = getContract(chainId, 'vipStaking');
 
@@ -195,9 +198,10 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
         query: { enabled: !!profileTokenId && typeof profileTokenId === 'bigint' && profileTokenId > 0n },
     });
     
+    // 現在這個呼叫是型別安全的，因為上面的防衛確保了 chainId 是 56 或 97
     const { data: nfts, isLoading: isLoadingNfts } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
-        queryFn: () => fetchAllOwnedNfts(address!, chainId!),
+        queryFn: () => fetchAllOwnedNfts(address!, chainId),
         enabled: !!address && !!chainId
     });
 
@@ -213,11 +217,10 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     
     const { writeContractAsync, isPending: isWithdrawing } = useWriteContract();
 
-    // --- 衍生狀態計算 (Derived State) ---
     const level = useMemo(() => experience ? getLevelFromExp(experience) : 1, [experience]);
 
     const externalMarkets = useMemo(() => {
-        const currentContracts = chainId ? contracts[chainId as keyof typeof contracts] : null;
+        const currentContracts = contracts[chainId];
         if (!currentContracts) return [];
         return [
             { title: '英雄市場', address: currentContracts.hero.address, icon: <Icons.Hero className="w-8 h-8"/> },
@@ -227,9 +230,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
         ];
     }, [chainId]);
 
-    // --- 事件處理函式 ---
     const handleWithdraw = async () => {
-        // 【修正】現在呼叫的是 playerVaultContract
         if (!playerVaultContract || !vaultInfo || withdrawableBalance === 0n) return;
         try {
             const hash = await writeContractAsync({ 
@@ -246,7 +247,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
 
     const isLoading = isLoadingProfile || isLoadingNfts || isLoadingVip || isLoadingVaultAndTax;
 
-    if (isLoading && !vaultInfo) { // 增加一個判斷，避免在刷新時也顯示全頁加載
+    if (isLoading && !vaultInfo) {
         return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
     }
 
