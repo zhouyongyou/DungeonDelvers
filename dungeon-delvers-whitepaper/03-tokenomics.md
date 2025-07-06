@@ -9,7 +9,7 @@ description: 我們的經濟核心是 U 本位定價與多維度的動態稅率�
 * **代幣名稱**: SoulShard
 * **代幣符號**: $SoulShard
 * **所在區塊鏈**: Binance Smart Chain (BSC)
-* **合約地址**: `0x89AF1ab41C685cDe2332C72f116751d74F49Bc3c` (測試網)
+* **合約地址**: `0x...`&#x20;
 
 #### **3.2 代幣產出與消耗**
 
