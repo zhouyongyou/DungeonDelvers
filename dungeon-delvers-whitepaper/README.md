@@ -10,6 +10,6 @@ _最後更新時間: 2025年7月6日_
 
 我們致力於將傳統遊戲的樂趣與 Web3 的真正所有權、DeFi 的經濟激勵相結合，為玩家創造一個既能娛樂又能創造價值的奇幻世界。
 
-[➡️ 前往體驗 DApp](https://www.soulshard.fun/)
+[➡️ 前往體驗 DApp](https://dungeondelvers.xyz)
 
 <figure><img src=".gitbook/assets/cover-1200x400.png" alt=""><figcaption></figcaption></figure>
