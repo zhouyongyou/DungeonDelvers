@@ -7,43 +7,129 @@ import { fetchAllOwnedNfts } from '../api/nfts';
 import { NftCard } from '../components/ui/NftCard';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
-import type { AnyNft, HeroNft, RelicNft, NftAttribute } from '../types/nft';
+import type { AnyNft, HeroNft, RelicNft } from '../types/nft';
+import { Buffer } from 'buffer';
 
-// ★ 核心修正：使用動態導入 (dynamic import) 來載入本地 JSON 檔案
+// ★ 核心修正：將 Solidity SVG 邏輯用 JavaScript 在前端重現
+// 這段程式碼模擬了 DungeonSVGLibrary.sol 的功能
+const SvgGenerator = {
+    _getSVGHeader: () => `<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">`,
+    _getGlobalStyles: () => `<style>.base{font-family: 'Georgia', serif; fill: #e0e0e0;}.title{font-size: 20px; font-weight: bold;}.subtitle{font-size: 14px; opacity: 0.7;}.stat-label{font-size: 12px; font-weight: bold; text-transform: uppercase; opacity: 0.6;}.stat-value{font-size: 16px; font-weight: bold;}.main-stat-value{font-size: 42px; font-weight: bold;}.footer-text{font-size: 12px; opacity: 0.5;}</style>`,
+    _getGradientDefs: (c1: string, c2: string) => `<defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${c1}"/><stop offset="100%" stop-color="${c2}"/></linearGradient></defs>`,
+    _getBackgroundPattern: (color: string) => `<rect width="400" height="400" fill="#111"/><g opacity="0.1"><path d="M10 0 L0 10 M20 0 L0 20 M30 0 L0 30" stroke="${color}" stroke-width="1"/><path d="M-10 400 L410 400" stroke="${color}" stroke-width="2"/></g>`,
+    _getBorder: (rarity: number) => `<rect x="4" y="4" width="392" height="392" rx="15" fill="transparent" stroke="${SvgGenerator._getRarityColor(rarity)}" stroke-width="2" stroke-opacity="0.8"/>`,
+    _getHeader: (title: string, subtitle: string, tokenId: bigint) => `<text x="20" y="38" class="base title">${title}<tspan class="subtitle">${subtitle}</tspan></text><text x="380" y="38" class="base subtitle" text-anchor="end">#${tokenId.toString()}</text>`,
+    _getCentralImage: (emoji: string) => `<rect x="50" y="65" width="300" height="150" rx="10" fill="rgba(0,0,0,0.2)"/><text x="50%" y="140" font-size="90" text-anchor="middle" dominant-baseline="middle">${emoji}</text>`,
+    _getPrimaryStat: (label: string, value: string) => `<text x="50%" y="245" class="base stat-label" text-anchor="middle">${label}</text><text x="50%" y="280" class="base main-stat-value" text-anchor="middle" fill="url(#grad)">${value}</text>`,
+    _getSecondaryStats: (label1: string, value1: string, label2: string, value2: string) => `<line x1="20" y1="320" x2="380" y2="320" stroke="#444" stroke-width="1"/><g text-anchor="middle"><text x="120" y="345" class="base stat-label">${label1}</text><text x="120" y="365" class="base stat-value">${value1}</text><text x="280" y="345" class="base stat-label">${label2}</text><text x="280" y="365" class="base stat-value">${value2}</text></g>`,
+    _getFooter: (text: string) => `<text x="50%" y="390" class="base footer-text" text-anchor="middle">${text}</text>`,
+    _getHeroStyles: () => ["#B71C1C", "#F44336"],
+    _getRelicStyles: () => ["#1A237E", "#3F51B5"],
+    _getRarityColor: (rarity: number) => {
+        if (rarity === 5) return "#E040FB";
+        if (rarity === 4) return "#00B0FF";
+        if (rarity === 3) return "#FFD600";
+        if (rarity === 2) return "#CFD8DC";
+        return "#D7CCC8";
+    },
+    _getRarityStars: (rarity: number) => {
+        let stars = '';
+        const color = SvgGenerator._getRarityColor(rarity);
+        for (let i = 0; i < 5; i++) {
+            stars += `<tspan fill="${color}" fill-opacity="${i < rarity ? '1' : '0.2'}">★</tspan>`;
+        }
+        return stars;
+    },
+    generateHeroSVG: (data: { rarity: number, power: number }, tokenId: bigint) => {
+        const [primaryColor, accentColor] = SvgGenerator._getHeroStyles();
+        const svgString = [
+            SvgGenerator._getSVGHeader(),
+            SvgGenerator._getGlobalStyles(),
+            SvgGenerator._getGradientDefs(primaryColor, accentColor),
+            SvgGenerator._getBackgroundPattern(primaryColor),
+            SvgGenerator._getBorder(data.rarity),
+            SvgGenerator._getHeader("Hero", "", tokenId),
+            SvgGenerator._getCentralImage("⚔️"),
+            SvgGenerator._getPrimaryStat("POWER", data.power.toString()),
+            SvgGenerator._getSecondaryStats("RARITY", SvgGenerator._getRarityStars(data.rarity), "", ""),
+            SvgGenerator._getFooter("Dungeon Delvers"),
+            '</svg>'
+        ].join('');
+        return `data:image/svg+xml;base64,${Buffer.from(svgString).toString('base64')}`;
+    },
+    generateRelicSVG: (data: { rarity: number, capacity: number }, tokenId: bigint) => {
+        const [primaryColor, accentColor] = SvgGenerator._getRelicStyles();
+        const svgString = [
+            SvgGenerator._getSVGHeader(),
+            SvgGenerator._getGlobalStyles(),
+            SvgGenerator._getGradientDefs(primaryColor, accentColor),
+            SvgGenerator._getBackgroundPattern(primaryColor),
+            SvgGenerator._getBorder(data.rarity),
+            SvgGenerator._getHeader("Relic", "", tokenId),
+            SvgGenerator._getCentralImage("💎"),
+            SvgGenerator._getPrimaryStat("CAPACITY", data.capacity.toString()),
+            SvgGenerator._getSecondaryStats("RARITY", SvgGenerator._getRarityStars(data.rarity), "", ""),
+            SvgGenerator._getFooter("Ancient Artifact"),
+            '</svg>'
+        ].join('');
+        return `data:image/svg+xml;base64,${Buffer.from(svgString).toString('base64')}`;
+    }
+};
+
+// ★ 核心修正：重寫 fetchAllPossibleNfts，不再讀取 JSON，而是直接生成數據
 const fetchAllPossibleNfts = async (): Promise<{ heroes: HeroNft[], relics: RelicNft[] }> => {
-    const heroIds = [1, 2, 3, 4, 5];
-    const relicIds = [1, 2, 3, 4, 5];
+    const rarities = [1, 2, 3, 4, 5];
+    const heroes: HeroNft[] = [];
+    const relics: RelicNft[] = [];
 
-    // 使用 Promise.all 平行處理所有導入請求
-    const heroDataPromises = heroIds.map(id => import(`../api/hero/${id}.json`));
-    const relicDataPromises = relicIds.map(id => import(`../api/relic/${id}.json`));
+    const getPowerByRarity = (r: number) => {
+        if (r === 1) return 32;
+        if (r === 2) return 75;
+        if (r === 3) return 125;
+        if (r === 4) return 175;
+        if (r === 5) return 227;
+        return 0;
+    };
+    
+    const getCapacityByRarity = (r: number) => r;
+    
+    const rarityNames = ["Common", "Uncommon", "Rare", "Epic", "Legendary"];
 
-    const heroModules = await Promise.all(heroDataPromises);
-    const relicModules = await Promise.all(relicDataPromises);
+    for (const r of rarities) {
+        const heroPower = getPowerByRarity(r);
+        const heroImage = SvgGenerator.generateHeroSVG({ rarity: r, power: heroPower }, BigInt(r));
+        heroes.push({
+            id: BigInt(r),
+            name: `${rarityNames[r-1]} Hero`,
+            description: `A hero of ${rarityNames[r-1]} rarity.`,
+            image: heroImage,
+            attributes: [
+                { trait_type: "Rarity", value: r },
+                { trait_type: "Power", value: heroPower }
+            ],
+            type: 'hero',
+            contractAddress: '0x0000000000000000000000000000000000000000',
+            power: heroPower,
+            rarity: r,
+        });
 
-    const heroData = heroModules.map(module => module.default);
-    const relicData = relicModules.map(module => module.default);
-
-    const findAttr = (attributes: NftAttribute[], trait: string, defaultValue: any = 0) => 
-        attributes?.find(a => a.trait_type === trait)?.value ?? defaultValue;
-
-    const heroes = heroData.map((meta, i) => ({
-        ...meta,
-        id: BigInt(heroIds[i]),
-        type: 'hero',
-        contractAddress: '0x', // 地址在此不重要
-        power: Number(findAttr(meta.attributes, 'Power')),
-        rarity: Number(findAttr(meta.attributes, 'Rarity', 1)),
-    })) as HeroNft[];
-
-    const relics = relicData.map((meta, i) => ({
-        ...meta,
-        id: BigInt(relicIds[i]),
-        type: 'relic',
-        contractAddress: '0x', // 地址在此不重要
-        capacity: Number(findAttr(meta.attributes, 'Capacity')),
-        rarity: Number(findAttr(meta.attributes, 'Rarity', 1)),
-    })) as RelicNft[];
+        const relicCapacity = getCapacityByRarity(r);
+        const relicImage = SvgGenerator.generateRelicSVG({ rarity: r, capacity: relicCapacity }, BigInt(r));
+        relics.push({
+            id: BigInt(r),
+            name: `${rarityNames[r-1]} Relic`,
+            description: `A relic of ${rarityNames[r-1]} rarity.`,
+            image: relicImage,
+            attributes: [
+                { trait_type: "Rarity", value: r },
+                { trait_type: "Capacity", value: relicCapacity }
+            ],
+            type: 'relic',
+            contractAddress: '0x0000000000000000000000000000000000000000',
+            capacity: relicCapacity,
+            rarity: r,
+        });
+    }
 
     return { heroes, relics };
 };
@@ -60,7 +146,12 @@ const CodexPage: React.FC = () => {
 
     const { data: ownedNfts, isLoading: isLoadingOwned } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
-        queryFn: () => fetchAllOwnedNfts(address!, chainId!),
+        queryFn: () => {
+            if (address && chainId) {
+                return fetchAllOwnedNfts(address, chainId);
+            }
+            return Promise.resolve(null);
+        },
         enabled: !!address && !!chainId,
     });
 
