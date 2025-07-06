@@ -1,7 +1,7 @@
 // src/pages/MintPage.tsx
 
 import React, { useState, useMemo } from 'react';
-import { useAccount, useReadContract, useWriteContract, useBalance } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract, useBalance, usePublicClient } from 'wagmi';
 import { formatEther, maxUint256, type Abi } from 'viem';
 import { useAppToast } from '../hooks/useAppToast';
 import { getContract } from '../config/contracts';
@@ -9,6 +9,44 @@ import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { bsc, bscTestnet } from 'wagmi/chains';
+import { Modal } from '../components/ui/Modal';
+import { NftCard } from '../components/ui/NftCard';
+import type { AnyNft, NftAttribute } from '../types/nft';
+import { fetchMetadata } from '../api/nfts';
+
+// =================================================================
+// Section: 新增的子元件
+// =================================================================
+
+// 顯示稀有度機率的元件
+const RarityProbabilities: React.FC = () => (
+    <div className="w-full text-xs text-gray-400 mt-4">
+        <h4 className="font-bold text-center mb-1 text-gray-300">稀有度機率</h4>
+        <div className="grid grid-cols-5 gap-1 text-center">
+            <div className="bg-black/20 p-1 rounded"><div>普通</div><div className="font-bold text-white">44%</div></div>
+            <div className="bg-black/20 p-1 rounded"><div>罕見</div><div className="font-bold text-white">35%</div></div>
+            <div className="bg-black/20 p-1 rounded"><div>稀有</div><div className="font-bold text-white">15%</div></div>
+            <div className="bg-black/20 p-1 rounded"><div>史詩</div><div className="font-bold text-white">5%</div></div>
+            <div className="bg-black/20 p-1 rounded"><div>傳說</div><div className="font-bold text-white">1%</div></div>
+        </div>
+    </div>
+);
+
+// 顯示鑄造結果的彈出視窗
+const MintResultModal: React.FC<{ nft: AnyNft | null; onClose: () => void }> = ({ nft, onClose }) => {
+    if (!nft) return null;
+    return (
+        <Modal isOpen={!!nft} onClose={onClose} title="鑄造成功！" confirmText="太棒了！" onConfirm={onClose}>
+            <div className="flex flex-col items-center">
+                <p className="mb-4 text-center text-gray-300">恭喜您獲得了新的{nft.type === 'hero' ? '英雄' : '聖物'}！</p>
+                <div className="w-64">
+                    <NftCard nft={nft} />
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
 
 // =================================================================
 // Section: 型別定義與輔助 Hook
@@ -17,13 +55,9 @@ import { bsc, bscTestnet } from 'wagmi/chains';
 type PaymentSource = 'wallet' | 'vault';
 type SupportedChainId = typeof bsc.id | typeof bscTestnet.id;
 
-/**
- * @dev 一個自定義 Hook，專門負責計算鑄造所需的成本和檢查用戶的授權狀態。
- */
+// ★ 核心修正：移除 totalSupply 的讀取，因為合約 ABI 中不存在
 const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: PaymentSource, chainId: SupportedChainId) => {
     const { address } = useAccount();
-    
-    // 因為 chainId 型別已確定，getContract 不會回傳 null
     const contractConfig = getContract(chainId, type)!;
     const soulShardContract = getContract(chainId, 'soulShard')!;
     const dungeonCoreContract = getContract(chainId, 'dungeonCore')!;
@@ -44,25 +78,18 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     });
     
     const totalRequiredAmount = useMemo(() => {
-        // ★ 核心修正：進行型別檢查，確保 requiredAmountPerUnit 是 bigint
         if (typeof requiredAmountPerUnit !== 'bigint') return 0n;
         return requiredAmountPerUnit * BigInt(quantity);
     }, [requiredAmountPerUnit, quantity]);
 
-    const { data: walletBalance } = useBalance({ 
-        address, 
-        token: soulShardContract.address,
-    });
+    const { data: walletBalance } = useBalance({ address, token: soulShardContract.address });
     
     const { data: vaultInfo } = useReadContract({
         address: playerVaultContract.address,
         abi: playerVaultContract.abi,
         functionName: 'playerInfo',
         args: [address!],
-        query: { 
-            enabled: !!address,
-            refetchInterval: 5000 
-        },
+        query: { enabled: !!address, refetchInterval: 5000 },
     });
     const vaultBalance = useMemo(() => (Array.isArray(vaultInfo) ? vaultInfo[0] as bigint : 0n), [vaultInfo]);
 
@@ -71,15 +98,11 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
         abi: soulShardContract.abi,
         functionName: 'allowance',
         args: [address!, contractConfig.address!],
-        query: { 
-            enabled: !!address && paymentSource === 'wallet',
-        },
+        query: { enabled: !!address && paymentSource === 'wallet' },
     });
 
     const needsApproval = useMemo(() => {
-        if (paymentSource !== 'wallet' || typeof allowance !== 'bigint' || !totalRequiredAmount) {
-            return false;
-        }
+        if (paymentSource !== 'wallet' || typeof allowance !== 'bigint' || !totalRequiredAmount) return false;
         return allowance < totalRequiredAmount;
     }, [paymentSource, allowance, totalRequiredAmount]);
     
@@ -113,15 +136,17 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
     const { address } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
+    const publicClient = usePublicClient();
     
     const [quantity, setQuantity] = useState(1);
     const [paymentSource, setPaymentSource] = useState<PaymentSource>('wallet');
+    const [mintingResult, setMintingResult] = useState<AnyNft | null>(null);
 
+    // ★ 核心修正：從 Hook 中移除 totalSupply
     const { requiredAmount, balance, needsApproval, isLoading: isLoadingPrice, platformFee, refetchAllowance } = useMintLogic(type, quantity, paymentSource, chainId);
     const { writeContractAsync, isPending: isMinting } = useWriteContract();
     
     const title = type === 'hero' ? '英雄' : '聖物';
-    
     const contractConfig = getContract(chainId, type)!;
     const soulShardContract = getContract(chainId, 'soulShard')!;
 
@@ -134,19 +159,17 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
                 args: [contractConfig.address, maxUint256]
             });
             addTransaction({ hash, description: `批准 ${title} 合約使用代幣` });
-            setTimeout(() => {
-                refetchAllowance();
-            }, 3000);
+            setTimeout(() => { refetchAllowance(); }, 3000);
         } catch (e: any) {
-             if (!e.message.includes('User rejected the request')) {
-                showToast(e.shortMessage || "授權失敗", "error");
-            }
+             if (!e.message.includes('User rejected the request')) showToast(e.shortMessage || "授權失敗", "error");
         }
     };
 
     const handleMint = async () => {
         if (balance < requiredAmount) return showToast(`${paymentSource === 'wallet' ? '錢包' : '金庫'}餘額不足`, 'error');
         if (paymentSource === 'wallet' && needsApproval) return showToast(`請先完成授權`, 'error');
+        // ★ 核心修正：在使用 publicClient 前進行檢查
+        if (!publicClient) return showToast('客戶端尚未準備好，請稍後再試', 'error');
 
         try {
             const description = `從${paymentSource === 'wallet' ? '錢包' : '金庫'}鑄造 ${quantity} 個${title}`;
@@ -161,6 +184,37 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
                 value: fee * BigInt(quantity),
             });
             addTransaction({ hash, description });
+
+            const receipt = await publicClient.waitForTransactionReceipt({ hash });
+            
+            const mintEventTopic = type === 'hero' 
+                ? '0xbafe2994f235b3c024921ee0a71536647565346c6503b416045d4b407077dcbe' // HeroMinted
+                : '0x340f14a313038575a213503f569f7e8f233486a4f1345d4b1263445d1d17d1e8'; // RelicMinted
+            
+            const mintLog = receipt.logs.filter(log => log.topics[0] === mintEventTopic).pop();
+            
+            if (mintLog) {
+                const tokenId = BigInt(mintLog.topics[1] as string);
+                const tokenUri = await publicClient.readContract({
+                    address: contractConfig.address,
+                    abi: contractConfig.abi,
+                    functionName: 'tokenURI',
+                    args: [tokenId]
+                }) as string;
+
+                const metadata = await fetchMetadata(tokenUri);
+                // ★ 核心修正：為 findAttr 的回呼參數加上型別
+                const findAttr = (trait: string, defaultValue: any = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
+                
+                let nftData: AnyNft;
+                if(type === 'hero') {
+                    nftData = { ...metadata, id: tokenId, type, contractAddress: contractConfig.address, power: Number(findAttr('Power')), rarity: Number(findAttr('Rarity')) };
+                } else {
+                    nftData = { ...metadata, id: tokenId, type, contractAddress: contractConfig.address, capacity: Number(findAttr('Capacity')), rarity: Number(findAttr('Rarity')) };
+                }
+                setMintingResult(nftData);
+            }
+
         } catch (error: any) {
             if (!error.message.includes('User rejected the request')) {
                 showToast(error.shortMessage || "鑄造失敗", "error");
@@ -176,6 +230,12 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
 
     return (
         <div className="card-bg p-6 rounded-xl shadow-lg flex flex-col items-center h-full">
+            <MintResultModal nft={mintingResult} onClose={() => setMintingResult(null)} />
+            <div className="w-full h-48 bg-gray-800/50 rounded-lg mb-4 flex items-center justify-center relative overflow-hidden">
+                <p className="text-6xl opacity-80">{type === 'hero' ? '⚔️' : '💎'}</p>
+                 {/* ★ 核心修正：移除總發行量顯示 */}
+            </div>
+
             <h3 className="section-title">招募{title}</h3>
             <div className="flex items-center justify-center gap-2 my-4">
                 {options.map(q => 
@@ -207,9 +267,10 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
             </div>
             
             {actionButton}
-            <p className="text-xs text-center text-gray-500 mt-2 px-2 h-8">
-                {`每次鑄造都會為社群更新隨機數種子！`}
-            </p>
+            <a href={`https://www.okx.com/web3/nft/markets/collection/bscn/${contractConfig.address}`} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 hover:underline mt-2">
+                前往市場交易
+            </a>
+            <RarityProbabilities />
         </div>
     );
 };

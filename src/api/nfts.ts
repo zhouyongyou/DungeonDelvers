@@ -11,7 +11,8 @@ import type {
     HeroNft,
     RelicNft,
     PartyNft,
-    VipNft
+    VipNft,
+    NftAttribute
 } from '../types/nft';
 
 // =================================================================
@@ -36,7 +37,8 @@ const getClient = (chainId: number) => {
 };
 
 // 從鏈上或 Base64 URI 中獲取元數據，並增加錯誤處理
-async function fetchMetadata(uri: string): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
+// ★ 核心修正：匯出 fetchMetadata 函式
+export async function fetchMetadata(uri: string): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
     try {
         if (uri.startsWith('data:application/json;base64,')) {
             const json = Buffer.from(uri.substring('data:application/json;base64,'.length), 'base64').toString();
@@ -65,7 +67,7 @@ function parseToTypedNft(
     contractAddress: `0x${string}`
 ): AnyNft {
     const findAttr = (trait: string, defaultValue: any = 0) => 
-        baseMetadata.attributes?.find(a => a.trait_type === trait)?.value ?? defaultValue;
+        baseMetadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
 
     const baseNft: BaseNft = { ...baseMetadata, id, contractAddress, ...baseMetadata };
 
