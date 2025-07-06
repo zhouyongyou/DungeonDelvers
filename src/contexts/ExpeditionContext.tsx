@@ -1,14 +1,17 @@
-import React, { createContext, useState, useCallback, useContext, type ReactNode } from 'react';
+// src/contexts/ExpeditionContext.tsx
+
+import React, { createContext, useState, useCallback, useContext, type ReactNode, useMemo } from 'react';
 import { formatEther } from 'viem';
 import { Modal } from '../components/ui/Modal';
 import victoryImageUrl from '/assets/images/win_screen_500x500.png';
 import defeatImageUrl from '/assets/images/lose_screen_500x500.png';
+import { Icons } from '../components/ui/icons'; // ★ 新增：導入圖示
+import { useAppToast } from '../hooks/useAppToast'; // ★ 新增：導入 Toast
 
-// [修改 1] 擴充介面，加入 expGained
 interface ExpeditionResult { 
     success: boolean; 
     reward: bigint; 
-    expGained: bigint; // 新增經驗值欄位
+    expGained: bigint;
 }
 interface ExpeditionContextValue { 
     showExpeditionResult: (result: ExpeditionResult) => void; 
@@ -24,8 +27,27 @@ export const useExpeditionResult = () => {
 
 export const ExpeditionProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [result, setResult] = useState<ExpeditionResult | null>(null);
+    const { showToast } = useAppToast(); // ★ 新增：使用 Toast
+    
     const showExpeditionResult = useCallback((res: ExpeditionResult) => { setResult(res); }, []);
     const handleClose = () => { setResult(null); };
+
+    // ★ 新增：產生分享內容的邏輯
+    const shareContent = useMemo(() => {
+        if (!result || !result.success) return { text: '', url: '' };
+        
+        const rewardAmount = parseFloat(formatEther(result.reward)).toFixed(4);
+        const text = `我剛剛在《Dungeon Delvers》的遠征中大獲全勝！🏆\n\n獲得了 ${rewardAmount} $SoulShard 和 ${result.expGained.toString()} 經驗值！快來加入我，一起探索地下城吧！\n\n#DungeonDelvers #GameFi #BNBChain`;
+        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent('https://www.dungeondelvers.xyz/')}`;
+        
+        return { text, twitterUrl };
+    }, [result]);
+
+    // ★ 新增：處理複製文字的函式
+    const handleCopy = () => {
+        navigator.clipboard.writeText(shareContent.text);
+        showToast('已複製分享內容！', 'success');
+    };
 
     return (
         <ExpeditionContext.Provider value={{ showExpeditionResult }}>
@@ -51,7 +73,35 @@ export const ExpeditionProvider: React.FC<{ children: ReactNode }> = ({ children
                                 </p>
                             </div>
                         )}
-                        <p className="text-sm text-gray-500 mt-4">{result.success ? "獎勵與經驗已發放至您的帳號。" : "再接再厲，下次好運！"}</p>
+                        
+                        {/* ★ 新增：分享按鈕區塊 */}
+                        {result.success && (
+                            <div className="mt-6 pt-4 border-t border-gray-300 dark:border-gray-700">
+                                <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">分享你的勝利！</p>
+                                <div className="flex justify-center gap-4">
+                                    <a 
+                                        href={shareContent.twitterUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#1DA1F2] text-white font-semibold transition hover:opacity-90"
+                                    >
+                                        <Icons.Twitter className="w-5 h-5" />
+                                        <span>分享到 X</span>
+                                    </a>
+                                    <button
+                                        onClick={handleCopy}
+                                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gray-600 text-white font-semibold transition hover:bg-gray-500"
+                                    >
+                                        <Icons.Copy className="w-5 h-5" />
+                                        <span>複製內容</span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {!result.success && (
+                            <p className="text-sm text-gray-500 mt-4">再接再厲，下次好運！</p>
+                        )}
                     </div>
                 </Modal>
             )}

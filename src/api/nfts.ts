@@ -101,9 +101,9 @@ async function fetchNftsForContract(
         let fromBlock: bigint | 'earliest' = 'earliest';
 
         // ★★★ 核心修正 ★★★
-        // 根據您的建議，將掃描範圍縮小到約一個月的區塊量 (3,500,000 blocks)
-        // 這是一個更高效、更精準的設定。
-        const blockRange = 3500000n; 
+        // 將掃描範圍調整為約一週的區塊量 (210,000 blocks)，
+        // 這是一個在公共 RPC 節點上更安全、更高效的設定。
+        const blockRange = 210000n; 
         
         if (currentBlock > blockRange) {
             fromBlock = currentBlock - blockRange;

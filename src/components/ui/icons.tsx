@@ -18,7 +18,22 @@ const ExternalLinkIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-// 為儀表板新增的圖示
+// ★ 新增：Twitter (X) 圖示
+const TwitterIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+);
+
+// ★ 新增：複製圖示
+const CopyIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    </svg>
+);
+
+
 const HeroIcon: React.FC<{ className?: string }> = ({ className }) => <span className={className}>🦸</span>;
 const RelicIcon: React.FC<{ className?: string }> = ({ className }) => <span className={className}>💎</span>;
 const PartyIcon: React.FC<{ className?: string }> = ({ className }) => <span className={className}>🛡️</span>;
@@ -27,7 +42,6 @@ const MintIcon: React.FC<{ className?: string }> = ({ className }) => <span clas
 const AltarIcon: React.FC<{ className?: string }> = ({ className }) => <span className={className}>🔥</span>;
 const AssetsIcon: React.FC<{ className?: string }> = ({ className }) => <span className={className}>📦</span>;
 const DungeonIcon: React.FC<{ className?: string }> = ({ className }) => <span className={className}>⚔️</span>;
-// ★ 新增：圖鑑圖示
 const CodexIcon: React.FC<{ className?: string }> = ({ className }) => <span className={className}>📖</span>;
 
 
@@ -43,5 +57,7 @@ export const Icons = {
     Altar: AltarIcon,
     Assets: AssetsIcon,
     Dungeon: DungeonIcon,
-    Codex: CodexIcon, // ★ 新增：導出圖鑑圖示
+    Codex: CodexIcon,
+    Twitter: TwitterIcon, // ★ 新增
+    Copy: CopyIcon,       // ★ 新增
 };
