@@ -1,4 +1,4 @@
-// src/pages/AdminPage.tsx (最終修正版)
+// src/pages/AdminPage.tsx (已修復)
 
 import React, { useState, useMemo, useEffect, type ReactNode } from 'react';
 import { useAccount, useReadContracts, useWriteContract, useReadContract } from 'wagmi';
@@ -14,7 +14,7 @@ import { useTransactionStore } from '../stores/useTransactionStore';
 type SupportedChainId = typeof bsc.id | typeof bscTestnet.id;
 
 // =================================================================
-// Section: 可重用的 UI 子元件 (已移至頂層，修復 scope 問題)
+// Section: 可重用的 UI 子元件
 // =================================================================
 
 const AdminSection: React.FC<{ title: string; children: ReactNode }> = ({ title, children }) => (
@@ -122,7 +122,7 @@ const SettingRow: React.FC<{ label: string; readSource: string; contract: NonNul
 };
 
 // =================================================================
-// Section: 複雜參數管理元件 (已驗證穩定性)
+// Section: 複雜參數管理元件
 // =================================================================
 
 const DungeonManager: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) => {
@@ -349,7 +349,18 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         }, {} as Record<string, { name: ContractName, address?: Address }>);
     }, [chainId, setupConfig]);
     
-    const parameterConfig = useMemo(() => {
+    type ParameterConfigItem = {
+        key: string;
+        label: string;
+        contract: NonNullable<ReturnType<typeof getContract>>;
+        getter: string;
+        setter: string;
+        isEther?: boolean;
+        isBasisPoints?: boolean;
+        placeholders?: string[];
+    };
+    
+    const parameterConfig = useMemo((): ParameterConfigItem[] => {
         const contracts = {
             hero: getContract(chainId, 'hero'),
             relic: getContract(chainId, 'relic'),
@@ -372,7 +383,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
             { key: 'commissionRate', label: "邀請佣金率", contract: contracts.playerVault, getter: 'commissionRate', setter: 'setCommissionRate', isBasisPoints: true, placeholders: ['新佣金率 (萬分位)'] },
             { key: 'withdrawThresholds', label: "提現門檻 (USD)", contract: contracts.playerVault, getter: 'smallWithdrawThresholdUSD', setter: 'setWithdrawThresholds', isEther: true, placeholders: ['小額門檻 (USD)', '大額門檻 (USD)'] },
         ];
-        return config.filter(c => c.contract && c.contract.address);
+        return config.filter((c): c is ParameterConfigItem => !!c.contract && !!c.contract.address);
     }, [chainId]);
 
     const { data: params, isLoading: isLoadingParams } = useReadContracts({
@@ -470,38 +481,84 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                 <AltarRuleManager chainId={chainId} />
             </AdminSection>
             
-            <AdminSection key="price-management" title="核心價格管理 (USD)">
-                {parameterConfig.filter(p => p.label.includes('價')).map((p) => (
-                    <SettingRow key={p.key} functionName={p.setter} {...p} readSource={`${p.contract?.address}.${p.getter}()`} currentValue={params?.[parameterConfig.findIndex(pc => pc.key === p.key)]?.result} isLoading={isLoadingParams} />
-                ))}
+            <AdminSection title="核心價格管理 (USD)">
+                {parameterConfig.filter(p => p.label.includes('價')).map((p) => {
+                    const { key, setter, ...rest } = p;
+                    return (
+                        <SettingRow
+                            key={key}
+                            {...rest}
+                            functionName={setter}
+                            readSource={`${p.contract.address}.${p.getter}()`}
+                            currentValue={params?.[parameterConfig.findIndex(pc => pc.key === p.key)]?.result}
+                            isLoading={isLoadingParams}
+                        />
+                    );
+                })}
             </AdminSection>
 
-            <AdminSection key="fee-management" title="平台費用管理 (BNB)">
-                {parameterConfig.filter(p => p.label.includes('費')).map((p) => (
-                    <SettingRow key={p.key} functionName={p.setter} {...p} readSource={`${p.contract?.address}.${p.getter}()`} currentValue={params?.[parameterConfig.findIndex(pc => pc.key === p.key)]?.result} isLoading={isLoadingParams} />
-                ))}
+            <AdminSection title="平台費用管理 (BNB)">
+                 {parameterConfig.filter(p => p.label.includes('費')).map((p) => {
+                    const { key, setter, ...rest } = p;
+                    return (
+                        <SettingRow
+                            key={key}
+                            {...rest}
+                            functionName={setter}
+                            readSource={`${p.contract.address}.${p.getter}()`}
+                            currentValue={params?.[parameterConfig.findIndex(pc => pc.key === p.key)]?.result}
+                            isLoading={isLoadingParams}
+                        />
+                    );
+                })}
             </AdminSection>
 
-            <AdminSection key="tax-management" title="稅務與提現系統">
+            <AdminSection title="稅務與提現系統">
                 {parameterConfig.filter(p => ['taxParams', 'commissionRate', 'withdrawThresholds'].includes(p.key)).map((p) => {
                     const paramIndex = parameterConfig.findIndex(pc => pc.key === p.key);
                     const currentValue = params?.[paramIndex]?.result;
+                    const { key, setter, ...rest } = p;
                      if (p.key === 'withdrawThresholds') {
                         return (
                             <React.Fragment key={p.key}>
-                                <SettingRow {...p} functionName={p.setter} readSource={`${p.contract?.address}.${p.getter}()`} currentValue={currentValue} isLoading={isLoadingParams} />
+                                <SettingRow
+                                    {...rest}
+                                    functionName={setter}
+                                    readSource={`${p.contract.address}.${p.getter}()`}
+                                    currentValue={currentValue}
+                                    isLoading={isLoadingParams}
+                                />
                                 <ReadOnlyRow label="當前大額門檻" value={`${formatEther(largeThresholdData as bigint ?? 0n)} USD`} isLoading={isLoadingLargeThreshold} />
                             </React.Fragment>
                         )
                     }
-                    return <SettingRow key={p.key} {...p} functionName={p.setter} readSource={`${p.contract?.address}.${p.getter}()`} currentValue={currentValue} isLoading={isLoadingParams} />
+                    return (
+                        <SettingRow
+                            key={key}
+                            {...rest}
+                            functionName={setter}
+                            readSource={`${p.contract.address}.${p.getter}()`}
+                            currentValue={currentValue}
+                            isLoading={isLoadingParams}
+                        />
+                    );
                 })}
             </AdminSection>
 
-            <AdminSection key="game-mechanics" title="遊戲機制參數">
-                 {parameterConfig.filter(p => ['restDivisor', 'vipCooldown'].includes(p.key)).map((p) => (
-                    <SettingRow key={p.key} {...p} functionName={p.setter} readSource={`${p.contract?.address}.${p.getter}()`} currentValue={params?.[parameterConfig.findIndex(pc => pc.key === p.key)]?.result} isLoading={isLoadingParams} />
-                ))}
+            <AdminSection title="遊戲機制參數">
+                 {parameterConfig.filter(p => ['restDivisor', 'vipCooldown'].includes(p.key)).map((p) => {
+                    const { key, setter, ...rest } = p;
+                    return (
+                        <SettingRow
+                            key={key}
+                            {...rest}
+                            functionName={setter}
+                            readSource={`${p.contract.address}.${p.getter}()`}
+                            currentValue={params?.[parameterConfig.findIndex(pc => pc.key === p.key)]?.result}
+                            isLoading={isLoadingParams}
+                        />
+                    );
+                })}
             </AdminSection>
         </>
     );
