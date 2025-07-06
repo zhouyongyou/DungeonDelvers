@@ -1,4 +1,4 @@
-// src/pages/AdminPage.tsx (已修復)
+// src/pages/AdminPage.tsx
 
 import React, { useState, useMemo, useEffect, type ReactNode } from 'react';
 import { useAccount, useReadContracts, useWriteContract, useReadContract } from 'wagmi';
@@ -8,10 +8,10 @@ import { useAppToast } from '../hooks/useAppToast';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
-import { bsc, bscTestnet } from 'wagmi/chains';
+import { bsc } from 'wagmi/chains';
 import { useTransactionStore } from '../stores/useTransactionStore';
 
-type SupportedChainId = typeof bsc.id | typeof bscTestnet.id;
+type SupportedChainId = typeof bsc.id;
 
 // =================================================================
 // Section: 可重用的 UI 子元件
@@ -280,6 +280,7 @@ const AltarRuleManager: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
 // =================================================================
 
 const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) => {
+    // ... (AdminPageContent 的所有內部邏輯保持不變) ...
     const { address } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
@@ -383,7 +384,8 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
             { key: 'commissionRate', label: "邀請佣金率", contract: contracts.playerVault, getter: 'commissionRate', setter: 'setCommissionRate', isBasisPoints: true, placeholders: ['新佣金率 (萬分位)'] },
             { key: 'withdrawThresholds', label: "提現門檻 (USD)", contract: contracts.playerVault, getter: 'smallWithdrawThresholdUSD', setter: 'setWithdrawThresholds', isEther: true, placeholders: ['小額門檻 (USD)', '大額門檻 (USD)'] },
         ];
-        return config.filter((c): c is ParameterConfigItem => !!c.contract && !!c.contract.address);
+        // 型別修正：直接用 as 斷言，避免 type predicate 報錯
+        return config.filter((c) => !!c.contract && !!c.contract.address) as ParameterConfigItem[];
     }, [chainId]);
 
     const { data: params, isLoading: isLoadingParams } = useReadContracts({
@@ -571,7 +573,8 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
 
 const AdminPage: React.FC = () => {
     const { chainId } = useAccount();
-    const isSupportedChain = (id: number | undefined): id is SupportedChainId => id === bsc.id || id === bscTestnet.id;
+    // ★ 核心修正：移除對 bscTestnet 的判斷
+    const isSupportedChain = (id: number | undefined): id is SupportedChainId => id === bsc.id;
 
     return (
         <section className="space-y-8">
@@ -579,7 +582,7 @@ const AdminPage: React.FC = () => {
             {isSupportedChain(chainId) ? (
                 <AdminPageContent chainId={chainId} />
             ) : (
-                <EmptyState message="請連接到支援的網路 (BSC 或 BSC 測試網)。" />
+                <EmptyState message="請連接到 BSC 主網以使用管理功能。" />
             )}
         </section>
     );

@@ -1,7 +1,7 @@
 // src/api/nfts.ts
 
 import { createPublicClient, http, type Address, type Abi } from 'viem';
-import { bsc, bscTestnet } from 'wagmi/chains';
+import { bsc } from 'wagmi/chains';
 import { Buffer } from 'buffer';
 import { getContract, type ContractName, partyABI, contracts } from '../config/contracts';
 import type { 
@@ -16,25 +16,6 @@ import type {
 } from '../types/nft';
 
 // =================================================================
-// Section: 精確的合約部署區塊號
-// =================================================================
-const DEPLOYMENT_BLOCKS: { [chainId: number]: { [key in ContractName]?: bigint } } = {
-  [bscTestnet.id]: {
-    hero: 57284000n,
-    relic: 57284000n,
-    party: 57284000n,
-    vipStaking: 57284000n
-  },
-  [bsc.id]: {
-    hero: 53071000n,
-    relic: 53071000n,
-    party: 53071000n,
-    vipStaking: 53071000n
-  }
-};
-
-
-// =================================================================
 // Section: 型別守衛與輔助函式
 // =================================================================
 
@@ -45,10 +26,10 @@ function isSupportedChain(chainId: number): chainId is SupportedChainId {
 }
 
 const getClient = (chainId: number) => {
-    const chain = chainId === bsc.id ? bsc : bscTestnet;
-    const rpcUrl = chainId === bsc.id 
-        ? (import.meta.env.VITE_ALCHEMY_BSC_MAINNET_RPC_URL || 'https://bsc-dataseed1.binance.org/')
-        : (import.meta.env.VITE_ALCHEMY_BSC_TESTNET_RPC_URL || 'https://data-seed-prebsc-1-s1.binance.org:8545/');
+    const chain = chainId === bsc.id ? bsc : null;
+    if (!chain) throw new Error("Unsupported chain for client creation");
+    
+    const rpcUrl = import.meta.env.VITE_ALCHEMY_BSC_MAINNET_RPC_URL || '[https://bsc-dataseed1.binance.org/](https://bsc-dataseed1.binance.org/)';
     return createPublicClient({ chain, transport: http(rpcUrl) });
 };
 
@@ -58,7 +39,7 @@ export async function fetchMetadata(uri: string): Promise<Omit<BaseNft, 'id' | '
             const json = Buffer.from(uri.substring('data:application/json;base64,'.length), 'base64').toString();
             return JSON.parse(json);
         } else if (uri.startsWith('ipfs://')) {
-            const ipfsUrl = uri.replace('ipfs://', 'https://ipfs.io/ipfs/');
+            const ipfsUrl = uri.replace('ipfs://', '[https://ipfs.io/ipfs/](https://ipfs.io/ipfs/)');
             const response = await fetch(ipfsUrl);
             if (!response.ok) throw new Error(`Failed to fetch from IPFS: ${response.statusText}`);
             return await response.json();
@@ -116,14 +97,16 @@ async function fetchNftsForContract(
     if (!contract) return [];
 
     try {
-        // ★★★ 核心修正：分批次查詢日誌以避免 RPC 限制 ★★★
-        const fromBlock = DEPLOYMENT_BLOCKS[chainId]?.[contractName] || 0n;
+        // ★★★ 核心修正：從最新區塊開始，分塊反向查詢 ★★★
         const toBlock = await client.getBlockNumber();
-        const CHUNK_SIZE = 499n; // 設定一個安全的查詢範圍
+        const CHUNK_SIZE = 499n; 
+        const MAX_SEARCH_BLOCKS = 57600n; // 大約 2 天的區塊量 (28800 blocks/day)
+        const searchLimitBlock = toBlock > MAX_SEARCH_BLOCKS ? toBlock - MAX_SEARCH_BLOCKS : 0n;
         
         let allLogs = [];
-        for (let startBlock = fromBlock; startBlock <= toBlock; startBlock += CHUNK_SIZE + 1n) {
-            const endBlock = startBlock + CHUNK_SIZE > toBlock ? toBlock : startBlock + CHUNK_SIZE;
+        for (let endBlock = toBlock; endBlock > searchLimitBlock; endBlock -= CHUNK_SIZE + 1n) {
+            const startBlock = endBlock - CHUNK_SIZE > searchLimitBlock ? endBlock - CHUNK_SIZE : searchLimitBlock;
+            
             const chunkLogs = await client.getLogs({
                 address: contract.address,
                 event: {
@@ -139,6 +122,7 @@ async function fetchNftsForContract(
                 toBlock: endBlock,
             });
             allLogs.push(...chunkLogs);
+            if (startBlock === 0n) break; // 如果已掃描到創世區塊，則停止
         }
 
         const potentialTokenIds = [...new Set(allLogs.map(log => log.args.tokenId).filter(id => id !== undefined))] as bigint[];
