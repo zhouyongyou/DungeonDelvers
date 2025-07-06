@@ -41,9 +41,6 @@ const ReferralPage: React.FC = () => {
         query: { enabled: !!address && !!playerVaultContract },
     });
     
-    const isLoadingCommission = false;
-    const totalCommission = 0n; // 暫時顯示為 0
-
     const { writeContractAsync, isPending: isSettingReferrer } = useWriteContract();
 
     // 從 URL search params 中讀取邀請碼
@@ -119,7 +116,7 @@ const ReferralPage: React.FC = () => {
                 </div>
                 <div className="mt-4 text-center">
                     <p className="text-gray-400">我賺取的總佣金</p>
-                    {isLoadingCommission ? <LoadingSpinner size="h-8 w-8" /> : <p className="text-3xl font-bold text-yellow-400">{parseFloat(formatEther(totalCommission)).toFixed(4)} $SoulShard</p>}
+                    {isLoadingCommission ? <LoadingSpinner size="h-8 w-8" /> : <p className="text-3xl font-bold text-yellow-400">{parseFloat(formatEther(totalCommission ?? 0n)).toFixed(4)} $SoulShard</p>}
                 </div>
             </div>
 

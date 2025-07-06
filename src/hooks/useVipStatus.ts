@@ -4,7 +4,6 @@ import { useAccount, useReadContract, useBalance } from 'wagmi';
 import { useMemo, useState, useEffect } from 'react';
 import { bsc, bscTestnet } from 'wagmi/chains';
 import { getContract } from '../config/contracts';
-import { formatEther } from 'viem';
 
 /**
  * @notice 一個自定義的倒數計時 Hook。

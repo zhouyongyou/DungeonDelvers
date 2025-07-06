@@ -1,16 +1,16 @@
 // src/pages/VipPage.tsx
 
 import React, { useState, useMemo } from 'react';
-import { useAccount, useWriteContract } from 'wagmi';
+import { useAccount, useWriteContract, useReadContract } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
-import { formatEther, maxUint256, parseEther } from 'viem'; // 導入 parseEther
+import { formatEther, maxUint256, parseEther } from 'viem';
 import { Buffer } from 'buffer';
 import { getContract } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
-import { useVipStatus } from '../hooks/useVipStatus'; // 導入新的 Hook
+import { useVipStatus } from '../hooks/useVipStatus';
 import { bsc, bscTestnet } from 'wagmi/chains';
 
 // VIP 卡片 SVG 顯示元件
@@ -55,7 +55,7 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | undefined }> = ({ tokenId }) 
 // =================================================================
 
 const VipPage: React.FC = () => {
-    const { address, chainId } = useAccount();
+    const { chainId } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
     const queryClient = useQueryClient();

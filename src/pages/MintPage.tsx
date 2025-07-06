@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract, useBalance } from 'wagmi';
-import { formatEther, maxUint256, type Abi, parseEther } from 'viem';
+import { formatEther, maxUint256, type Abi } from 'viem';
 import { useAppToast } from '../hooks/useAppToast';
 import { getContract } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
@@ -117,7 +117,7 @@ interface MintCardProps {
 }
 
 const MintCard: React.FC<MintCardProps> = ({ type, options }) => {
-    const { address } = useAccount(); // 修正：移除未使用的 chainId
+    const { address } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
     
@@ -129,7 +129,7 @@ const MintCard: React.FC<MintCardProps> = ({ type, options }) => {
     
     const title = type === 'hero' ? '英雄' : '聖物';
     
-    const { chainId } = useAccount(); // 再次獲取 chainId
+    const { chainId } = useAccount();
     // 確保在組件內部使用時 chainId 是有效的
     const contractConfig = chainId ? getContract(chainId, type) : null;
     const soulShardContract = chainId ? getContract(chainId, 'soulShard') : null;
