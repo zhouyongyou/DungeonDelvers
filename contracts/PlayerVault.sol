@@ -1,5 +1,4 @@
-// contracts/PlayerVault.sol.txt
-
+// contracts/PlayerVault.sol (已修正)
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -9,9 +8,9 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
- * @title PlayerVault (v3.1 - 增加佣金查詢)
+ * @title PlayerVault (v3.2 - 增加佣金查詢)
  * @notice 專門負責玩家資金的存儲、提款和遊戲內消費。
- * @dev v3.1 版本加入了查詢總佣金的功能。
+ * @dev v3.2 版本加入了查詢總佣金的函式。
  */
 contract PlayerVault is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -27,8 +26,7 @@ contract PlayerVault is Ownable, ReentrancyGuard {
     }
     mapping(address => PlayerInfo) public playerInfo;
     mapping(address => address) public referrers;
-    // ★ 新增：追蹤每個地址賺取的總佣金
-    mapping(address => uint256) public totalCommissionPaid;
+    mapping(address => uint256) public totalCommissionPaid; // 追蹤每個地址賺取的總佣金
 
     uint256 public constant PERCENT_DIVISOR = 10000;
     uint256 public constant USD_DECIMALS = 1e18;
@@ -89,9 +87,7 @@ contract PlayerVault is Ownable, ReentrancyGuard {
         require(_amount > 0, "Vault: Amount must be > 0");
         require(player.withdrawableBalance >= _amount, "Vault: Insufficient balance");
 
-        uint256 amountUSD = IOracle(dungeonCore.oracle()).getAmountOut(
-            address(soulShardToken), dungeonCore.usdToken(), _amount
-        );
+        uint256 amountUSD = dungeonCore.getSoulShardAmountForUSD(_amount);
 
         if (amountUSD <= smallWithdrawThresholdUSD && player.lastFreeWithdrawTimestamp + 1 days <= block.timestamp) {
             player.lastFreeWithdrawTimestamp = block.timestamp;
@@ -115,7 +111,6 @@ contract PlayerVault is Ownable, ReentrancyGuard {
         PlayerInfo storage player = playerInfo[_player];
         require(player.withdrawableBalance >= _amount, "Vault: Insufficient balance for game spending");
         player.withdrawableBalance -= _amount;
-        // 將代幣轉給呼叫此函式的遊戲合約
         soulShardToken.safeTransfer(msg.sender, _amount);
         emit GameSpending(_player, msg.sender, _amount);
     }
@@ -134,7 +129,7 @@ contract PlayerVault is Ownable, ReentrancyGuard {
             commissionAmount = (amountAfterTaxes * commissionRate) / PERCENT_DIVISOR;
             if (commissionAmount > 0) {
                 soulShardToken.safeTransfer(referrer, commissionAmount);
-                totalCommissionPaid[referrer] += commissionAmount; // ★ 新增：累計佣金
+                totalCommissionPaid[referrer] += commissionAmount;
                 emit CommissionPaid(_withdrawer, referrer, commissionAmount);
             }
         }
@@ -215,5 +210,12 @@ contract PlayerVault is Ownable, ReentrancyGuard {
     
     function withdrawGameRevenue(uint256 amount) external onlyOwner {
         soulShardToken.safeTransfer(owner(), amount);
+    }
+    
+    /**
+     * @notice (新增) 查詢一個地址賺取的總佣金
+     */
+    function getTotalCommissionPaid(address _user) external view returns (uint256) {
+        return totalCommissionPaid[_user];
     }
 }

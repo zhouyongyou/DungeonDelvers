@@ -1,4 +1,4 @@
-// interfaces.sol
+// interfaces.sol (已修正)
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -38,13 +38,15 @@ interface IDungeonCore {
 }
 
 interface IOracle {
-    function getAmountOut(address tokenIn, address tokenOut, uint256 amountIn) external view returns (uint256);
+    function getAmountOut(address tokenIn, uint256 amountIn) external view returns (uint256);
 }
 
 interface IPlayerVault {
     function soulShardToken() external view returns (IERC20);
     function spendForGame(address _player, uint256 _amount) external;
     function deposit(address _player, uint256 _amount) external;
+    // ★ 新增：查詢總佣金的函式
+    function getTotalCommissionPaid(address _user) external view returns (uint256);
 }
 
 interface IDungeonMaster {
@@ -52,11 +54,35 @@ interface IDungeonMaster {
 }
 
 interface IDungeonStorage {
-    function getDungeon(uint256 dungeonId) external view returns (uint256 requiredPower, uint256 rewardAmountUSD, uint8 baseSuccessRate, bool isInitialized);
-    function getPartyStatus(uint256 partyId) external view returns (uint256 provisionsRemaining, uint256 cooldownEndsAt, uint256 unclaimedRewards, uint8 fatigueLevel);
-    function setPartyStatus(uint256 partyId, uint256 provisionsRemaining, uint256 cooldownEndsAt, uint256 unclaimedRewards, uint8 fatigueLevel) external;
-    function setExpeditionRequest(uint256 requestId, address requester, uint256 partyId, uint256 dungeonId) external;
-    function getExpeditionRequest(uint256 requestId) external view returns (address requester, uint256 partyId, uint256 dungeonId);
+    // ★ 修改：將結構體定義移至此處，以便其他合約引用
+    struct Dungeon {
+        uint256 requiredPower;
+        uint256 rewardAmountUSD;
+        uint8 baseSuccessRate;
+        bool isInitialized;
+    }
+
+    struct PartyStatus {
+        uint256 provisionsRemaining;
+        uint256 cooldownEndsAt;
+        uint256 unclaimedRewards;
+        uint8 fatigueLevel;
+    }
+
+    struct ExpeditionRequest {
+        address requester;
+        uint256 partyId;
+        uint256 dungeonId;
+    }
+    
+    // ★ 新增：NUM_DUNGEONS 的 getter
+    function NUM_DUNGEONS() external view returns (uint256);
+    function getDungeon(uint256 dungeonId) external view returns (Dungeon memory);
+    function getPartyStatus(uint256 partyId) external view returns (PartyStatus memory);
+    function setDungeon(uint256 id, Dungeon calldata data) external;
+    function setPartyStatus(uint256 partyId, PartyStatus calldata data) external;
+    function setExpeditionRequest(uint256 requestId, ExpeditionRequest calldata data) external;
+    function getExpeditionRequest(uint256 requestId) external view returns (ExpeditionRequest memory);
     function deleteExpeditionRequest(uint256 requestId) external;
 }
 

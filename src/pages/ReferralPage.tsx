@@ -1,4 +1,4 @@
-// src/pages/ReferralPage.tsx
+// src/pages/ReferralPage.tsx (已修正)
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useReadContract, useWriteContract } from 'wagmi';
@@ -9,6 +9,7 @@ import { ActionButton } from '../components/ui/ActionButton';
 import { isAddress, formatEther } from 'viem';
 import { bsc, bscTestnet } from 'wagmi/chains';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { Icons } from '../components/ui/icons';
 
 const ReferralPage: React.FC = () => {
     const { address, chainId } = useAccount();
@@ -18,7 +19,6 @@ const ReferralPage: React.FC = () => {
     const [referrerInput, setReferrerInput] = useState('');
     const [copied, setCopied] = useState(false);
 
-    // ★ 核心修正：在元件的開頭加入型別防衛
     if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
         return <div className="p-4 text-center text-gray-400">請連接到支援的網路以使用邀請功能。</div>;
     }
@@ -32,20 +32,18 @@ const ReferralPage: React.FC = () => {
         query: { enabled: !!address && !!playerVaultContract },
     });
 
-    // TODO: 'totalCommissionPaid' 函式目前在 PlayerVault 合約中不存在。
-    // 當合約更新後，可以取消註解以下程式碼來獲取真實佣金數據。
+    // ★ 修正：呼叫新的 getTotalCommissionPaid 函式
     const { data: totalCommission, isLoading: isLoadingCommission } = useReadContract({
         ...playerVaultContract,
-        functionName: 'totalCommissionPaid', // This function needs to be added to the contract ABI
+        functionName: 'getTotalCommissionPaid',
         args: [address!],
         query: { enabled: !!address && !!playerVaultContract },
     });
     
     const { writeContractAsync, isPending: isSettingReferrer } = useWriteContract();
 
-    // 從 URL search params 中讀取邀請碼
     useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
+        const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
         const ref = urlParams.get('ref');
         if (ref && isAddress(ref)) {
             setReferrerInput(ref);
@@ -82,7 +80,6 @@ const ReferralPage: React.FC = () => {
 
     const referralLink = useMemo(() => {
         if (typeof window === 'undefined' || !address) return '';
-        // 修正：使用 hash 路由來產生連結
         return `${window.location.origin}${window.location.pathname}#/?ref=${address}`;
     }, [address]);
 
@@ -111,7 +108,7 @@ const ReferralPage: React.FC = () => {
                         className="w-full bg-transparent text-gray-300 font-mono text-sm p-2"
                     />
                     <ActionButton onClick={handleCopyLink} className="w-full sm:w-auto flex-shrink-0">
-                        {copied ? '已複製!' : '複製連結'}
+                        {copied ? '已複製!' : <><Icons.Copy className="w-4 h-4 mr-2" />複製連結</>}
                     </ActionButton>
                 </div>
                 <div className="mt-4 text-center">

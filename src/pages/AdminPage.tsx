@@ -81,16 +81,17 @@ const AddressSettingRow: React.FC<{ title: string; description: string; currentA
     );
 };
 
-const SettingRow: React.FC<{ label: string; contract: ReturnType<typeof getContract>; functionName: string; currentValue?: any; isLoading: boolean; isEther?: boolean; isBasisPoints?: boolean; placeholders?: string[]; }> = ({ label, contract, functionName, currentValue, isLoading, isEther = false, isBasisPoints = false, placeholders = ['輸入新值'] }) => {
+const SettingRow: React.FC<{ label: string; contract: NonNullable<ReturnType<typeof getContract>>; functionName: string; currentValue?: any; isLoading: boolean; isEther?: boolean; isBasisPoints?: boolean; placeholders?: string[]; }> = ({ label, contract, functionName, currentValue, isLoading, isEther = false, isBasisPoints = false, placeholders = ['輸入新值'] }) => {
     const [inputValues, setInputValues] = useState<string[]>(new Array(placeholders.length).fill(''));
     const { showToast } = useAppToast();
     const { writeContractAsync, isPending } = useWriteContract();
 
     const handleUpdate = async () => {
-        if (inputValues.some(v => !v) || !contract) return;
+        if (inputValues.some(v => !v)) return;
         try {
             const valuesToSet = inputValues.map((val, index) => {
-                if (isEther && index === 0) return parseEther(val);
+                if (placeholders[index]?.toLowerCase().includes('usd')) return parseEther(val);
+                if (placeholders[index]?.toLowerCase().includes('bnb')) return parseEther(val);
                 return BigInt(val);
             });
             await writeContractAsync({ address: contract.address, abi: contract.abi as Abi, functionName, args: valuesToSet });
@@ -119,7 +120,7 @@ const SettingRow: React.FC<{ label: string; contract: ReturnType<typeof getContr
 };
 
 // =================================================================
-// Section: 複雜參數管理元件 (★ 已修復執行時錯誤)
+// Section: 複雜參數管理元件 (★ 已修復)
 // =================================================================
 
 const DungeonManager: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) => {
@@ -272,7 +273,7 @@ const AltarRuleManager: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
 };
 
 // =================================================================
-// Section: AdminPage 主元件
+// Section: AdminPage 主元件 (★ 已修正)
 // =================================================================
 
 const AdminPage: React.FC = () => {
@@ -352,7 +353,7 @@ const AdminPage: React.FC = () => {
     }, [chainId, setupConfig]);
 
     const { data: readResults, isLoading: isLoadingSettings } = useReadContracts({
-        contracts: contractsToRead as any,
+        contracts: contractsToRead,
         query: { enabled: !!chainId && contractsToRead.length > 0 },
     });
 
@@ -375,11 +376,16 @@ const AdminPage: React.FC = () => {
         }, {} as Record<string, { name: ContractName, address?: Address }>);
     }, [chainId, setupConfig]);
     
-    const { data: params, isLoading: isLoadingParams } = useReadContracts({
-        contracts: allContracts ? [
+    const paramsContracts = useMemo(() => {
+        if (!allContracts || !currentAddressMap.owner || currentAddressMap.owner.toLowerCase() !== address?.toLowerCase()) return [];
+        return [
             { ...allContracts.hero, functionName: 'mintPriceUSD' }, { ...allContracts.relic, functionName: 'mintPriceUSD' }, { ...allContracts.dungeonMaster, functionName: 'provisionPriceUSD' }, { ...allContracts.dungeonMaster, functionName: 'explorationFee' }, { ...allContracts.hero, functionName: 'platformFee' }, { ...allContracts.relic, functionName: 'platformFee' }, { ...allContracts.party, functionName: 'platformFee' }, { ...allContracts.dungeonMaster, functionName: 'restCostPowerDivisor' }, { ...allContracts.playerVault, functionName: 'standardInitialRate' }, { ...allContracts.playerVault, functionName: 'largeWithdrawInitialRate' }, { ...allContracts.playerVault, functionName: 'decreaseRatePerPeriod' }, { ...allContracts.playerVault, functionName: 'commissionRate' }, { ...allContracts.playerVault, functionName: 'smallWithdrawThresholdUSD' }, { ...allContracts.playerVault, functionName: 'largeWithdrawThresholdUSD' }, { ...allContracts.vipStaking, functionName: 'unstakeCooldown' },
-        ].filter(c => c && c.address) : [],
-        query: { enabled: !!allContracts && !!currentAddressMap.owner && currentAddressMap.owner.toLowerCase() === address?.toLowerCase() }
+        ].filter(c => c && c.address);
+    }, [allContracts, currentAddressMap.owner, address]);
+
+    const { data: params, isLoading: isLoadingParams } = useReadContracts({
+        contracts: paramsContracts as any,
+        query: { enabled: paramsContracts.length > 0 }
     });
     
     const handleSet = async (key: string, targetContract: any, functionName: string) => {
@@ -475,32 +481,35 @@ const AdminPage: React.FC = () => {
                 <AltarRuleManager chainId={chainId} />
             </AdminSection>
             
-            <AdminSection title="核心價格管理 (USD)">
-                <SettingRow label="英雄鑄造價" contract={allContracts?.hero} functionName="setMintPriceUSD" currentValue={heroMintPrice} isLoading={isLoadingParams} isEther placeholders={['新價格 (USD)']} />
-                <SettingRow label="聖物鑄造價" contract={allContracts?.relic} functionName="setMintPriceUSD" currentValue={relicMintPrice} isLoading={isLoadingParams} isEther placeholders={['新價格 (USD)']} />
-                <SettingRow label="儲備購買價" contract={allContracts?.dungeonMaster} functionName="setProvisionPriceUSD" currentValue={provisionPrice} isLoading={isLoadingParams} isEther placeholders={['新價格 (USD)']} />
-            </AdminSection>
+            {allContracts && (
+                <>
+                    <AdminSection title="核心價格管理 (USD)">
+                        {allContracts.hero && <SettingRow label="英雄鑄造價" contract={allContracts.hero} functionName="setMintPriceUSD" currentValue={heroMintPrice} isLoading={isLoadingParams} isEther placeholders={['新價格 (USD)']} />}
+                        {allContracts.relic && <SettingRow label="聖物鑄造價" contract={allContracts.relic} functionName="setMintPriceUSD" currentValue={relicMintPrice} isLoading={isLoadingParams} isEther placeholders={['新價格 (USD)']} />}
+                        {allContracts.dungeonMaster && <SettingRow label="儲備購買價" contract={allContracts.dungeonMaster} functionName="setProvisionPriceUSD" currentValue={provisionPrice} isLoading={isLoadingParams} isEther placeholders={['新價格 (USD)']} />}
+                    </AdminSection>
 
-            <AdminSection title="平台費用管理 (BNB)">
-                <SettingRow label="英雄平台費" contract={allContracts?.hero} functionName="setPlatformFee" currentValue={heroFee} isLoading={isLoadingParams} isEther placeholders={['新費用 (BNB)']} />
-                <SettingRow label="聖物平台費" contract={allContracts?.relic} functionName="setPlatformFee" currentValue={relicFee} isLoading={isLoadingParams} isEther placeholders={['新費用 (BNB)']} />
-                <SettingRow label="隊伍平台費" contract={allContracts?.party} functionName="setPlatformFee" currentValue={partyFee} isLoading={isLoadingParams} isEther placeholders={['新費用 (BNB)']} />
-                <SettingRow label="遠征探索費" contract={allContracts?.dungeonMaster} functionName="setExplorationFee" currentValue={explorationFee} isLoading={isLoadingParams} isEther placeholders={['新費用 (BNB)']} />
-            </AdminSection>
+                    <AdminSection title="平台費用管理 (BNB)">
+                        {allContracts.hero && <SettingRow label="英雄平台費" contract={allContracts.hero} functionName="setPlatformFee" currentValue={heroFee} isLoading={isLoadingParams} isEther placeholders={['新費用 (BNB)']} />}
+                        {allContracts.relic && <SettingRow label="聖物平台費" contract={allContracts.relic} functionName="setPlatformFee" currentValue={relicFee} isLoading={isLoadingParams} isEther placeholders={['新費用 (BNB)']} />}
+                        {allContracts.party && <SettingRow label="隊伍平台費" contract={allContracts.party} functionName="setPlatformFee" currentValue={partyFee} isLoading={isLoadingParams} isEther placeholders={['新費用 (BNB)']} />}
+                        {allContracts.dungeonMaster && <SettingRow label="遠征探索費" contract={allContracts.dungeonMaster} functionName="setExplorationFee" currentValue={explorationFee} isLoading={isLoadingParams} isEther placeholders={['新費用 (BNB)']} />}
+                    </AdminSection>
 
-            <AdminSection title="遊戲機制參數">
-                <SettingRow label="休息成本係數" contract={allContracts?.dungeonMaster} functionName="setRestCostPowerDivisor" currentValue={restDivisor} isLoading={isLoadingParams} placeholders={['新係數 (戰力/USD)']} />
-                <SettingRow label="VIP 取消質押冷卻 (秒)" contract={allContracts?.vipStaking} functionName="setUnstakeCooldown" currentValue={unstakeCooldown} isLoading={isLoadingParams} placeholders={['新冷卻時間 (秒)']} />
-            </AdminSection>
-            
-            <AdminSection title="稅務與提現系統">
-                <SettingRow label="稅務參數" contract={allContracts?.playerVault} functionName="setTaxParameters" currentValue={standardRate} isLoading={isLoadingParams} isBasisPoints placeholders={['標準稅率 (‱)', '大額稅率 (‱)', '衰減率 (‱)', '週期(秒)']} />
-                <SettingRow label="邀請佣金率" contract={allContracts?.playerVault} functionName="setCommissionRate" currentValue={commissionRate} isLoading={isLoadingParams} isBasisPoints placeholders={['新佣金率 (萬分位)']} />
-                <SettingRow label="提現門檻 (USD)" contract={allContracts?.playerVault} functionName="setWithdrawThresholds" currentValue={null} isLoading={isLoadingParams} isEther placeholders={['小額門檻 (USD)', '大額門檻 (USD)']} />
-                <ReadOnlyRow label="當前小額門檻" value={`${formatEther(smallWithdrawThreshold as bigint ?? 0n)} USD`} isLoading={isLoadingParams} />
-                <ReadOnlyRow label="當前大額門檻" value={`${formatEther(largeWithdrawThreshold as bigint ?? 0n)} USD`} isLoading={isLoadingParams} />
-            </AdminSection>
-
+                    <AdminSection title="遊戲機制參數">
+                        {allContracts.dungeonMaster && <SettingRow label="休息成本係數" contract={allContracts.dungeonMaster} functionName="setRestCostPowerDivisor" currentValue={restDivisor} isLoading={isLoadingParams} placeholders={['新係數 (戰力/USD)']} />}
+                        {allContracts.vipStaking && <SettingRow label="VIP 取消質押冷卻 (秒)" contract={allContracts.vipStaking} functionName="setUnstakeCooldown" currentValue={unstakeCooldown} isLoading={isLoadingParams} placeholders={['新冷卻時間 (秒)']} />}
+                    </AdminSection>
+                    
+                    <AdminSection title="稅務與提現系統">
+                        {allContracts.playerVault && <SettingRow label="稅務參數" contract={allContracts.playerVault} functionName="setTaxParameters" currentValue={standardRate} isLoading={isLoadingParams} isBasisPoints placeholders={['標準稅率 (‱)', '大額稅率 (‱)', '衰減率 (‱)', '週期(秒)']} />}
+                        {allContracts.playerVault && <SettingRow label="邀請佣金率" contract={allContracts.playerVault} functionName="setCommissionRate" currentValue={commissionRate} isLoading={isLoadingParams} isBasisPoints placeholders={['新佣金率 (萬分位)']} />}
+                        {allContracts.playerVault && <SettingRow label="提現門檻 (USD)" contract={allContracts.playerVault} functionName="setWithdrawThresholds" currentValue={null} isLoading={isLoadingParams} isEther placeholders={['小額門檻 (USD)', '大額門檻 (USD)']} />}
+                        <ReadOnlyRow label="當前小額門檻" value={`${formatEther(smallWithdrawThreshold as bigint ?? 0n)} USD`} isLoading={isLoadingParams} />
+                        <ReadOnlyRow label="當前大額門檻" value={`${formatEther(largeWithdrawThreshold as bigint ?? 0n)} USD`} isLoading={isLoadingParams} />
+                    </AdminSection>
+                </>
+            )}
         </section>
     );
 };

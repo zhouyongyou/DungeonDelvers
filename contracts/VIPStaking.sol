@@ -1,4 +1,4 @@
-// VIPStaking.sol SVG
+// VIPStaking.sol (已修正)
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -119,9 +119,9 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
         uint256 stakedAmount = userStakes[_user].amount;
         if (stakedAmount == 0 || address(dungeonCore) == address(0)) return 0;
 
-        // 計算質押金額的 USD 價值
+        // ★ 核心修正：呼叫 getAmountOut 時只傳入 2 個參數
         uint256 stakedValueUSD = IOracle(dungeonCore.oracle()).getAmountOut(
-            address(soulShardToken), dungeonCore.usdToken(), stakedAmount
+            address(soulShardToken), stakedAmount
         );
         
         // 等級計算公式: level = sqrt(USD價值 / 100)
@@ -137,8 +137,9 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
         
         uint256 stakedValueUSD = 0;
         if (stakedAmount > 0) {
+            // ★ 核心修正：呼叫 getAmountOut 時只傳入 2 個參數
             stakedValueUSD = IOracle(dungeonCore.oracle()).getAmountOut(
-                address(soulShardToken), dungeonCore.usdToken(), stakedAmount
+                address(soulShardToken), stakedAmount
             );
         }
 
@@ -185,17 +186,14 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
     }
     
     // --- 內部函式 ---
-    // 覆寫 _update 函式，使 VIP NFT 不可轉讓
     function _update(address to, uint256 tokenId, address auth) internal override returns (address) {
         address from = _ownerOf(tokenId);
         require(from == address(0) || to == address(0), "VIP: Non-transferable");
         return super._update(to, tokenId, auth);
     }
 
-    // 在 VIPStaking.sol 中加入這個函數
     function getVipTaxReduction(address _user) external view returns (uint256) {
         uint8 level = getVipLevel(_user);
-        // 每級減免 0.5% (50 / 10000)
         return uint256(level) * 50;
     }
 }
