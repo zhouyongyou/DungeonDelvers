@@ -18,18 +18,14 @@ import type {
 // =================================================================
 // Section: 精確的合約部署區塊號
 // =================================================================
-// 為了最大化查詢效率並避免 RPC 限制，我們為每個合約指定其部署時的區塊號。
-// 這樣在查詢事件時，就無需從創世區塊開始掃描。
-// TODO: 請務必前往 BscScan 查詢並填寫您合約的【真實】部署區塊號！
 const DEPLOYMENT_BLOCKS: { [chainId: number]: { [key in ContractName]?: bigint } } = {
   [bscTestnet.id]: {
-    hero: 57284000n,       // 請替換為 Hero 合約在測試網的【真實】部署區塊號
-    relic: 57284000n,      // 請替換為 Relic 合約在測試網的【真實】部署區塊號
-    party: 57284000n,      // 請替換為 Party 合約在測試網的【真實】部署區塊號
-    vipStaking: 57284000n  // 請替換為 VIP 合約在測試網的【真實】部署區塊號
+    hero: 57284000n,
+    relic: 57284000n,
+    party: 57284000n,
+    vipStaking: 57284000n
   },
   [bsc.id]: {
-    // 未來主網上線後，在此處填寫主網的區塊號
     hero: 53071000n,
     relic: 53071000n,
     party: 53071000n,
@@ -50,10 +46,9 @@ function isSupportedChain(chainId: number): chainId is SupportedChainId {
 
 const getClient = (chainId: number) => {
     const chain = chainId === bsc.id ? bsc : bscTestnet;
-    // 使用您在 wagmi.ts 中設定的 Alchemy RPC URL
     const rpcUrl = chainId === bsc.id 
-        ? (import.meta.env.VITE_ALCHEMY_BSC_MAINNET_RPC_URL || 'https://bnb-mainnet.g.alchemy.com/v2/3lmTWjUVbFylAurhdU-rSUefTC-P4tKf')
-        : (import.meta.env.VITE_ALCHEMY_BSC_TESTNET_RPC_URL || 'https://bnb-testnet.g.alchemy.com/v2/3lmTWjUVbFylAurhdU-rSUefTC-P4tKf');
+        ? (import.meta.env.VITE_ALCHEMY_BSC_MAINNET_RPC_URL || 'https://bsc-dataseed1.binance.org/')
+        : (import.meta.env.VITE_ALCHEMY_BSC_TESTNET_RPC_URL || 'https://data-seed-prebsc-1-s1.binance.org:8545/');
     return createPublicClient({ chain, transport: http(rpcUrl) });
 };
 
@@ -121,24 +116,32 @@ async function fetchNftsForContract(
     if (!contract) return [];
 
     try {
-        // ★★★ 核心修正：動態獲取起始區塊號 ★★★
-        const fromBlock = DEPLOYMENT_BLOCKS[chainId]?.[contractName] || 'earliest';
+        // ★★★ 核心修正：分批次查詢日誌以避免 RPC 限制 ★★★
+        const fromBlock = DEPLOYMENT_BLOCKS[chainId]?.[contractName] || 0n;
+        const toBlock = await client.getBlockNumber();
+        const CHUNK_SIZE = 499n; // 設定一個安全的查詢範圍
+        
+        let allLogs = [];
+        for (let startBlock = fromBlock; startBlock <= toBlock; startBlock += CHUNK_SIZE + 1n) {
+            const endBlock = startBlock + CHUNK_SIZE > toBlock ? toBlock : startBlock + CHUNK_SIZE;
+            const chunkLogs = await client.getLogs({
+                address: contract.address,
+                event: {
+                    type: 'event', name: 'Transfer',
+                    inputs: [
+                        { type: 'address', name: 'from', indexed: true },
+                        { type: 'address', name: 'to', indexed: true },
+                        { type: 'uint256', name: 'tokenId', indexed: true },
+                    ],
+                },
+                args: { to: owner },
+                fromBlock: startBlock,
+                toBlock: endBlock,
+            });
+            allLogs.push(...chunkLogs);
+        }
 
-        const transferLogs = await client.getLogs({
-            address: contract.address,
-            event: {
-                type: 'event', name: 'Transfer',
-                inputs: [
-                    { type: 'address', name: 'from', indexed: true },
-                    { type: 'address', name: 'to', indexed: true },
-                    { type: 'uint256', name: 'tokenId', indexed: true },
-                ],
-            },
-            args: { to: owner },
-            fromBlock: fromBlock,
-        });
-
-        const potentialTokenIds = [...new Set(transferLogs.map(log => log.args.tokenId).filter(id => id !== undefined))] as bigint[];
+        const potentialTokenIds = [...new Set(allLogs.map(log => log.args.tokenId).filter(id => id !== undefined))] as bigint[];
         if (potentialTokenIds.length === 0) return [];
         
         const ownerOfCalls = potentialTokenIds.map(id => ({
