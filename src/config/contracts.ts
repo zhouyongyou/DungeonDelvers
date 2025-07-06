@@ -22,11 +22,11 @@ export * from './abis';
 
 // =================================================================
 // 1. 定義所有合約的地址和 ABI
-// ★ 核心修改：所有地址現在都直接從 Vite 的環境變數動態讀取
+// ★ 核心修改：為主網和測試網的 SoulShard 代幣使用不同的環境變數
 // =================================================================
 export const contracts = {
   [bscTestnet.id]: {
-    soulShard: { address: import.meta.env.VITE_SOUL_SHARD_TOKEN_ADDRESS as Address, abi: soulShardTokenABI },
+    soulShard: { address: import.meta.env.VITE_TESTNET_SOUL_SHARD_TOKEN_ADDRESS as Address, abi: soulShardTokenABI },
     hero: { address: import.meta.env.VITE_TESTNET_HERO_ADDRESS as Address, abi: heroABI },
     relic: { address: import.meta.env.VITE_TESTNET_RELIC_ADDRESS as Address, abi: relicABI },
     dungeonCore: { address: import.meta.env.VITE_TESTNET_DUNGEONCORE_ADDRESS as Address, abi: dungeonCoreABI },
@@ -64,12 +64,8 @@ export type ContractName = keyof (typeof contracts)[SupportedChainId];
 
 
 // =================================================================
-// 3. getContract 函式 (已修正)
+// 3. getContract 函式 (保持不變)
 // =================================================================
-/**
- * @notice 獲取指定鏈和名稱的合約設定。
- * @dev 此函式現在會一併回傳 chainId，方便後續使用。
- */
 export function getContract<
   TChainId extends SupportedChainId,
   TContractName extends keyof (typeof contracts)[TChainId]
@@ -83,11 +79,9 @@ export function getContract<
   
   const contractConfig = contracts[chainId][name];
   
-  // 這裡的檢查現在變得更重要，如果 .env 檔案中沒有填寫地址，它會是 undefined 或空字串
   if (!contractConfig || !(contractConfig as any).address) {
     return null;
   }
   
-  // ★ 核心修正：回傳的物件中包含 chainId
   return { ...contractConfig, chainId };
 }

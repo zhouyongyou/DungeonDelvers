@@ -26,8 +26,10 @@ interface ImportMetaEnv {
 
   // =================================================================
   // Section: 核心代幣與流動性池合約地址
+  // ★ 核心修改：為測試網和主網的 SoulShard 代幣分別定義變數
   // =================================================================
-  readonly VITE_SOUL_SHARD_TOKEN_ADDRESS: string;
+  readonly VITE_SOUL_SHARD_TOKEN_ADDRESS: string; // 主網地址
+  readonly VITE_TESTNET_SOUL_SHARD_TOKEN_ADDRESS: string; // 測試網地址
   readonly VITE_USD_TOKEN_ADDRESS: string;
   readonly VITE_TESTNET_POOL_ADDRESS: string;
   readonly VITE_MAINNET_POOL_ADDRESS: string;

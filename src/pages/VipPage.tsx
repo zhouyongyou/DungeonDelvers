@@ -205,9 +205,13 @@ const VipPage: React.FC = () => {
                         <div>
                             <h3 className="section-title text-xl">我的 VIP 狀態</h3>
                             <div className="grid grid-cols-3 gap-4 text-center">
-                                {/* ★ 核心修正：加入更嚴謹的型別檢查，避免渲染問題 */}
                                 <div><div className="text-sm text-gray-500 dark:text-gray-400">質押總額</div><div className="font-bold text-2xl text-gray-800 dark:text-white">{isLoading ? <LoadingSpinner /> : typeof stakedAmount === 'bigint' ? formatEther(stakedAmount) : '...'}</div></div>
-                                <div><div className="text-sm text-gray-500 dark:text-gray-400">VIP 等級</div><div className="font-bold text-2xl text-yellow-500 dark:text-yellow-400">LV {isLoading ? '...' : vipLevel}</div></div>
+                                <div>
+                                    <div className="text-sm text-gray-500 dark:text-gray-400">VIP 等級</div>
+                                    <div className="font-bold text-2xl text-yellow-500 dark:text-yellow-400">
+                                        LV {isLoading ? '...' : (typeof vipLevel === 'number' ? vipLevel : '...')}
+                                    </div>
+                                </div>
                                 <div><div className="text-sm text-gray-500 dark:text-gray-400">稅率減免</div><div className="font-bold text-2xl text-green-600 dark:text-green-400">{isLoading ? '...' : typeof taxReduction === 'bigint' ? (Number(taxReduction) / 100).toFixed(2) + '%' : '...'}</div></div>
                             </div>
                         </div>

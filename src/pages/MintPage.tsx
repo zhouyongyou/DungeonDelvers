@@ -15,7 +15,7 @@ import type { AnyNft, NftAttribute } from '../types/nft';
 import { fetchMetadata } from '../api/nfts';
 
 // =================================================================
-// Section: 新增的子元件
+// Section: 新增的子元件 (保持不變)
 // =================================================================
 
 // 顯示稀有度機率的元件
@@ -49,37 +49,33 @@ const MintResultModal: React.FC<{ nft: AnyNft | null; onClose: () => void }> = (
 
 
 // =================================================================
-// Section: 型別定義與輔助 Hook
+// Section: 型別定義與輔助 Hook (★ 已重構)
 // =================================================================
 
 type PaymentSource = 'wallet' | 'vault';
 type SupportedChainId = typeof bsc.id | typeof bscTestnet.id;
 
+/**
+ * @notice 獲取鑄造相關數據的自定義 Hook (已重構)
+ * @dev 此版本直接呼叫 Hero/Relic 合約的 getRequiredSoulShardAmount 函式，
+ * 將兩次鏈上讀取簡化為一次，提高了效率和穩定性。
+ */
 const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: PaymentSource, chainId: SupportedChainId) => {
     const { address } = useAccount();
     const contractConfig = getContract(chainId, type)!;
     const soulShardContract = getContract(chainId, 'soulShard')!;
-    const dungeonCoreContract = getContract(chainId, 'dungeonCore')!;
     const playerVaultContract = getContract(chainId, 'playerVault')!;
 
-    const { data: mintPriceUSD, isLoading: isLoadingPrice } = useReadContract({
+    // ★ 核心修改：直接呼叫合約的輔助函式來獲取總價，而不是分兩步計算。
+    const { data: totalRequiredAmount, isLoading } = useReadContract({
         address: contractConfig.address,
         abi: contractConfig.abi,
-        functionName: 'mintPriceUSD',
+        functionName: 'getRequiredSoulShardAmount',
+        args: [BigInt(quantity)],
+        query: {
+            enabled: !!contractConfig && quantity > 0, // 只有在元件準備好且數量大於0時才查詢
+        },
     });
-
-    const { data: requiredAmountPerUnit, isLoading: isLoadingConversion } = useReadContract({
-        address: dungeonCoreContract.address,
-        abi: dungeonCoreContract.abi,
-        functionName: 'getSoulShardAmountForUSD',
-        args: [typeof mintPriceUSD === 'bigint' ? mintPriceUSD : 0n],
-        query: { enabled: typeof mintPriceUSD === 'bigint' && mintPriceUSD > 0n },
-    });
-    
-    const totalRequiredAmount = useMemo(() => {
-        if (typeof requiredAmountPerUnit !== 'bigint') return 0n;
-        return requiredAmountPerUnit * BigInt(quantity);
-    }, [requiredAmountPerUnit, quantity]);
 
     const { data: walletBalance } = useBalance({ address, token: soulShardContract.address });
     
@@ -112,17 +108,17 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     });
 
     return {
-        requiredAmount: totalRequiredAmount,
+        requiredAmount: totalRequiredAmount ?? 0n,
         balance: paymentSource === 'wallet' ? (walletBalance?.value ?? 0n) : vaultBalance,
         needsApproval,
-        isLoading: isLoadingPrice || isLoadingConversion,
+        isLoading: isLoading, // 現在只有一個 loading 狀態
         platformFee: platformFee as bigint ?? 0n,
         refetchAllowance,
     };
 };
 
 // =================================================================
-// Section: MintCard 子元件
+// Section: MintCard 子元件 (★ 已更新)
 // =================================================================
 
 interface MintCardProps {
@@ -141,7 +137,8 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
     const [paymentSource, setPaymentSource] = useState<PaymentSource>('wallet');
     const [mintingResult, setMintingResult] = useState<AnyNft | null>(null);
 
-    const { requiredAmount, balance, needsApproval, isLoading: isLoadingPrice, platformFee, refetchAllowance } = useMintLogic(type, quantity, paymentSource, chainId);
+    // ★ 核心修改：isLoading 的變數名稱從 isLoadingPrice 改為更通用的 isLoading
+    const { requiredAmount, balance, needsApproval, isLoading, platformFee, refetchAllowance } = useMintLogic(type, quantity, paymentSource, chainId);
     const { writeContractAsync, isPending: isMinting } = useWriteContract();
     
     const title = type === 'hero' ? '英雄' : '聖物';
@@ -228,8 +225,8 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
         ? <ActionButton onClick={handleApprove} isLoading={isMinting} className="w-48 h-12">授權</ActionButton>
         : <ActionButton 
             onClick={handleMint} 
-            isLoading={isMinting || isLoadingPrice} 
-            disabled={!address || isLoadingPrice || balance < requiredAmount || requiredAmount === 0n} 
+            isLoading={isMinting || isLoading} // ★ 核心修改：使用新的 isLoading 狀態
+            disabled={!address || isLoading || balance < requiredAmount || requiredAmount === 0n} 
             className="w-48 h-12"
           >
             {isMinting ? '請在錢包確認' : (address ? `招募 ${quantity} 個` : '請先連接錢包')}
@@ -263,7 +260,7 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
             </div>
 
             <div className="text-center mb-4 min-h-[72px] flex-grow flex flex-col justify-center">
-                {isLoadingPrice ? <LoadingSpinner color="border-gray-500" /> : 
+                {isLoading ? <LoadingSpinner color="border-gray-500" /> : // ★ 核心修改：使用新的 isLoading 狀態
                     <div>
                         <p className="text-lg text-gray-500 dark:text-gray-400">總價:</p>
                         <p className="font-bold text-yellow-500 dark:text-yellow-400 text-2xl">{parseFloat(formatEther(requiredAmount)).toFixed(4)}</p>
@@ -282,7 +279,7 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
 };
 
 // =================================================================
-// Section: 新的內部元件，確保 chainId 型別正確
+// Section: MintingInterface & MintPage 主元件 (保持不變)
 // =================================================================
 
 const MintingInterface: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) => {
@@ -296,11 +293,6 @@ const MintingInterface: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         </div>
     );
 };
-
-
-// =================================================================
-// Section: MintPage 主元件 (重構後)
-// =================================================================
 
 const MintPage: React.FC = () => {
     const { chainId } = useAccount();
