@@ -1,4 +1,4 @@
-// src/config/contracts.ts
+// src/config/contracts.ts (最終修正版)
 
 import { bsc, bscTestnet } from 'wagmi/chains';
 import { type Address } from 'viem';
@@ -22,7 +22,7 @@ export * from './abis';
 
 // =================================================================
 // 1. 定義所有合約的地址和 ABI
-// ★ 核心修改：為主網和測試網的 SoulShard 代幣使用不同的環境變數
+// ★ 核心修正：為所有合約明確區分主網 (MAINNET) 和測試網 (TESTNET) 的環境變數
 // =================================================================
 export const contracts = {
   [bscTestnet.id]: {
@@ -40,7 +40,7 @@ export const contracts = {
     oracle: { address: import.meta.env.VITE_TESTNET_ORACLE_ADDRESS as Address, abi: oracleABI },
   },
   [bsc.id]: {
-    soulShard: { address: import.meta.env.VITE_SOUL_SHARD_TOKEN_ADDRESS as Address, abi: soulShardTokenABI },
+    soulShard: { address: import.meta.env.VITE_MAINNET_SOUL_SHARD_TOKEN_ADDRESS as Address, abi: soulShardTokenABI },
     hero: { address: import.meta.env.VITE_MAINNET_HERO_ADDRESS as Address, abi: heroABI },
     relic: { address: import.meta.env.VITE_MAINNET_RELIC_ADDRESS as Address, abi: relicABI },
     dungeonCore: { address: import.meta.env.VITE_MAINNET_DUNGEONCORE_ADDRESS as Address, abi: dungeonCoreABI },

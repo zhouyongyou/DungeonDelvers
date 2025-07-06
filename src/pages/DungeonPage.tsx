@@ -1,4 +1,4 @@
-// src/pages/DungeonPage.tsx
+// src/pages/DungeonPage.tsx (引導優化版)
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useReadContracts, useReadContract, useWriteContract } from 'wagmi';
@@ -35,7 +35,7 @@ interface PartyStatusCardProps {
   onRest: (partyId: bigint) => void;
   onBuyProvisions: (partyId: bigint) => void;
   isTxPending: boolean;
-  isAnyTxPendingForThisParty: boolean; // ★ 新增：判斷此卡片是否有待處理交易
+  isAnyTxPendingForThisParty: boolean;
   chainId: SupportedChainId;
 }
 
@@ -52,7 +52,6 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
         query: { enabled: !!dungeonStorageContract, refetchInterval: 5000 }
     });
     
-    // ★ 新增：交易成功後刷新狀態
     const queryClient = useQueryClient();
     useEffect(() => {
         if (!isAnyTxPendingForThisParty) {
@@ -82,7 +81,6 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
 
     const renderStatus = () => {
         if (isLoadingStatus) return <span className="text-gray-400">讀取狀態...</span>;
-        // ★ 修改：增加「遠征中」的狀態顯示
         if (isAnyTxPendingForThisParty) return <span className="px-3 py-1 text-sm font-medium text-purple-300 bg-purple-900/50 rounded-full flex items-center gap-2"><LoadingSpinner size="h-3 w-3" />遠征中</span>;
         if (isOnCooldown) return <span className="px-3 py-1 text-sm font-medium text-yellow-300 bg-yellow-900/50 rounded-full">冷卻中...</span>;
         if (provisionsRemaining === 0n) return <span className="px-3 py-1 text-sm font-medium text-orange-400 bg-orange-900/50 rounded-full">需要儲備</span>;
@@ -183,7 +181,6 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
         }).filter((d): d is Dungeon => d !== null && d.isInitialized);
     }, [dungeonsData]);
     
-    // ★ 新增：檢查特定隊伍是否有待處理的交易
     const checkPendingTxForParty = (partyId: bigint) => {
         return transactions.some(tx => tx.status === 'pending' && tx.description.includes(`隊伍 #${partyId.toString()}`));
     };
@@ -222,7 +219,15 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
                 <h2 className="page-title">遠征指揮中心</h2>
                 {(!nfts || nfts.parties.length === 0) ? (
                     <EmptyState message="您還沒有任何隊伍可以派遣。">
-                        <ActionButton onClick={() => setActivePage('party')} className="mt-4">前往創建隊伍</ActionButton>
+                        {/* ★ 新增：引導按鈕 */}
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center mt-4">
+                            <ActionButton onClick={() => setActivePage('party')} className="w-48 h-12">
+                                前往創建隊伍
+                            </ActionButton>
+                            <ActionButton onClick={() => setActivePage('mint')} className="w-48 h-12 bg-teal-600 hover:bg-teal-500">
+                                前往鑄造
+                            </ActionButton>
+                        </div>
                     </EmptyState>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

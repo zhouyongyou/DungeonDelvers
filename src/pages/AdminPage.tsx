@@ -1,5 +1,7 @@
+// src/pages/AdminPage.tsx (最終修正版)
+
 import React, { useState, useMemo, useEffect, type ReactNode } from 'react';
-import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
+import { useAccount, useReadContracts, useWriteContract, useReadContract } from 'wagmi';
 import { parseEther, formatEther, type Address, type Abi, isAddress } from 'viem';
 import { getContract, type ContractName, contracts as contractConfigs } from '../config/contracts';
 import { useAppToast } from '../hooks/useAppToast';
@@ -12,7 +14,7 @@ import { useTransactionStore } from '../stores/useTransactionStore';
 type SupportedChainId = typeof bsc.id | typeof bscTestnet.id;
 
 // =================================================================
-// Section: 可重用的 UI 子元件 (已驗證穩定性)
+// Section: 可重用的 UI 子元件 (已移至頂層，修復 scope 問題)
 // =================================================================
 
 const AdminSection: React.FC<{ title: string; children: ReactNode }> = ({ title, children }) => (
@@ -31,7 +33,7 @@ const ReadOnlyRow: React.FC<{ label: string; value?: string; isLoading?: boolean
     </div>
 );
 
-const AddressSettingRow: React.FC<{ title: string; description: string; currentAddress?: Address; envAddress?: Address; envContractName?: string; isLoading: boolean; inputValue: string; onInputChange: (value: string) => void; onSet: () => Promise<void>; isSetting: boolean; }> = ({ title, description, currentAddress, envAddress, envContractName, isLoading, inputValue, onInputChange, onSet, isSetting }) => {
+const AddressSettingRow: React.FC<{ title: string; description: string; readSource: string; currentAddress?: Address; envAddress?: Address; envContractName?: string; isLoading: boolean; inputValue: string; onInputChange: (value: string) => void; onSet: () => Promise<void>; isSetting: boolean; }> = ({ title, description, readSource, currentAddress, envAddress, envContractName, isLoading, inputValue, onInputChange, onSet, isSetting }) => {
     const isConfigured = currentAddress && currentAddress !== '0x0000000000000000000000000000000000000000';
     const isEnvSet = envAddress && envAddress !== '0x0000000000000000000000000000000000000000';
     const isMatched = isConfigured && isEnvSet && currentAddress?.toLowerCase() === envAddress?.toLowerCase();
@@ -51,7 +53,7 @@ const AddressSettingRow: React.FC<{ title: string; description: string; currentA
                 )}
             </div>
             <div className="text-xs font-mono grid grid-cols-[90px_1fr_20px] items-center gap-x-2">
-                <span className="text-gray-400">鏈上當前:</span>
+                <span className="text-gray-400" title={`讀取來源: ${readSource}`}>鏈上當前:</span>
                 {isLoading ? <LoadingSpinner size="h-3 w-3" /> : (
                     <>
                         <span className={`${isConfigured ? 'text-green-400' : 'text-yellow-400'} truncate`} title={currentAddress}>
@@ -81,7 +83,7 @@ const AddressSettingRow: React.FC<{ title: string; description: string; currentA
     );
 };
 
-const SettingRow: React.FC<{ label: string; contract: NonNullable<ReturnType<typeof getContract>>; functionName: string; currentValue?: any; isLoading: boolean; isEther?: boolean; isBasisPoints?: boolean; placeholders?: string[]; }> = ({ label, contract, functionName, currentValue, isLoading, isEther = false, isBasisPoints = false, placeholders = ['輸入新值'] }) => {
+const SettingRow: React.FC<{ label: string; readSource: string; contract: NonNullable<ReturnType<typeof getContract>>; functionName: string; currentValue?: any; isLoading: boolean; isEther?: boolean; isBasisPoints?: boolean; placeholders?: string[]; }> = ({ label, readSource, contract, functionName, currentValue, isLoading, isEther = false, isBasisPoints = false, placeholders = ['輸入新值'] }) => {
     const [inputValues, setInputValues] = useState<string[]>(new Array(placeholders.length).fill(''));
     const { showToast } = useAppToast();
     const { writeContractAsync, isPending } = useWriteContract();
@@ -101,11 +103,11 @@ const SettingRow: React.FC<{ label: string; contract: NonNullable<ReturnType<typ
         }
     };
     
-    const displayValue = isLoading ? <LoadingSpinner size="h-4 w-4" /> : isEther ? `${formatEther(currentValue ?? 0n)}` : isBasisPoints ? `${(Number(currentValue ?? 0n) / 100).toFixed(2)}%` : (currentValue?.toString() ?? 'N/A');
+    const displayValue = isLoading ? <LoadingSpinner size="h-4 w-4" /> : currentValue === undefined || currentValue === null ? 'N/A' : isEther ? `${formatEther(currentValue ?? 0n)}` : isBasisPoints ? `${(Number(currentValue ?? 0n) / 100).toFixed(2)}%` : currentValue.toString();
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-            <label className="text-gray-300 md:col-span-1">{label}</label>
+            <label className="text-gray-300 md:col-span-1" title={`讀取來源: ${readSource}`}>{label}</label>
             <div className="font-mono text-sm bg-black/20 p-2 rounded md:col-span-1 break-all">
                 當前值: <span className="text-yellow-400">{displayValue}</span>
             </div>
@@ -120,7 +122,7 @@ const SettingRow: React.FC<{ label: string; contract: NonNullable<ReturnType<typ
 };
 
 // =================================================================
-// Section: 複雜參數管理元件 (★ 已修復)
+// Section: 複雜參數管理元件 (已驗證穩定性)
 // =================================================================
 
 const DungeonManager: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) => {
@@ -272,12 +274,13 @@ const AltarRuleManager: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     );
 };
 
+
 // =================================================================
-// Section: AdminPage 主元件 (★ 已修正)
+// Section: AdminPageContent (核心邏輯元件)
 // =================================================================
 
-const AdminPage: React.FC = () => {
-    const { address, chainId } = useAccount();
+const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) => {
+    const { address } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
     const { writeContractAsync } = useWriteContract();
@@ -286,69 +289,40 @@ const AdminPage: React.FC = () => {
     const [isBatchSetting, setIsBatchSetting] = useState(false);
     const [pendingTx, setPendingTx] = useState<string | null>(null);
 
-    const isSupportedChain = (id: number | undefined): id is SupportedChainId => id === bsc.id || id === bscTestnet.id;
-
-    const allContracts = useMemo(() => {
-        if (!isSupportedChain(chainId)) return null;
-        return {
-            dungeonCore: getContract(chainId, 'dungeonCore'),
-            hero: getContract(chainId, 'hero'),
-            relic: getContract(chainId, 'relic'),
-            party: getContract(chainId, 'party'),
-            dungeonMaster: getContract(chainId, 'dungeonMaster'),
-            playerVault: getContract(chainId, 'playerVault'),
-            oracle: getContract(chainId, 'oracle'),
-            altarOfAscension: getContract(chainId, 'altarOfAscension'),
-            dungeonStorage: getContract(chainId, 'dungeonStorage'),
-            playerProfile: getContract(chainId, 'playerProfile'),
-            vipStaking: getContract(chainId, 'vipStaking'),
-        };
-    }, [chainId]);
-
     const setupConfig = useMemo(() => {
-        if (!isSupportedChain(chainId)) return [];
-        const createSetting = (key: string, title: string, target: ContractName, func: string, value: ContractName) => ({ key, title, targetContractName: target, functionName: func, valueToSetContractName: value });
+        const createSetting = (key: string, title: string, target: ContractName, setter: string, value: ContractName, getter: string) => ({ key, title, targetContractName: target, setterFunctionName: setter, valueToSetContractName: value, getterFunctionName: getter });
         return [
-            createSetting('oracle', '設定價格預言機', 'dungeonCore', 'setOracle', 'oracle'),
-            createSetting('playerVault', '設定玩家金庫', 'dungeonCore', 'setPlayerVault', 'playerVault'),
-            createSetting('dungeonMaster', '設定地城主', 'dungeonCore', 'setDungeonMaster', 'dungeonMaster'),
-            createSetting('altar', '設定升星祭壇', 'dungeonCore', 'setAltarOfAscension', 'altarOfAscension'),
-            createSetting('playerProfile', '設定玩家檔案', 'dungeonCore', 'setPlayerProfile', 'playerProfile'),
-            createSetting('vip', '設定VIP質押', 'dungeonCore', 'setVipStaking', 'vipStaking'),
-            createSetting('hero', '註冊英雄合約', 'dungeonCore', 'setHeroContract', 'hero'),
-            createSetting('relic', '註冊聖物合約', 'dungeonCore', 'setRelicContract', 'relic'),
-            createSetting('party', '註冊隊伍合約', 'dungeonCore', 'setPartyContract', 'party'),
-            createSetting('dungeonCoreForHero', '在 Hero 中設定總機', 'hero', 'setDungeonCore', 'dungeonCore'),
-            createSetting('dungeonCoreForRelic', '在 Relic 中設定總機', 'relic', 'setDungeonCore', 'dungeonCore'),
-            createSetting('dungeonCoreForParty', '在 Party 中設定總機', 'party', 'setDungeonCore', 'dungeonCore'),
-            createSetting('dungeonCoreForDM', '在 DungeonMaster 中設定總機', 'dungeonMaster', 'setDungeonCore', 'dungeonCore'),
-            createSetting('storageForDM', '在 DungeonMaster 中設定儲存', 'dungeonMaster', 'setDungeonStorage', 'dungeonStorage'),
-            createSetting('logicForStorage', '在 DungeonStorage 中授權邏輯', 'dungeonStorage', 'setLogicContract', 'dungeonMaster'),
-            createSetting('dungeonCoreForProfile', '在 PlayerProfile 中設定總機', 'playerProfile', 'setDungeonCore', 'dungeonCore'),
-            createSetting('dungeonCoreForVip', '在 VIPStaking 中設定總機', 'vipStaking', 'setDungeonCore', 'dungeonCore'),
-            createSetting('dungeonCoreForAltar', '在 Altar 中設定總機', 'altarOfAscension', 'setDungeonCore', 'dungeonCore'),
+            createSetting('oracle', '設定價格預言機', 'dungeonCore', 'setOracle', 'oracle', 'oracleAddress'),
+            createSetting('playerVault', '設定玩家金庫', 'dungeonCore', 'setPlayerVault', 'playerVault', 'playerVaultAddress'),
+            createSetting('dungeonMaster', '設定地城主', 'dungeonCore', 'setDungeonMaster', 'dungeonMaster', 'dungeonMasterAddress'),
+            createSetting('altar', '設定升星祭壇', 'dungeonCore', 'setAltarOfAscension', 'altarOfAscension', 'altarOfAscensionAddress'),
+            createSetting('playerProfile', '設定玩家檔案', 'dungeonCore', 'setPlayerProfile', 'playerProfile', 'playerProfileAddress'),
+            createSetting('vip', '設定VIP質押', 'dungeonCore', 'setVipStaking', 'vipStaking', 'vipStakingAddress'),
+            createSetting('hero', '註冊英雄合約', 'dungeonCore', 'setHeroContract', 'hero', 'heroContractAddress'),
+            createSetting('relic', '註冊聖物合約', 'dungeonCore', 'setRelicContract', 'relic', 'relicContractAddress'),
+            createSetting('party', '註冊隊伍合約', 'dungeonCore', 'setPartyContract', 'party', 'partyContractAddress'),
+            createSetting('dungeonCoreForHero', '在 Hero 中設定總機', 'hero', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
+            createSetting('dungeonCoreForRelic', '在 Relic 中設定總機', 'relic', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
+            createSetting('dungeonCoreForParty', '在 Party 中設定總機', 'party', 'setDungeonCore', 'dungeonCore', 'dungeonCoreContract'),
+            createSetting('dungeonCoreForDM', '在 DungeonMaster 中設定總機', 'dungeonMaster', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
+            createSetting('storageForDM', '在 DungeonMaster 中設定儲存', 'dungeonMaster', 'setDungeonStorage', 'dungeonStorage', 'dungeonStorage'),
+            createSetting('logicForStorage', '在 DungeonStorage 中授權邏輯', 'dungeonStorage', 'setLogicContract', 'dungeonMaster', 'logicContract'),
+            createSetting('dungeonCoreForProfile', '在 PlayerProfile 中設定總機', 'playerProfile', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
+            createSetting('dungeonCoreForVip', '在 VIPStaking 中設定總機', 'vipStaking', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
+            createSetting('dungeonCoreForAltar', '在 Altar 中設定總機', 'altarOfAscension', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
         ];
     }, [chainId]);
 
     const contractsToRead = useMemo(() => {
-        if (!isSupportedChain(chainId)) return [];
         const coreContract = getContract(chainId, 'dungeonCore');
-
         const configs = setupConfig.map(c => {
             const contract = getContract(chainId, c.targetContractName);
             if (!contract) return null;
-            const functionName = c.functionName.replace('set', '');
-            const getterName = functionName.charAt(0).toLowerCase() + functionName.slice(1);
-            if (c.targetContractName === 'dungeonCore') {
-                return { ...contract, functionName: `${getterName}Address` };
-            }
-            return { ...contract, functionName: getterName };
+            return { ...contract, functionName: c.getterFunctionName };
         });
-
         if (coreContract) {
             configs.unshift({ ...coreContract, functionName: 'owner' });
         }
-        
         return configs.filter((c): c is NonNullable<typeof c> => c !== null && !!c.address);
     }, [chainId, setupConfig]);
 
@@ -368,7 +342,6 @@ const AdminPage: React.FC = () => {
     }, [readResults, setupConfig]);
     
     const envAddressMap: Record<string, { name: ContractName, address?: Address }> = useMemo(() => {
-        if (!isSupportedChain(chainId)) return {};
         const getAddr = (name: ContractName) => ({ name, address: contractConfigs[chainId]?.[name]?.address });
         return setupConfig.reduce((acc, config) => {
             acc[config.key] = getAddr(config.valueToSetContractName);
@@ -376,18 +349,43 @@ const AdminPage: React.FC = () => {
         }, {} as Record<string, { name: ContractName, address?: Address }>);
     }, [chainId, setupConfig]);
     
-    const paramsContracts = useMemo(() => {
-        if (!allContracts || !currentAddressMap.owner || currentAddressMap.owner.toLowerCase() !== address?.toLowerCase()) return [];
-        return [
-            { ...allContracts.hero, functionName: 'mintPriceUSD' }, { ...allContracts.relic, functionName: 'mintPriceUSD' }, { ...allContracts.dungeonMaster, functionName: 'provisionPriceUSD' }, { ...allContracts.dungeonMaster, functionName: 'explorationFee' }, { ...allContracts.hero, functionName: 'platformFee' }, { ...allContracts.relic, functionName: 'platformFee' }, { ...allContracts.party, functionName: 'platformFee' }, { ...allContracts.dungeonMaster, functionName: 'restCostPowerDivisor' }, { ...allContracts.playerVault, functionName: 'standardInitialRate' }, { ...allContracts.playerVault, functionName: 'largeWithdrawInitialRate' }, { ...allContracts.playerVault, functionName: 'decreaseRatePerPeriod' }, { ...allContracts.playerVault, functionName: 'commissionRate' }, { ...allContracts.playerVault, functionName: 'smallWithdrawThresholdUSD' }, { ...allContracts.playerVault, functionName: 'largeWithdrawThresholdUSD' }, { ...allContracts.vipStaking, functionName: 'unstakeCooldown' },
-        ].filter(c => c && c.address);
-    }, [allContracts, currentAddressMap.owner, address]);
+    const parameterConfig = useMemo(() => {
+        const contracts = {
+            hero: getContract(chainId, 'hero'),
+            relic: getContract(chainId, 'relic'),
+            party: getContract(chainId, 'party'),
+            dungeonMaster: getContract(chainId, 'dungeonMaster'),
+            playerVault: getContract(chainId, 'playerVault'),
+            vipStaking: getContract(chainId, 'vipStaking'),
+        };
+        const config = [
+            { key: 'heroMintPrice', label: "英雄鑄造價", contract: contracts.hero, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', isEther: true, placeholders: ['新價格 (USD)'] },
+            { key: 'relicMintPrice', label: "聖物鑄造價", contract: contracts.relic, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', isEther: true, placeholders: ['新價格 (USD)'] },
+            { key: 'provisionPrice', label: "儲備購買價", contract: contracts.dungeonMaster, getter: 'provisionPriceUSD', setter: 'setProvisionPriceUSD', isEther: true, placeholders: ['新價格 (USD)'] },
+            { key: 'heroFee', label: "英雄平台費", contract: contracts.hero, getter: 'platformFee', setter: 'setPlatformFee', isEther: true, placeholders: ['新費用 (BNB)'] },
+            { key: 'relicFee', label: "聖物平台費", contract: contracts.relic, getter: 'platformFee', setter: 'setPlatformFee', isEther: true, placeholders: ['新費用 (BNB)'] },
+            { key: 'partyFee', label: "隊伍平台費", contract: contracts.party, getter: 'platformFee', setter: 'setPlatformFee', isEther: true, placeholders: ['新費用 (BNB)'] },
+            { key: 'explorationFee', label: "遠征探索費", contract: contracts.dungeonMaster, getter: 'explorationFee', setter: 'setExplorationFee', isEther: true, placeholders: ['新費用 (BNB)'] },
+            { key: 'restDivisor', label: "休息成本係數", contract: contracts.dungeonMaster, getter: 'restCostPowerDivisor', setter: 'setRestCostPowerDivisor', placeholders: ['新係數 (戰力/USD)'] },
+            { key: 'vipCooldown', label: "VIP 取消質押冷卻 (秒)", contract: contracts.vipStaking, getter: 'unstakeCooldown', setter: 'setUnstakeCooldown', placeholders: ['新冷卻時間 (秒)'] },
+            { key: 'taxParams', label: "稅務參數", contract: contracts.playerVault, getter: 'standardInitialRate', setter: 'setTaxParameters', isBasisPoints: true, placeholders: ['標準稅率 (‱)', '大額稅率 (‱)', '衰減率 (‱)', '週期(秒)'] },
+            { key: 'commissionRate', label: "邀請佣金率", contract: contracts.playerVault, getter: 'commissionRate', setter: 'setCommissionRate', isBasisPoints: true, placeholders: ['新佣金率 (萬分位)'] },
+            { key: 'withdrawThresholds', label: "提現門檻 (USD)", contract: contracts.playerVault, getter: 'smallWithdrawThresholdUSD', setter: 'setWithdrawThresholds', isEther: true, placeholders: ['小額門檻 (USD)', '大額門檻 (USD)'] },
+        ];
+        return config.filter(c => c.contract && c.contract.address);
+    }, [chainId]);
 
     const { data: params, isLoading: isLoadingParams } = useReadContracts({
-        contracts: paramsContracts as any,
-        query: { enabled: paramsContracts.length > 0 }
+        contracts: parameterConfig.map(p => ({ ...p.contract, functionName: p.getter })) as any,
+        query: { enabled: parameterConfig.length > 0 }
     });
-    
+
+    const { data: largeThresholdData, isLoading: isLoadingLargeThreshold } = useReadContract({
+        ...getContract(chainId, 'playerVault'),
+        functionName: 'largeWithdrawThresholdUSD',
+        query: { enabled: !!getContract(chainId, 'playerVault') }
+    });
+
     const handleSet = async (key: string, targetContract: any, functionName: string) => {
         const newAddress = inputs[key];
         if (!isAddress(newAddress)) { showToast('請輸入有效的地址', 'error'); return; }
@@ -404,7 +402,6 @@ const AdminPage: React.FC = () => {
     };
 
     const handleBatchSet = async () => {
-        if (!isSupportedChain(chainId)) return;
         setIsBatchSetting(true);
         showToast('開始批次設定，請逐一在錢包中確認交易...', 'info');
         for (const config of setupConfig) {
@@ -414,7 +411,7 @@ const AdminPage: React.FC = () => {
                 showToast(`正在設定 ${config.title}...`, 'info');
                 const contract = getContract(chainId, config.targetContractName);
                 if(contract) {
-                    await handleSet(config.key, contract, config.functionName);
+                    await handleSet(config.key, contract, config.setterFunctionName);
                 }
             }
         }
@@ -429,26 +426,18 @@ const AdminPage: React.FC = () => {
         setInputs(prev => ({ ...prev, ...definedEnvAddresses }));
         showToast('已從 .env 設定檔載入所有地址！', 'info');
     };
-
-    if (!isSupportedChain(chainId)) {
-        return <section><h2 className="page-title">管理控制台</h2><EmptyState message="請連接到支援的網路。" /></section>;
-    }
     
     const ownerAddress = currentAddressMap.owner;
-    if (isLoadingSettings || isLoadingParams) {
+    if (isLoadingSettings || isLoadingParams || isLoadingLargeThreshold) {
         return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
     }
 
     if (ownerAddress && ownerAddress.toLowerCase() !== address?.toLowerCase()) {
-        return <section><h2 className="page-title">管理控制台</h2><EmptyState message="權限不足，僅合約擁有者可訪問。" /></section>;
+        return <EmptyState message="權限不足，僅合約擁有者可訪問。" />;
     }
 
-    const [ heroMintPrice, relicMintPrice, provisionPrice, explorationFee, heroFee, relicFee, partyFee, restDivisor, standardRate, , , commissionRate, smallWithdrawThreshold, largeWithdrawThreshold, unstakeCooldown ] = params?.map(p => p.result) ?? [];
-
     return (
-        <section className="space-y-8">
-            <h2 className="page-title">超級管理控制台</h2>
-
+        <>
             <AdminSection title="合約串接中心">
                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <p className="text-gray-300 text-sm max-w-2xl">此頁面用於在合約部署後，將各個模組的地址設定到正確的位置。請依序填入所有已部署的合約地址，然後點擊「全部設定」，或逐一進行設定。</p>
@@ -461,13 +450,13 @@ const AdminPage: React.FC = () => {
                     <div className="space-y-4">
                         <h4 className="text-xl font-semibold text-center">總機設定 (DungeonCore)</h4>
                         {setupConfig.slice(0, 9).map(config => (
-                            <AddressSettingRow key={config.key} title={config.title} description={`在 DungeonCore 中設定 ${config.valueToSetContractName}`} currentAddress={currentAddressMap[config.key]} envAddress={envAddressMap[config.key]?.address} envContractName={envAddressMap[config.key]?.name} isLoading={isLoadingSettings} inputValue={inputs[config.key] || ''} onInputChange={(val) => setInputs(prev => ({ ...prev, [config.key]: val }))} onSet={() => handleSet(config.key, getContract(chainId, config.targetContractName)!, config.functionName)} isSetting={pendingTx === config.key} />
+                            <AddressSettingRow key={config.key} title={config.title} description={`在 ${config.targetContractName} 中設定 ${config.valueToSetContractName}`} readSource={`${config.targetContractName}.${config.getterFunctionName}()`} currentAddress={currentAddressMap[config.key]} envAddress={envAddressMap[config.key]?.address} envContractName={envAddressMap[config.key]?.name} isLoading={isLoadingSettings} inputValue={inputs[config.key] || ''} onInputChange={(val) => setInputs(prev => ({ ...prev, [config.key]: val }))} onSet={() => handleSet(config.key, getContract(chainId, config.targetContractName)!, config.setterFunctionName)} isSetting={pendingTx === config.key} />
                         ))}
                     </div>
                     <div className="space-y-4">
                         <h4 className="text-xl font-semibold text-center">各模組回連設定</h4>
                         {setupConfig.slice(9).map(config => (
-                            <AddressSettingRow key={config.key} title={config.title} description={`在 ${config.targetContractName} 中設定 ${config.valueToSetContractName}`} currentAddress={currentAddressMap[config.key]} envAddress={envAddressMap[config.key]?.address} envContractName={envAddressMap[config.key]?.name} isLoading={isLoadingSettings} inputValue={inputs[config.key] || ''} onInputChange={(val) => setInputs(prev => ({ ...prev, [config.key]: val }))} onSet={() => handleSet(config.key, getContract(chainId, config.targetContractName)!, config.functionName)} isSetting={pendingTx === config.key} />
+                            <AddressSettingRow key={config.key} title={config.title} description={`在 ${config.targetContractName} 中設定 ${config.valueToSetContractName}`} readSource={`${config.targetContractName}.${config.getterFunctionName}()`} currentAddress={currentAddressMap[config.key]} envAddress={envAddressMap[config.key]?.address} envContractName={envAddressMap[config.key]?.name} isLoading={isLoadingSettings} inputValue={inputs[config.key] || ''} onInputChange={(val) => setInputs(prev => ({ ...prev, [config.key]: val }))} onSet={() => handleSet(config.key, getContract(chainId, config.targetContractName)!, config.setterFunctionName)} isSetting={pendingTx === config.key} />
                         ))}
                     </div>
                 </div>
@@ -481,34 +470,59 @@ const AdminPage: React.FC = () => {
                 <AltarRuleManager chainId={chainId} />
             </AdminSection>
             
-            {allContracts && (
-                <>
-                    <AdminSection title="核心價格管理 (USD)">
-                        {allContracts.hero && <SettingRow label="英雄鑄造價" contract={allContracts.hero} functionName="setMintPriceUSD" currentValue={heroMintPrice} isLoading={isLoadingParams} isEther placeholders={['新價格 (USD)']} />}
-                        {allContracts.relic && <SettingRow label="聖物鑄造價" contract={allContracts.relic} functionName="setMintPriceUSD" currentValue={relicMintPrice} isLoading={isLoadingParams} isEther placeholders={['新價格 (USD)']} />}
-                        {allContracts.dungeonMaster && <SettingRow label="儲備購買價" contract={allContracts.dungeonMaster} functionName="setProvisionPriceUSD" currentValue={provisionPrice} isLoading={isLoadingParams} isEther placeholders={['新價格 (USD)']} />}
-                    </AdminSection>
+            <AdminSection key="price-management" title="核心價格管理 (USD)">
+                {parameterConfig.filter(p => p.label.includes('價')).map((p) => (
+                    <SettingRow key={p.key} functionName={p.setter} {...p} readSource={`${p.contract?.address}.${p.getter}()`} currentValue={params?.[parameterConfig.findIndex(pc => pc.key === p.key)]?.result} isLoading={isLoadingParams} />
+                ))}
+            </AdminSection>
 
-                    <AdminSection title="平台費用管理 (BNB)">
-                        {allContracts.hero && <SettingRow label="英雄平台費" contract={allContracts.hero} functionName="setPlatformFee" currentValue={heroFee} isLoading={isLoadingParams} isEther placeholders={['新費用 (BNB)']} />}
-                        {allContracts.relic && <SettingRow label="聖物平台費" contract={allContracts.relic} functionName="setPlatformFee" currentValue={relicFee} isLoading={isLoadingParams} isEther placeholders={['新費用 (BNB)']} />}
-                        {allContracts.party && <SettingRow label="隊伍平台費" contract={allContracts.party} functionName="setPlatformFee" currentValue={partyFee} isLoading={isLoadingParams} isEther placeholders={['新費用 (BNB)']} />}
-                        {allContracts.dungeonMaster && <SettingRow label="遠征探索費" contract={allContracts.dungeonMaster} functionName="setExplorationFee" currentValue={explorationFee} isLoading={isLoadingParams} isEther placeholders={['新費用 (BNB)']} />}
-                    </AdminSection>
+            <AdminSection key="fee-management" title="平台費用管理 (BNB)">
+                {parameterConfig.filter(p => p.label.includes('費')).map((p) => (
+                    <SettingRow key={p.key} functionName={p.setter} {...p} readSource={`${p.contract?.address}.${p.getter}()`} currentValue={params?.[parameterConfig.findIndex(pc => pc.key === p.key)]?.result} isLoading={isLoadingParams} />
+                ))}
+            </AdminSection>
 
-                    <AdminSection title="遊戲機制參數">
-                        {allContracts.dungeonMaster && <SettingRow label="休息成本係數" contract={allContracts.dungeonMaster} functionName="setRestCostPowerDivisor" currentValue={restDivisor} isLoading={isLoadingParams} placeholders={['新係數 (戰力/USD)']} />}
-                        {allContracts.vipStaking && <SettingRow label="VIP 取消質押冷卻 (秒)" contract={allContracts.vipStaking} functionName="setUnstakeCooldown" currentValue={unstakeCooldown} isLoading={isLoadingParams} placeholders={['新冷卻時間 (秒)']} />}
-                    </AdminSection>
-                    
-                    <AdminSection title="稅務與提現系統">
-                        {allContracts.playerVault && <SettingRow label="稅務參數" contract={allContracts.playerVault} functionName="setTaxParameters" currentValue={standardRate} isLoading={isLoadingParams} isBasisPoints placeholders={['標準稅率 (‱)', '大額稅率 (‱)', '衰減率 (‱)', '週期(秒)']} />}
-                        {allContracts.playerVault && <SettingRow label="邀請佣金率" contract={allContracts.playerVault} functionName="setCommissionRate" currentValue={commissionRate} isLoading={isLoadingParams} isBasisPoints placeholders={['新佣金率 (萬分位)']} />}
-                        {allContracts.playerVault && <SettingRow label="提現門檻 (USD)" contract={allContracts.playerVault} functionName="setWithdrawThresholds" currentValue={null} isLoading={isLoadingParams} isEther placeholders={['小額門檻 (USD)', '大額門檻 (USD)']} />}
-                        <ReadOnlyRow label="當前小額門檻" value={`${formatEther(smallWithdrawThreshold as bigint ?? 0n)} USD`} isLoading={isLoadingParams} />
-                        <ReadOnlyRow label="當前大額門檻" value={`${formatEther(largeWithdrawThreshold as bigint ?? 0n)} USD`} isLoading={isLoadingParams} />
-                    </AdminSection>
-                </>
+            <AdminSection key="tax-management" title="稅務與提現系統">
+                {parameterConfig.filter(p => ['taxParams', 'commissionRate', 'withdrawThresholds'].includes(p.key)).map((p) => {
+                    const paramIndex = parameterConfig.findIndex(pc => pc.key === p.key);
+                    const currentValue = params?.[paramIndex]?.result;
+                     if (p.key === 'withdrawThresholds') {
+                        return (
+                            <React.Fragment key={p.key}>
+                                <SettingRow {...p} functionName={p.setter} readSource={`${p.contract?.address}.${p.getter}()`} currentValue={currentValue} isLoading={isLoadingParams} />
+                                <ReadOnlyRow label="當前大額門檻" value={`${formatEther(largeThresholdData as bigint ?? 0n)} USD`} isLoading={isLoadingLargeThreshold} />
+                            </React.Fragment>
+                        )
+                    }
+                    return <SettingRow key={p.key} {...p} functionName={p.setter} readSource={`${p.contract?.address}.${p.getter}()`} currentValue={currentValue} isLoading={isLoadingParams} />
+                })}
+            </AdminSection>
+
+            <AdminSection key="game-mechanics" title="遊戲機制參數">
+                 {parameterConfig.filter(p => ['restDivisor', 'vipCooldown'].includes(p.key)).map((p) => (
+                    <SettingRow key={p.key} {...p} functionName={p.setter} readSource={`${p.contract?.address}.${p.getter}()`} currentValue={params?.[parameterConfig.findIndex(pc => pc.key === p.key)]?.result} isLoading={isLoadingParams} />
+                ))}
+            </AdminSection>
+        </>
+    );
+};
+
+
+// =================================================================
+// Section: AdminPage (入口元件)
+// =================================================================
+
+const AdminPage: React.FC = () => {
+    const { chainId } = useAccount();
+    const isSupportedChain = (id: number | undefined): id is SupportedChainId => id === bsc.id || id === bscTestnet.id;
+
+    return (
+        <section className="space-y-8">
+            <h2 className="page-title">超級管理控制台</h2>
+            {isSupportedChain(chainId) ? (
+                <AdminPageContent chainId={chainId} />
+            ) : (
+                <EmptyState message="請連接到支援的網路 (BSC 或 BSC 測試網)。" />
             )}
         </section>
     );

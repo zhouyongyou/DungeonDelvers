@@ -1,4 +1,4 @@
-// src/pages/MyAssetsPage.tsx
+// src/pages/MyAssetsPage.tsx (引導優化版)
 
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract, usePublicClient } from 'wagmi';
@@ -58,39 +58,53 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
             <h3 className="section-title">創建新隊伍</h3>
             <p className="text-sm text-gray-400 mb-4">選擇英雄和聖物來組建你的冒險隊伍。隊伍的英雄數量不能超過聖物的總容量。</p>
             
-            {/* ★ 修改：在 md 以下螢幕寬度時，英雄和聖物選擇區塊會垂直堆疊 */}
             <div className="flex flex-col md:grid md:grid-cols-2 gap-6 mb-4">
                 <div>
                     <h4 className="font-semibold text-lg mb-2 text-white">選擇英雄 ({selectedHeroes.length}/5)</h4>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
-                        {heroes.map(hero => (
+                        {heroes.length > 0 ? heroes.map(hero => (
                             <NftCard 
                                 key={`select-${hero.id}`} 
                                 nft={hero} 
                                 onSelect={() => toggleSelection(hero.id, 'hero')} 
                                 isSelected={selectedHeroes.includes(hero.id)} 
                             />
-                        ))}
-                         {heroes.length === 0 && <div className="col-span-full"><EmptyState message="沒有可用的英雄" /></div>}
+                        )) : (
+                            <div className="col-span-full">
+                                {/* ★ 新增：引導按鈕 */}
+                                <EmptyState message="沒有可用的英雄">
+                                    <a href="#/mint">
+                                        <ActionButton className="mt-2">前往鑄造</ActionButton>
+                                    </a>
+                                </EmptyState>
+                            </div>
+                        )}
                     </div>
                 </div>
                 <div>
                     <h4 className="font-semibold text-lg mb-2 text-white">選擇聖物 ({selectedRelics.length}/5)</h4>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
-                        {relics.map(relic => (
+                        {relics.length > 0 ? relics.map(relic => (
                             <NftCard 
                                 key={`select-${relic.id}`} 
                                 nft={relic} 
                                 onSelect={() => toggleSelection(relic.id, 'relic')} 
                                 isSelected={selectedRelics.includes(relic.id)} 
                             />
-                        ))}
-                        {relics.length === 0 && <div className="col-span-full"><EmptyState message="沒有可用的聖物" /></div>}
+                        )) : (
+                             <div className="col-span-full">
+                                {/* ★ 新增：引導按鈕 */}
+                                <EmptyState message="沒有可用的聖物">
+                                     <a href="#/mint">
+                                        <ActionButton className="mt-2">前往鑄造</ActionButton>
+                                    </a>
+                                </EmptyState>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* ★ 修改：在 sm 以下螢幕寬度時，統計數據和創建按鈕會垂直堆疊 */}
             <div className="flex flex-col sm:flex-row justify-between items-center bg-gray-900/50 p-4 rounded-lg">
                 <div className="flex gap-6 text-center">
                     <div>
@@ -121,7 +135,6 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
     );
 };
 
-// NftGrid 元件 (無變更)
 const NftGrid: React.FC<{ nfts: AnyNft[] }> = ({ nfts }) => {
     if (nfts.length === 0) return <EmptyState message="這裡空空如也..." />;
     return (
@@ -239,7 +252,6 @@ const MyAssetsPage: React.FC = () => {
             />
 
             <div className="card-bg p-4 md:p-6 rounded-2xl shadow-xl">
-                 {/* ★ 修改：在小螢幕上，標題和篩選器會垂直堆疊 */}
                 <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
                     <h3 className="section-title">我的收藏</h3>
                     <div className="flex items-center gap-1 sm:gap-2 bg-gray-900/50 p-1 rounded-lg mt-2 sm:mt-0">

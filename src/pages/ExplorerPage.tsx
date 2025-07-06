@@ -1,6 +1,6 @@
-// src/pages/ExplorerPage.tsx
+// src/pages/ExplorerPage.tsx (最終修正版)
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useReadContracts, useReadContract } from 'wagmi';
 import { getContract } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
@@ -48,13 +48,11 @@ const QuerySection: React.FC<QuerySectionProps> = ({ title, inputType, inputPlac
 // Section: 各類查詢邏輯與顯示
 // =================================================================
 
-// ★ 新增：玩家檔案搜尋元件
 const PlayerSearchQuery: React.FC = () => {
     const [message, setMessage] = useState('請輸入玩家地址進行查詢。');
 
     const handleQuery = (address: string) => {
         if (isAddress(address)) {
-            // 直接修改 hash 來觸發路由跳轉
             window.location.hash = `#/profile?address=${address}`;
         } else {
             setMessage('無效的錢包地址，請重新輸入。');
@@ -93,11 +91,15 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
         query: { enabled: false }
     });
 
-    const handleQuery = (id: string) => {
-        if (id) {
-            setSubmittedId(BigInt(id));
-            setTimeout(() => refetch(), 100);
+    // ★ 核心修正：使用 useEffect 來觸發數據獲取
+    useEffect(() => {
+        if (submittedId !== null) {
+            refetch();
         }
+    }, [submittedId, refetch]);
+
+    const handleQuery = (id: string) => {
+        if (id) setSubmittedId(BigInt(id));
     };
 
     const renderResult = () => {
@@ -142,11 +144,15 @@ const PartyStatusQuery: React.FC = () => {
         query: { enabled: false }
     });
     
-    const handleQuery = (id: string) => {
-        if (id) {
-            setSubmittedId(BigInt(id));
-            setTimeout(() => refetch(), 100);
+    // ★ 核心修正：使用 useEffect 來觸發數據獲取
+    useEffect(() => {
+        if (submittedId !== null) {
+            refetch();
         }
+    }, [submittedId, refetch]);
+    
+    const handleQuery = (id: string) => {
+        if (id) setSubmittedId(BigInt(id));
     };
 
     const renderResult = () => {
@@ -183,7 +189,6 @@ const ExplorerPage: React.FC = () => {
       <h2 className="page-title">遊戲數據瀏覽器</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="space-y-8">
-          {/* ★ 新增：將玩家搜尋放在最顯眼的位置 */}
           <PlayerSearchQuery />
           <PartyStatusQuery />
           <NftQuery type="hero" />

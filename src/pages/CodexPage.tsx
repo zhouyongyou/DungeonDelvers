@@ -1,4 +1,4 @@
-// src/pages/CodexPage.tsx
+// src/pages/CodexPage.tsx (引導優化版)
 
 import React, { useState, useMemo } from 'react';
 import { useAccount } from 'wagmi';
@@ -9,9 +9,8 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import type { AnyNft, HeroNft, RelicNft } from '../types/nft';
 import { Buffer } from 'buffer';
+import { ActionButton } from '../components/ui/ActionButton';
 
-// ★ 核心修正：將 Solidity SVG 邏輯用 JavaScript 在前端重現
-// 這段程式碼模擬了 DungeonSVGLibrary.sol 的功能
 const SvgGenerator = {
     _getSVGHeader: () => `<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">`,
     _getGlobalStyles: () => `<style>.base{font-family: 'Georgia', serif; fill: #e0e0e0;}.title{font-size: 20px; font-weight: bold;}.subtitle{font-size: 14px; opacity: 0.7;}.stat-label{font-size: 12px; font-weight: bold; text-transform: uppercase; opacity: 0.6;}.stat-value{font-size: 16px; font-weight: bold;}.main-stat-value{font-size: 42px; font-weight: bold;}.footer-text{font-size: 12px; opacity: 0.5;}</style>`,
@@ -76,7 +75,6 @@ const SvgGenerator = {
     }
 };
 
-// ★ 核心修正：重寫 fetchAllPossibleNfts，不再讀取 JSON，而是直接生成數據
 const fetchAllPossibleNfts = async (): Promise<{ heroes: HeroNft[], relics: RelicNft[] }> => {
     const rarities = [1, 2, 3, 4, 5];
     const heroes: HeroNft[] = [];
@@ -175,9 +173,18 @@ const CodexPage: React.FC = () => {
     return (
         <section>
             <h2 className="page-title">冒險者圖鑑</h2>
-            <p className="text-center text-gray-400 max-w-2xl mx-auto -mt-4 mb-8">
+            <p className="text-center text-gray-400 max-w-2xl mx-auto -mt-4 mb-6">
                 探索埃索斯大陸上所有傳說中的英雄與聖物。點亮您已擁有的收藏！
             </p>
+
+            {/* ★ 新增：引導按鈕 */}
+            <div className="text-center mb-8">
+                <a href="#/mint">
+                    <ActionButton className="px-8 py-3 text-lg">
+                        前往鑄造英雄/聖物
+                    </ActionButton>
+                </a>
+            </div>
 
             <div className="flex justify-center mb-6">
                 <div className="flex items-center gap-2 bg-gray-900/50 p-1 rounded-lg">

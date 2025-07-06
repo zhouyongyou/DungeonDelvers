@@ -1,4 +1,4 @@
-// src/pages/ProfilePage.tsx
+// src/pages/ProfilePage.tsx (引導優化版)
 
 import React, { useMemo } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
@@ -103,9 +103,15 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                     <p className="text-gray-400 mb-4 max-w-md text-center">
                         您的玩家檔案是一個獨一無二的靈魂綁定代幣 (SBT)，它將在您**首次成功完成地下城遠征**後由系統自動為您鑄造。
                     </p>
-                    <ActionButton onClick={() => setActivePage('dungeon')} className="w-48 h-12">
-                        前往地下城
-                    </ActionButton>
+                    {/* ★ 新增：引導按鈕 */}
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                        <ActionButton onClick={() => setActivePage('dungeon')} className="w-48 h-12">
+                            前往地下城
+                        </ActionButton>
+                        <ActionButton onClick={() => setActivePage('mint')} className="w-48 h-12 bg-teal-600 hover:bg-teal-500">
+                            前往鑄造
+                        </ActionButton>
+                    </div>
                 </EmptyState>
             );
         }
