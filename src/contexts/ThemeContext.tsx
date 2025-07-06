@@ -12,7 +12,8 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [theme, setThemeState] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) || 'system');
+    // ★ 核心修正：將預設主題從 'system' 改為 'dark'
+    const [theme, setThemeState] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) || 'dark');
     
     const effectiveTheme = useMemo(() => {
         if (theme === 'system') {

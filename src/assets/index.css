@@ -2,42 +2,75 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ★ 核心修正：將 keyframes 定義移至 @layer 外部，解決語法錯誤 */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes zoom-in {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 @layer base {
   body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* 淺色模式使用米色漸層，深色模式則使用深紫色漸層 */
-    /* 新增：為 body 設定基礎文字顏色，並在深色模式下切換為淺灰色，確保所有文字預設可見 */
-    @apply bg-gradient-to-b from-[#fdf6e3] to-[#f7f0e0] font-sans text-gray-800 dark:bg-gradient-to-b dark:from-[#2D2A4A] dark:to-[#1F1D36] dark:text-gray-300;
+    /* ★ 核心修正：優化淺色模式的預設樣式 */
+    @apply bg-gray-100 font-sans text-gray-800;
+    @apply dark:bg-gradient-to-b dark:from-[#2D2A4A] dark:to-[#1F1D36] dark:text-gray-300;
   }
 
-  /* 新增：為表單元素（輸入框、下拉選單）設定深色模式樣式，確保可讀性 */
   input, select, textarea {
-    @apply dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400;
+    @apply bg-white border-gray-300 text-gray-900 placeholder-gray-500;
+    @apply dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400;
   }
 }
 
 @layer components {
   .card-bg {
-    /* 深色模式下，卡片背景改為帶透明度的黑色，邊框也調整為淺色 */
-    /* 新增：確保卡片內的文字在深色模式下有好的對比 */
-    @apply bg-white/60 backdrop-blur-lg border border-black/10 dark:bg-black/20 dark:border-white/10 dark:text-gray-300;
+    /* ★ 核心修正：為淺色模式提供更清晰的卡片背景 */
+    @apply bg-white/80 backdrop-blur-lg border border-gray-200 shadow-sm;
+    @apply dark:bg-black/20 dark:border-white/10 dark:shadow-lg;
   }
   .btn-primary {
     @apply bg-gradient-to-tr from-violet-500 to-indigo-500 text-white shadow-lg shadow-indigo-500/40 transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/60 hover:-translate-y-px disabled:bg-gray-400 disabled:shadow-none disabled:cursor-not-allowed active:scale-95;
   }
   .nav-item {
-    @apply px-4 py-2 rounded-full cursor-pointer transition-colors duration-300 hover:bg-white/10 text-gray-200;
+    @apply px-4 py-2 rounded-full cursor-pointer transition-colors duration-300;
+    @apply text-gray-600 hover:bg-black/5; /* 淺色模式 */
+    @apply dark:text-gray-300 dark:hover:bg-white/10; /* 深色模式 */
   }
   .nav-item.active {
-      @apply bg-white/20 font-semibold text-white;
+      @apply bg-black/10 font-semibold text-gray-900; /* 淺色模式 */
+      @apply dark:bg-white/20 dark:font-semibold dark:text-white; /* 深色模式 */
   }
   .page-title {
-      /* ★ 修改：頁面標題在小螢幕上為 3xl，在 md 螢幕及以上為 4xl */
-      @apply text-3xl md:text-4xl font-bold text-center mb-8 text-[#2D2A4A] dark:text-gray-200 font-serif tracking-wide;
+      @apply text-3xl md:text-4xl font-bold text-center mb-8 text-gray-800 dark:text-gray-200 font-serif tracking-wide;
   }
   .section-title {
-      /* ★ 修改：區塊標題在小螢幕上為 xl，在 md 螢幕及以上為 2xl */
-      @apply text-xl md:text-2xl font-bold mb-4 text-[#2D2A4A] dark:text-gray-300;
+      @apply text-xl md:text-2xl font-bold mb-4 text-gray-800 dark:text-gray-300;
+  }
+}
+
+@layer utilities {
+  .animate-slide-in-right {
+    animation: slide-in-right 0.5s ease-out forwards;
+  }
+  .animate-zoom-in {
+    animation: zoom-in 0.3s ease-out forwards;
   }
 }
