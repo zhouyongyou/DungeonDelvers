@@ -1,18 +1,74 @@
-import { useAccount } from 'wagmi';
-import { useWatchContractEvent } from 'wagmi';
+// src/hooks/useContractEvents.ts (Refactored)
+
+import { useAccount, useWatchContractEvent } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
-import { decodeEventLog, type Log } from 'viem';
+import { decodeEventLog, type Log, type Abi } from 'viem';
 import { getContract } from '../config/contracts';
 import { useAppToast } from './useAppToast';
 import { useExpeditionResult } from '../contexts/ExpeditionContext';
-import type { AllNftCollections } from '../types/nft'; // ★ 修正：移除未使用的 AnyNft
+import type { AllNftCollections, PartyNft } from '../types/nft';
 import { bsc, bscTestnet } from 'wagmi/chains';
 
-// ★ 修正：為解碼後的日誌定義一個清晰的型別
+// 定義解碼後日誌的通用型別
 type DecodedLogWithArgs = {
     eventName: string;
     args: any;
 };
+
+/**
+ * @notice 一個高階工廠函式，用於創建通用的事件處理器。
+ * @param contract 要監聽的合約物件。
+ * @param eventName 要監聽的事件名稱。
+ * @param userAddress 當前用戶的地址。
+ * @param callback 處理事件的回呼函式。
+ * @param checkPartyOwnership 是否需要檢查隊伍所有權 (專為隊伍相關事件設計)。
+ * @param queryClient 用於獲取快取數據的 queryClient 實例。
+ * @returns 一個 onLogs 函式，可直接傳遞給 useWatchContractEvent。
+ */
+function createContractEventHandler(
+    contract: ReturnType<typeof getContract>,
+    eventName: string,
+    userAddress: `0x${string}` | undefined,
+    callback: (decodedLog: DecodedLogWithArgs) => void,
+    checkPartyOwnership: boolean = false,
+    queryClient?: ReturnType<typeof useQueryClient>
+) {
+    return (logs: Log[]) => {
+        if (!contract || !userAddress) return;
+
+        // 如果需要檢查隊伍所有權，先從快取中獲取玩家擁有的隊伍 ID
+        const myPartyIds = checkPartyOwnership && queryClient
+            ? (queryClient.getQueryData<AllNftCollections>(['ownedNfts', userAddress, contract.chainId])?.parties.map((p: PartyNft) => p.id) ?? [])
+            : [];
+
+        logs.forEach(log => {
+            try {
+                const decodedLog = decodeEventLog({ abi: contract.abi as Abi, ...log }) as DecodedLogWithArgs;
+                
+                if (decodedLog.eventName === eventName) {
+                    const args = decodedLog.args;
+
+                    // 檢查是否為隊伍特定事件
+                    if (checkPartyOwnership) {
+                        if (args.partyId && myPartyIds.includes(args.partyId)) {
+                            callback(decodedLog);
+                        }
+                        return;
+                    }
+
+                    // 通用檢查，涵蓋 owner, player, user 等常見欄位
+                    const userField = args.owner || args.player || args.user;
+                    if (userField && userField.toLowerCase() === userAddress.toLowerCase()) {
+                        callback(decodedLog);
+                    }
+                }
+            } catch (e) {
+                console.error(`解析事件 ${eventName} 失敗:`, e);
+            }
+        });
+    };
+}
+
 
 export const useContractEvents = () => {
     const { address, chainId } = useAccount();
@@ -20,10 +76,12 @@ export const useContractEvents = () => {
     const { showExpeditionResult } = useExpeditionResult();
     const queryClient = useQueryClient();
     
+    // 進行網路檢查，確保在支援的鏈上
     if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
         return; 
     }
 
+    // 獲取所有需要的合約實例
     const heroContract = getContract(chainId, 'hero');
     const relicContract = getContract(chainId, 'relic');
     const partyContract = getContract(chainId, 'party');
@@ -31,7 +89,9 @@ export const useContractEvents = () => {
     const playerVaultContract = getContract(chainId, 'playerVault');
     const altarOfAscensionContract = getContract(chainId, 'altarOfAscension');
 
+    // 通用的數據刷新函式
     const invalidateAllUserData = () => {
+        // 使用 queryClient 讓相關的快取失效，觸發數據重新獲取
         queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
         queryClient.invalidateQueries({ queryKey: ['balance'] });
         queryClient.invalidateQueries({ queryKey: ['playerInfo'] });
@@ -44,57 +104,22 @@ export const useContractEvents = () => {
         queryClient.invalidateQueries({ queryKey: ['getRestCost'] });
     };
 
-    // ★ 修正：讓 handler 函式接收我們定義的強型別
-    const handleLogsForUser = (logs: Log[], contract: any, eventName: string, handler: (decodedLog: DecodedLogWithArgs) => void) => {
-        if (!contract || !address) return;
-        logs.forEach(log => {
-            try {
-                // ★ 修正：將解碼結果斷言為我們定義的型別，解決 'unknown' 錯誤
-                const decodedLog = decodeEventLog({ abi: contract.abi, ...log }) as DecodedLogWithArgs;
-                if (decodedLog.eventName === eventName) {
-                    const args = decodedLog.args;
-                    const userField = args.owner || args.player || args.user;
-                    if (userField && userField.toLowerCase() === address.toLowerCase()) {
-                        handler(decodedLog);
-                    }
-                }
-            } catch (e) { console.error(`解析事件 ${eventName} 失敗:`, e); }
-        });
-    };
-    
-    const handlePartySpecificEvent = (logs: Log[], contract: any, eventName: string, handler: (decodedLog: DecodedLogWithArgs) => void) => {
-        if (!contract || !address) return;
-        const ownedNftsData = queryClient.getQueryData<AllNftCollections>(['ownedNfts', address, chainId]);
-        const myPartyIds = ownedNftsData?.parties.map(p => p.id) ?? [];
+    // 使用工廠函式創建事件處理器
+    useWatchContractEvent({ ...heroContract, eventName: 'HeroMinted', onLogs: createContractEventHandler(heroContract, 'HeroMinted', address, (log) => { showToast(`英雄 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); invalidateAllUserData(); }) });
+    useWatchContractEvent({ ...relicContract, eventName: 'RelicMinted', onLogs: createContractEventHandler(relicContract, 'RelicMinted', address, (log) => { showToast(`聖物 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); invalidateAllUserData(); }) });
+    useWatchContractEvent({ ...partyContract, eventName: 'PartyCreated', onLogs: createContractEventHandler(partyContract, 'PartyCreated', address, (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 創建成功！`, 'success'); invalidateAllUserData(); }) });
+    useWatchContractEvent({ ...playerVaultContract, eventName: 'Deposited', onLogs: createContractEventHandler(playerVaultContract, 'Deposited', address, () => { showToast(`獎勵已存入金庫！`, 'success'); invalidateAllUserData(); }) });
+    useWatchContractEvent({ ...playerVaultContract, eventName: 'Withdrawn', onLogs: createContractEventHandler(playerVaultContract, 'Withdrawn', address, () => { showToast(`金庫提領成功！`, 'success'); invalidateAllUserData(); }) });
 
-        logs.forEach(log => {
-            try {
-                const decodedLog = decodeEventLog({ abi: contract.abi, ...log }) as DecodedLogWithArgs;
-                if (decodedLog.eventName === eventName) {
-                    const { partyId } = decodedLog.args;
-                    if (partyId && myPartyIds.includes(partyId)) {
-                        handler(decodedLog);
-                    }
-                }
-            } catch (e) { console.error(`解析事件 ${eventName} 失敗:`, e); }
-        });
-    };
-
-    useWatchContractEvent({ ...heroContract, eventName: 'HeroMinted', onLogs: (logs) => handleLogsForUser(logs, heroContract, 'HeroMinted', (log) => { showToast(`英雄 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); invalidateAllUserData(); }) });
-    useWatchContractEvent({ ...relicContract, eventName: 'RelicMinted', onLogs: (logs) => handleLogsForUser(logs, relicContract, 'RelicMinted', (log) => { showToast(`聖物 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); invalidateAllUserData(); }) });
-    useWatchContractEvent({ ...partyContract, eventName: 'PartyCreated', onLogs: (logs) => handleLogsForUser(logs, partyContract, 'PartyCreated', (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 創建成功！`, 'success'); invalidateAllUserData(); }) });
-    useWatchContractEvent({ ...dungeonMasterContract, eventName: 'ExpeditionFulfilled', onLogs: (logs) => handlePartySpecificEvent(logs, dungeonMasterContract, 'ExpeditionFulfilled', (log) => { const { success, reward, expGained } = log.args; showExpeditionResult({ success, reward, expGained }); invalidateAllUserData(); }) });
-    useWatchContractEvent({ ...dungeonMasterContract, eventName: 'PartyRested', onLogs: (logs) => handlePartySpecificEvent(logs, dungeonMasterContract, 'PartyRested', (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 已恢復活力！`, 'success'); invalidateAllUserData(); }) });
+    // 處理隊伍特定事件
+    useWatchContractEvent({ ...dungeonMasterContract, eventName: 'ExpeditionFulfilled', onLogs: createContractEventHandler(dungeonMasterContract, 'ExpeditionFulfilled', address, (log) => { const { success, reward, expGained } = log.args; showExpeditionResult({ success, reward, expGained }); invalidateAllUserData(); }, true, queryClient) });
+    useWatchContractEvent({ ...dungeonMasterContract, eventName: 'PartyRested', onLogs: createContractEventHandler(dungeonMasterContract, 'PartyRested', address, (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 已恢復活力！`, 'success'); invalidateAllUserData(); }, true, queryClient) });
     
-    // ★ 修正：將未使用的 'log' 參數改為 '_log'，消除 linter 警告
-    useWatchContractEvent({ ...playerVaultContract, eventName: 'Deposited', onLogs: (logs) => handleLogsForUser(logs, playerVaultContract, 'Deposited', (_log) => { showToast(`獎勵已存入金庫！`, 'success'); invalidateAllUserData(); }) });
-    
-    useWatchContractEvent({ ...playerVaultContract, eventName: 'Withdrawn', onLogs: (logs) => handleLogsForUser(logs, playerVaultContract, 'Withdrawn', (_log) => { showToast(`金庫提領成功！`, 'success'); invalidateAllUserData(); }) });
-    
-    useWatchContractEvent({ ...altarOfAscensionContract, eventName: 'UpgradeProcessed', onLogs: (logs) => handleLogsForUser(logs, altarOfAscensionContract, 'UpgradeProcessed', (log) => {
+    // 處理升星祭壇事件
+    useWatchContractEvent({ ...altarOfAscensionContract, eventName: 'UpgradeProcessed', onLogs: createContractEventHandler(altarOfAscensionContract, 'UpgradeProcessed', address, (log) => {
         const { targetRarity, outcome } = log.args;
-        const outcomeMessages = { 3: `⚜️ 大成功！獲得 2 個 ${targetRarity}★ NFT！`, 2: `✨ 升星成功！獲得 1 個 ${targetRarity}★ NFT！`, 1: `💔 升星失敗，但返還了部分材料。`, 0: `💀 升星完全失敗，所有材料已銷毀。` };
-        const message = outcomeMessages[outcome as keyof typeof outcomeMessages] || "升星處理完成。";
+        const outcomeMessages: Record<number, string> = { 3: `⚜️ 大成功！獲得 2 個 ${targetRarity}★ NFT！`, 2: `✨ 升星成功！獲得 1 個 ${targetRarity}★ NFT！`, 1: `💔 升星失敗，但返還了部分材料。`, 0: `💀 升星完全失敗，所有材料已銷毀。` };
+        const message = outcomeMessages[outcome] || "升星處理完成。";
         const type = outcome >= 2 ? 'success' : 'info';
         showToast(message, type);
         invalidateAllUserData();

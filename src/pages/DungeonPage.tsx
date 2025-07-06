@@ -5,7 +5,7 @@ import { useAccount, useReadContracts, useReadContract, useWriteContract } from 
 import { useQuery } from '@tanstack/react-query';
 import { formatEther } from 'viem';
 import { fetchAllOwnedNfts } from '../api/nfts';
-import { getContract, dungeonStorageABI } from '../config/contracts';
+import { getContract, dungeonStorageABI, type contracts } from '../config/contracts';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ActionButton } from '../components/ui/ActionButton';
@@ -16,6 +16,9 @@ import type { PartyNft } from '../types/nft';
 import { Modal } from '../components/ui/Modal';
 import ProvisionsPage from './ProvisionsPage';
 import { bsc, bscTestnet } from 'wagmi/chains';
+
+// 定義支援的鏈 ID 型別
+type SupportedChainId = keyof typeof contracts;
 
 // 地城資訊的型別定義
 interface Dungeon {
@@ -35,31 +38,29 @@ interface PartyStatusCardProps {
   onRest: (partyId: bigint) => void;
   onBuyProvisions: (partyId: bigint) => void;
   isTxPending: boolean;
+  chainId: SupportedChainId; // 傳入 chainId
 }
 
 /**
  * 隊伍狀態卡片元件
  * 負責顯示單一隊伍的狀態，並提供相應的操作按鈕。
  */
-const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onStartExpedition, onRest, onBuyProvisions, isTxPending }) => {
-    const { chainId } = useAccount();
+const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onStartExpedition, onRest, onBuyProvisions, isTxPending, chainId }) => {
     const [selectedDungeonId, setSelectedDungeonId] = useState<bigint>(1n);
 
-    // 確保 wagmi hook 的參數是型別安全的
+    // 從 props 獲取 chainId，確保型別正確
     const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
     const dungeonStorageContract = getContract(chainId, 'dungeonStorage');
 
     const { data: partyStatus, isLoading: isLoadingStatus } = useReadContract({
-        address: dungeonStorageContract?.address,
-        abi: dungeonStorageContract?.abi,
+        ...dungeonStorageContract,
         functionName: 'getPartyStatus',
         args: [party.id],
         query: { enabled: !!dungeonStorageContract, refetchInterval: 5000 }
     });
     
     const { data: explorationFee } = useReadContract({
-        address: dungeonMasterContract?.address,
-        abi: dungeonMasterContract?.abi,
+        ...dungeonMasterContract,
         functionName: 'explorationFee',
         query: { enabled: !!dungeonMasterContract }
     });
@@ -94,8 +95,11 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
         if (provisionsRemaining === 0n) return <ActionButton onClick={() => onBuyProvisions(party.id)} className="w-full h-10 bg-orange-600 hover:bg-orange-500">購買儲備</ActionButton>;
         if (fatigueLevel > 0) return <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10 bg-blue-600 hover:bg-blue-500">休息</ActionButton>;
         
+        // 確保 explorationFee 是 bigint
+        const fee = typeof explorationFee === 'bigint' ? explorationFee : 0n;
+
         return (
-            <ActionButton onClick={() => onStartExpedition(party.id, selectedDungeonId, explorationFee ?? 0n)} isLoading={isTxPending} className="w-full h-10">
+            <ActionButton onClick={() => onStartExpedition(party.id, selectedDungeonId, fee)} isLoading={isTxPending} className="w-full h-10">
                 開始遠征
             </ActionButton>
         );
@@ -166,8 +170,8 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
 
     const dungeonStorageContract = useMemo(() => {
         if (!dungeonStorageAddress) return null;
-        return { address: dungeonStorageAddress, abi: dungeonStorageABI };
-    }, [dungeonStorageAddress]);
+        return { address: dungeonStorageAddress, abi: dungeonStorageABI, chainId };
+    }, [dungeonStorageAddress, chainId]);
     
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
@@ -274,6 +278,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
                                 onRest={handleRest}
                                 onBuyProvisions={handleBuyProvisions}
                                 isTxPending={isTxPending}
+                                chainId={chainId}
                             />
                         ))}
                     </div>

@@ -20,7 +20,7 @@ const AltarPage = lazy(() => import('./pages/AltarPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const VipPage = lazy(() => import('./pages/VipPage'));
-const ReferralPage = lazy(() => import('./pages/ReferralPage')); // 【新增】導入邀請頁面
+const ReferralPage = lazy(() => import('./pages/ReferralPage'));
 
 const PageLoader: React.FC = () => (
     <div className="flex justify-center items-center h-64">
@@ -32,9 +32,10 @@ const PageLoader: React.FC = () => (
 );
 
 const getPageFromHash = (): Page => {
-    // 【修改】從 hash 中解析頁面和潛在的邀請碼
+    // 從 hash 中解析頁面
     const hash = window.location.hash.replace('#/', '');
-    const [page] = hash.split('?');
+    // 移除查詢參數，只取頁面路徑
+    const page = hash.split('?')[0];
     const validPages: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'explorer', 'admin', 'altar', 'profile', 'vip', 'referral'];
     if (validPages.includes(page as Page)) {
         return page as Page;
@@ -55,7 +56,10 @@ function App() {
   }, []);
 
   const handleSetPage = (page: Page) => {
-    window.location.hash = `/${page}`;
+    // 移除舊的查詢參數，只更新 hash 路徑
+    const newUrl = new URL(window.location.href);
+    newUrl.hash = `/${page}`;
+    window.history.pushState({}, '', newUrl);
     setActivePage(page);
   };
 
@@ -75,7 +79,7 @@ function App() {
         case 'altar': return <AltarPage />;
         case 'profile': return <ProfilePage setActivePage={handleSetPage} />;
         case 'vip': return <VipPage />;
-        case 'referral': return <ReferralPage />; // 【新增】渲染邀請頁面
+        case 'referral': return <ReferralPage />;
         default: return <DashboardPage setActivePage={handleSetPage} />;
     }
   };

@@ -11,7 +11,7 @@ import { useTransactionStore } from '../stores/useTransactionStore';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
-import { bsc, bscTestnet } from 'wagmi/chains'; // ★ 新增：導入 bsc 和 bscTestnet 以便進行型別防衛
+import { bsc, bscTestnet } from 'wagmi/chains';
 
 interface ProvisionsPageProps {
     preselectedPartyId?: bigint | null;
@@ -37,39 +37,36 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
     const soulShardContract = getContract(chainId, 'soulShard');
     const playerVaultContract = getContract(chainId, 'playerVault');
 
-    // ★ 核心修正 #2：確保所有 wagmi hook 的參數都是型別安全的
     const { data: provisionPriceUSD, isLoading: isLoadingPrice } = useReadContract({
-        address: dungeonMasterContract?.address,
-        abi: dungeonMasterContract?.abi,
+        ...dungeonMasterContract,
         functionName: 'provisionPriceUSD',
-        query: { enabled: !!dungeonMasterContract && dungeonMasterContract.address.startsWith('0x') },
+        query: { enabled: !!dungeonMasterContract },
     });
 
     const { data: requiredAmount, isLoading: isLoadingConversion } = useReadContract({
-        address: dungeonCoreContract?.address,
-        abi: dungeonCoreContract?.abi,
+        ...dungeonCoreContract,
         functionName: 'getSoulShardAmountForUSD',
-        args: [(provisionPriceUSD as bigint) || 0n],
+        args: [typeof provisionPriceUSD === 'bigint' ? provisionPriceUSD : 0n],
         query: { enabled: !!dungeonCoreContract && typeof provisionPriceUSD === 'bigint' },
     });
 
     const totalRequiredAmount = useMemo(() => {
-        if (!requiredAmount) return 0n;
-        return requiredAmount * BigInt(quantity);
+        // 確保 requiredAmount 是 bigint 才進行計算
+        const amountPerUnit = typeof requiredAmount === 'bigint' ? requiredAmount : 0n;
+        return amountPerUnit * BigInt(quantity);
     }, [requiredAmount, quantity]);
 
     const { data: walletBalance } = useBalance({
         address,
         token: soulShardContract?.address,
-        query: { enabled: !!address && !!soulShardContract && soulShardContract.address.startsWith('0x') }
+        query: { enabled: !!address && !!soulShardContract }
     });
 
     const { data: vaultInfo } = useReadContract({
-        address: playerVaultContract?.address,
-        abi: playerVaultContract?.abi,
+        ...playerVaultContract,
         functionName: 'playerInfo',
         args: [address!],
-        query: { enabled: !!address && !!playerVaultContract && playerVaultContract.address.startsWith('0x'), refetchInterval: 5000 },
+        query: { enabled: !!address && !!playerVaultContract, refetchInterval: 5000 },
     });
     const vaultBalance = useMemo(() => (Array.isArray(vaultInfo) ? vaultInfo[0] as bigint : 0n), [vaultInfo]);
     
@@ -80,11 +77,10 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
     });
 
     const { data: allowance, refetch: refetchAllowance } = useReadContract({
-        address: soulShardContract?.address,
-        abi: soulShardContract?.abi,
+        ...soulShardContract,
         functionName: 'allowance',
         args: [address!, dungeonMasterContract?.address!],
-        query: { enabled: !!address && !!soulShardContract && soulShardContract.address.startsWith('0x') && !!dungeonMasterContract && dungeonMasterContract.address.startsWith('0x') && paymentSource === 'wallet' },
+        query: { enabled: !!address && !!soulShardContract && !!dungeonMasterContract && paymentSource === 'wallet' },
     });
 
     const needsApproval = useMemo(() => {
@@ -95,7 +91,7 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
     const handlePurchase = async () => {
-        if (!selectedPartyId || !dungeonMasterContract || !dungeonMasterContract.address.startsWith('0x')) return;
+        if (!selectedPartyId || !dungeonMasterContract) return;
         
         const balance = paymentSource === 'wallet' ? (walletBalance?.value ?? 0n) : vaultBalance;
         if (balance < totalRequiredAmount) return showToast(`${paymentSource === 'wallet' ? '錢包' : '金庫'}餘額不足`, 'error');

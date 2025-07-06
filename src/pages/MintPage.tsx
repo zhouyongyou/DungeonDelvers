@@ -2,8 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract, useBalance } from 'wagmi';
-import { useQueryClient } from '@tanstack/react-query'; // ★ 修正 #1：從正確的套件導入
-import { formatEther, maxUint256, type Abi } from 'viem';
+import { formatEther, maxUint256, type Abi, parseEther } from 'viem';
 import { useAppToast } from '../hooks/useAppToast';
 import { getContract } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
@@ -24,7 +23,7 @@ type PaymentSource = 'wallet' | 'vault';
 const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: PaymentSource) => {
     const { address, chainId } = useAccount();
 
-    // ★ 核心修正 #2: 在 Hook 內部加入型別防衛，確保後續操作的型別安全
+    // 在 Hook 內部加入型別防衛，確保後續操作的型別安全
     if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
         return {
             requiredAmount: 0n,
@@ -32,10 +31,10 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
             needsApproval: false,
             isLoading: true,
             platformFee: 0n,
+            refetchAllowance: () => {} // 提供一個空函式作為預設值
         };
     }
     
-    // 現在 TypeScript 知道 chainId 是 56 或 97，所以 getContract 可以正確推斷型別
     const contractConfig = getContract(chainId, type);
     const soulShardContract = getContract(chainId, 'soulShard');
     const dungeonCoreContract = getContract(chainId, 'dungeonCore');
@@ -50,7 +49,7 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     const { data: requiredAmountPerUnit, isLoading: isLoadingConversion } = useReadContract({
         ...dungeonCoreContract,
         functionName: 'getSoulShardAmountForUSD',
-        args: [(mintPriceUSD as bigint) || 0n],
+        args: [typeof mintPriceUSD === 'bigint' ? mintPriceUSD : 0n],
         query: { enabled: !!dungeonCoreContract && typeof mintPriceUSD === 'bigint' },
     });
     
@@ -76,7 +75,7 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     });
     const vaultBalance = useMemo(() => (Array.isArray(vaultInfo) ? vaultInfo[0] as bigint : 0n), [vaultInfo]);
 
-    const { data: allowance } = useReadContract({
+    const { data: allowance, refetch: refetchAllowance } = useReadContract({
         ...soulShardContract,
         functionName: 'allowance',
         args: [address!, contractConfig?.address!],
@@ -104,6 +103,7 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
         needsApproval,
         isLoading: isLoadingPrice || isLoadingConversion,
         platformFee: platformFee as bigint ?? 0n,
+        refetchAllowance, // 導出 refetch 函式
     };
 };
 
@@ -117,21 +117,22 @@ interface MintCardProps {
 }
 
 const MintCard: React.FC<MintCardProps> = ({ type, options }) => {
-    const { chainId, address } = useAccount();
+    const { address } = useAccount(); // 修正：移除未使用的 chainId
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
-    const queryClient = useQueryClient();
     
     const [quantity, setQuantity] = useState(1);
     const [paymentSource, setPaymentSource] = useState<PaymentSource>('wallet');
 
-    const { requiredAmount, balance, needsApproval, isLoading: isLoadingPrice, platformFee } = useMintLogic(type, quantity, paymentSource);
+    const { requiredAmount, balance, needsApproval, isLoading: isLoadingPrice, platformFee, refetchAllowance } = useMintLogic(type, quantity, paymentSource);
     const { writeContractAsync, isPending: isMinting } = useWriteContract();
     
     const title = type === 'hero' ? '英雄' : '聖物';
     
-    const contractConfig = getContract(chainId, type);
-    const soulShardContract = getContract(chainId, 'soulShard');
+    const { chainId } = useAccount(); // 再次獲取 chainId
+    // 確保在組件內部使用時 chainId 是有效的
+    const contractConfig = chainId ? getContract(chainId, type) : null;
+    const soulShardContract = chainId ? getContract(chainId, 'soulShard') : null;
 
     const handleApprove = async () => {
         if (!contractConfig || !soulShardContract) return;
@@ -143,10 +144,12 @@ const MintCard: React.FC<MintCardProps> = ({ type, options }) => {
                 args: [contractConfig.address, maxUint256]
             });
             addTransaction({ hash, description: `批准 ${title} 合約使用代幣` });
-            // 授權後，主動讓相關的 allowance 查詢失效，以觸發重新獲取
-            await queryClient.invalidateQueries({ 
-                queryKey: ['readContract', { address: soulShardContract.address, functionName: 'allowance', args: [address!, contractConfig.address], chainId }]
-            });
+            // 授權後，等待一段時間再刷新 allowance
+            setTimeout(() => {
+                if (refetchAllowance) {
+                    refetchAllowance();
+                }
+            }, 3000);
         } catch (e: any) {
              if (!e.message.includes('User rejected the request')) {
                 showToast(e.shortMessage || "授權失敗", "error");

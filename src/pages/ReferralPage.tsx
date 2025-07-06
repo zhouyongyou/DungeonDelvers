@@ -1,6 +1,6 @@
 // src/pages/ReferralPage.tsx
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { getContract } from '../config/contracts';
 import { useAppToast } from '../hooks/useAppToast';
@@ -32,14 +32,29 @@ const ReferralPage: React.FC = () => {
         query: { enabled: !!address && !!playerVaultContract },
     });
 
+    // TODO: 'totalCommissionPaid' 函式目前在 PlayerVault 合約中不存在。
+    // 當合約更新後，可以取消註解以下程式碼來獲取真實佣金數據。
     const { data: totalCommission, isLoading: isLoadingCommission } = useReadContract({
         ...playerVaultContract,
-        functionName: 'totalCommissionPaid',
+        functionName: 'totalCommissionPaid', // This function needs to be added to the contract ABI
         args: [address!],
         query: { enabled: !!address && !!playerVaultContract },
     });
+    
+    const isLoadingCommission = false;
+    const totalCommission = 0n; // 暫時顯示為 0
 
     const { writeContractAsync, isPending: isSettingReferrer } = useWriteContract();
+
+    // 從 URL search params 中讀取邀請碼
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const ref = urlParams.get('ref');
+        if (ref && isAddress(ref)) {
+            setReferrerInput(ref);
+        }
+    }, []);
+
 
     const handleSetReferrer = async () => {
         if (!isAddress(referrerInput)) {
@@ -48,13 +63,16 @@ const ReferralPage: React.FC = () => {
         if (!playerVaultContract) {
             return showToast('合約尚未準備好', 'error');
         }
+        if (referrerInput.toLowerCase() === address?.toLowerCase()) {
+            return showToast('不能將自己設為邀請人', 'error');
+        }
 
         try {
             const hash = await writeContractAsync({
                 address: playerVaultContract.address,
                 abi: playerVaultContract.abi,
                 functionName: 'setReferrer',
-                args: [referrerInput],
+                args: [referrerInput as `0x${string}`],
             });
             addTransaction({ hash, description: `設定邀請人為 ${referrerInput.substring(0, 6)}...` });
             setTimeout(() => refetchReferrer(), 2000);
@@ -67,7 +85,8 @@ const ReferralPage: React.FC = () => {
 
     const referralLink = useMemo(() => {
         if (typeof window === 'undefined' || !address) return '';
-        return `${window.location.origin}?ref=${address}`;
+        // 修正：使用 hash 路由來產生連結
+        return `${window.location.origin}${window.location.pathname}#/?ref=${address}`;
     }, [address]);
 
     const handleCopyLink = () => {
@@ -100,7 +119,7 @@ const ReferralPage: React.FC = () => {
                 </div>
                 <div className="mt-4 text-center">
                     <p className="text-gray-400">我賺取的總佣金</p>
-                    {isLoadingCommission ? <LoadingSpinner size="h-8 w-8" /> : <p className="text-3xl font-bold text-yellow-400">{parseFloat(formatEther(typeof totalCommission === 'bigint' ? totalCommission : 0n)).toFixed(4)} $SoulShard</p>}
+                    {isLoadingCommission ? <LoadingSpinner size="h-8 w-8" /> : <p className="text-3xl font-bold text-yellow-400">{parseFloat(formatEther(totalCommission)).toFixed(4)} $SoulShard</p>}
                 </div>
             </div>
 

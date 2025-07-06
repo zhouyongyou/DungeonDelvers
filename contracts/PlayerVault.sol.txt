@@ -9,9 +9,9 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
- * @title PlayerVault (v3 - 增加邀請功能)
+ * @title PlayerVault (v3.1 - 增加佣金查詢)
  * @notice 專門負責玩家資金的存儲、提款和遊戲內消費。
- * @dev v3 版本加入了設定邀請人的功能。
+ * @dev v3.1 版本加入了查詢總佣金的功能。
  */
 contract PlayerVault is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -27,6 +27,8 @@ contract PlayerVault is Ownable, ReentrancyGuard {
     }
     mapping(address => PlayerInfo) public playerInfo;
     mapping(address => address) public referrers;
+    // ★ 新增：追蹤每個地址賺取的總佣金
+    mapping(address => uint256) public totalCommissionPaid;
 
     uint256 public constant PERCENT_DIVISOR = 10000;
     uint256 public constant USD_DECIMALS = 1e18;
@@ -39,7 +41,7 @@ contract PlayerVault is Ownable, ReentrancyGuard {
     uint256 public decreaseRatePerPeriod = 500;
     uint256 public periodDuration = 1 days;
 
-    uint256 public commissionRate = 500;
+    uint256 public commissionRate = 500; // 5%
 
     // --- 事件 ---
     event Deposited(address indexed player, uint256 amount);
@@ -52,7 +54,7 @@ contract PlayerVault is Ownable, ReentrancyGuard {
     event TaxParametersUpdated(uint256 standardRate, uint256 largeRate, uint256 decreaseRate, uint256 period);
     event WithdrawThresholdsUpdated(uint256 smallAmount, uint256 largeAmount);
 
-    modifier onlyAuthorized() {
+    modifier onlyAuthorizedGameContracts() {
         require(address(dungeonCore) != address(0), "Vault: DungeonCore not set");
         address sender = msg.sender;
         require(
@@ -60,18 +62,20 @@ contract PlayerVault is Ownable, ReentrancyGuard {
             sender == dungeonCore.altarOfAscension() ||
             sender == dungeonCore.heroContract() ||
             sender == dungeonCore.relicContract(),
-            "Vault: Caller not authorized"
+            "Vault: Caller not an authorized game contract"
         );
+        _;
+    }
+    
+    modifier onlyDungeonMaster() {
+        require(address(dungeonCore) != address(0), "Vault: DungeonCore not set");
+        require(msg.sender == dungeonCore.dungeonMaster(), "Vault: Caller is not the DungeonMaster");
         _;
     }
 
     constructor(address initialOwner) Ownable(initialOwner) {}
     
-    /**
-     * @notice 【新增】設定邀請人函式
-     * @dev 每個玩家只能設定一次邀請人，且不能是自己。
-     * @param _referrer 邀請人的地址。
-     */
+    // --- 玩家功能 ---
     function setReferrer(address _referrer) external nonReentrant {
         require(referrers[msg.sender] == address(0), "Vault: Referrer already set");
         require(_referrer != msg.sender, "Vault: Cannot refer yourself");
@@ -91,43 +95,61 @@ contract PlayerVault is Ownable, ReentrancyGuard {
 
         if (amountUSD <= smallWithdrawThresholdUSD && player.lastFreeWithdrawTimestamp + 1 days <= block.timestamp) {
             player.lastFreeWithdrawTimestamp = block.timestamp;
-            _processWithdrawal(player, _amount, 0);
+            _processWithdrawal(player, msg.sender, _amount, 0);
             return;
         }
 
         uint256 taxRate = _calculateTaxRate(msg.sender, amountUSD);
         
-        _processWithdrawal(player, _amount, taxRate);
+        _processWithdrawal(player, msg.sender, _amount, taxRate);
     }
 
-    function _processWithdrawal(PlayerInfo storage player, uint256 _amount, uint256 _taxRate) private {
+    // --- 遊戲合約互動 ---
+    function deposit(address _player, uint256 _amount) external onlyDungeonMaster {
+        require(_player != address(0), "Vault: Cannot deposit to zero address");
+        playerInfo[_player].withdrawableBalance += _amount;
+        emit Deposited(_player, _amount);
+    }
+
+    function spendForGame(address _player, uint256 _amount) external onlyAuthorizedGameContracts {
+        PlayerInfo storage player = playerInfo[_player];
+        require(player.withdrawableBalance >= _amount, "Vault: Insufficient balance for game spending");
+        player.withdrawableBalance -= _amount;
+        // 將代幣轉給呼叫此函式的遊戲合約
+        soulShardToken.safeTransfer(msg.sender, _amount);
+        emit GameSpending(_player, msg.sender, _amount);
+    }
+
+    // --- 內部邏輯 ---
+    function _processWithdrawal(PlayerInfo storage player, address _withdrawer, uint256 _amount, uint256 _taxRate) private {
         player.withdrawableBalance -= _amount;
         player.lastWithdrawTimestamp = block.timestamp;
 
         uint256 taxAmount = (_amount * _taxRate) / PERCENT_DIVISOR;
         uint256 amountAfterTaxes = _amount - taxAmount;
 
-        address referrer = referrers[msg.sender];
+        address referrer = referrers[_withdrawer];
         uint256 commissionAmount = 0;
         if (referrer != address(0)) {
             commissionAmount = (amountAfterTaxes * commissionRate) / PERCENT_DIVISOR;
             if (commissionAmount > 0) {
                 soulShardToken.safeTransfer(referrer, commissionAmount);
-                emit CommissionPaid(msg.sender, referrer, commissionAmount);
+                totalCommissionPaid[referrer] += commissionAmount; // ★ 新增：累計佣金
+                emit CommissionPaid(_withdrawer, referrer, commissionAmount);
             }
         }
         
         uint256 finalAmountToPlayer = amountAfterTaxes - commissionAmount;
 
         if (finalAmountToPlayer > 0) {
-            soulShardToken.safeTransfer(msg.sender, finalAmountToPlayer);
+            soulShardToken.safeTransfer(_withdrawer, finalAmountToPlayer);
         }
         
         if (taxAmount > 0) {
             soulShardToken.safeTransfer(dungeonCore.owner(), taxAmount);
         }
         
-        emit Withdrawn(msg.sender, finalAmountToPlayer, taxAmount);
+        emit Withdrawn(_withdrawer, finalAmountToPlayer, taxAmount);
     }
 
     function _calculateTaxRate(address _player, uint256 _amountUSD) internal view returns (uint256) {
@@ -155,6 +177,7 @@ contract PlayerVault is Ownable, ReentrancyGuard {
         return initialRate - totalReduction;
     }
 
+    // --- Owner 管理功能 ---
     function setTaxParameters(
         uint256 _standardRate,
         uint256 _largeRate,
