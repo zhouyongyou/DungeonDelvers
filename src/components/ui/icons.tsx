@@ -1,3 +1,5 @@
+// src/components/ui/icons.tsx
+
 import React from 'react';
 
 const HistoryIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -25,6 +27,8 @@ const MintIcon: React.FC<{ className?: string }> = ({ className }) => <span clas
 const AltarIcon: React.FC<{ className?: string }> = ({ className }) => <span className={className}>🔥</span>;
 const AssetsIcon: React.FC<{ className?: string }> = ({ className }) => <span className={className}>📦</span>;
 const DungeonIcon: React.FC<{ className?: string }> = ({ className }) => <span className={className}>⚔️</span>;
+// ★ 新增：圖鑑圖示
+const CodexIcon: React.FC<{ className?: string }> = ({ className }) => <span className={className}>📖</span>;
 
 
 // 將所有圖示統一導出
@@ -39,4 +43,5 @@ export const Icons = {
     Altar: AltarIcon,
     Assets: AssetsIcon,
     Dungeon: DungeonIcon,
+    Codex: CodexIcon, // ★ 新增：導出圖鑑圖示
 };

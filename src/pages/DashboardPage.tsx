@@ -1,7 +1,9 @@
+// src/pages/DashboardPage.tsx
+
 import React, { useMemo } from 'react';
 import { useAccount, useReadContract, useReadContracts, useWriteContract } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { formatEther } from 'viem'; // ★ 修正：移除未使用的 'Address'
+import { formatEther } from 'viem';
 import { getContract, contracts, playerVaultABI } from '../config/contracts';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { ActionButton } from '../components/ui/ActionButton';
@@ -10,12 +12,11 @@ import type { Page } from '../types/page';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { useAppToast } from '../hooks/useAppToast';
 import { Icons } from '../components/ui/icons';
-import { bsc, bscTestnet } from 'wagmi/chains'; // ★ 新增：導入 bsc 和 bscTestnet 以便進行型別防衛
+import { bsc, bscTestnet } from 'wagmi/chains';
+// ★ 新增：導入城鎮告示板元件
+import { TownBulletin } from '../components/ui/TownBulletin';
 
-// =================================================================
-// Section: 輔助函式與子元件 (保持不變)
-// =================================================================
-
+// (此處省略未變更的 getLevelFromExp, StatCard, QuickActionButton, ExternalLinkButton, useVaultAndTax 元件程式碼)
 const getLevelFromExp = (exp: bigint): number => {
     if (exp < 100n) return 1;
     return Math.floor(Math.sqrt(Number(exp) / 100)) + 1;
@@ -52,38 +53,14 @@ const ExternalLinkButton: React.FC<{ title: string; url: string; icon: React.Rea
     </a>
 );
 
-
-// =================================================================
-// Section: 新增的自定義 Hook，用於封裝複雜的金庫與稅率邏輯
-// =================================================================
 const useVaultAndTax = () => {
     const { address, chainId } = useAccount();
-
-    // 再次加入型別防衛，確保此 Hook 內部也是型別安全的
-    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
-        return {
-            playerVaultContract: null,
-            vaultInfo: undefined,
-            currentTaxRate: 0,
-            isLoading: true,
-        };
-    }
-
+    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) return { playerVaultContract: null, vaultInfo: undefined, currentTaxRate: 0, isLoading: true, };
     const dungeonCoreContract = getContract(chainId, 'dungeonCore');
     const playerProfileContract = getContract(chainId, 'playerProfile');
     const vipStakingContract = getContract(chainId, 'vipStaking');
-
-    const { data: playerVaultAddress } = useReadContract({
-        ...dungeonCoreContract,
-        functionName: 'playerVaultAddress',
-        query: { enabled: !!dungeonCoreContract },
-    });
-    
-    const playerVaultContract = useMemo(() => {
-        if (!playerVaultAddress) return null;
-        return { address: playerVaultAddress, abi: playerVaultABI };
-    }, [playerVaultAddress]);
-
+    const { data: playerVaultAddress } = useReadContract({ ...dungeonCoreContract, functionName: 'playerVaultAddress', query: { enabled: !!dungeonCoreContract }, });
+    const playerVaultContract = useMemo(() => { if (!playerVaultAddress) return null; return { address: playerVaultAddress, abi: playerVaultABI }; }, [playerVaultAddress]);
     const { data: taxParams, isLoading: isLoadingTaxParams } = useReadContracts({
         contracts: [
             { ...playerVaultContract, functionName: 'playerInfo', args: [address!] },
@@ -98,70 +75,30 @@ const useVaultAndTax = () => {
         ],
         query: { enabled: !!address && !!playerVaultContract && !!vipStakingContract && !!playerProfileContract }
     });
-
-    const [
-        playerInfo,
-        smallWithdrawThresholdUSD,
-        largeWithdrawThresholdUSD,
-        standardInitialRate,
-        largeWithdrawInitialRate,
-        decreaseRatePerPeriod,
-        periodDuration,
-        vipTaxReduction,
-        playerLevel
-    ] = useMemo(() => taxParams?.map(item => item.result) ?? [], [taxParams]);
-    
+    const [ playerInfo, smallWithdrawThresholdUSD, largeWithdrawThresholdUSD, standardInitialRate, largeWithdrawInitialRate, decreaseRatePerPeriod, periodDuration, vipTaxReduction, playerLevel ] = useMemo(() => taxParams?.map(item => item.result) ?? [], [taxParams]);
     const withdrawableBalance = useMemo(() => (playerInfo as any)?.[0] as bigint | 0n, [playerInfo]);
-
-    const { data: withdrawableBalanceInUSD, isLoading: isLoadingUsdValue } = useReadContract({
-        ...dungeonCoreContract,
-        functionName: 'getSoulShardAmountForUSD',
-        args: [withdrawableBalance],
-        query: { enabled: !!dungeonCoreContract && withdrawableBalance > 0n }
-    });
-    
+    const { data: withdrawableBalanceInUSD, isLoading: isLoadingUsdValue } = useReadContract({ ...dungeonCoreContract, functionName: 'getSoulShardAmountForUSD', args: [withdrawableBalance], query: { enabled: !!dungeonCoreContract && withdrawableBalance > 0n } });
     const currentTaxRate = useMemo(() => {
         if (!taxParams || !playerInfo) return 0;
-        
         const info = playerInfo as readonly [bigint, bigint, bigint];
         const lastWithdrawTimestamp = info[1];
         const lastFreeWithdrawTimestamp = info[2];
         const amountUSD = withdrawableBalanceInUSD ?? 0n;
-
         const oneDay = 24n * 60n * 60n;
-        if (amountUSD <= (smallWithdrawThresholdUSD as bigint) && BigInt(Math.floor(Date.now() / 1000)) >= lastFreeWithdrawTimestamp + oneDay) {
-            return 0;
-        }
-        
+        if (amountUSD <= (smallWithdrawThresholdUSD as bigint) && BigInt(Math.floor(Date.now() / 1000)) >= lastFreeWithdrawTimestamp + oneDay) return 0;
         let initialRate = (amountUSD > (largeWithdrawThresholdUSD as bigint)) ? (largeWithdrawInitialRate as bigint) : (standardInitialRate as bigint);
-
         const timeSinceLast = BigInt(Math.floor(Date.now() / 1000)) - lastWithdrawTimestamp;
         const periodsPassed = timeSinceLast / (periodDuration as bigint);
         const timeDecay = periodsPassed * (decreaseRatePerPeriod as bigint);
-
         const vipReduction = vipTaxReduction as bigint ?? 0n;
         const levelReduction = (playerLevel ? BigInt(Math.floor(Number(playerLevel) / 10)) : 0n) * 100n;
-
         const totalReduction = timeDecay + vipReduction + levelReduction;
-        
         if (totalReduction >= initialRate) return 0;
-
         return Number(initialRate - totalReduction) / 100;
-
     }, [taxParams, playerInfo, withdrawableBalanceInUSD]);
-
-    return {
-        playerVaultContract,
-        vaultInfo: playerInfo as readonly [bigint, bigint, bigint] | undefined,
-        currentTaxRate,
-        isLoading: isLoadingTaxParams || isLoadingUsdValue,
-    };
+    return { playerVaultContract, vaultInfo: playerInfo as readonly [bigint, bigint, bigint] | undefined, currentTaxRate, isLoading: isLoadingTaxParams || isLoadingUsdValue, };
 };
 
-
-// =================================================================
-// Section: DashboardPage 主元件
-// =================================================================
 
 const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setActivePage }) => {
     const { address, chainId } = useAccount();
@@ -169,7 +106,6 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     const { addTransaction } = useTransactionStore();
     const { showToast } = useAppToast();
 
-    // ★★★ 核心修正：在元件渲染的開頭加入型別防衛 ★★★
     if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
         return (
             <div className="flex justify-center items-center h-64">
@@ -184,41 +120,13 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     const playerProfileContract = getContract(chainId, 'playerProfile');
     const vipStakingContract = getContract(chainId, 'vipStaking');
 
-    const { data: profileTokenId } = useReadContract({
-        ...playerProfileContract,
-        functionName: 'profileTokenOf',
-        args: [address!],
-        query: { enabled: !!address && !!playerProfileContract },
-    });
-
-    const { data: experience, isLoading: isLoadingProfile } = useReadContract({
-        ...playerProfileContract,
-        functionName: 'playerExperience',
-        args: [profileTokenId!],
-        query: { enabled: !!profileTokenId && typeof profileTokenId === 'bigint' && profileTokenId > 0n },
-    });
-    
-    // 現在這個呼叫是型別安全的，因為上面的防衛確保了 chainId 是 56 或 97
-    const { data: nfts, isLoading: isLoadingNfts } = useQuery({
-        queryKey: ['ownedNfts', address, chainId],
-        queryFn: () => fetchAllOwnedNfts(address!, chainId),
-        enabled: !!address && !!chainId
-    });
-
-    const { data: vipStake, isLoading: isLoadingVip } = useReadContract({
-        ...vipStakingContract,
-        functionName: 'userStakes',
-        args: [address!],
-        query: {
-            enabled: !!address && !!vipStakingContract,
-            select: (data: unknown) => (Array.isArray(data) && (data[0] as bigint) > 0n) ? '質押中' : '未質押',
-        },
-    });
+    const { data: profileTokenId } = useReadContract({ ...playerProfileContract, functionName: 'profileTokenOf', args: [address!], query: { enabled: !!address && !!playerProfileContract }, });
+    const { data: experience, isLoading: isLoadingProfile } = useReadContract({ ...playerProfileContract, functionName: 'playerExperience', args: [profileTokenId!], query: { enabled: !!profileTokenId && typeof profileTokenId === 'bigint' && profileTokenId > 0n }, });
+    const { data: nfts, isLoading: isLoadingNfts } = useQuery({ queryKey: ['ownedNfts', address, chainId], queryFn: () => fetchAllOwnedNfts(address!, chainId), enabled: !!address && !!chainId });
+    const { data: vipStake, isLoading: isLoadingVip } = useReadContract({ ...vipStakingContract, functionName: 'userStakes', args: [address!], query: { enabled: !!address && !!vipStakingContract, select: (data: unknown) => (Array.isArray(data) && (data[0] as bigint) > 0n) ? '質押中' : '未質押', }, });
     
     const { writeContractAsync, isPending: isWithdrawing } = useWriteContract();
-
     const level = useMemo(() => experience ? getLevelFromExp(experience) : 1, [experience]);
-
     const externalMarkets = useMemo(() => {
         const currentContracts = contracts[chainId];
         if (!currentContracts) return [];
@@ -233,23 +141,14 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     const handleWithdraw = async () => {
         if (!playerVaultContract || !vaultInfo || withdrawableBalance === 0n) return;
         try {
-            const hash = await writeContractAsync({ 
-                ...playerVaultContract, 
-                functionName: 'withdraw', 
-                args: [withdrawableBalance] 
-            });
+            const hash = await writeContractAsync({ ...playerVaultContract, functionName: 'withdraw', args: [withdrawableBalance] });
             addTransaction({ hash, description: '從金庫提領 $SoulShard' });
             setTimeout(() => queryClient.invalidateQueries({ queryKey: ['playerInfo', address] }), 2000);
-        } catch(e: any) { 
-            showToast(e.shortMessage || "提領失敗", "error"); 
-        }
+        } catch(e: any) { showToast(e.shortMessage || "提領失敗", "error"); }
     };
 
     const isLoading = isLoadingProfile || isLoadingNfts || isLoadingVip || isLoadingVaultAndTax;
-
-    if (isLoading && !vaultInfo) {
-        return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
-    }
+    if (isLoading && !vaultInfo) return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
 
     return (
         <section className="space-y-8">
@@ -276,13 +175,19 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                 </div>
             </div>
 
-            <div>
-                <h3 className="section-title">資產快照</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <StatCard title="英雄總數" value={nfts?.heroes.length ?? 0} isLoading={isLoadingNfts} icon={<Icons.Hero className="w-6 h-6"/>} />
-                    <StatCard title="聖物總數" value={nfts?.relics.length ?? 0} isLoading={isLoadingNfts} icon={<Icons.Relic className="w-6 h-6"/>} />
-                    <StatCard title="隊伍總數" value={nfts?.parties.length ?? 0} isLoading={isLoadingNfts} icon={<Icons.Party className="w-6 h-6"/>} />
-                    <StatCard title="VIP 狀態" value={vipStake ?? '讀取中...'} isLoading={isLoadingVip} icon={<Icons.Vip className="w-6 h-6"/>} />
+            {/* ★ 新增：將資產快照和告示板並排顯示 */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                    <h3 className="section-title">資產快照</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <StatCard title="英雄總數" value={nfts?.heroes.length ?? 0} isLoading={isLoadingNfts} icon={<Icons.Hero className="w-6 h-6"/>} />
+                        <StatCard title="聖物總數" value={nfts?.relics.length ?? 0} isLoading={isLoadingNfts} icon={<Icons.Relic className="w-6 h-6"/>} />
+                        <StatCard title="隊伍總數" value={nfts?.parties.length ?? 0} isLoading={isLoadingNfts} icon={<Icons.Party className="w-6 h-6"/>} />
+                        <StatCard title="VIP 狀態" value={vipStake ?? '讀取中...'} isLoading={isLoadingVip} icon={<Icons.Vip className="w-6 h-6"/>} />
+                    </div>
+                </div>
+                <div className="lg:col-span-1">
+                    <TownBulletin />
                 </div>
             </div>
 

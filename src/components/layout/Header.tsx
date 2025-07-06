@@ -13,7 +13,7 @@ import { RecentTransactions } from '../ui/RecentTransactions';
 import { Icons } from '../ui/icons';
 import { bsc, bscTestnet } from 'wagmi/chains';
 
-// 主題切換按鈕 (無變更)
+// (此處省略未變更的 ThemeToggleButton, usePlayerLevel, MenuIcon, XIcon 元件程式碼)
 const ThemeToggleButton: React.FC = () => {
     const { theme, setTheme, effectiveTheme } = useTheme();
     const toggleTheme = () => {
@@ -32,7 +32,6 @@ const ThemeToggleButton: React.FC = () => {
     );
 };
 
-// 讀取玩家等級的 Hook (無變更)
 const usePlayerLevel = () => {
     const { address, chainId } = useAccount();
     if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) return { level: null };
@@ -47,7 +46,6 @@ const usePlayerLevel = () => {
     return { level };
 };
 
-// ★ 新增：漢堡選單圖示
 const MenuIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
         <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -56,7 +54,6 @@ const MenuIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
-// ★ 新增：關閉圖示
 const XIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -64,14 +61,13 @@ const XIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
-
 export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) => void }> = ({ activePage, setActivePage }) => {
   const { address, isConnected, isConnecting } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
 
   const [isTxPopoverOpen, setIsTxPopoverOpen] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false); // ★ 新增：行動裝置選單開關狀態
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const { level } = usePlayerLevel();
 
@@ -85,6 +81,8 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
           { key: 'party', label: '隊伍' },
           { key: 'dungeon', label: '地下城' },
           { key: 'altar', label: '升星祭壇' },
+          // ★ 新增：圖鑑頁面連結
+          { key: 'codex', label: '圖鑑' },
           { key: 'vip', label: 'VIP' },
           { key: 'referral', label: '邀請' },
           { key: 'explorer', label: '數據查詢' },
@@ -104,29 +102,26 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    // 當選單打開時，禁止背景滾動
     document.body.style.overflow = isMenuOpen ? 'hidden' : 'auto';
     return () => {
         document.removeEventListener("mousedown", handleClickOutside);
-        document.body.style.overflow = 'auto'; // 元件卸載時恢復滾動
+        document.body.style.overflow = 'auto';
     };
   }, [isMenuOpen, popoverRef]);
 
   const handleNavClick = (page: Page) => {
       setActivePage(page);
-      setIsMenuOpen(false); // 點擊導航項目後關閉選單
+      setIsMenuOpen(false);
   };
 
   return (
     <header className="bg-[#1F1D36] shadow-lg sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3">
             <div className="flex justify-between items-center">
-                {/* Logo and Title */}
                 <div className="flex items-center space-x-2 md:space-x-4">
                     <img src={logoUrl} alt="Dungeon Delvers Logo" className="h-10 w-10 md:h-12 md:w-12 rounded-full border-2 border-[#C0A573]"/>
                     <div>
                         <h1 className="text-xl md:text-3xl font-bold text-white text-shadow-gold">Dungeon Delvers</h1>
-                        {/* ★ 修改：在小螢幕上隱藏標語 */}
                         <div className="hidden md:flex text-xs text-gray-300 dark:text-gray-400 items-center gap-2">
                            {isConnected && level && (
                                 <span className="font-bold text-yellow-400 bg-black/20 px-2 py-0.5 rounded">LV {level}</span>
@@ -136,7 +131,6 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
                     </div>
                 </div>
                 
-                {/* Action Buttons */}
                 <div className="flex items-center gap-1 md:gap-2">
                     <ThemeToggleButton />
                     {isConnected && (
@@ -150,7 +144,6 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
                     <ActionButton onClick={handleConnectClick} isLoading={isConnecting} disabled={isConnecting} className="px-3 py-2 md:px-4 rounded-full text-sm w-32 md:w-36">
                       {isConnected && address ? `${address.substring(0, 4)}...${address.substring(address.length - 4)}` : '連接錢包'}
                     </ActionButton>
-                    {/* ★ 新增：漢堡選單按鈕，只在小於 md 的螢幕上顯示 */}
                     <div className="md:hidden">
                         <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 rounded-full text-gray-300 hover:bg-white/20 transition-colors">
                             <MenuIcon />
@@ -159,7 +152,6 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
                 </div>
             </div>
             
-            {/* ★ 修改：桌面版導航列，在小於 md 的螢幕上隱藏 */}
             <nav className="hidden md:flex mt-4 flex-wrap justify-center gap-2 text-sm">
               {navItems.map(item => (
                   <a key={item.key} href={`#/${item.key}`} className={`nav-item ${activePage === item.key ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage(item.key); }}>
@@ -169,7 +161,6 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
             </nav>
         </div>
 
-        {/* ★ 新增：行動裝置的全螢幕選單 */}
         {isMenuOpen && (
             <div className="md:hidden fixed inset-0 bg-[#1F1D36]/95 backdrop-blur-sm z-50 flex flex-col p-4 animate-zoom-in">
                 <div className="flex justify-between items-center mb-8">

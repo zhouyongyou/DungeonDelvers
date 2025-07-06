@@ -19,15 +19,12 @@ import type {
 // Section: 型別守衛與輔助函式
 // =================================================================
 
-// 【新增】定義支援的鏈 ID 型別，與 contracts.ts 同步
 type SupportedChainId = keyof typeof contracts;
 
-// 【新增】建立一個型別守衛函式，用於檢查 chainId 是否為我們所支援的
 function isSupportedChain(chainId: number): chainId is SupportedChainId {
     return chainId in contracts;
 }
 
-// 根據鏈 ID 獲取一個公共的 viem 客戶端
 const getClient = (chainId: number) => {
     const chain = chainId === bsc.id ? bsc : bscTestnet;
     const rpcUrl = chainId === bsc.id 
@@ -36,8 +33,6 @@ const getClient = (chainId: number) => {
     return createPublicClient({ chain, transport: http(rpcUrl) });
 };
 
-// 從鏈上或 Base64 URI 中獲取元數據，並增加錯誤處理
-// ★ 核心修正：匯出 fetchMetadata 函式
 export async function fetchMetadata(uri: string): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
     try {
         if (uri.startsWith('data:application/json;base64,')) {
@@ -59,7 +54,6 @@ export async function fetchMetadata(uri: string): Promise<Omit<BaseNft, 'id' | '
     }
 }
 
-// 輔助函式，將通用的元數據轉換為我們定義的、帶有具體屬性的強型別 NFT 物件
 function parseToTypedNft(
     baseMetadata: Omit<BaseNft, 'id' | 'contractAddress'>,
     id: bigint,
@@ -90,7 +84,6 @@ function parseToTypedNft(
 // Section: NFT 數據獲取核心邏輯
 // =================================================================
 
-// 通用函式，使用掃描事件並透過 multicall 確認所有權，來獲取 NFT
 async function fetchNftsForContract(
     client: ReturnType<typeof getClient>,
     owner: Address,
@@ -98,14 +91,24 @@ async function fetchNftsForContract(
     type: AnyNft['type'],
     chainId: number
 ): Promise<AnyNft[]> {
-    // 【修正】在呼叫 getContract 之前，先使用型別守衛進行檢查
     if (!isSupportedChain(chainId)) return [];
     
     const contract = getContract(chainId, contractName);
     if (!contract) return [];
 
     try {
-        // 1. 掃描所有發送給該玩家的 Transfer 事件
+        const currentBlock = await client.getBlockNumber();
+        let fromBlock: bigint | 'earliest' = 'earliest';
+
+        // ★★★ 核心修正 ★★★
+        // 根據您的建議，將掃描範圍縮小到約一個月的區塊量 (3,500,000 blocks)
+        // 這是一個更高效、更精準的設定。
+        const blockRange = 3500000n; 
+        
+        if (currentBlock > blockRange) {
+            fromBlock = currentBlock - blockRange;
+        }
+
         const transferLogs = await client.getLogs({
             address: contract.address,
             event: {
@@ -117,13 +120,12 @@ async function fetchNftsForContract(
                 ],
             },
             args: { to: owner },
-            fromBlock: 'earliest',
+            fromBlock: fromBlock,
         });
 
         const potentialTokenIds = [...new Set(transferLogs.map(log => log.args.tokenId).filter(id => id !== undefined))] as bigint[];
         if (potentialTokenIds.length === 0) return [];
         
-        // 2. 使用 multicall 一次性確認所有權
         const ownerOfCalls = potentialTokenIds.map(id => ({
             address: contract.address, abi: contract.abi as Abi,
             functionName: 'ownerOf', args: [id],
@@ -135,14 +137,12 @@ async function fetchNftsForContract(
         );
         if (ownedTokenIds.length === 0) return [];
 
-        // 3. 為確認擁有的 token ID 獲取元數據 URI
         const uriCalls = ownedTokenIds.map(id => ({
             address: contract.address, abi: contract.abi as Abi,
             functionName: 'tokenURI', args: [id],
         }));
         const uriResults = await client.multicall({ contracts: uriCalls, allowFailure: true });
 
-        // 4. 解析元數據並轉換為強型別物件
         const nftPromises = ownedTokenIds.map(async (id, index) => {
             if (uriResults[index].status === 'success') {
                 const metadata = await fetchMetadata(uriResults[index].result as string);
@@ -159,9 +159,7 @@ async function fetchNftsForContract(
     }
 }
 
-// 獲取玩家所有種類的 NFT
 export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promise<AllNftCollections> {
-    // 【修正】在檔案的入口處就進行一次總的鏈 ID 檢查
     if (!isSupportedChain(chainId)) {
         console.error(`不支援的鏈 ID: ${chainId}`);
         return { heroes: [], relics: [], parties: [], vipCards: [] };
@@ -169,7 +167,6 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
 
     const client = getClient(chainId);
 
-    // 平行獲取所有基礎 NFT 資料
     const [heroes, relics, parties, vipCards] = await Promise.all([
         fetchNftsForContract(client, owner, 'hero', 'hero', chainId),
         fetchNftsForContract(client, owner, 'relic', 'relic', chainId),
@@ -177,19 +174,17 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
         fetchNftsForContract(client, owner, 'vipStaking', 'vip', chainId),
     ]);
 
-    // 如果獲取到了 Party NFT，則額外發起一次 multicall 來獲取它們的詳細構成
     if (parties.length > 0) {
         const partyContract = getContract(chainId, 'party');
         if (partyContract) {
             const compositionCalls = parties.map(p => ({
                 address: partyContract.address,
-                abi: partyABI, // 直接使用 partyABI
+                abi: partyABI,
                 functionName: 'getPartyComposition',
                 args: [p.id],
             }));
             const compositions = await client.multicall({ contracts: compositionCalls, allowFailure: true });
 
-            // 將獲取到的構成資訊更新回 Party 物件中
             compositions.forEach((result, index) => {
                 if (result.status === 'success' && Array.isArray(result.result)) {
                     const party = parties[index] as PartyNft;

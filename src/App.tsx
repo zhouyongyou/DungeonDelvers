@@ -21,6 +21,8 @@ const AdminPage = lazy(() => import('./pages/AdminPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const VipPage = lazy(() => import('./pages/VipPage'));
 const ReferralPage = lazy(() => import('./pages/ReferralPage'));
+// ★ 新增：導入圖鑑頁面
+const CodexPage = lazy(() => import('./pages/CodexPage'));
 
 const PageLoader: React.FC = () => (
     <div className="flex justify-center items-center h-64">
@@ -32,11 +34,10 @@ const PageLoader: React.FC = () => (
 );
 
 const getPageFromHash = (): Page => {
-    // 從 hash 中解析頁面
     const hash = window.location.hash.replace('#/', '');
-    // 移除查詢參數，只取頁面路徑
     const page = hash.split('?')[0];
-    const validPages: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'explorer', 'admin', 'altar', 'profile', 'vip', 'referral'];
+    // ★ 新增：將 'codex' 加入到合法的頁面列表中
+    const validPages: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'explorer', 'admin', 'altar', 'profile', 'vip', 'referral', 'codex'];
     if (validPages.includes(page as Page)) {
         return page as Page;
     }
@@ -56,7 +57,6 @@ function App() {
   }, []);
 
   const handleSetPage = (page: Page) => {
-    // 移除舊的查詢參數，只更新 hash 路徑
     const newUrl = new URL(window.location.href);
     newUrl.hash = `/${page}`;
     window.history.pushState({}, '', newUrl);
@@ -64,7 +64,8 @@ function App() {
   };
 
   const renderPage = () => {
-    const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'admin', 'altar', 'profile', 'vip', 'referral'];
+    // ★ 新增：將 'codex' 加入到需要錢包連接的頁面列表中
+    const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'admin', 'altar', 'profile', 'vip', 'referral', 'codex'];
     if (!isConnected && pageRequiresWallet.includes(activePage)) {
         return (<div className="mt-10"><EmptyState message="要使用此功能，請先連接您的錢包。" /></div>);
     }
@@ -80,6 +81,8 @@ function App() {
         case 'profile': return <ProfilePage setActivePage={handleSetPage} />;
         case 'vip': return <VipPage />;
         case 'referral': return <ReferralPage />;
+        // ★ 新增：圖鑑頁面的路由 case
+        case 'codex': return <CodexPage />;
         default: return <DashboardPage setActivePage={handleSetPage} />;
     }
   };
