@@ -1,3 +1,5 @@
+// src/pages/ReferralPage.tsx
+
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { getContract } from '../config/contracts';
@@ -6,7 +8,7 @@ import { useTransactionStore } from '../stores/useTransactionStore';
 import { ActionButton } from '../components/ui/ActionButton';
 import { isAddress, formatEther } from 'viem';
 import { bsc, bscTestnet } from 'wagmi/chains';
-import { LoadingSpinner } from '../components/ui/LoadingSpinner'; // ★ 新增：導入 LoadingSpinner
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 
 const ReferralPage: React.FC = () => {
     const { address, chainId } = useAccount();
@@ -16,29 +18,25 @@ const ReferralPage: React.FC = () => {
     const [referrerInput, setReferrerInput] = useState('');
     const [copied, setCopied] = useState(false);
 
-    // ★ 核心修正 #1：在元件的開頭加入型別防衛
+    // ★ 核心修正：在元件的開頭加入型別防衛
     if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
         return <div className="p-4 text-center text-gray-400">請連接到支援的網路以使用邀請功能。</div>;
     }
 
-    // ★ 修正：移除未使用的 dungeonCoreContract
     const playerVaultContract = getContract(chainId, 'playerVault');
 
-    // ★ 核心修正 #2：確保 wagmi hook 的參數是型別安全的
     const { data: currentReferrer, isLoading: isLoadingReferrer, refetch: refetchReferrer } = useReadContract({
-        address: playerVaultContract?.address,
-        abi: playerVaultContract?.abi,
+        ...playerVaultContract,
         functionName: 'referrers',
         args: [address!],
-        query: { enabled: !!address && !!playerVaultContract && playerVaultContract.address.startsWith('0x') },
+        query: { enabled: !!address && !!playerVaultContract },
     });
 
     const { data: totalCommission, isLoading: isLoadingCommission } = useReadContract({
-        address: playerVaultContract?.address,
-        abi: playerVaultContract?.abi,
+        ...playerVaultContract,
         functionName: 'totalCommissionPaid',
         args: [address!],
-        query: { enabled: !!address && !!playerVaultContract && playerVaultContract.address.startsWith('0x') },
+        query: { enabled: !!address && !!playerVaultContract },
     });
 
     const { writeContractAsync, isPending: isSettingReferrer } = useWriteContract();
@@ -47,7 +45,7 @@ const ReferralPage: React.FC = () => {
         if (!isAddress(referrerInput)) {
             return showToast('請輸入有效的錢包地址', 'error');
         }
-        if (!playerVaultContract || !playerVaultContract.address.startsWith('0x')) {
+        if (!playerVaultContract) {
             return showToast('合約尚未準備好', 'error');
         }
 

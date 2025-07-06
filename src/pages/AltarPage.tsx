@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from 'react';
+// src/pages/AltarPage.tsx
+
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
-import { formatEther, type Abi } from 'viem';
+import { formatEther } from 'viem';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { getContract } from '../config/contracts';
 import { NftCard } from '../components/ui/NftCard';
@@ -11,12 +13,11 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import type { HeroNft, RelicNft, NftType } from '../types/nft';
+import { bsc, bscTestnet } from 'wagmi/chains'; // 導入支援的鏈
 
 // =================================================================
 // Section: 型別定義與輔助元件
 // =================================================================
-
-type UpgradeableNft = HeroNft | RelicNft;
 
 // 用於顯示升級規則和機率的卡片
 const UpgradeInfoCard: React.FC<{
@@ -65,6 +66,18 @@ const AltarPage: React.FC = () => {
     const [rarity, setRarity] = useState<number>(1);
     const [selectedNfts, setSelectedNfts] = useState<bigint[]>([]);
 
+    // ★ 核心修正: 在元件頂部加入型別防衛
+    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+        return (
+            <section>
+                <h2 className="page-title">升星祭壇</h2>
+                <div className="card-bg p-10 rounded-xl text-center text-gray-400">
+                    <p>請先連接到支援的網路 (BSC 或 BSC 測試網) 以使用升星祭壇。</p>
+                </div>
+            </section>
+        );
+    }
+
     const altarContract = getContract(chainId, 'altarOfAscension');
     const heroContract = getContract(chainId, 'hero');
     const relicContract = getContract(chainId, 'relic');
@@ -74,7 +87,7 @@ const AltarPage: React.FC = () => {
     // 獲取玩家的所有 NFT
     const { data: nfts, isLoading: isLoadingNfts } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
-        queryFn: () => fetchAllOwnedNfts(address!, chainId!),
+        queryFn: () => fetchAllOwnedNfts(address!, chainId),
         enabled: !!address && !!chainId,
     });
 
@@ -166,7 +179,7 @@ const AltarPage: React.FC = () => {
                     <div className="card-bg p-6 rounded-2xl">
                         <h3 className="section-title text-xl">1. 選擇升級目標</h3>
                         <div className="flex items-center gap-2 bg-gray-900/50 p-1 rounded-lg mb-4">
-                            {(['hero', 'relic'] as NftType[]).map(t => (
+                            {(['hero', 'relic'] as const).map(t => (
                                 <button key={t} onClick={() => setNftType(t)} className={`w-full py-2 text-sm font-medium rounded-md transition ${nftType === t ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'}`}>
                                     {t === 'hero' ? '英雄' : '聖物'}
                                 </button>
@@ -201,8 +214,8 @@ const AltarPage: React.FC = () => {
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                             {availableNfts.map(nft => (
                                 <NftCard
-                                    key={nft.id}
-                                    nft={nft}
+                                    key={nft.id.toString()}
+                                    nft={nft as HeroNft | RelicNft}
                                     onSelect={() => handleSelectNft(nft.id)}
                                     isSelected={selectedNfts.includes(nft.id)}
                                 />

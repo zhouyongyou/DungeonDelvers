@@ -1,3 +1,5 @@
+// src/pages/DungeonPage.tsx
+
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContracts, useReadContract, useWriteContract } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
@@ -43,7 +45,7 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
     const { chainId } = useAccount();
     const [selectedDungeonId, setSelectedDungeonId] = useState<bigint>(1n);
 
-    // ★ 核心修正 #1：確保 wagmi hook 的參數是型別安全的
+    // 確保 wagmi hook 的參數是型別安全的
     const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
     const dungeonStorageContract = getContract(chainId, 'dungeonStorage');
 
@@ -52,20 +54,19 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
         abi: dungeonStorageContract?.abi,
         functionName: 'getPartyStatus',
         args: [party.id],
-        query: { enabled: !!dungeonStorageContract && dungeonStorageContract.address.startsWith('0x'), refetchInterval: 5000 }
+        query: { enabled: !!dungeonStorageContract, refetchInterval: 5000 }
     });
     
     const { data: explorationFee } = useReadContract({
         address: dungeonMasterContract?.address,
         abi: dungeonMasterContract?.abi,
         functionName: 'explorationFee',
-        query: { enabled: !!dungeonMasterContract && dungeonMasterContract.address.startsWith('0x') }
+        query: { enabled: !!dungeonMasterContract }
     });
 
     const { isOnCooldown, fatigueLevel, effectivePower, provisionsRemaining } = useMemo(() => {
         if (!partyStatus) return { isOnCooldown: false, fatigueLevel: 0, effectivePower: BigInt(party.totalPower), provisionsRemaining: 0n };
         
-        // ★ 核心修正 #2：使用 as unknown 進行型別轉換，避免不相容的錯誤
         const [provisions, cooldownEndsAt, , fatigue] = partyStatus as unknown as readonly [bigint, bigint, bigint, number];
         
         const power = BigInt(party.totalPower);
@@ -79,7 +80,6 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
         };
     }, [partyStatus, party.totalPower]);
 
-    // ... 其餘元件邏輯保持不變 ...
     const renderStatus = () => {
         if (isLoadingStatus) return <span className="text-gray-400">讀取狀態...</span>;
         if (isOnCooldown) return <span className="px-3 py-1 text-sm font-medium text-yellow-300 bg-yellow-900/50 rounded-full">冷卻中...</span>;
@@ -128,7 +128,6 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
     );
 };
 
-// DungeonInfoCard 元件保持不變...
 const DungeonInfoCard: React.FC<{ dungeon: Dungeon }> = ({ dungeon }) => (
     <div className="card-bg p-4 rounded-xl shadow-lg flex flex-col bg-gray-800/50">
         <h4 className="text-lg font-bold font-serif text-yellow-300">{dungeon.name}</h4>
@@ -152,7 +151,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
     const [isProvisionModalOpen, setIsProvisionModalOpen] = useState(false);
     const [selectedPartyForProvision, setSelectedPartyForProvision] = useState<bigint | null>(null);
 
-    // ★ 核心修正 #3：在元件開頭加入型別防衛
+    // ★ 核心修正：在元件的開頭加入型別防衛
     if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
         return <div className="flex justify-center items-center h-64"><p className="text-lg text-gray-500">請連接到支援的網路</p></div>;
     }
@@ -160,10 +159,9 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
     const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
     
     const { data: dungeonStorageAddress } = useReadContract({
-        address: dungeonMasterContract?.address,
-        abi: dungeonMasterContract?.abi,
+        ...dungeonMasterContract,
         functionName: 'dungeonStorage',
-        query: { enabled: !!dungeonMasterContract && dungeonMasterContract.address.startsWith('0x') }
+        query: { enabled: !!dungeonMasterContract }
     });
 
     const dungeonStorageContract = useMemo(() => {
@@ -185,10 +183,9 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
             functionName: 'getDungeon',
             args: [BigInt(i + 1)],
         })),
-        query: { enabled: !!dungeonStorageContract && dungeonStorageContract.address.startsWith('0x') }
+        query: { enabled: !!dungeonStorageContract }
     });
 
-    // ... 其餘邏輯保持不變 ...
     const dungeons: Dungeon[] = useMemo(() => {
         const getDungeonName = (id: number) => ["", "新手礦洞", "哥布林洞穴", "食人魔山谷", "蜘蛛巢穴", "石化蜥蜴沼澤", "巫妖墓穴", "奇美拉之巢", "惡魔前哨站", "巨龍之巔", "混沌深淵"][id] || "未知地城";
         if (!dungeonsData) return [];
@@ -200,7 +197,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
     }, [dungeonsData]);
 
     const handleStartExpedition = async (partyId: bigint, dungeonId: bigint, fee: bigint) => {
-        if (!dungeonMasterContract || !dungeonMasterContract.address.startsWith('0x')) return;
+        if (!dungeonMasterContract) return;
         try {
             const hash = await writeContractAsync({
                 address: dungeonMasterContract.address,
@@ -218,7 +215,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
     };
 
     const handleRest = async (partyId: bigint) => {
-        if (!dungeonMasterContract || !dungeonMasterContract.address.startsWith('0x')) return;
+        if (!dungeonMasterContract) return;
         try {
             const hash = await writeContractAsync({
                 address: dungeonMasterContract.address,
@@ -251,6 +248,8 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
                 isOpen={isProvisionModalOpen}
                 onClose={() => setIsProvisionModalOpen(false)}
                 title="購買遠征儲備"
+                onConfirm={() => {}} // This modal is now just a container, logic is in ProvisionsPage
+                confirmText="關閉" // Or hide buttons
             >
                 <ProvisionsPage 
                     preselectedPartyId={selectedPartyForProvision} 

@@ -11,6 +11,7 @@ import { DEVELOPER_ADDRESS } from '../../config/constants';
 import { getContract } from '../../config/contracts';
 import { RecentTransactions } from '../ui/RecentTransactions'; 
 import { Icons } from '../ui/icons';
+import { bsc, bscTestnet } from 'wagmi/chains'; // 導入支援的鏈
 
 const ThemeToggleButton: React.FC = () => {
     const { theme, setTheme, effectiveTheme } = useTheme();
@@ -36,32 +37,50 @@ const ThemeToggleButton: React.FC = () => {
     );
 };
 
+// ★ 新增：一個專門用於讀取玩家等級的自定義 Hook
+const usePlayerLevel = () => {
+    const { address, chainId } = useAccount();
+
+    // ★ 核心修正 #1: 在 Hook 內部加入型別防衛
+    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+        return { level: null };
+    }
+
+    const playerProfileContract = getContract(chainId, 'playerProfile');
+
+    const { data: tokenId } = useReadContract({
+        ...playerProfileContract,
+        functionName: 'profileTokenOf',
+        args: [address!],
+        query: { enabled: !!address && !!playerProfileContract }
+    });
+
+    const { data: experience } = useReadContract({
+        ...playerProfileContract,
+        functionName: 'playerExperience',
+        args: [tokenId!],
+        query: { enabled: typeof tokenId === 'bigint' && tokenId > 0n }
+    });
+
+    const level = useMemo(() => {
+        if (typeof experience !== 'bigint') return null;
+        if (experience < 100n) return 1;
+        return Math.floor(Math.sqrt(Number(experience) / 100)) + 1;
+    }, [experience]);
+
+    return { level };
+}
+
 export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) => void }> = ({ activePage, setActivePage }) => {
-  const { address, chainId, isConnected, isConnecting } = useAccount();
+  const { address, isConnected, isConnecting } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
 
   const [isTxPopoverOpen, setIsTxPopoverOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  const playerProfileContract = getContract(chainId, 'playerProfile');
-  const { data: tokenId } = useReadContract({
-    ...playerProfileContract,
-    functionName: 'profileTokenOf',
-    args: [address!],
-    query: { enabled: !!address && !!playerProfileContract }
-  });
-  const { data: experience } = useReadContract({
-    ...playerProfileContract,
-    functionName: 'playerExperience',
-    args: [tokenId!],
-    query: { enabled: typeof tokenId === 'bigint' && tokenId > BigInt(0) }
-  });
-  const level = useMemo(() => {
-    if (typeof experience !== 'bigint') return null;
-    if (experience < BigInt(100)) return 1;
-    return Math.floor(Math.sqrt(Number(experience) / 100)) + 1;
-  }, [experience]);
+  // ★ 核心修正 #2: 使用自定義 Hook 來獲取等級
+  const { level } = usePlayerLevel();
 
   const isDeveloper = isConnected && address?.toLowerCase() === DEVELOPER_ADDRESS.toLowerCase();
   
@@ -73,7 +92,7 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
       { key: 'dungeon', label: '地下城' },
       { key: 'altar', label: '升星祭壇' },
       { key: 'vip', label: 'VIP' },
-      { key: 'referral', label: '邀請' }, // 【新增】邀請頁面導航
+      { key: 'referral', label: '邀請' },
       { key: 'explorer', label: '數據查詢' },
   ];
   if (isDeveloper) {

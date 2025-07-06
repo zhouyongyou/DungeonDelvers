@@ -1,3 +1,5 @@
+// src/pages/ProfilePage.tsx
+
 import React from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import { Buffer } from 'buffer';
@@ -5,7 +7,8 @@ import { getContract } from '../config/contracts';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ActionButton } from '../components/ui/ActionButton';
-import type { Page } from '../types/page'; // 雖然此頁面未使用，但為保持一致性而保留
+import type { Page } from '../types/page';
+import { bsc, bscTestnet } from 'wagmi/chains'; // 導入支援的鏈
 
 // =================================================================
 // Section: ProfilePage 主元件
@@ -14,6 +17,19 @@ import type { Page } from '../types/page'; // 雖然此頁面未使用，但為�
 const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setActivePage }) => {
     const { address, chainId } = useAccount();
 
+    // ★ 核心修正 #1: 在元件頂部加入型別防衛
+    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+        return (
+            <section>
+                <h2 className="page-title">玩家檔案</h2>
+                <div className="card-bg p-10 rounded-xl text-center text-gray-400">
+                    <p>請先連接到支援的網路 (BSC 或 BSC 測試網) 以檢視您的檔案。</p>
+                </div>
+            </section>
+        );
+    }
+
+    // 現在可以安全地呼叫 getContract
     const playerProfileContract = getContract(chainId, 'playerProfile');
 
     // 1. 檢查玩家是否已經擁有 Profile NFT
@@ -23,7 +39,7 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
         args: [address!],
         query: { 
             enabled: !!address && !!playerProfileContract,
-            refetchInterval: 10000, // 定期刷新以檢查是否已獲得
+            refetchInterval: 10000,
         },
     });
 
@@ -32,7 +48,7 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
         ...playerProfileContract,
         functionName: 'tokenURI',
         args: [tokenId!],
-        query: { enabled: !!tokenId && tokenId > 0n },
+        query: { enabled: !!tokenId && tokenId > 0n && !!playerProfileContract },
     });
 
     const renderContent = () => {
@@ -40,25 +56,30 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
             return <div className="flex justify-center items-center h-96"><LoadingSpinner /></div>;
         }
 
-        // 如果 tokenId 存在且大於 0，表示玩家已擁有檔案
         if (tokenId && tokenId > 0n && tokenURI) {
-            const decodedUri = Buffer.from((tokenURI as string).substring('data:application/json;base64,'.length), 'base64').toString();
-            const metadata = JSON.parse(decodedUri);
-            const svgImage = Buffer.from(metadata.image.substring('data:image/svg+xml;base64,'.length), 'base64').toString();
-            
-            return (
-                <div className="card-bg p-6 rounded-2xl shadow-xl flex flex-col items-center">
-                    <h3 className="section-title">我的玩家徽章</h3>
-                    <div 
-                        className="w-full max-w-lg my-4 border-4 border-gray-700 rounded-lg overflow-hidden"
-                        dangerouslySetInnerHTML={{ __html: svgImage }} 
-                    />
-                    <p className="text-sm text-gray-400">這是一個動態的 SBT (靈魂綁定代幣)，它將記錄您在遊戲中的光輝歷程。</p>
-                </div>
-            );
+            try {
+                const decodedUri = Buffer.from((tokenURI as string).substring('data:application/json;base64,'.length), 'base64').toString();
+                const metadata = JSON.parse(decodedUri);
+                // 增加對 image 欄位的檢查，防止 SVG 解析錯誤
+                const svgImage = metadata.image ? Buffer.from(metadata.image.substring('data:image/svg+xml;base64,'.length), 'base64').toString() : '';
+                
+                return (
+                    <div className="card-bg p-6 rounded-2xl shadow-xl flex flex-col items-center">
+                        <h3 className="section-title">我的玩家徽章</h3>
+                        <div 
+                            className="w-full max-w-lg my-4 border-4 border-gray-700 rounded-lg overflow-hidden"
+                            dangerouslySetInnerHTML={{ __html: svgImage }} 
+                        />
+                        <p className="text-sm text-gray-400">這是一個動態的 SBT (靈魂綁定代幣)，它將記錄您在遊戲中的光輝歷程。</p>
+                    </div>
+                );
+            } catch (error) {
+                 console.error("解析 Profile SVG 失敗:", error);
+                 return <EmptyState message="無法載入您的個人檔案視覺效果。" />;
+            }
         }
 
-        // 【核心修改】如果玩家沒有檔案，顯示引導訊息，而不是創建按鈕
+        // ★ 核心修正 #2: EmptyState 現在可以正確接收 children
         return (
             <EmptyState message="您尚未獲得玩家檔案">
                 <p className="text-gray-400 mb-4 max-w-md text-center">

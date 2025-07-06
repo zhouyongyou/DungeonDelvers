@@ -1,3 +1,5 @@
+// src/components/core/TransactionWatcher.tsx
+
 import React, { useEffect, useMemo } from 'react';
 import { useWaitForTransactionReceipt } from 'wagmi';
 import { useTransactionStore, type Transaction } from '../../stores/useTransactionStore';

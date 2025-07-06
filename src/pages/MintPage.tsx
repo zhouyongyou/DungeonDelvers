@@ -1,5 +1,8 @@
+// src/pages/MintPage.tsx
+
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract, useBalance } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query'; // ★ 修正 #1：從正確的套件導入
 import { formatEther, maxUint256, type Abi } from 'viem';
 import { useAppToast } from '../hooks/useAppToast';
 import { getContract } from '../config/contracts';
@@ -21,27 +24,27 @@ type PaymentSource = 'wallet' | 'vault';
 const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: PaymentSource) => {
     const { address, chainId } = useAccount();
 
+    // ★ 核心修正 #2: 在 Hook 內部加入型別防衛，確保後續操作的型別安全
     if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
         return {
             requiredAmount: 0n,
             balance: 0n,
             needsApproval: false,
-            refetchAllowance: () => {},
             isLoading: true,
             platformFee: 0n,
         };
     }
-
+    
+    // 現在 TypeScript 知道 chainId 是 56 或 97，所以 getContract 可以正確推斷型別
     const contractConfig = getContract(chainId, type);
     const soulShardContract = getContract(chainId, 'soulShard');
     const dungeonCoreContract = getContract(chainId, 'dungeonCore');
     const playerVaultContract = getContract(chainId, 'playerVault');
 
     const { data: mintPriceUSD, isLoading: isLoadingPrice } = useReadContract({
-        address: contractConfig?.address,
-        abi: contractConfig?.abi,
+        ...contractConfig,
         functionName: 'mintPriceUSD',
-        query: { enabled: !!contractConfig && contractConfig.address.startsWith('0x') },
+        query: { enabled: !!contractConfig },
     });
 
     const { data: requiredAmountPerUnit, isLoading: isLoadingConversion } = useReadContract({
@@ -59,46 +62,48 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     const { data: walletBalance } = useBalance({ 
         address, 
         token: soulShardContract?.address,
-        query: { enabled: !!address && !!soulShardContract && soulShardContract.address.startsWith('0x') }
+        query: { enabled: !!address && !!soulShardContract }
     });
     
-    // ★ 核心修正 #1：確保傳遞給 useReadContract 的物件是有效的
-    // 只有當 playerVaultContract 存在且其地址是有效的 '0x...' 地址時，才啟用這個 hook
     const { data: vaultInfo } = useReadContract({
-        address: playerVaultContract?.address,
-        abi: playerVaultContract?.abi,
+        ...playerVaultContract,
         functionName: 'playerInfo',
         args: [address!],
         query: { 
-            enabled: !!address && !!playerVaultContract && playerVaultContract.address.startsWith('0x'),
+            enabled: !!address && !!playerVaultContract,
             refetchInterval: 5000 
         },
     });
     const vaultBalance = useMemo(() => (Array.isArray(vaultInfo) ? vaultInfo[0] as bigint : 0n), [vaultInfo]);
 
-    const { data: allowance, refetch: refetchAllowance } = useReadContract({
-        address: soulShardContract?.address,
-        abi: soulShardContract?.abi,
+    const { data: allowance } = useReadContract({
+        ...soulShardContract,
         functionName: 'allowance',
         args: [address!, contractConfig?.address!],
-        query: { enabled: !!address && !!soulShardContract && soulShardContract.address.startsWith('0x') && !!contractConfig && contractConfig.address.startsWith('0x') && paymentSource === 'wallet' },
+        query: { 
+            enabled: !!address && !!soulShardContract && !!contractConfig && paymentSource === 'wallet',
+        },
     });
 
-    // ★ 核心修正 #2：在比較前，先確保 allowance 是一個 bigint 型別
     const needsApproval = useMemo(() => {
         if (paymentSource !== 'wallet' || typeof allowance !== 'bigint' || !totalRequiredAmount) {
             return false;
         }
         return allowance < totalRequiredAmount;
     }, [paymentSource, allowance, totalRequiredAmount]);
+    
+    const { data: platformFee } = useReadContract({
+        ...contractConfig,
+        functionName: 'platformFee',
+        query: { enabled: !!contractConfig },
+    });
 
     return {
         requiredAmount: totalRequiredAmount,
         balance: paymentSource === 'wallet' ? (walletBalance?.value ?? 0n) : vaultBalance,
         needsApproval,
-        refetchAllowance,
         isLoading: isLoadingPrice || isLoadingConversion,
-        platformFee: type === 'hero' ? 300000000000000n : 300000000000000n,
+        platformFee: platformFee as bigint ?? 0n,
     };
 };
 
@@ -112,22 +117,19 @@ interface MintCardProps {
 }
 
 const MintCard: React.FC<MintCardProps> = ({ type, options }) => {
-    const { chainId } = useAccount();
+    const { chainId, address } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
+    const queryClient = useQueryClient();
     
     const [quantity, setQuantity] = useState(1);
     const [paymentSource, setPaymentSource] = useState<PaymentSource>('wallet');
 
-    const { requiredAmount, balance, needsApproval, refetchAllowance, isLoading: isLoadingPrice, platformFee } = useMintLogic(type, quantity, paymentSource);
+    const { requiredAmount, balance, needsApproval, isLoading: isLoadingPrice, platformFee } = useMintLogic(type, quantity, paymentSource);
     const { writeContractAsync, isPending: isMinting } = useWriteContract();
     
     const title = type === 'hero' ? '英雄' : '聖物';
     
-    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
-        return <div className="card-bg p-6 rounded-xl shadow-lg flex flex-col items-center h-full justify-center"><p className="text-gray-400">請先連接到支援的網路</p></div>;
-    }
-
     const contractConfig = getContract(chainId, type);
     const soulShardContract = getContract(chainId, 'soulShard');
 
@@ -141,7 +143,10 @@ const MintCard: React.FC<MintCardProps> = ({ type, options }) => {
                 args: [contractConfig.address, maxUint256]
             });
             addTransaction({ hash, description: `批准 ${title} 合約使用代幣` });
-            setTimeout(() => refetchAllowance(), 2000); 
+            // 授權後，主動讓相關的 allowance 查詢失效，以觸發重新獲取
+            await queryClient.invalidateQueries({ 
+                queryKey: ['readContract', { address: soulShardContract.address, functionName: 'allowance', args: [address!, contractConfig.address], chainId }]
+            });
         } catch (e: any) {
              if (!e.message.includes('User rejected the request')) {
                 showToast(e.shortMessage || "授權失敗", "error");
@@ -175,8 +180,8 @@ const MintCard: React.FC<MintCardProps> = ({ type, options }) => {
     
     const actionButton = (paymentSource === 'wallet' && needsApproval)
         ? <ActionButton onClick={handleApprove} isLoading={isMinting} className="w-48 h-12">授權</ActionButton>
-        : <ActionButton onClick={handleMint} isLoading={isMinting || isLoadingPrice} disabled={isLoadingPrice || balance < requiredAmount} className="w-48 h-12">
-            {isMinting ? '請在錢包確認' : `招募 ${quantity} 個`}
+        : <ActionButton onClick={handleMint} isLoading={isMinting || isLoadingPrice} disabled={!address || isLoadingPrice || balance < requiredAmount} className="w-48 h-12">
+            {isMinting ? '請在錢包確認' : (address ? `招募 ${quantity} 個` : '請先連接錢包')}
           </ActionButton>;
 
     return (
@@ -197,7 +202,7 @@ const MintCard: React.FC<MintCardProps> = ({ type, options }) => {
                     <button onClick={() => setPaymentSource('vault')} className={`px-4 py-2 rounded-md text-sm font-semibold transition ${paymentSource === 'vault' ? 'bg-gray-700 text-white shadow' : 'text-gray-300'}`}>金庫支付 (免稅)</button>
                 </div>
                 <p className="text-xs text-center mt-2 text-gray-500">
-                    {paymentSource === 'wallet' ? '錢包餘額' : '金庫餘額'}: {parseFloat(formatEther(balance)).toFixed(4)} $SoulShard
+                    {paymentSource === 'wallet' ? '錢包餘額' : '金庫餘額'}: {address ? parseFloat(formatEther(balance)).toFixed(4) : '0.00'} $SoulShard
                 </p>
             </div>
 
@@ -224,8 +229,21 @@ const MintCard: React.FC<MintCardProps> = ({ type, options }) => {
 // =================================================================
 
 const MintPage: React.FC = () => {
+    const { chainId } = useAccount();
     const heroMintOptions = [1, 5, 10, 20, 50];
     const relicMintOptions = [1, 5, 10, 20, 50];
+    
+    // 在頁面元件層級進行網路檢查，提供清晰的用戶指引
+    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+        return (
+            <section>
+                <h2 className="page-title">鑄造工坊</h2>
+                <div className="card-bg p-10 rounded-xl text-center text-gray-400">
+                    <p>請先連接到支援的網路 (BSC 或 BSC 測試網) 以使用鑄造功能。</p>
+                </div>
+            </section>
+        );
+    }
 
     return (
         <section>

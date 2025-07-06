@@ -3,8 +3,8 @@ import { useAccount, useReadContracts, useReadContract } from 'wagmi';
 import { getContract } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import type { NftType } from '../types/nft';
 import { formatEther, type Address } from 'viem';
+import { bsc, bscTestnet } from 'wagmi/chains'; // 導入支援的鏈
 
 // =================================================================
 // Section: 可重用的查詢元件
@@ -50,6 +50,11 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
     const { chainId } = useAccount();
     const [submittedId, setSubmittedId] = useState<bigint | null>(null);
 
+    // ★ 修正: 加入型別防衛
+    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+        return <p className="text-gray-500">請連接到支援的網路。</p>;
+    }
+
     const contract = getContract(chainId, type);
     const title = { hero: '英雄', relic: '聖物', party: '隊伍' }[type];
 
@@ -69,7 +74,7 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
 
     const { data, isLoading, isError, error, refetch } = useReadContracts({
         contracts: contractsToQuery as any,
-        query: { enabled: false } // 手動觸發
+        query: { enabled: false }
     });
 
     const handleQuery = (id: string) => {
@@ -125,6 +130,11 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
 const PlayerProfileQuery: React.FC = () => {
     const { chainId } = useAccount();
     const [submittedAddress, setSubmittedAddress] = useState<Address | null>(null);
+
+    // ★ 修正: 加入型別防衛
+    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+        return <p className="text-gray-500">請連接到支援的網路。</p>;
+    }
     const contract = getContract(chainId, 'playerProfile');
 
     const { data, isLoading, isError, refetch } = useReadContracts({
@@ -165,6 +175,11 @@ const PlayerProfileQuery: React.FC = () => {
 const PartyStatusQuery: React.FC = () => {
     const { chainId } = useAccount();
     const [submittedId, setSubmittedId] = useState<bigint | null>(null);
+
+    // ★ 修正: 加入型別防衛
+    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+        return <p className="text-gray-500">請連接到支援的網路。</p>;
+    }
     const contract = getContract(chainId, 'dungeonStorage');
 
     const { data, isLoading, isError, refetch } = useReadContract({
@@ -185,7 +200,8 @@ const PartyStatusQuery: React.FC = () => {
         if (!submittedId) return <p className="text-gray-500">請輸入隊伍 ID 查詢。</p>;
         if (isError || !data) return <p className="text-red-500">查詢失敗或隊伍不存在。</p>;
         
-        const [provisions, cooldown, rewards, fatigue] = data as readonly [bigint, bigint, bigint, number];
+        // ★ 修正: 使用 as unknown 來安全地進行型別轉換
+        const [provisions, cooldown, rewards, fatigue] = data as unknown as readonly [bigint, bigint, bigint, number];
         const cooldownDate = new Date(Number(cooldown) * 1000);
 
         return (

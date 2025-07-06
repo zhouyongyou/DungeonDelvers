@@ -1,6 +1,5 @@
 // src/config/contracts.ts
 
-// ★ 修正：移除未使用的 'Address' 型別導入
 import { bsc, bscTestnet } from 'wagmi/chains';
 import {
   soulShardTokenABI,
@@ -47,10 +46,10 @@ export const contracts = {
     altarOfAscension: { address: '0xYOUR_MAINNET_ALTAR_ADDRESS', abi: altarOfAscensionABI },
     playerProfile: { address: '0xYOUR_MAINNET_PLAYERPROFILE_ADDRESS', abi: playerProfileABI },
     vipStaking: { address: '0xYOUR_MAINNET_VIPSTAKING_ADDRESS', abi: vipStakingABI },
-    playerVault: { address: 'YOUR_MAINNET_PLAYERVAULT_ADDRESS', abi: playerVaultABI },
-    dungeonMaster: { address: 'YOUR_MAINNET_DUNGEONMASTER_ADDRESS', abi: dungeonMasterABI },
-    dungeonStorage: { address: 'YOUR_MAINNET_DUNGEONSTORAGE_ADDRESS', abi: dungeonStorageABI },
-    oracle: { address: 'YOUR_MAINNET_ORACLE_ADDRESS', abi: oracleABI },
+    playerVault: { address: '0xYOUR_MAINNET_PLAYERVAULT_ADDRESS', abi: playerVaultABI },
+    dungeonMaster: { address: '0xYOUR_MAINNET_DUNGEONMASTER_ADDRESS', abi: dungeonMasterABI },
+    dungeonStorage: { address: '0xYOUR_MAINNET_DUNGEONSTORAGE_ADDRESS', abi: dungeonStorageABI },
+    oracle: { address: '0xYOUR_MAINNET_ORACLE_ADDRESS', abi: oracleABI },
   },
 } as const;
 
@@ -79,13 +78,8 @@ export function getContract<
   const contractConfig = contracts[chainId][name];
   
   // ★★★ 核心修正 ★★★
-  // 我們在這裡進行一個型別斷言 (type assertion)，明確告訴 TypeScript
-  // `contractConfig` 這個物件一定會有一個 `address` 屬性，其型別為 string。
-  // 這解決了 TypeScript 在處理泛型時無法準確推斷型別的問題。
-  const address = (contractConfig as { address: string }).address;
-
-  // 檢查合約地址是否為預留位置
-  if (!contractConfig || address.includes('YOUR_')) {
+  // 移除危險的型別斷言，改用更安全的屬性檢查
+  if (!contractConfig || typeof (contractConfig as any).address !== 'string' || (contractConfig as any).address.includes('YOUR_')) {
     // console.warn(`合約 "${String(name)}" 在 chainId ${chainId} 的地址尚未設定。`);
     return null;
   }

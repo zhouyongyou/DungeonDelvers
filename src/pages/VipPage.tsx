@@ -1,13 +1,16 @@
+// src/pages/VipPage.tsx
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useReadContract, useWriteContract, useBalance } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
-import { formatEther, maxUint256, parseEther, type Hash, type Abi } from 'viem';
+import { formatEther, maxUint256 } from 'viem';
 import { getContract } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { Buffer } from 'buffer';
+import { bsc, bscTestnet } from 'wagmi/chains'; // 導入支援的鏈
 
 // =================================================================
 // Section: 輔助 Hook 與子元件
@@ -36,19 +39,26 @@ const useCountdown = (targetTimestamp: number) => {
 // VIP 卡片 SVG 顯示元件
 const VipCardDisplay: React.FC<{ tokenId: bigint | undefined }> = ({ tokenId }) => {
     const { chainId } = useAccount();
+    
+    // ★ 修正：在呼叫 getContract 前進行型別防衛
+    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+        return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-500">網路不支援</div>;
+    }
     const vipStakingContract = getContract(chainId, 'vipStaking');
 
     const { data: tokenURI, isLoading } = useReadContract({
         ...vipStakingContract,
         functionName: 'tokenURI',
         args: [tokenId!],
-        query: { enabled: !!tokenId && tokenId > 0n },
+        query: { enabled: !!tokenId && tokenId > 0n && !!vipStakingContract },
     });
 
     const svgImage = useMemo(() => {
         if (!tokenURI) return null;
         try {
-            const decodedUri = Buffer.from((tokenURI as string).substring('data:application/json;base64,'.length), 'base64').toString();
+            // 確保 tokenURI 是字串
+            const uriString = typeof tokenURI === 'string' ? tokenURI : '';
+            const decodedUri = Buffer.from(uriString.substring('data:application/json;base64,'.length), 'base64').toString();
             const metadata = JSON.parse(decodedUri);
             return metadata.image;
         } catch (e) {
@@ -72,21 +82,34 @@ const VipPage: React.FC = () => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
-    const queryClient = useQueryClient();
+    const queryClient = useQueryClient(); // ★ 修正：保留 queryClient 以便刷新數據
 
     const [amount, setAmount] = useState('');
     const [mode, setMode] = useState<'stake' | 'unstake'>('stake');
     
+    // ★ 核心修正：在元件頂部進行型別防衛
+    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+        return (
+            <section className="space-y-8">
+                <h2 className="page-title">VIP 質押中心</h2>
+                <div className="card-bg p-10 rounded-xl text-center text-gray-400">
+                    <p>請先連接到支援的網路 (BSC 或 BSC 測試網) 以使用 VIP 功能。</p>
+                </div>
+            </section>
+        );
+    }
+
+    // 現在可以安全地呼叫 getContract
     const vipStakingContract = getContract(chainId, 'vipStaking');
     const soulShardContract = getContract(chainId, 'soulShard');
 
     // --- 數據讀取 ---
     const { data: soulShardBalance } = useBalance({ address, token: soulShardContract?.address });
-    const { data: stakeInfo, refetch: refetchStakeInfo } = useReadContract({ ...vipStakingContract, functionName: 'userStakes', args: [address!] });
+    const { data: stakeInfo } = useReadContract({ ...vipStakingContract, functionName: 'userStakes', args: [address!] });
     const { data: vipLevel } = useReadContract({ ...vipStakingContract, functionName: 'getVipLevel', args: [address!] });
     const { data: taxReduction } = useReadContract({ ...vipStakingContract, functionName: 'getVipTaxReduction', args: [address!] });
-    const { data: unstakeQueue, refetch: refetchUnstakeQueue } = useReadContract({ ...vipStakingContract, functionName: 'unstakeQueue', args: [address!] });
-    const { data: allowance, refetch: refetchAllowance } = useReadContract({ ...soulShardContract, functionName: 'allowance', args: [address!, vipStakingContract?.address!] });
+    const { data: unstakeQueue } = useReadContract({ ...vipStakingContract, functionName: 'unstakeQueue', args: [address!] });
+    const { data: allowance } = useReadContract({ ...soulShardContract, functionName: 'allowance', args: [address!, vipStakingContract?.address!] });
 
     const stakedAmount = stakeInfo?.[0] ?? 0n;
     const tokenId = stakeInfo?.[1];
@@ -103,12 +126,21 @@ const VipPage: React.FC = () => {
         return (allowance ?? 0n) < parseEther(amount);
     }, [allowance, amount, mode]);
     
+    // --- 異步操作完成後刷新數據的通用函式 ---
+    const invalidateQueries = () => {
+        queryClient.invalidateQueries({ queryKey: ['userStakes'] });
+        queryClient.invalidateQueries({ queryKey: ['unstakeQueue'] });
+        queryClient.invalidateQueries({ queryKey: ['balance'] });
+        queryClient.invalidateQueries({ queryKey: ['allowance'] });
+    };
+
     // --- 事件處理函式 ---
     const handleApprove = async () => {
         if (!vipStakingContract || !soulShardContract) return;
         try {
             const hash = await writeContractAsync({ ...soulShardContract, functionName: 'approve', args: [vipStakingContract.address, maxUint256] });
             addTransaction({ hash, description: '批准 VIP 合約使用代幣' });
+            showToast('授權交易已送出', 'info');
         } catch (e: any) { showToast(e.shortMessage || "授權失敗", "error"); }
     };
     
@@ -118,6 +150,7 @@ const VipPage: React.FC = () => {
             const hash = await writeContractAsync({ ...vipStakingContract, functionName: 'stake', args: [parseEther(amount)] });
             addTransaction({ hash, description: `質押 ${amount} $SoulShard` });
             setAmount('');
+            invalidateQueries();
         } catch (e: any) { showToast(e.shortMessage || "質押失敗", "error"); }
     };
 
@@ -127,6 +160,7 @@ const VipPage: React.FC = () => {
             const hash = await writeContractAsync({ ...vipStakingContract, functionName: 'requestUnstake', args: [parseEther(amount)] });
             addTransaction({ hash, description: `請求取消質押 ${amount} $SoulShard` });
             setAmount('');
+            invalidateQueries();
         } catch (e: any) { showToast(e.shortMessage || "請求失敗", "error"); }
     };
 
@@ -135,6 +169,7 @@ const VipPage: React.FC = () => {
         try {
             const hash = await writeContractAsync({ ...vipStakingContract, functionName: 'claimUnstaked' });
             addTransaction({ hash, description: '領取已取消質押的代幣' });
+            invalidateQueries();
         } catch (e: any) { showToast(e.shortMessage || "領取失敗", "error"); }
     };
 
@@ -195,7 +230,7 @@ const VipPage: React.FC = () => {
                                 className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none h-12 bg-gray-800 border-gray-700"
                             />
                             <button 
-                                onClick={() => setAmount(formatEther(mode === 'stake' ? soulShardBalance?.value ?? 0n : stakedAmount))}
+                                onClick={() => setAmount(formatEther(mode === 'stake' ? (soulShardBalance?.value ?? 0n) : stakedAmount))}
                                 className="h-12 px-4 bg-gray-700 hover:bg-gray-600 rounded-md text-sm"
                             >
                                 最大

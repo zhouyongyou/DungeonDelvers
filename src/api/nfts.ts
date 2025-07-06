@@ -1,3 +1,5 @@
+// src/api/nfts.ts
+
 import { createPublicClient, http, type Address, type Abi } from 'viem';
 import { bsc, bscTestnet } from 'wagmi/chains';
 import { Buffer } from 'buffer';
@@ -27,7 +29,10 @@ function isSupportedChain(chainId: number): chainId is SupportedChainId {
 // 根據鏈 ID 獲取一個公共的 viem 客戶端
 const getClient = (chainId: number) => {
     const chain = chainId === bsc.id ? bsc : bscTestnet;
-    return createPublicClient({ chain, transport: http() });
+    const rpcUrl = chainId === bsc.id 
+        ? (import.meta.env.VITE_BSC_MAINNET_RPC_URL || 'https://bsc-dataseed1.binance.org/')
+        : (import.meta.env.VITE_BSC_TESTNET_RPC_URL || 'https://data-seed-prebsc-1-s1.binance.org:8545/');
+    return createPublicClient({ chain, transport: http(rpcUrl) });
 };
 
 // 從鏈上或 Base64 URI 中獲取元數據，並增加錯誤處理
@@ -62,7 +67,7 @@ function parseToTypedNft(
     const findAttr = (trait: string, defaultValue: any = 0) => 
         baseMetadata.attributes?.find(a => a.trait_type === trait)?.value ?? defaultValue;
 
-    const baseNft: BaseNft = { ...baseMetadata, id, contractAddress };
+    const baseNft: BaseNft = { ...baseMetadata, id, contractAddress, ...baseMetadata };
 
     switch (type) {
         case 'hero':
@@ -70,7 +75,7 @@ function parseToTypedNft(
         case 'relic':
             return { ...baseNft, type: 'relic', capacity: Number(findAttr('Capacity')), rarity: Number(findAttr('Rarity')) };
         case 'party':
-            return { ...baseNft, type: 'party', totalPower: Number(findAttr('Total Power')), totalCapacity: Number(findAttr('Total Capacity')), heroIds: [], relicIds: [] };
+            return { ...baseNft, type: 'party', totalPower: BigInt(findAttr('Total Power')), totalCapacity: BigInt(findAttr('Total Capacity')), heroIds: [], relicIds: [], partyRarity: Number(findAttr('Party Rarity', 1)) };
         case 'vip':
             return { ...baseNft, type: 'vip', level: Number(findAttr('Level')) };
         default:
@@ -124,7 +129,7 @@ async function fetchNftsForContract(
         const ownersResults = await client.multicall({ contracts: ownerOfCalls, allowFailure: true });
 
         const ownedTokenIds = potentialTokenIds.filter((_, index) => 
-            ownersResults[index].status === 'success' && ownersResults[index].result === owner
+            ownersResults[index].status === 'success' && (ownersResults[index].result as Address).toLowerCase() === owner.toLowerCase()
         );
         if (ownedTokenIds.length === 0) return [];
 

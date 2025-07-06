@@ -6,6 +6,7 @@ import { useAppToast } from '../hooks/useAppToast';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
+import { bsc, bscTestnet } from 'wagmi/chains'; // 導入支援的鏈
 
 // =================================================================
 // Section: 可重用的管理介面子元件
@@ -44,7 +45,7 @@ const SettingRow: React.FC<SettingRowProps> = ({ label, contract, functionName, 
                 const argType = (isAddress && index === 0) ? 'address' : (isEther && index === 0) ? 'ether' : 'bigint';
                 if (argType === 'ether') return parseEther(val);
                 if (argType === 'bigint') return BigInt(val);
-                return val; // address
+                return val as Address; // address
             });
 
             await writeContractAsync({
@@ -98,6 +99,19 @@ const SettingRow: React.FC<SettingRowProps> = ({ label, contract, functionName, 
 
 const AdminPage: React.FC = () => {
     const { address, chainId } = useAccount();
+
+    // ★ 核心修正: 在元件頂部加入型別防衛
+    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
+        return (
+            <section className="space-y-8">
+                <h2 className="page-title">遊戲管理控制台</h2>
+                <div className="card-bg p-10 rounded-xl text-center text-gray-400">
+                    <p>請先連接到支援的網路 (BSC 或 BSC 測試網) 並使用管理員帳號。</p>
+                </div>
+            </section>
+        );
+    }
+
     const dungeonCoreContract = getContract(chainId, 'dungeonCore');
     const heroContract = getContract(chainId, 'hero');
     const relicContract = getContract(chainId, 'relic');
@@ -122,7 +136,7 @@ const AdminPage: React.FC = () => {
             { ...playerVaultContract, functionName: 'decreaseRatePerPeriod' },
             { ...playerVaultContract, functionName: 'commissionRate' },
         ],
-        query: { enabled: !!address && owner === address }
+        query: { enabled: !!address && owner === address && !!heroContract && !!relicContract && !!partyContract && !!dungeonMasterContract && !!playerVaultContract }
     });
 
     if (isLoadingOwner) {
