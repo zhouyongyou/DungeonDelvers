@@ -9,20 +9,20 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import type { AnyNft, HeroNft, RelicNft, NftAttribute } from '../types/nft';
 
-// 模擬從 api 資料夾讀取所有可能的 NFT
+// ★ 核心修正：使用動態導入 (dynamic import) 來載入本地 JSON 檔案
 const fetchAllPossibleNfts = async (): Promise<{ heroes: HeroNft[], relics: RelicNft[] }> => {
     const heroIds = [1, 2, 3, 4, 5];
     const relicIds = [1, 2, 3, 4, 5];
 
-    const heroPromises = heroIds.map(id => 
-        fetch(`/api/hero/${id}.json`).then(res => res.json())
-    );
-    const relicPromises = relicIds.map(id => 
-        fetch(`/api/relic/${id}.json`).then(res => res.json())
-    );
+    // 使用 Promise.all 平行處理所有導入請求
+    const heroDataPromises = heroIds.map(id => import(`../api/hero/${id}.json`));
+    const relicDataPromises = relicIds.map(id => import(`../api/relic/${id}.json`));
 
-    const heroData = await Promise.all(heroPromises);
-    const relicData = await Promise.all(relicPromises);
+    const heroModules = await Promise.all(heroDataPromises);
+    const relicModules = await Promise.all(relicDataPromises);
+
+    const heroData = heroModules.map(module => module.default);
+    const relicData = relicModules.map(module => module.default);
 
     const findAttr = (attributes: NftAttribute[], trait: string, defaultValue: any = 0) => 
         attributes?.find(a => a.trait_type === trait)?.value ?? defaultValue;
@@ -33,7 +33,7 @@ const fetchAllPossibleNfts = async (): Promise<{ heroes: HeroNft[], relics: Reli
         type: 'hero',
         contractAddress: '0x', // 地址在此不重要
         power: Number(findAttr(meta.attributes, 'Power')),
-        rarity: Number(findAttr(meta.attributes, 'Rarity', 1)), // 假設稀有度是數字
+        rarity: Number(findAttr(meta.attributes, 'Rarity', 1)),
     })) as HeroNft[];
 
     const relics = relicData.map((meta, i) => ({
@@ -53,21 +53,19 @@ const CodexPage: React.FC = () => {
     const { address, chainId } = useAccount();
     const [filter, setFilter] = useState<'hero' | 'relic'>('hero');
 
-    // 獲取所有可能的 NFT
     const { data: allPossibleNfts, isLoading: isLoadingAll } = useQuery({
         queryKey: ['allPossibleNfts'],
         queryFn: fetchAllPossibleNfts,
     });
 
-    // 獲取玩家擁有的 NFT
     const { data: ownedNfts, isLoading: isLoadingOwned } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
         queryFn: () => fetchAllOwnedNfts(address!, chainId!),
         enabled: !!address && !!chainId,
     });
 
-    const ownedHeroIds = useMemo(() => new Set(ownedNfts?.heroes.map(h => h.name)), [ownedNfts]);
-    const ownedRelicIds = useMemo(() => new Set(ownedNfts?.relics.map(r => r.name)), [ownedNfts]);
+    const ownedHeroNames = useMemo(() => new Set(ownedNfts?.heroes.map(h => h.name)), [ownedNfts]);
+    const ownedRelicNames = useMemo(() => new Set(ownedNfts?.relics.map(r => r.name)), [ownedNfts]);
 
     const displayNfts = useMemo(() => {
         if (!allPossibleNfts) return [];
@@ -76,8 +74,8 @@ const CodexPage: React.FC = () => {
 
     const getIsUnlocked = (nft: AnyNft) => {
         if (!ownedNfts) return false;
-        if (nft.type === 'hero') return ownedHeroIds.has(nft.name);
-        if (nft.type === 'relic') return ownedRelicIds.has(nft.name);
+        if (nft.type === 'hero') return ownedHeroNames.has(nft.name);
+        if (nft.type === 'relic') return ownedRelicNames.has(nft.name);
         return false;
     };
 
