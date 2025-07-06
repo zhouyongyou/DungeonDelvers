@@ -1,6 +1,6 @@
 // src/pages/CodexPage.tsx
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
 import { fetchAllOwnedNfts } from '../api/nfts';

@@ -1,10 +1,12 @@
+// src/pages/ExplorerPage.tsx
+
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContracts, useReadContract } from 'wagmi';
 import { getContract } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { formatEther, type Address } from 'viem';
-import { bsc, bscTestnet } from 'wagmi/chains'; // 導入支援的鏈
+import { formatEther, type Address, isAddress } from 'viem';
+import { bsc, bscTestnet } from 'wagmi/chains';
 
 // =================================================================
 // Section: 可重用的查詢元件
@@ -14,12 +16,12 @@ interface QuerySectionProps {
   title: string;
   inputType: 'number' | 'text';
   inputPlaceholder: string;
-  onQuery: (id: string) => void;
-  isLoading: boolean;
+  onQuery: (value: string) => void;
+  isLoading?: boolean;
   children: React.ReactNode;
 }
 
-const QuerySection: React.FC<QuerySectionProps> = ({ title, inputType, inputPlaceholder, onQuery, isLoading, children }) => {
+const QuerySection: React.FC<QuerySectionProps> = ({ title, inputType, inputPlaceholder, onQuery, isLoading = false, children }) => {
     const [inputValue, setInputValue] = useState('');
 
     return (
@@ -43,14 +45,34 @@ const QuerySection: React.FC<QuerySectionProps> = ({ title, inputType, inputPlac
 };
 
 // =================================================================
-// Section: NFT 查詢邏輯與顯示
+// Section: 各類查詢邏輯與顯示
 // =================================================================
+
+// ★ 新增：玩家檔案搜尋元件
+const PlayerSearchQuery: React.FC = () => {
+    const [message, setMessage] = useState('請輸入玩家地址進行查詢。');
+
+    const handleQuery = (address: string) => {
+        if (isAddress(address)) {
+            // 直接修改 hash 來觸發路由跳轉
+            window.location.hash = `#/profile?address=${address}`;
+        } else {
+            setMessage('無效的錢包地址，請重新輸入。');
+        }
+    };
+
+    return (
+        <QuerySection title="玩家檔案搜尋" inputType="text" inputPlaceholder="輸入玩家地址" onQuery={handleQuery}>
+            <p className="text-gray-500">{message}</p>
+        </QuerySection>
+    );
+};
+
 
 const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
     const { chainId } = useAccount();
     const [submittedId, setSubmittedId] = useState<bigint | null>(null);
 
-    // ★ 修正: 加入型別防衛
     if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
         return <p className="text-gray-500">請連接到支援的網路。</p>;
     }
@@ -62,13 +84,7 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
         if (!submittedId || !contract) return [];
         const { address, abi } = contract;
         const ownerCall = { address, abi, functionName: 'ownerOf', args: [submittedId] };
-        
-        const functionNameMap = {
-            hero: 'getHeroProperties',
-            relic: 'getRelicProperties',
-            party: 'getPartyComposition'
-        };
-
+        const functionNameMap = { hero: 'getHeroProperties', relic: 'getRelicProperties', party: 'getPartyComposition' };
         return [ownerCall, { address, abi, functionName: functionNameMap[type], args: [submittedId] }];
     }, [submittedId, contract, type]);
 
@@ -96,21 +112,9 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
         return (
             <>
                 <p><b>擁有者:</b> <span className="font-mono text-xs break-all">{owner}</span></p>
-                {type === 'hero' && props && <>
-                    <p><b>稀有度:</b> {"★".repeat(props.rarity)}{"☆".repeat(5 - props.rarity)}</p>
-                    <p><b>戰力:</b> {props.power.toString()}</p>
-                </>}
-                {type === 'relic' && props && <>
-                    <p><b>稀有度:</b> {"★".repeat(props.rarity)}{"☆".repeat(5 - props.rarity)}</p>
-                    <p><b>容量:</b> {props.capacity.toString()}</p>
-                </>}
-                {type === 'party' && props && <>
-                    <p><b>隊伍稀有度:</b> {"★".repeat(props.partyRarity)}{"☆".repeat(5 - props.partyRarity)}</p>
-                    <p><b>總戰力:</b> {props.totalPower.toString()}</p>
-                    <p><b>總容量:</b> {props.totalCapacity.toString()}</p>
-                    <p><b>英雄列表 (ID):</b> {props.heroIds?.join(', ') || '無'}</p>
-                    <p><b>聖物列表 (ID):</b> {props.relicIds?.join(', ') || '無'}</p>
-                </>}
+                {type === 'hero' && props && <><p><b>稀有度:</b> {"★".repeat(props.rarity)}{"☆".repeat(5 - props.rarity)}</p><p><b>戰力:</b> {props.power.toString()}</p></>}
+                {type === 'relic' && props && <><p><b>稀有度:</b> {"★".repeat(props.rarity)}{"☆".repeat(5 - props.rarity)}</p><p><b>容量:</b> {props.capacity.toString()}</p></>}
+                {type === 'party' && props && <><p><b>隊伍稀有度:</b> {"★".repeat(props.partyRarity)}{"☆".repeat(5 - props.partyRarity)}</p><p><b>總戰力:</b> {props.totalPower.toString()}</p><p><b>總容量:</b> {props.totalCapacity.toString()}</p><p><b>英雄列表 (ID):</b> {props.heroIds?.join(', ') || '無'}</p><p><b>聖物列表 (ID):</b> {props.relicIds?.join(', ') || '無'}</p></>}
             </>
         );
     };
@@ -122,61 +126,10 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
     );
 };
 
-
-// =================================================================
-// Section: 新增的查詢元件
-// =================================================================
-
-const PlayerProfileQuery: React.FC = () => {
-    const { chainId } = useAccount();
-    const [submittedAddress, setSubmittedAddress] = useState<Address | null>(null);
-
-    // ★ 修正: 加入型別防衛
-    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
-        return <p className="text-gray-500">請連接到支援的網路。</p>;
-    }
-    const contract = getContract(chainId, 'playerProfile');
-
-    const { data, isLoading, isError, refetch } = useReadContracts({
-        contracts: [
-            { ...contract, functionName: 'profileTokenOf', args: [submittedAddress!] },
-            { ...contract, functionName: 'getLevel', args: [submittedAddress!] },
-        ],
-        query: { enabled: false }
-    });
-
-    const handleQuery = (address: string) => {
-        if (address) {
-            setSubmittedAddress(address as Address);
-            setTimeout(() => refetch(), 100);
-        }
-    };
-
-    const renderResult = () => {
-        if (!submittedAddress) return <p className="text-gray-500">請輸入玩家地址查詢。</p>;
-        if (isError || !data || data.some(d => d.status === 'failure')) return <p className="text-red-500">查詢失敗或該玩家無檔案。</p>;
-        
-        const [tokenId, level] = data.map(d => d.result);
-        return (
-            <>
-                <p><b>檔案 SBT ID:</b> {tokenId?.toString()}</p>
-                <p><b>玩家等級:</b> {level?.toString()}</p>
-            </>
-        );
-    };
-
-    return (
-        <QuerySection title="玩家檔案查詢" inputType="text" inputPlaceholder="輸入玩家地址" onQuery={handleQuery} isLoading={isLoading}>
-            {renderResult()}
-        </QuerySection>
-    );
-};
-
 const PartyStatusQuery: React.FC = () => {
     const { chainId } = useAccount();
     const [submittedId, setSubmittedId] = useState<bigint | null>(null);
 
-    // ★ 修正: 加入型別防衛
     if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
         return <p className="text-gray-500">請連接到支援的網路。</p>;
     }
@@ -200,7 +153,6 @@ const PartyStatusQuery: React.FC = () => {
         if (!submittedId) return <p className="text-gray-500">請輸入隊伍 ID 查詢。</p>;
         if (isError || !data) return <p className="text-red-500">查詢失敗或隊伍不存在。</p>;
         
-        // ★ 修正: 使用 as unknown 來安全地進行型別轉換
         const [provisions, cooldown, rewards, fatigue] = data as unknown as readonly [bigint, bigint, bigint, number];
         const cooldownDate = new Date(Number(cooldown) * 1000);
 
@@ -231,12 +183,13 @@ const ExplorerPage: React.FC = () => {
       <h2 className="page-title">遊戲數據瀏覽器</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="space-y-8">
+          {/* ★ 新增：將玩家搜尋放在最顯眼的位置 */}
+          <PlayerSearchQuery />
           <PartyStatusQuery />
-          <NftQuery type="party" />
           <NftQuery type="hero" />
         </div>
         <div className="space-y-8">
-          <PlayerProfileQuery />
+          <NftQuery type="party" />
           <NftQuery type="relic" />
         </div>
       </div>
