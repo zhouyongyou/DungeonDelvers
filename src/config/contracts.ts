@@ -62,27 +62,29 @@ export type ContractName = keyof (typeof contracts)[SupportedChainId];
 
 
 // =================================================================
-// 3. getContract 函式 (保持不變)
+// 3. getContract 函式 (已修正)
 // =================================================================
+/**
+ * @notice 獲取指定鏈和名稱的合約設定。
+ * @dev 此函式現在會一併回傳 chainId，方便後續使用。
+ */
 export function getContract<
   TChainId extends SupportedChainId,
   TContractName extends keyof (typeof contracts)[TChainId]
 >(
   chainId: TChainId | undefined,
   name: TContractName
-): (typeof contracts)[TChainId][TContractName] | null {
+) {
   if (!chainId || !contracts[chainId]) {
     return null;
   }
   
   const contractConfig = contracts[chainId][name];
   
-  // ★★★ 核心修正 ★★★
-  // 移除危險的型別斷言，改用更安全的屬性檢查
   if (!contractConfig || typeof (contractConfig as any).address !== 'string' || (contractConfig as any).address.includes('YOUR_')) {
-    // console.warn(`合約 "${String(name)}" 在 chainId ${chainId} 的地址尚未設定。`);
     return null;
   }
   
-  return contractConfig;
+  // ★ 核心修正：回傳的物件中包含 chainId
+  return { ...contractConfig, chainId };
 }

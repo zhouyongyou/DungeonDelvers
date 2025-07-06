@@ -105,18 +105,18 @@ export const useContractEvents = () => {
     };
 
     // 使用工廠函式創建事件處理器
-    useWatchContractEvent({ ...heroContract, eventName: 'HeroMinted', onLogs: createContractEventHandler(heroContract, 'HeroMinted', address, (log) => { showToast(`英雄 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); invalidateAllUserData(); }) });
-    useWatchContractEvent({ ...relicContract, eventName: 'RelicMinted', onLogs: createContractEventHandler(relicContract, 'RelicMinted', address, (log) => { showToast(`聖物 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); invalidateAllUserData(); }) });
-    useWatchContractEvent({ ...partyContract, eventName: 'PartyCreated', onLogs: createContractEventHandler(partyContract, 'PartyCreated', address, (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 創建成功！`, 'success'); invalidateAllUserData(); }) });
-    useWatchContractEvent({ ...playerVaultContract, eventName: 'Deposited', onLogs: createContractEventHandler(playerVaultContract, 'Deposited', address, () => { showToast(`獎勵已存入金庫！`, 'success'); invalidateAllUserData(); }) });
-    useWatchContractEvent({ ...playerVaultContract, eventName: 'Withdrawn', onLogs: createContractEventHandler(playerVaultContract, 'Withdrawn', address, () => { showToast(`金庫提領成功！`, 'success'); invalidateAllUserData(); }) });
+    useWatchContractEvent({ ...heroContract, chainId, eventName: 'HeroMinted', onLogs: createContractEventHandler(heroContract, 'HeroMinted', address, (log) => { showToast(`英雄 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); invalidateAllUserData(); }) });
+    useWatchContractEvent({ ...relicContract, chainId, eventName: 'RelicMinted', onLogs: createContractEventHandler(relicContract, 'RelicMinted', address, (log) => { showToast(`聖物 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); invalidateAllUserData(); }) });
+    useWatchContractEvent({ ...partyContract, chainId, eventName: 'PartyCreated', onLogs: createContractEventHandler(partyContract, 'PartyCreated', address, (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 創建成功！`, 'success'); invalidateAllUserData(); }) });
+    useWatchContractEvent({ ...playerVaultContract, chainId, eventName: 'Deposited', onLogs: createContractEventHandler(playerVaultContract, 'Deposited', address, () => { showToast(`獎勵已存入金庫！`, 'success'); invalidateAllUserData(); }) });
+    useWatchContractEvent({ ...playerVaultContract, chainId, eventName: 'Withdrawn', onLogs: createContractEventHandler(playerVaultContract, 'Withdrawn', address, () => { showToast(`金庫提領成功！`, 'success'); invalidateAllUserData(); }) });
 
     // 處理隊伍特定事件
-    useWatchContractEvent({ ...dungeonMasterContract, eventName: 'ExpeditionFulfilled', onLogs: createContractEventHandler(dungeonMasterContract, 'ExpeditionFulfilled', address, (log) => { const { success, reward, expGained } = log.args; showExpeditionResult({ success, reward, expGained }); invalidateAllUserData(); }, true, queryClient) });
-    useWatchContractEvent({ ...dungeonMasterContract, eventName: 'PartyRested', onLogs: createContractEventHandler(dungeonMasterContract, 'PartyRested', address, (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 已恢復活力！`, 'success'); invalidateAllUserData(); }, true, queryClient) });
+    useWatchContractEvent({ ...dungeonMasterContract, chainId, eventName: 'ExpeditionFulfilled', onLogs: createContractEventHandler(dungeonMasterContract, 'ExpeditionFulfilled', address, (log) => { const { success, reward, expGained } = log.args; showExpeditionResult({ success, reward, expGained }); invalidateAllUserData(); }, true, queryClient) });
+    useWatchContractEvent({ ...dungeonMasterContract, chainId, eventName: 'PartyRested', onLogs: createContractEventHandler(dungeonMasterContract, 'PartyRested', address, (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 已恢復活力！`, 'success'); invalidateAllUserData(); }, true, queryClient) });
     
     // 處理升星祭壇事件
-    useWatchContractEvent({ ...altarOfAscensionContract, eventName: 'UpgradeProcessed', onLogs: createContractEventHandler(altarOfAscensionContract, 'UpgradeProcessed', address, (log) => {
+    useWatchContractEvent({ ...altarOfAscensionContract, chainId, eventName: 'UpgradeProcessed', onLogs: createContractEventHandler(altarOfAscensionContract, 'UpgradeProcessed', address, (log) => {
         const { targetRarity, outcome } = log.args;
         const outcomeMessages: Record<number, string> = { 3: `⚜️ 大成功！獲得 2 個 ${targetRarity}★ NFT！`, 2: `✨ 升星成功！獲得 1 個 ${targetRarity}★ NFT！`, 1: `💔 升星失敗，但返還了部分材料。`, 0: `💀 升星完全失敗，所有材料已銷毀。` };
         const message = outcomeMessages[outcome] || "升星處理完成。";
