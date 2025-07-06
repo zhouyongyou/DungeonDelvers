@@ -16,6 +16,29 @@ import type {
 } from '../types/nft';
 
 // =================================================================
+// Section: 精確的合約部署區塊號
+// =================================================================
+// 為了最大化查詢效率並避免 RPC 限制，我們為每個合約指定其部署時的區塊號。
+// 這樣在查詢事件時，就無需從創世區塊開始掃描。
+// TODO: 請務必前往 BscScan 查詢並填寫您合約的【真實】部署區塊號！
+const DEPLOYMENT_BLOCKS: { [chainId: number]: { [key in ContractName]?: bigint } } = {
+  [bscTestnet.id]: {
+    hero: 57284000n,       // 請替換為 Hero 合約在測試網的【真實】部署區塊號
+    relic: 57284000n,      // 請替換為 Relic 合約在測試網的【真實】部署區塊號
+    party: 57284000n,      // 請替換為 Party 合約在測試網的【真實】部署區塊號
+    vipStaking: 57284000n  // 請替換為 VIP 合約在測試網的【真實】部署區塊號
+  },
+  [bsc.id]: {
+    // 未來主網上線後，在此處填寫主網的區塊號
+    hero: 53071000n,
+    relic: 53071000n,
+    party: 53071000n,
+    vipStaking: 53071000n
+  }
+};
+
+
+// =================================================================
 // Section: 型別守衛與輔助函式
 // =================================================================
 
@@ -27,9 +50,10 @@ function isSupportedChain(chainId: number): chainId is SupportedChainId {
 
 const getClient = (chainId: number) => {
     const chain = chainId === bsc.id ? bsc : bscTestnet;
+    // 使用您在 wagmi.ts 中設定的 Alchemy RPC URL
     const rpcUrl = chainId === bsc.id 
-        ? (import.meta.env.VITE_BSC_MAINNET_RPC_URL || 'https://bsc-dataseed1.binance.org/')
-        : (import.meta.env.VITE_BSC_TESTNET_RPC_URL || 'https://data-seed-prebsc-1-s1.binance.org:8545/');
+        ? (import.meta.env.VITE_ALCHEMY_BSC_MAINNET_RPC_URL || 'https://bnb-mainnet.g.alchemy.com/v2/3lmTWjUVbFylAurhdU-rSUefTC-P4tKf')
+        : (import.meta.env.VITE_ALCHEMY_BSC_TESTNET_RPC_URL || 'https://bnb-testnet.g.alchemy.com/v2/3lmTWjUVbFylAurhdU-rSUefTC-P4tKf');
     return createPublicClient({ chain, transport: http(rpcUrl) });
 };
 
@@ -97,17 +121,8 @@ async function fetchNftsForContract(
     if (!contract) return [];
 
     try {
-        const currentBlock = await client.getBlockNumber();
-        let fromBlock: bigint | 'earliest' = 'earliest';
-
-        // ★★★ 核心修正 ★★★
-        // 將掃描範圍調整為約一週的區塊量 (210,000 blocks)，
-        // 這是一個在公共 RPC 節點上更安全、更高效的設定。
-        const blockRange = 210000n; 
-        
-        if (currentBlock > blockRange) {
-            fromBlock = currentBlock - blockRange;
-        }
+        // ★★★ 核心修正：動態獲取起始區塊號 ★★★
+        const fromBlock = DEPLOYMENT_BLOCKS[chainId]?.[contractName] || 'earliest';
 
         const transferLogs = await client.getLogs({
             address: contract.address,
