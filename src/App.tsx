@@ -21,7 +21,6 @@ const AdminPage = lazy(() => import('./pages/AdminPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const VipPage = lazy(() => import('./pages/VipPage'));
 const ReferralPage = lazy(() => import('./pages/ReferralPage'));
-// ★ 新增：導入圖鑑頁面
 const CodexPage = lazy(() => import('./pages/CodexPage'));
 
 const PageLoader: React.FC = () => (
@@ -36,18 +35,20 @@ const PageLoader: React.FC = () => (
 const getPageFromHash = (): Page => {
     const hash = window.location.hash.replace('#/', '');
     const page = hash.split('?')[0];
-    // ★ 新增：將 'codex' 加入到合法的頁面列表中
     const validPages: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'explorer', 'admin', 'altar', 'profile', 'vip', 'referral', 'codex'];
     if (validPages.includes(page as Page)) {
         return page as Page;
     }
-    return 'dashboard';
+    // ★ 核心優化：將預設首頁從 'dashboard' 改為 'mint'
+    // 這將極大地改善首次載入的體驗和 RPC 負載。
+    return 'mint'; 
 };
 
 function App() {
   const [activePage, setActivePage] = useState<Page>(getPageFromHash);
   const { isConnected } = useAccount();
   
+  // 這個 Hook 會在背景監聽鏈上事件，並自動更新相關數據
   useContractEvents();
 
   useEffect(() => {
@@ -59,13 +60,15 @@ function App() {
   const handleSetPage = (page: Page) => {
     const newUrl = new URL(window.location.href);
     newUrl.hash = `/${page}`;
+    // 使用 history.pushState 來改變 URL 而不重新整理頁面
     window.history.pushState({}, '', newUrl);
     setActivePage(page);
   };
 
   const renderPage = () => {
-    // ★ 新增：將 'codex' 加入到需要錢包連接的頁面列表中
     const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'admin', 'altar', 'profile', 'vip', 'referral', 'codex'];
+    
+    // 如果頁面需要錢包但尚未連接，則顯示提示
     if (!isConnected && pageRequiresWallet.includes(activePage)) {
         return (<div className="mt-10"><EmptyState message="要使用此功能，請先連接您的錢包。" /></div>);
     }
@@ -81,9 +84,8 @@ function App() {
         case 'profile': return <ProfilePage setActivePage={handleSetPage} />;
         case 'vip': return <VipPage />;
         case 'referral': return <ReferralPage />;
-        // ★ 新增：圖鑑頁面的路由 case
         case 'codex': return <CodexPage />;
-        default: return <DashboardPage setActivePage={handleSetPage} />;
+        default: return <MintPage />; // 預設頁面也改為 MintPage
     }
   };
 
@@ -96,6 +98,7 @@ function App() {
           </Suspense>
       </main>
       <Footer />
+      {/* 這個元件負責在背景追蹤已發送交易的狀態 */}
       <TransactionWatcher />
     </div>
   );

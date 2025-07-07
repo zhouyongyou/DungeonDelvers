@@ -1,4 +1,4 @@
-// src/pages/DashboardPage.tsx (Hooks 規則修正版)
+// src/pages/DashboardPage.tsx (防崩潰優化版)
 
 import React, { useMemo } from 'react';
 import { useAccount, useReadContract, useReadContracts, useWriteContract } from 'wagmi';
@@ -15,8 +15,10 @@ import { Icons } from '../components/ui/icons';
 import { bsc } from 'wagmi/chains';
 import { TownBulletin } from '../components/ui/TownBulletin';
 
+// 輔助函式與子元件 (保持不變)
 const getLevelFromExp = (exp: bigint): number => {
     if (exp < 100n) return 1;
+    // ★ 修正: 使用 Math.floor 確保整數等級
     return Math.floor(Math.sqrt(Number(exp) / 100)) + 1;
 };
 
@@ -51,21 +53,21 @@ const ExternalLinkButton: React.FC<{ title: string; url: string; icon: React.Rea
     </a>
 );
 
+
+// ★ 核心修正 #1: useVaultAndTax Hook 增加防禦性
 const useVaultAndTax = () => {
     const { address, chainId } = useAccount();
-    
-    // ★ 修正：將條件返回移至 Hook 內部，確保外部元件的 Hook 順序不變
-    // 這樣做可以確保無論 chainId 是否匹配，此 Hook 內部調用的 Hooks 數量都是固定的。
     const isChainSupported = chainId === bsc.id;
 
-    const dungeonCoreContract = getContract(chainId as any, 'dungeonCore');
-    const playerProfileContract = getContract(chainId as any, 'playerProfile');
-    const vipStakingContract = getContract(chainId as any, 'vipStaking');
+    // 使用 getContract 並處理可能為 null 的情況
+    const dungeonCoreContract = getContract(isChainSupported ? chainId : undefined, 'dungeonCore');
+    const playerProfileContract = getContract(isChainSupported ? chainId : undefined, 'playerProfile');
+    const vipStakingContract = getContract(isChainSupported ? chainId : undefined, 'vipStaking');
     
     const { data: playerVaultAddress } = useReadContract({ 
         ...dungeonCoreContract, 
         functionName: 'playerVaultAddress', 
-        query: { enabled: isChainSupported && !!dungeonCoreContract }, 
+        query: { enabled: !!dungeonCoreContract }, 
     });
     
     const playerVaultContract = useMemo(() => {
@@ -74,6 +76,7 @@ const useVaultAndTax = () => {
     }, [playerVaultAddress]);
 
     const contractsArr = useMemo(() => {
+        // 確保所有合約都已成功載入
         if (!isChainSupported || !playerVaultContract || !vipStakingContract || !playerProfileContract || !address) return [];
         return [
             { ...playerVaultContract, functionName: 'playerInfo', args: [address] },
@@ -97,7 +100,7 @@ const useVaultAndTax = () => {
     
     const withdrawableBalance = useMemo(() => (Array.isArray(playerInfo) && typeof playerInfo[0] === 'bigint' ? playerInfo[0] : 0n), [playerInfo]);
     
-    const { data: withdrawableBalanceInUSD, isLoading: isLoadingUsdValue } = useReadContract({ ...dungeonCoreContract, functionName: 'getSoulShardAmountForUSD', args: [withdrawableBalance], query: { enabled: isChainSupported && !!dungeonCoreContract && withdrawableBalance > 0n } });
+    const { data: withdrawableBalanceInUSD, isLoading: isLoadingUsdValue } = useReadContract({ ...dungeonCoreContract, functionName: 'getSoulShardAmountForUSD', args: [withdrawableBalance], query: { enabled: !!dungeonCoreContract && withdrawableBalance > 0n } });
     
     const currentTaxRate = useMemo(() => {
         if (!taxParams || !Array.isArray(playerInfo) || playerInfo.length < 3) return 0;
@@ -128,7 +131,8 @@ const useVaultAndTax = () => {
         playerVaultContract, 
         vaultInfo: (Array.isArray(playerInfo) && playerInfo.length >= 3) ? playerInfo as unknown as readonly [bigint, bigint, bigint] : undefined, 
         currentTaxRate, 
-        isLoading: isLoadingTaxParams || isLoadingUsdValue 
+        isLoading: isLoadingTaxParams || isLoadingUsdValue,
+        isError: !playerVaultContract || !dungeonCoreContract, // ★ 新增: 導出錯誤狀態
     };
 };
 
@@ -137,11 +141,10 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     const { addTransaction } = useTransactionStore();
     const { showToast } = useAppToast();
 
-    // ★★★ 核心修正：將所有 Hooks 調用移至元件的頂層 ★★★
-    // 這是修復 "Rendered more hooks than during the previous render" 錯誤的關鍵。
-    const { playerVaultContract, vaultInfo, currentTaxRate, isLoading: isLoadingVaultAndTax } = useVaultAndTax();
+    const { playerVaultContract, vaultInfo, currentTaxRate, isLoading: isLoadingVaultAndTax, isError: isVaultError } = useVaultAndTax();
     const withdrawableBalance = vaultInfo?.[0] ?? 0n;
 
+    // ★ 核心修正 #2: 為每個 getContract 呼叫增加防禦性
     const playerProfileContract = getContract(chainId as any, 'playerProfile');
     const vipStakingContract = getContract(chainId as any, 'vipStaking');
 
@@ -157,6 +160,8 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     const externalMarkets = useMemo(() => {
         if (!chainId || chainId !== bsc.id) return [];
         const currentContracts = contracts[bsc.id];
+        // ★ 核心修正 #3: 增加對 currentContracts 的檢查
+        if (!currentContracts) return [];
         return [
             { title: '英雄市場', address: currentContracts.hero?.address ?? '', icon: <Icons.Hero className="w-8 h-8"/> },
             { title: '聖物市場', address: currentContracts.relic?.address ?? '', icon: <Icons.Relic className="w-8 h-8"/> },
@@ -173,11 +178,20 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
         } catch(e: any) { showToast(e.shortMessage || "提領失敗", "error"); }
     };
 
-    // 現在，條件渲染只影響 JSX 的輸出，而不會影響 Hooks 的調用順序
     if (!chainId || chainId !== bsc.id) {
         return (
             <div className="flex justify-center items-center h-64">
                 <p className="text-lg text-gray-500">請連接到支援的網路 (BSC) 以檢視儀表板。</p>
+            </div>
+        );
+    }
+    
+    // ★ 核心修正 #4: 增加對合約設定錯誤的全局處理
+    if (isVaultError) {
+         return (
+            <div className="card-bg p-10 rounded-xl text-center text-red-400">
+                <h3 className="text-xl font-bold">儀表板載入失敗</h3>
+                <p className="mt-2">無法讀取核心合約設定，請確認您的 <code>.env</code> 檔案是否配置正確。</p>
             </div>
         );
     }

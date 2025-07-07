@@ -98,13 +98,13 @@ async function fetchNftsForContract(
     if (!contract) return [];
 
     try {
-        // ★★★ RPC 優化核心：分塊反向查詢 (Chunked Reverse Query) ★★★
-        // 傳統方法是從創世區塊掃描到最新區塊，這非常慢且消耗 RPC 資源。
-        // 優化後的方法是從最新區塊開始，一塊一塊地往舊的歷史紀錄查詢。
-        // 這樣可以更快地找到用戶最近獲得的 NFT，並設定一個合理的查詢深度，避免掃描整個鏈。
         const toBlock = await client.getBlockNumber();
-        const CHUNK_SIZE = 1999n; // 每次查詢的區塊範圍，BSC 節點通常限制為 5000
-        const MAX_SEARCH_BLOCKS = 57600n; // 最大查詢深度，約等於 2 天的區塊量 (28800 blocks/day)
+        
+        // ★★★ 核心修正：將 CHUNK_SIZE 從 1999n 調整為 499n ★★★
+        // 這個值小於 Alchemy 節點的 500 區塊限制，可以有效避免請求錯誤。
+        const CHUNK_SIZE = 499n; 
+        const MAX_SEARCH_BLOCKS = 576n; // 暫時的
+        // const MAX_SEARCH_BLOCKS = 57600n; // 最大查詢深度，約等於 2 天的區塊量 (28800 blocks/day)
         const searchLimitBlock = toBlock > MAX_SEARCH_BLOCKS ? toBlock - MAX_SEARCH_BLOCKS : 0n;
         
         let allLogs = [];
@@ -126,34 +126,29 @@ async function fetchNftsForContract(
                 toBlock: endBlock,
             });
             allLogs.push(...chunkLogs);
-            if (startBlock === 0n) break; // 如果已掃描到創世區塊，則停止
+            if (startBlock === 0n) break;
         }
 
-        // 從日誌中獲取潛在的 Token ID 列表
         const potentialTokenIds = [...new Set(allLogs.map(log => log.args.tokenId).filter(id => id !== undefined))] as bigint[];
         if (potentialTokenIds.length === 0) return [];
         
-        // 使用 multicall 一次性驗證這些 NFT 的當前擁有者
         const ownerOfCalls = potentialTokenIds.map(id => ({
             address: contract.address, abi: contract.abi as Abi,
             functionName: 'ownerOf', args: [id],
         }));
         const ownersResults = await client.multicall({ contracts: ownerOfCalls, allowFailure: true });
 
-        // 過濾出真正屬於該用戶的 NFT
         const ownedTokenIds = potentialTokenIds.filter((_, index) => 
             ownersResults[index].status === 'success' && (ownersResults[index].result as Address).toLowerCase() === owner.toLowerCase()
         );
         if (ownedTokenIds.length === 0) return [];
 
-        // 使用 multicall 一次性獲取所有 NFT 的元數據 URI
         const uriCalls = ownedTokenIds.map(id => ({
             address: contract.address, abi: contract.abi as Abi,
             functionName: 'tokenURI', args: [id],
         }));
         const uriResults = await client.multicall({ contracts: uriCalls, allowFailure: true });
 
-        // 並行處理所有元數據的獲取和解析
         const nftPromises = ownedTokenIds.map(async (id, index) => {
             if (uriResults[index].status === 'success') {
                 const metadata = await fetchMetadata(uriResults[index].result as string);
@@ -178,7 +173,6 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
 
     const client = getClient(chainId);
 
-    // 並行獲取所有類型的 NFT
     const [heroes, relics, parties, vipCards] = await Promise.all([
         fetchNftsForContract(client, owner, 'hero', 'hero', chainId),
         fetchNftsForContract(client, owner, 'relic', 'relic', chainId),
@@ -186,7 +180,6 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
         fetchNftsForContract(client, owner, 'vipStaking', 'vip', chainId),
     ]);
 
-    // 如果有隊伍 NFT，則額外獲取其詳細構成
     if (parties.length > 0) {
         const partyContract = getContract(chainId, 'party');
         if (partyContract) {

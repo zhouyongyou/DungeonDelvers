@@ -1,4 +1,4 @@
-// src/pages/MintPage.tsx (延遲查詢優化版)
+// src/pages/MintPage.tsx (增強錯誤提示版)
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useReadContract, useWriteContract, useBalance, usePublicClient } from 'wagmi';
@@ -14,31 +14,17 @@ import { NftCard } from '../components/ui/NftCard';
 import type { AnyNft, NftAttribute } from '../types/nft';
 import { fetchMetadata } from '../api/nfts';
 
-// ★★★ 核心優化 #1：建立一個可重用的 useDebounce Hook ★★★
-// 這個 Hook 會接收一個值，並在該值停止變化一段時間後，才回傳最新的值。
+// Debounce Hook (保持不變)
 function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
     useEffect(() => {
-        // 設定一個計時器，在指定的延遲時間後更新值
-        const handler = setTimeout(() => {
-            setDebouncedValue(value);
-        }, delay);
-
-        // 如果 value 在延遲時間內再次變化，則清除上一個計時器
-        return () => {
-            clearTimeout(handler);
-        };
+        const handler = setTimeout(() => { setDebouncedValue(value); }, delay);
+        return () => { clearTimeout(handler); };
     }, [value, delay]);
-
     return debouncedValue;
 }
 
-
-// =================================================================
-// Section: 子元件 (保持不變)
-// =================================================================
-
+// 子元件 (保持不變)
 const RarityProbabilities: React.FC = () => (
     <div className="w-full text-xs text-gray-400 mt-4">
         <h4 className="font-bold text-center mb-1 text-gray-500 dark:text-gray-300">稀有度機率</h4>
@@ -67,73 +53,80 @@ const MintResultModal: React.FC<{ nft: AnyNft | null; onClose: () => void }> = (
 };
 
 
-// =================================================================
-// Section: 型別定義與輔助 Hook
-// =================================================================
-
 type PaymentSource = 'wallet' | 'vault';
 type SupportedChainId = typeof bsc.id;
 
+// ★ 核心改動 #1: useMintLogic Hook 現在會回傳詳細的 error 物件
 const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: PaymentSource, chainId: SupportedChainId) => {
     const { address } = useAccount();
-    const contractConfig = getContract(chainId, type)!;
-    const soulShardContract = getContract(chainId, 'soulShard')!;
-    const playerVaultContract = getContract(chainId, 'playerVault')!;
+    const contractConfig = getContract(chainId, type);
+    const soulShardContract = getContract(chainId, 'soulShard');
+    const playerVaultContract = getContract(chainId, 'playerVault');
+    const dungeonCoreContract = getContract(chainId, 'dungeonCore');
 
-    const { data: totalRequiredAmount, isLoading, isError } = useReadContract({
-        address: contractConfig.address,
-        abi: contractConfig.abi,
-        functionName: 'getRequiredSoulShardAmount',
-        args: [BigInt(quantity)],
+    const { data: requiredAmountInUsd, isLoading: isLoadingPrice } = useReadContract({
+        address: contractConfig?.address,
+        abi: contractConfig?.abi,
+        functionName: 'mintPriceUSD',
+        query: { enabled: !!contractConfig },
+    });
+
+    const { data: totalRequiredAmount, isLoading: isLoadingConversion, isError, error } = useReadContract({
+        address: dungeonCoreContract?.address,
+        abi: dungeonCoreContract?.abi,
+        functionName: 'getSoulShardAmountForUSD',
+        args: [typeof requiredAmountInUsd === 'bigint' ? requiredAmountInUsd * BigInt(quantity) : 0n],
         query: {
-            enabled: !!contractConfig && quantity > 0,
+            enabled: !!dungeonCoreContract && !!requiredAmountInUsd && quantity > 0,
         },
     });
 
-    const { data: walletBalance } = useBalance({ address, token: soulShardContract.address });
+    const { data: walletBalance } = useBalance({ address, token: soulShardContract?.address, query: { enabled: !!address && !!soulShardContract } });
     
     const { data: vaultInfo } = useReadContract({
-        address: playerVaultContract.address,
-        abi: playerVaultContract.abi,
+        address: playerVaultContract?.address,
+        abi: playerVaultContract?.abi,
         functionName: 'playerInfo',
         args: [address!],
-        query: { enabled: !!address },
+        query: { enabled: !!address && !!playerVaultContract },
     });
     const vaultBalance = useMemo(() => (Array.isArray(vaultInfo) ? vaultInfo[0] as bigint : 0n), [vaultInfo]);
 
     const { data: allowance, refetch: refetchAllowance } = useReadContract({
-        address: soulShardContract.address,
-        abi: soulShardContract.abi,
+        address: soulShardContract?.address,
+        abi: soulShardContract?.abi,
         functionName: 'allowance',
-        args: [address!, contractConfig.address!],
-        query: { enabled: !!address && paymentSource === 'wallet' },
+        args: [address!, contractConfig?.address!],
+        query: { enabled: !!address && !!contractConfig && paymentSource === 'wallet' },
     });
 
     const needsApproval = useMemo(() => {
-        if (paymentSource !== 'wallet' || typeof allowance !== 'bigint' || !totalRequiredAmount) return false;
+        if (
+            paymentSource !== 'wallet' ||
+            typeof allowance !== 'bigint' ||
+            typeof totalRequiredAmount !== 'bigint'
+        ) return false;
         return allowance < totalRequiredAmount;
     }, [paymentSource, allowance, totalRequiredAmount]);
     
     const { data: platformFee } = useReadContract({
-        address: contractConfig.address,
-        abi: contractConfig.abi,
+        address: contractConfig?.address,
+        abi: contractConfig?.abi,
         functionName: 'platformFee',
+        query: { enabled: !!contractConfig }
     });
 
     return {
         requiredAmount: totalRequiredAmount ?? 0n,
         balance: paymentSource === 'wallet' ? (walletBalance?.value ?? 0n) : vaultBalance,
         needsApproval,
-        isLoading: isLoading,
-        isError: isError,
+        isLoading: isLoadingPrice || isLoadingConversion,
+        isError,
+        error, // 回傳錯誤物件
         platformFee: platformFee as bigint ?? 0n,
         refetchAllowance,
     };
 };
-
-// =================================================================
-// Section: MintCard 子元件 (已更新)
-// =================================================================
 
 interface MintCardProps {
     type: 'hero' | 'relic';
@@ -151,19 +144,31 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
     const [paymentSource, setPaymentSource] = useState<PaymentSource>('wallet');
     const [mintingResult, setMintingResult] = useState<AnyNft | null>(null);
 
-    // ★★★ 核心優化 #2：使用 useDebounce Hook ★★★
-    // 我們不再直接使用 quantity 來查詢價格，而是使用 debouncedQuantity。
-    // 只有當用戶停止切換數量 300 毫秒後，debouncedQuantity 的值才會更新，從而觸發價格查詢。
     const debouncedQuantity = useDebounce(quantity, 300);
     
-    const { requiredAmount, balance, needsApproval, isLoading, isError, platformFee, refetchAllowance } = useMintLogic(type, debouncedQuantity, paymentSource, chainId);
+    const { requiredAmount, balance, needsApproval, isLoading, isError, error, platformFee, refetchAllowance } = useMintLogic(type, debouncedQuantity, paymentSource, chainId);
     const { writeContractAsync, isPending: isMinting } = useWriteContract();
     
     const title = type === 'hero' ? '英雄' : '聖物';
-    const contractConfig = getContract(chainId, type)!;
-    const soulShardContract = getContract(chainId, 'soulShard')!;
+    const contractConfig = getContract(chainId, type);
+    const soulShardContract = getContract(chainId, 'soulShard');
+
+    if (!contractConfig || !soulShardContract) {
+        return (
+            <div className="card-bg p-6 rounded-xl shadow-lg flex flex-col items-center justify-center h-full text-center">
+                <h3 className="text-xl font-bold text-red-500">設定錯誤</h3>
+                <p className="text-gray-400 mt-2">
+                    找不到 '{type}' 或 '$SoulShard' 的合約地址。
+                </p>
+                <p className="text-gray-500 text-xs mt-1">
+                    請檢查您的 <code>.env</code> 環境變數設定是否正確。
+                </p>
+            </div>
+        );
+    }
 
     const handleApprove = async () => {
+        if (!soulShardContract || !contractConfig) return;
         try {
             const hash = await writeContractAsync({
                 address: soulShardContract.address,
@@ -179,10 +184,12 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
     };
 
     const handleMint = async () => {
+        if (!contractConfig || !publicClient) return showToast('客戶端尚未準備好，請稍後再試', 'error');
         if (isError) return showToast('價格讀取失敗，無法鑄造', 'error');
-        if (balance < requiredAmount) return showToast(`${paymentSource === 'wallet' ? '錢包' : '金庫'}餘額不足`, 'error');
+        if (typeof balance === 'bigint' && typeof requiredAmount === 'bigint' && balance < requiredAmount) {
+            return showToast(`${paymentSource === 'wallet' ? '錢包' : '金庫'}餘額不足`, 'error');
+        }
         if (paymentSource === 'wallet' && needsApproval) return showToast(`請先完成授權`, 'error');
-        if (!publicClient) return showToast('客戶端尚未準備好，請稍後再試', 'error');
 
         try {
             const description = `從${paymentSource === 'wallet' ? '錢包' : '金庫'}鑄造 ${quantity} 個${title}`;
@@ -205,9 +212,7 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
                 try {
                     const decoded = decodeEventLog({ abi: contractConfig.abi, ...log });
                     return decoded.eventName === mintEventName;
-                } catch {
-                    return false;
-                }
+                } catch { return false; }
             });
             
             if (mintLog) {
@@ -245,7 +250,14 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
         : <ActionButton 
             onClick={handleMint} 
             isLoading={isMinting || isLoading}
-            disabled={!address || isLoading || isError || balance < requiredAmount || requiredAmount === 0n} 
+            disabled={
+                !address ||
+                isLoading ||
+                isError ||
+                !(typeof balance === 'bigint' && typeof requiredAmount === 'bigint') ||
+                balance < requiredAmount ||
+                requiredAmount === 0n
+            } 
             className="w-48 h-12"
           >
             {isMinting ? '請在錢包確認' : (address ? `招募 ${quantity} 個` : '請先連接錢包')}
@@ -285,31 +297,37 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
                         <p className="text-sm text-gray-500 mt-2">讀取價格中...</p>
                     </div>
                 ) : isError ? (
-                    <div className="text-red-500">
+                    // ★ 核心改動 #3: 顯示更詳細的錯誤訊息
+                    <div className="text-red-500 text-center">
                         <p className="font-bold">價格讀取失敗</p>
-                        <p className="text-xs">請檢查網路或稍後再試</p>
+                        <p className="text-xs mt-1">
+                            {(error as any)?.shortMessage?.includes('DungeonCore address not set') 
+                                ? '原因：Hero/Relic 合約尚未設定總機地址。' 
+                                : (error as any)?.shortMessage?.includes('Oracle not set')
+                                ? '原因：總機合約尚未設定預言機地址。'
+                                : '請檢查合約串接或網路連線。'}
+                        </p>
+                        <p className="text-xs mt-2 text-gray-500">
+                            提示：請前往「管理後台」完成所有合約的串接設定。
+                        </p>
                     </div>
                 ) : (
                     <div>
                         <p className="text-lg text-gray-500 dark:text-gray-400">總價:</p>
-                        <p className="font-bold text-yellow-500 dark:text-yellow-400 text-2xl">{parseFloat(formatEther(requiredAmount)).toFixed(4)}</p>
+                        <p className="font-bold text-yellow-500 dark:text-yellow-400 text-2xl">{parseFloat(formatEther(typeof requiredAmount === 'bigint' ? requiredAmount : 0n)).toFixed(4)}</p>
                         <p className="text-xs text-gray-500">$SoulShard + {formatEther(platformFee * BigInt(quantity))} BNB</p>
                     </div>
                 )}
             </div>
             
             {actionButton}
-            <a href={`https://www.okx.com/web3/nft/markets/collection/bscn/${contractConfig.address}`} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500 dark:text-indigo-400 hover:underline mt-2">
+            <a href={contractConfig.address ? `https://www.okx.com/web3/nft/markets/collection/bscn/${contractConfig.address}` : '#'} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500 dark:text-indigo-400 hover:underline mt-2">
                 前往市場交易
             </a>
             <RarityProbabilities />
         </div>
     );
 };
-
-// =================================================================
-// Section: MintingInterface & MintPage 主元件
-// =================================================================
 
 const MintingInterface: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) => {
     const heroMintOptions = [1, 5, 10, 20, 50];
