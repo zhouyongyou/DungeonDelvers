@@ -1,0 +1,11 @@
+{
+  "bsc": {
+    "Hero": {
+      "address": "0xfc2a24E894236a6169d2353BE430a3d5828111D2",
+      "startBlock": 53099902
+    },
+    "Relic": {
+      "address": "0xd86245Ddce19E8F94Bc30f0facf7bd111069FAf9"
+    }
+  }
+}

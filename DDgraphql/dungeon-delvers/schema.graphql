@@ -1,0 +1,76 @@
+# ===============================================================
+# 玩家是所有數據的中心。
+# 它的 ID 就是錢包地址。
+# @entity(immutable: true) 表示一個 Player 實體一旦創建，
+# 除了關聯的列表外，其自身欄位（如 ID）不會再改變。
+# ===============================================================
+type Player @entity(immutable: true) {
+  id: Bytes! # 玩家的錢包地址
+  heroes: [Hero!]! @derivedFrom(field: "owner")
+  relics: [Relic!]! @derivedFrom(field: "owner")
+  parties: [Party!]! @derivedFrom(field: "owner")
+  profile: PlayerProfile @entity(field: "id") # 1-to-1 關係
+  vip: VIP @entity(field: "id") # 1-to-1 關係
+  vault: PlayerVault @entity(field: "id") # 1-to-1 關係
+}
+
+# ===============================================================
+# NFT 實體
+# @entity(immutable: false) 表示這些實體的屬性可能會改變。
+# 例如，一個 Hero 的 owner 可能會因為 Transfer 事件而改變。
+# ===============================================================
+type Hero @entity(immutable: false) {
+  id: ID! # 格式: contractAddress-tokenId
+  tokenId: BigInt!
+  owner: Player!
+  power: BigInt!
+  rarity: Int!
+  party: Party # 英雄可能屬於某個隊伍
+}
+
+type Relic @entity(immutable: false) {
+  id: ID! # 格式: contractAddress-tokenId
+  tokenId: BigInt!
+  owner: Player!
+  capacity: Int!
+  rarity: Int!
+  party: Party # 聖物可能屬於某個隊伍
+}
+
+type Party @entity(immutable: false) {
+  id: ID! # 格式: contractAddress-tokenId
+  tokenId: BigInt!
+  owner: Player!
+  heroes: [Hero!]! @derivedFrom(field: "party")
+  relics: [Relic!]! @derivedFrom(field: "party")
+  totalPower: BigInt!
+  totalCapacity: BigInt!
+  partyRarity: Int!
+  # 隊伍狀態，這些都會頻繁更新
+  provisionsRemaining: BigInt!
+  cooldownEndsAt: BigInt!
+  unclaimedRewards: BigInt!
+  fatigueLevel: Int!
+}
+
+# ===============================================================
+# 玩家狀態實體
+# 這些實體與玩家地址綁定，自身欄位會更新，但實體本身不會被刪除。
+# ===============================================================
+type PlayerProfile @entity(immutable: false) {
+  id: Bytes! # 玩家地址
+  level: Int!
+  experience: BigInt!
+}
+
+type VIP @entity(immutable: false) {
+  id: Bytes! # 玩家地址
+  stakedAmount: BigInt!
+  tokenId: BigInt # VIP 卡的 Token ID，可能不存在
+}
+
+type PlayerVault @entity(immutable: false) {
+  id: Bytes! # 玩家地址
+  withdrawableBalance: BigInt!
+  totalCommissionPaid: BigInt!
+}
