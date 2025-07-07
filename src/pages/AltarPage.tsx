@@ -1,10 +1,12 @@
-// src/pages/AltarPage.tsx (最終優化版)
+// src/pages/AltarPage.tsx (The Graph 改造版)
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useReadContracts, useWriteContract, usePublicClient } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatEther, decodeEventLog, type Abi } from 'viem';
-import { fetchAllOwnedNfts, fetchMetadata } from '../api/nfts';
+// 不再需要從 nfts.ts 獲取所有 NFT
+// import { fetchAllOwnedNfts } from '../api/nfts'; 
+import { fetchMetadata } from '../api/nfts';
 import { getContract, altarOfAscensionABI, heroABI, relicABI } from '../config/contracts';
 import { NftCard } from '../components/ui/NftCard';
 import { ActionButton } from '../components/ui/ActionButton';
@@ -17,7 +19,72 @@ import { bsc } from 'wagmi/chains';
 import { Modal } from '../components/ui/Modal';
 
 // =================================================================
-// Section: 型別定義與輔助元件
+// Section: GraphQL 查詢與數據獲取 Hooks
+// =================================================================
+
+const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
+
+// ★ 核心改造：專為祭壇設計的、可篩選星級的 GraphQL 查詢
+const GET_FILTERED_NFTS_QUERY = `
+  query GetFilteredNfts($owner: ID!, $rarity: Int!) {
+    heroes(where: { owner: $owner, rarity: $rarity }) {
+      id
+      tokenId
+      power
+      rarity
+    }
+    relics(where: { owner: $owner, rarity: $rarity }) {
+      id
+      tokenId
+      capacity
+      rarity
+    }
+  }
+`;
+
+// 新的 Hook，根據類型和星級獲取可用於升級的 NFT
+const useAltarMaterials = (nftType: NftType, rarity: number) => {
+    const { address, chainId } = useAccount();
+
+    return useQuery<(HeroNft[] | RelicNft[])>({
+        queryKey: ['altarMaterials', address, chainId, nftType, rarity],
+        queryFn: async () => {
+            if (!address || !THE_GRAPH_API_URL) return [];
+            
+            const response = await fetch(THE_GRAPH_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    query: GET_FILTERED_NFTS_QUERY,
+                    variables: { owner: address.toLowerCase(), rarity },
+                }),
+            });
+            if (!response.ok) throw new Error('GraphQL Network response was not ok');
+            const { data } = await response.json();
+
+            const assets = nftType === 'hero' ? data.heroes : data.relics;
+            if (!assets) return [];
+
+            // 將 The Graph 的數據轉換為前端的型別
+            return assets.map((asset: any) => ({
+                id: BigInt(asset.tokenId),
+                tokenId: BigInt(asset.tokenId),
+                name: `${nftType === 'hero' ? '英雄' : '聖物'} #${asset.tokenId}`,
+                image: '', // 在這個頁面我們不需要顯示圖片
+                description: '',
+                attributes: [],
+                contractAddress: (nftType === 'hero' ? getContract(bsc.id, 'hero') : getContract(bsc.id, 'relic'))!.address,
+                type: nftType,
+                ...asset
+            }));
+        },
+        enabled: !!address && chainId === bsc.id && rarity > 0,
+    });
+};
+
+
+// =================================================================
+// Section: 子元件 (保持不變)
 // =================================================================
 
 type UpgradeOutcomeStatus = 'great_success' | 'success' | 'partial_fail' | 'total_fail';
@@ -28,28 +95,19 @@ type UpgradeOutcome = {
   message: string;
 };
 
-// 升星結果彈出視窗
 const UpgradeResultModal: React.FC<{ result: UpgradeOutcome | null; onClose: () => void }> = ({ result, onClose }) => {
     if (!result) return null;
-
     const titleMap: Record<UpgradeOutcomeStatus, string> = {
-        great_success: '⚜️ 大成功！',
-        success: '✨ 升星成功！',
-        partial_fail: '💔 部分失敗...',
-        total_fail: '💀 完全失敗',
+        great_success: '⚜️ 大成功！', success: '✨ 升星成功！',
+        partial_fail: '💔 部分失敗...', total_fail: '💀 完全失敗',
     };
-
     return (
         <Modal isOpen={!!result} onClose={onClose} title={titleMap[result.status]} confirmText="太棒了！" onConfirm={onClose}>
             <div className="flex flex-col items-center">
                 <p className="mb-4 text-center text-gray-300">{result.message}</p>
                 {result.nfts.length > 0 && (
                     <div className="grid grid-cols-2 gap-4">
-                        {result.nfts.map(nft => (
-                            <div key={nft.id.toString()} className="w-40">
-                                <NftCard nft={nft} />
-                            </div>
-                        ))}
+                        {result.nfts.map(nft => ( <div key={nft.id.toString()} className="w-40"><NftCard nft={nft} /></div> ))}
                     </div>
                 )}
             </div>
@@ -57,25 +115,10 @@ const UpgradeResultModal: React.FC<{ result: UpgradeOutcome | null; onClose: () 
     );
 };
 
-
-// 顯示升級規則和機率的卡片
-const UpgradeInfoCard: React.FC<{
-  rule: any;
-  isLoading: boolean;
-}> = ({ rule, isLoading }) => {
-  if (isLoading) {
-    return <div className="card-bg p-4 rounded-xl animate-pulse h-48"><LoadingSpinner /></div>;
-  }
-  if (!rule || !rule.materialsRequired) {
-    return (
-      <div className="card-bg p-4 rounded-xl text-center text-gray-500">
-        請先選擇要升級的星級
-      </div>
-    );
-  }
-
+const UpgradeInfoCard: React.FC<{ rule: any; isLoading: boolean; }> = ({ rule, isLoading }) => {
+  if (isLoading) return <div className="card-bg p-4 rounded-xl animate-pulse h-48"><LoadingSpinner /></div>;
+  if (!rule || !rule.materialsRequired) return <div className="card-bg p-4 rounded-xl text-center text-gray-500">請先選擇要升級的星級</div>;
   const totalChance = rule.greatSuccessChance + rule.successChance + rule.partialFailChance;
-
   return (
     <div className="card-bg p-6 rounded-2xl text-sm">
       <h4 className="section-title text-xl">升星規則</h4>
@@ -97,7 +140,7 @@ const UpgradeInfoCard: React.FC<{
 // =================================================================
 
 const AltarPage: React.FC = () => {
-    const { address, chainId } = useAccount();
+    const { chainId } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
     const publicClient = usePublicClient();
@@ -108,16 +151,8 @@ const AltarPage: React.FC = () => {
     const [selectedNfts, setSelectedNfts] = useState<bigint[]>([]);
     const [upgradeResult, setUpgradeResult] = useState<UpgradeOutcome | null>(null);
 
-
     if (!chainId || chainId !== bsc.id) {
-        return (
-            <section>
-                <h2 className="page-title">升星祭壇</h2>
-                <div className="card-bg p-10 rounded-xl text-center text-gray-400">
-                    <p>請先連接到支援的網路 (BSC) 以使用升星祭壇。</p>
-                </div>
-            </section>
-        );
+        return <section><h2 className="page-title">升星祭壇</h2><div className="card-bg p-10 rounded-xl text-center text-gray-400"><p>請先連接到支援的網路 (BSC) 以使用升星祭壇。</p></div></section>;
     }
 
     const altarContract = getContract(bsc.id, 'altarOfAscension');
@@ -126,18 +161,11 @@ const AltarPage: React.FC = () => {
 
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
-    const { data: nfts, isLoading: isLoadingNfts } = useQuery({
-        queryKey: ['ownedNfts', address, chainId],
-        queryFn: () => fetchAllOwnedNfts(address!, chainId),
-        enabled: !!address && !!chainId,
-    });
+    // ★ 核心改造：使用新的 Hook 來精準獲取材料
+    const { data: availableNfts, isLoading: isLoadingNfts } = useAltarMaterials(nftType, rarity);
 
     const { data: upgradeRulesData, isLoading: isLoadingRules } = useReadContracts({
-        contracts: [1, 2, 3, 4].map(r => ({
-            ...altarContract,
-            functionName: 'upgradeRules',
-            args: [r],
-        })),
+        contracts: [1, 2, 3, 4].map(r => ({ ...altarContract, functionName: 'upgradeRules', args: [r] })),
         query: { enabled: !!altarContract },
     });
     
@@ -151,116 +179,64 @@ const AltarPage: React.FC = () => {
         return null;
     }, [upgradeRulesData, rarity]);
 
-    const availableNfts = useMemo(() => {
-        if (!nfts) return [];
-        const sourceNfts = nftType === 'hero' ? nfts.heroes : nfts.relics;
-        return sourceNfts.filter(nft => nft.rarity === rarity);
-    }, [nfts, nftType, rarity]);
-
     const handleSelectNft = (id: bigint) => {
         setSelectedNfts(prev => {
-            if (prev.includes(id)) {
-                return prev.filter(i => i !== id);
-            }
-            if (currentRule && prev.length < currentRule.materialsRequired) {
-                return [...prev, id];
-            }
+            if (prev.includes(id)) return prev.filter(i => i !== id);
+            if (currentRule && prev.length < currentRule.materialsRequired) return [...prev, id];
             showToast(`最多只能選擇 ${currentRule?.materialsRequired} 個材料`, 'error');
             return prev;
         });
     };
     
-    const resetSelections = () => {
-        setSelectedNfts([]);
-    };
-    
+    const resetSelections = () => setSelectedNfts([]);
     useEffect(resetSelections, [nftType, rarity]);
 
-    // ★★★ 程式碼優化：重構升級處理邏輯，使其更清晰健壯 ★★★
     const handleUpgrade = async () => {
         if (!currentRule || !altarContract || !publicClient) return;
-        if (selectedNfts.length !== currentRule.materialsRequired) {
-            return showToast(`需要 ${currentRule.materialsRequired} 個材料`, 'error');
-        }
+        if (selectedNfts.length !== currentRule.materialsRequired) return showToast(`需要 ${currentRule.materialsRequired} 個材料`, 'error');
 
         const tokenContract = nftType === 'hero' ? heroContract : relicContract;
         if (!tokenContract) return showToast('合約地址未設定', 'error');
 
         try {
-            const hash = await writeContractAsync({
-                ...altarContract,
-                functionName: 'upgradeNFTs',
-                args: [tokenContract.address, selectedNfts],
-                value: currentRule.nativeFee,
-            });
+            const hash = await writeContractAsync({ ...altarContract, functionName: 'upgradeNFTs', args: [tokenContract.address, selectedNfts], value: currentRule.nativeFee });
             addTransaction({ hash, description: `升星 ${rarity}★ ${nftType === 'hero' ? '英雄' : '聖物'}` });
             
             const receipt = await publicClient.waitForTransactionReceipt({ hash });
-
-            // 1. 從日誌中解析出升級結果 (outcome)
             const upgradeLog = receipt.logs.find(log => log.address.toLowerCase() === altarContract.address.toLowerCase());
-            if (!upgradeLog) {
-                showToast("升星結果解析失敗：找不到對應事件", "error");
-                return;
-            }
+            if (!upgradeLog) throw new Error("找不到升級事件");
+
             const decodedUpgradeLog = decodeEventLog({ abi: altarOfAscensionABI, ...upgradeLog });
-            if (decodedUpgradeLog.eventName !== 'UpgradeProcessed') {
-                showToast("升星結果解析失敗：事件名稱不符", "error");
-                return;
-            }
+            if (decodedUpgradeLog.eventName !== 'UpgradeProcessed') throw new Error("事件名稱不符");
+
             const outcome = Number((decodedUpgradeLog.args as any).outcome);
-
-            // 2. 從日誌中解析出新鑄造的 NFT
-            const mintEventName = nftType === 'hero' ? 'HeroMinted' : 'RelicMinted';
             const tokenContractAbi = nftType === 'hero' ? heroABI : relicABI;
-
+            const mintEventName = nftType === 'hero' ? 'HeroMinted' : 'RelicMinted';
+            
             const mintedLogs = receipt.logs
                 .filter(log => log.address.toLowerCase() === tokenContract.address.toLowerCase())
-                .map(log => {
-                    try { return decodeEventLog({ abi: tokenContractAbi, ...log }); } catch { return null; }
-                })
-                .filter((decodedLog): decodedLog is NonNullable<typeof decodedLog> => 
-                    decodedLog !== null && decodedLog.eventName === mintEventName
-                );
+                .map(log => { try { return decodeEventLog({ abi: tokenContractAbi, ...log }); } catch { return null; } })
+                .filter((log): log is NonNullable<typeof log> => log !== null && log.eventName === mintEventName);
 
-            // 3. 獲取新 NFT 的元數據
             const newNfts: AnyNft[] = await Promise.all(mintedLogs.map(async (log: any) => {
                 const tokenId = log.args.tokenId;
                 const tokenUri = await publicClient.readContract({ address: tokenContract.address, abi: tokenContract.abi as Abi, functionName: 'tokenURI', args: [tokenId] }) as string;
                 const metadata = await fetchMetadata(tokenUri);
                 const findAttr = (trait: string, defaultValue: any = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
-
-                if (nftType === 'hero') {
-                    return { ...metadata, id: tokenId, type: 'hero', contractAddress: tokenContract.address, power: Number(findAttr('Power')), rarity: Number(findAttr('Rarity')) };
-                } else {
-                    return { ...metadata, id: tokenId, type: 'relic', contractAddress: tokenContract.address, capacity: Number(findAttr('Capacity')), rarity: Number(findAttr('Rarity')) };
-                }
+                if (nftType === 'hero') return { ...metadata, id: tokenId, type: 'hero', contractAddress: tokenContract.address, power: Number(findAttr('Power')), rarity: Number(findAttr('Rarity')) };
+                return { ...metadata, id: tokenId, type: 'relic', contractAddress: tokenContract.address, capacity: Number(findAttr('Capacity')), rarity: Number(findAttr('Rarity')) };
             }));
 
-            // 4. 根據結果顯示對應的訊息
-            const outcomeMessages: Record<number, string> = {
-                3: `大成功！您獲得了 ${newNfts.length} 個更高星級的 NFT！`,
-                2: `恭喜！您成功獲得了 1 個更高星級的 NFT！`,
-                1: `可惜，升星失敗了，但我們為您保留了 ${newNfts.length} 個材料。`,
-                0: '升星失敗，所有材料都已銷毀。再接再厲！'
-            };
-            
+            const outcomeMessages: Record<number, string> = { 3: `大成功！您獲得了 ${newNfts.length} 個更高星級的 NFT！`, 2: `恭喜！您成功獲得了 1 個更高星級的 NFT！`, 1: `可惜，升星失敗了，但我們為您保留了 ${newNfts.length} 個材料。`, 0: '升星失敗，所有材料都已銷毀。再接再厲！' };
             const statusMap: UpgradeOutcomeStatus[] = ['total_fail', 'partial_fail', 'success', 'great_success'];
+            setUpgradeResult({ status: statusMap[outcome] || 'total_fail', nfts: newNfts, message: outcomeMessages[outcome] || "發生未知錯誤" });
 
-            setUpgradeResult({
-                status: statusMap[outcome] || 'total_fail',
-                nfts: newNfts,
-                message: outcomeMessages[outcome] || "發生未知錯誤"
-            });
-
-            // 5. 清理並刷新數據
             resetSelections();
             queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
+            queryClient.invalidateQueries({ queryKey: ['altarMaterials'] });
 
         } catch (e: any) {
-            if (!e.message.includes('User rejected the request')) {
-                showToast(e.shortMessage || "升星失敗", "error");
-            }
+            if (!e.message.includes('User rejected the request')) showToast(e.shortMessage || "升星失敗", "error");
         }
     };
 
@@ -270,9 +246,7 @@ const AltarPage: React.FC = () => {
         <section className="space-y-8">
             <UpgradeResultModal result={upgradeResult} onClose={() => setUpgradeResult(null)} />
             <h2 className="page-title">升星祭壇</h2>
-            <p className="text-center text-gray-400 max-w-2xl mx-auto -mt-4">
-                將多個同星級的 NFT 作為祭品，有機會合成更高星級的強大資產！結果由鏈上隨機數決定，絕對公平。
-            </p>
+            <p className="text-center text-gray-400 max-w-2xl mx-auto -mt-4">將多個同星級的 NFT 作為祭品，有機會合成更高星級的強大資產！結果由鏈上隨機數決定，絕對公平。</p>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 <div className="lg:col-span-1 space-y-6 sticky top-24">
@@ -280,44 +254,25 @@ const AltarPage: React.FC = () => {
                         <h3 className="section-title text-xl">1. 選擇升級目標</h3>
                         <div className="flex items-center gap-2 bg-gray-900/50 p-1 rounded-lg mb-4">
                             {(['hero', 'relic'] as const).map(t => (
-                                <button key={t} onClick={() => setNftType(t)} className={`w-full py-2 text-sm font-medium rounded-md transition ${nftType === t ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'}`}>
-                                    {t === 'hero' ? '英雄' : '聖物'}
-                                </button>
+                                <button key={t} onClick={() => setNftType(t)} className={`w-full py-2 text-sm font-medium rounded-md transition ${nftType === t ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'}`}>{t === 'hero' ? '英雄' : '聖物'}</button>
                             ))}
                         </div>
                         <div className="flex items-center gap-2 bg-gray-900/50 p-1 rounded-lg">
                             {[1, 2, 3, 4].map(r => (
-                                <button key={r} onClick={() => setRarity(r)} className={`w-full py-2 text-sm font-medium rounded-md transition ${rarity === r ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'}`}>
-                                    {r} ★
-                                </button>
+                                <button key={r} onClick={() => setRarity(r)} className={`w-full py-2 text-sm font-medium rounded-md transition ${rarity === r ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'}`}>{r} ★</button>
                             ))}
                         </div>
                     </div>
-                    
                     <UpgradeInfoCard rule={currentRule} isLoading={isLoadingRules} />
-
-                    <ActionButton 
-                        onClick={handleUpgrade} 
-                        isLoading={isTxPending} 
-                        disabled={isTxPending || !currentRule || selectedNfts.length !== currentRule.materialsRequired}
-                        className="w-full h-14 text-lg"
-                    >
-                        {isTxPending ? '正在獻祭...' : '開始升星'}
-                    </ActionButton>
+                    <ActionButton onClick={handleUpgrade} isLoading={isTxPending} disabled={isTxPending || !currentRule || selectedNfts.length !== currentRule.materialsRequired} className="w-full h-14 text-lg">{isTxPending ? '正在獻祭...' : '開始升星'}</ActionButton>
                 </div>
-
                 <div className="lg:col-span-2 card-bg p-6 rounded-2xl">
                     <h3 className="section-title">2. 選擇材料 ({selectedNfts.length} / {currentRule?.materialsRequired ?? '...'})</h3>
                     {isLoading ? <div className="flex justify-center h-64 items-center"><LoadingSpinner /></div> : 
-                     availableNfts.length > 0 ? (
+                     availableNfts && availableNfts.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                             {availableNfts.map(nft => (
-                                <NftCard
-                                    key={nft.id.toString()}
-                                    nft={nft as HeroNft | RelicNft}
-                                    onSelect={() => handleSelectNft(nft.id)}
-                                    isSelected={selectedNfts.includes(nft.id)}
-                                />
+                                <NftCard key={nft.id.toString()} nft={nft as HeroNft | RelicNft} onSelect={() => handleSelectNft(nft.id)} isSelected={selectedNfts.includes(nft.id)} />
                             ))}
                         </div>
                     ) : (

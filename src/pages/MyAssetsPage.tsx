@@ -1,9 +1,9 @@
-// src/pages/MyAssetsPage.tsx (引導優化版)
+// src/pages/MyAssetsPage.tsx (The Graph 改造版)
 
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract, usePublicClient } from 'wagmi';
-import { useQuery } from '@tanstack/react-query';
-import { fetchAllOwnedNfts } from '../api/nfts';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { fetchAllOwnedNfts } from '../api/nfts'; // 我們繼續使用這個函式，但它內部已經被改造了
 import { NftCard } from '../components/ui/NftCard';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -11,9 +11,13 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { getContract } from '../config/contracts';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
-import type { AnyNft, HeroNft, RelicNft, NftType } from '../types/nft';
+import type { HeroNft, RelicNft, NftType } from '../types/nft';
 import { formatEther } from 'viem';
-import { bsc, bscTestnet } from 'wagmi/chains';
+import { bsc } from 'wagmi/chains';
+
+// =================================================================
+// Section: 子元件 (TeamBuilder)
+// =================================================================
 
 interface TeamBuilderProps {
   heroes: HeroNft[];
@@ -30,7 +34,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
     const toggleSelection = (id: bigint, type: 'hero' | 'relic') => {
         const list = type === 'hero' ? selectedHeroes : selectedRelics;
         const setList = type === 'hero' ? setSelectedHeroes : setSelectedRelics;
-        const limit = 5;
+        const limit = 5; // 每個隊伍最多5個英雄/聖物
 
         if (list.includes(id)) {
             setList(list.filter(i => i !== id));
@@ -71,7 +75,6 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
                             />
                         )) : (
                             <div className="col-span-full">
-                                {/* ★ 新增：引導按鈕 */}
                                 <EmptyState message="沒有可用的英雄">
                                     <a href="#/mint">
                                         <ActionButton className="mt-2">前往鑄造</ActionButton>
@@ -93,7 +96,6 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
                             />
                         )) : (
                              <div className="col-span-full">
-                                {/* ★ 新增：引導按鈕 */}
                                 <EmptyState message="沒有可用的聖物">
                                      <a href="#/mint">
                                         <ActionButton className="mt-2">前往鑄造</ActionButton>
@@ -135,39 +137,30 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
     );
 };
 
-const NftGrid: React.FC<{ nfts: AnyNft[] }> = ({ nfts }) => {
-    if (nfts.length === 0) return <EmptyState message="這裡空空如也..." />;
-    return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {nfts.map(nft => <NftCard key={nft.id.toString()} nft={nft} />)}
-        </div>
-    );
-};
-
+// =================================================================
+// Section: 主頁面元件
+// =================================================================
 
 const MyAssetsPage: React.FC = () => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
     const publicClient = usePublicClient();
+    const queryClient = useQueryClient();
 
     const [filter, setFilter] = useState<NftType>('party');
 
-    if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <EmptyState message="請連接到支援的網路 (BSC 或 BSC 測試網) 以檢視您的資產。" />
-            </div>
-        );
+    if (!chainId || chainId !== bsc.id) {
+        return <div className="flex justify-center items-center h-64"><EmptyState message="請連接到支援的網路 (BSC) 以檢視您的資產。" /></div>;
     }
 
-    // 型別安全呼叫 getContract
-    const heroContract = chainId === bsc.id ? getContract(bsc.id, 'hero') : chainId === bscTestnet.id ? getContract(bscTestnet.id as any, 'hero') : null;
-    const relicContract = chainId === bsc.id ? getContract(bsc.id, 'relic') : chainId === bscTestnet.id ? getContract(bscTestnet.id as any, 'relic') : null;
-    const partyContract = chainId === bsc.id ? getContract(bsc.id, 'party') : chainId === bscTestnet.id ? getContract(bscTestnet.id as any, 'party') : null;
+    const heroContract = getContract(bsc.id, 'hero');
+    const relicContract = getContract(bsc.id, 'relic');
+    const partyContract = getContract(bsc.id, 'party');
 
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
+    // ★ 核心改造：繼續使用這個 useQuery，但它現在會呼叫我們用 GraphQL 改造過的 fetchAllOwnedNfts
     const { data: nfts, isLoading } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
         queryFn: () => fetchAllOwnedNfts(address!, chainId),
@@ -180,6 +173,19 @@ const MyAssetsPage: React.FC = () => {
         query: { enabled: !!partyContract }
     });
     const platformFee = typeof platformFeeRaw === 'bigint' ? platformFeeRaw : undefined;
+
+    // ★ 核心改造：簡化可用 NFT 的過濾邏輯
+    const { availableHeroes, availableRelics } = useMemo(() => {
+        if (!nfts) return { availableHeroes: [], availableRelics: [] };
+        
+        const heroIdsInParties = new Set(nfts.parties.flatMap(p => p.heroIds.map(id => id.toString())));
+        const relicIdsInParties = new Set(nfts.parties.flatMap(p => p.relicIds.map(id => id.toString())));
+
+        return {
+            availableHeroes: nfts.heroes.filter(h => !heroIdsInParties.has(h.id.toString())),
+            availableRelics: nfts.relics.filter(r => !relicIdsInParties.has(r.id.toString())),
+        };
+    }, [nfts]);
 
     const filteredNfts = useMemo(() => {
         if (!nfts) return [];
@@ -222,6 +228,8 @@ const MyAssetsPage: React.FC = () => {
                 value: platformFee,
             });
             addTransaction({ hash, description: `創建新隊伍` });
+            // 成功後，手動觸發 'ownedNfts' 查詢的刷新
+            queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
 
         } catch (e: any) {
             if (!e.message.includes('User rejected the request')) {
@@ -246,8 +254,8 @@ const MyAssetsPage: React.FC = () => {
             <h2 className="page-title">我的資產與隊伍</h2>
             
             <TeamBuilder 
-                heroes={nfts?.heroes.filter(h => !(nfts.parties.flatMap(p => p.heroIds) as bigint[]).includes(h.id)) ?? []} 
-                relics={nfts?.relics.filter(r => !(nfts.parties.flatMap(p => p.relicIds) as bigint[]).includes(r.id)) ?? []}
+                heroes={availableHeroes} 
+                relics={availableRelics}
                 onCreateParty={handleCreateParty}
                 isCreating={isTxPending}
                 platformFee={platformFee}
@@ -268,7 +276,13 @@ const MyAssetsPage: React.FC = () => {
                         ))}
                     </div>
                 </div>
-                <NftGrid nfts={filteredNfts} />
+                {filteredNfts.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                        {filteredNfts.map(nft => <NftCard key={nft.id.toString()} nft={nft} />)}
+                    </div>
+                ) : (
+                    <EmptyState message="這裡空空如也..." />
+                )}
             </div>
         </section>
     );

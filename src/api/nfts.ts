@@ -1,22 +1,71 @@
-// src/api/nfts.ts
+// src/api/nfts.ts (The Graph 改造版)
 
-import { createPublicClient, http, type Address, type Abi } from 'viem';
+import { createPublicClient, http, type Address } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { Buffer } from 'buffer';
-import { getContract, type ContractName, partyABI, contracts } from '../config/contracts';
+import { getContract, contracts } from '../config/contracts';
 import type { 
     AllNftCollections, 
-    AnyNft, 
     BaseNft, 
     HeroNft,
     RelicNft,
     PartyNft,
     VipNft,
-    NftAttribute
+    NftAttribute,
+    NftType
 } from '../types/nft';
 
 // =================================================================
-// Section: 型別守衛與輔助函式
+// Section 1: The Graph API 設定
+// =================================================================
+
+// ★ 核心改造：從環境變數讀取 The Graph API URL，避免硬編碼
+const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
+
+// 定義一個 GraphQL 查詢語句。
+// 這個查詢會一次性獲取一個玩家地址所擁有的所有資產的核心資訊。
+const GET_PLAYER_ASSETS_QUERY = `
+  query GetPlayerAssets($owner: ID!) {
+    player(id: $owner) {
+      id
+      heroes {
+        id
+        tokenId
+        power
+        rarity
+      }
+      relics {
+        id
+        tokenId
+        capacity
+        rarity
+      }
+      parties {
+        id
+        tokenId
+        totalPower
+        totalCapacity
+        partyRarity
+        heroes {
+          id
+          tokenId
+        }
+        relics {
+          id
+          tokenId
+        }
+      }
+      vip {
+        id
+        tokenId
+        stakedAmount
+      }
+    }
+  }
+`;
+
+// =================================================================
+// Section 2: 輔助函式 (保持不變)
 // =================================================================
 
 type SupportedChainId = keyof typeof contracts;
@@ -29,11 +78,11 @@ const getClient = (chainId: number) => {
     const chain = chainId === bsc.id ? bsc : null;
     if (!chain) throw new Error("Unsupported chain for client creation");
     
-    // 從環境變數讀取 RPC URL，如果沒有則使用公開節點
     const rpcUrl = import.meta.env.VITE_ALCHEMY_BSC_MAINNET_RPC_URL || 'https://bsc-dataseed1.binance.org/';
     return createPublicClient({ chain, transport: http(rpcUrl) });
 };
 
+// 解析元數據的函式保持不變，因為我們仍然需要處理 tokenURI
 export async function fetchMetadata(uri: string): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
     try {
         if (uri.startsWith('data:application/json;base64,')) {
@@ -55,156 +104,107 @@ export async function fetchMetadata(uri: string): Promise<Omit<BaseNft, 'id' | '
     }
 }
 
-function parseToTypedNft(
-    baseMetadata: Omit<BaseNft, 'id' | 'contractAddress'>,
-    id: bigint,
-    type: AnyNft['type'],
-    contractAddress: `0x${string}`
-): AnyNft {
-    const findAttr = (trait: string, defaultValue: any = 0) => 
-        baseMetadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
-
-    const baseNft: BaseNft = { ...baseMetadata, id, contractAddress, ...baseMetadata };
-
-    switch (type) {
-        case 'hero':
-            return { ...baseNft, type: 'hero', power: Number(findAttr('Power')), rarity: Number(findAttr('Rarity')) };
-        case 'relic':
-            return { ...baseNft, type: 'relic', capacity: Number(findAttr('Capacity')), rarity: Number(findAttr('Rarity')) };
-        case 'party':
-            return { ...baseNft, type: 'party', totalPower: BigInt(findAttr('Total Power')), totalCapacity: BigInt(findAttr('Total Capacity')), heroIds: [], relicIds: [], partyRarity: Number(findAttr('Party Rarity', 1)) };
-        case 'vip':
-            return { ...baseNft, type: 'vip', level: Number(findAttr('Level')) };
-        default:
-             const _exhaustiveCheck: never = type;
-             throw new Error(`未知的 NFT 種類: ${_exhaustiveCheck}`);
-    }
-}
-
 // =================================================================
-// Section: NFT 數據獲取核心邏輯 (RPC 優化版)
+// Section 3: 核心數據獲取邏輯 (全新 GraphQL 版本)
 // =================================================================
 
-async function fetchNftsForContract(
-    client: ReturnType<typeof getClient>,
-    owner: Address,
-    contractName: ContractName,
-    type: AnyNft['type'],
-    chainId: number
-): Promise<AnyNft[]> {
-    if (!isSupportedChain(chainId)) return [];
-    
-    const contract = getContract(chainId, contractName);
-    if (!contract) return [];
-
-    try {
-        const toBlock = await client.getBlockNumber();
-        
-        // ★★★ 核心修正：將 CHUNK_SIZE 從 1999n 調整為 499n ★★★
-        // 這個值小於 Alchemy 節點的 500 區塊限制，可以有效避免請求錯誤。
-        const CHUNK_SIZE = 499n; 
-        const MAX_SEARCH_BLOCKS = 576n; // 暫時的
-        // const MAX_SEARCH_BLOCKS = 57600n; // 最大查詢深度，約等於 2 天的區塊量 (28800 blocks/day)
-        const searchLimitBlock = toBlock > MAX_SEARCH_BLOCKS ? toBlock - MAX_SEARCH_BLOCKS : 0n;
-        
-        let allLogs = [];
-        for (let endBlock = toBlock; endBlock > searchLimitBlock; endBlock -= CHUNK_SIZE + 1n) {
-            const startBlock = endBlock - CHUNK_SIZE > searchLimitBlock ? endBlock - CHUNK_SIZE : searchLimitBlock;
-            
-            const chunkLogs = await client.getLogs({
-                address: contract.address,
-                event: {
-                    type: 'event', name: 'Transfer',
-                    inputs: [
-                        { type: 'address', name: 'from', indexed: true },
-                        { type: 'address', name: 'to', indexed: true },
-                        { type: 'uint256', name: 'tokenId', indexed: true },
-                    ],
-                },
-                args: { to: owner },
-                fromBlock: startBlock,
-                toBlock: endBlock,
-            });
-            allLogs.push(...chunkLogs);
-            if (startBlock === 0n) break;
-        }
-
-        const potentialTokenIds = [...new Set(allLogs.map(log => log.args.tokenId).filter(id => id !== undefined))] as bigint[];
-        if (potentialTokenIds.length === 0) return [];
-        
-        const ownerOfCalls = potentialTokenIds.map(id => ({
-            address: contract.address, abi: contract.abi as Abi,
-            functionName: 'ownerOf', args: [id],
-        }));
-        const ownersResults = await client.multicall({ contracts: ownerOfCalls, allowFailure: true });
-
-        const ownedTokenIds = potentialTokenIds.filter((_, index) => 
-            ownersResults[index].status === 'success' && (ownersResults[index].result as Address).toLowerCase() === owner.toLowerCase()
-        );
-        if (ownedTokenIds.length === 0) return [];
-
-        const uriCalls = ownedTokenIds.map(id => ({
-            address: contract.address, abi: contract.abi as Abi,
-            functionName: 'tokenURI', args: [id],
-        }));
-        const uriResults = await client.multicall({ contracts: uriCalls, allowFailure: true });
-
-        const nftPromises = ownedTokenIds.map(async (id, index) => {
-            if (uriResults[index].status === 'success') {
-                const metadata = await fetchMetadata(uriResults[index].result as string);
-                return parseToTypedNft(metadata, id, type, contract.address);
-            }
-            return null;
-        });
-        
-        return (await Promise.all(nftPromises)).filter((nft): nft is AnyNft => nft !== null);
-
-    } catch (error) {
-        console.error(`獲取 ${type} NFT 時出錯: `, error);
-        return [];
-    }
-}
-
+/**
+ * @notice 使用 The Graph 獲取一個玩家擁有的所有 NFT 數據。
+ * @dev 這取代了舊的、基於 getLogs 的掃描方法，速度和效率都大幅提升。
+ * @param owner 玩家的錢包地址。
+ * @param chainId 當前的鏈 ID。
+ * @returns 一個包含所有已分類 NFT 的物件。
+ */
 export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promise<AllNftCollections> {
+    const emptyResult: AllNftCollections = { heroes: [], relics: [], parties: [], vipCards: [] };
     if (!isSupportedChain(chainId)) {
         console.error(`不支援的鏈 ID: ${chainId}`);
-        return { heroes: [], relics: [], parties: [], vipCards: [] };
+        return emptyResult;
     }
 
-    const client = getClient(chainId);
+    try {
+        // --- 步驟 1: 從 The Graph 獲取基礎數據 ---
+        const response = await fetch(THE_GRAPH_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                query: GET_PLAYER_ASSETS_QUERY,
+                variables: { owner: owner.toLowerCase() },
+            }),
+        });
 
-    const [heroes, relics, parties, vipCards] = await Promise.all([
-        fetchNftsForContract(client, owner, 'hero', 'hero', chainId),
-        fetchNftsForContract(client, owner, 'relic', 'relic', chainId),
-        fetchNftsForContract(client, owner, 'party', 'party', chainId),
-        fetchNftsForContract(client, owner, 'vipStaking', 'vip', chainId),
-    ]);
-
-    if (parties.length > 0) {
-        const partyContract = getContract(chainId, 'party');
-        if (partyContract) {
-            const compositionCalls = parties.map(p => ({
-                address: partyContract.address,
-                abi: partyABI,
-                functionName: 'getPartyComposition',
-                args: [p.id],
-            }));
-            const compositions = await client.multicall({ contracts: compositionCalls, allowFailure: true });
-
-            compositions.forEach((result, index) => {
-                if (result.status === 'success' && Array.isArray(result.result)) {
-                    const party = parties[index] as PartyNft;
-                    party.heroIds = result.result[0] as bigint[];
-                    party.relicIds = result.result[1] as bigint[];
-                }
-            });
+        if (!response.ok) {
+            throw new Error(`GraphQL 請求失敗: ${response.statusText}`);
         }
-    }
 
-    return { 
-        heroes: heroes as HeroNft[], 
-        relics: relics as RelicNft[], 
-        parties: parties as PartyNft[], 
-        vipCards: vipCards as VipNft[]
-    };
+        const { data } = await response.json();
+        const playerAssets = data?.player;
+
+        if (!playerAssets) {
+            // 如果 The Graph 中沒有這個玩家的數據，代表他沒有任何資產
+            return emptyResult;
+        }
+
+        // --- 步驟 2: 批量獲取動態元數據 (tokenURI) ---
+        const client = getClient(chainId);
+        const contractsMap = {
+            heroes: getContract(chainId, 'hero'),
+            relics: getContract(chainId, 'relic'),
+            parties: getContract(chainId, 'party'),
+            vipCards: getContract(chainId, 'vipStaking'),
+        };
+
+        const uriCalls: any[] = [];
+        if (playerAssets.heroes?.length) uriCalls.push(...playerAssets.heroes.map((h: any) => ({ ...contractsMap.heroes, functionName: 'tokenURI', args: [BigInt(h.tokenId)] })));
+        if (playerAssets.relics?.length) uriCalls.push(...playerAssets.relics.map((r: any) => ({ ...contractsMap.relics, functionName: 'tokenURI', args: [BigInt(r.tokenId)] })));
+        if (playerAssets.parties?.length) uriCalls.push(...playerAssets.parties.map((p: any) => ({ ...contractsMap.parties, functionName: 'tokenURI', args: [BigInt(p.tokenId)] })));
+        if (playerAssets.vip) uriCalls.push({ ...contractsMap.vipCards, functionName: 'tokenURI', args: [BigInt(playerAssets.vip.tokenId)] });
+
+        const uriResults = uriCalls.length > 0 ? await client.multicall({ contracts: uriCalls, allowFailure: true }) : [];
+
+        // --- 步驟 3: 解析元數據並組合最終結果 ---
+        let uriIndex = 0;
+        const parseNfts = async (assets: any[], type: NftType): Promise<any[]> => {
+            if (!assets || assets.length === 0) return [];
+            return Promise.all(assets.map(async (asset) => {
+                const uriResult = uriResults[uriIndex++];
+                if (uriResult.status !== 'success') return null;
+
+                const metadata = await fetchMetadata(uriResult.result as string);
+                const findAttr = (trait: string, defaultValue: any = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
+
+                const baseNft: BaseNft = { 
+                    ...metadata, 
+                    id: BigInt(asset.tokenId), 
+                    contractAddress: contractsMap[type === 'vip' ? 'vipCards' : `${type}s` as keyof typeof contractsMap]!.address
+                };
+
+                switch (type) {
+                    case 'hero': return { ...baseNft, type, power: Number(asset.power), rarity: Number(asset.rarity) };
+                    case 'relic': return { ...baseNft, type, capacity: Number(asset.capacity), rarity: Number(asset.rarity) };
+                    case 'party': return { ...baseNft, type, totalPower: BigInt(asset.totalPower), totalCapacity: BigInt(asset.totalCapacity), heroIds: asset.heroes.map((h:any) => BigInt(h.tokenId)), relicIds: asset.relics.map((r:any) => BigInt(r.tokenId)), partyRarity: Number(asset.partyRarity) };
+                    case 'vip': return { ...baseNft, type, level: Number(findAttr('VIP Level')) };
+                    default: return null;
+                }
+            }));
+        };
+
+        const [heroes, relics, parties, vipCards] = await Promise.all([
+            parseNfts(playerAssets.heroes, 'hero'),
+            parseNfts(playerAssets.relics, 'relic'),
+            parseNfts(playerAssets.parties, 'party'),
+            playerAssets.vip ? parseNfts([playerAssets.vip], 'vip') : Promise.resolve([]),
+        ]);
+
+        return {
+            heroes: heroes.filter(Boolean) as HeroNft[],
+            relics: relics.filter(Boolean) as RelicNft[],
+            parties: parties.filter(Boolean) as PartyNft[],
+            vipCards: vipCards.filter(Boolean) as VipNft[],
+        };
+
+    } catch (error) {
+        console.error("獲取 NFT 數據時發生嚴重錯誤: ", error);
+        return emptyResult;
+    }
 }

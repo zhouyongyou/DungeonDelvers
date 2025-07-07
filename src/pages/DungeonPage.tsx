@@ -1,11 +1,12 @@
-// src/pages/DungeonPage.tsx (RPC 優化最終版)
+// src/pages/DungeonPage.tsx (The Graph 改造版)
 
 import React, { useState, useMemo } from 'react';
-import { useAccount, useReadContracts, useReadContract, useWriteContract } from 'wagmi';
+import { useAccount, useReadContract, useReadContracts, useWriteContract } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
 import { formatEther } from 'viem';
-import { fetchAllOwnedNfts } from '../api/nfts';
-import { getContract, dungeonStorageABI } from '../config/contracts';
+// 不再需要從 nfts.ts 獲取數據
+// import { fetchAllOwnedNfts } from '../api/nfts';
+import { getContract, type SupportedChainId } from '../config/contracts';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ActionButton } from '../components/ui/ActionButton';
@@ -17,8 +18,11 @@ import { Modal } from '../components/ui/Modal';
 import ProvisionsPage from './ProvisionsPage';
 import { bsc } from 'wagmi/chains';
 
-// 僅支援主網 chainId 型別
-type SupportedChainId = typeof bsc.id; // 56
+// =================================================================
+// Section: 型別定義與 GraphQL 查詢
+// =================================================================
+
+const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
 
 interface Dungeon {
   id: number;
@@ -29,12 +33,83 @@ interface Dungeon {
   isInitialized: boolean;
 }
 
-// ★★★ RPC 優化核心 #1：修改 PartyStatusCard Props ★★★
-// 移除獨立的數據獲取邏輯，改為直接接收從父元件傳遞過來的 partyStatus。
+// 查詢玩家擁有的隊伍及其詳細狀態
+const GET_PLAYER_PARTIES_QUERY = `
+  query GetPlayerParties($owner: ID!) {
+    player(id: $owner) {
+      parties {
+        id
+        tokenId
+        totalPower
+        totalCapacity
+        partyRarity
+        provisionsRemaining
+        cooldownEndsAt
+        unclaimedRewards
+        fatigueLevel
+        # 我們需要 name 和 image 來渲染 NftCard
+        # 這些數據應該在後續的 multicall 中獲取，但為了簡化，先假設它們存在
+        # 在真實的應用中，我們會在 fetchMetadata 中獲取這些
+      }
+    }
+  }
+`;
+
+// =================================================================
+// Section: 數據獲取 Hooks
+// =================================================================
+
+// 新的 Hook，用於從 The Graph 獲取所有隊伍的數據
+const usePlayerParties = () => {
+    const { address, chainId } = useAccount();
+    return useQuery<PartyNft[]>({
+        queryKey: ['playerParties', address, chainId],
+        queryFn: async () => {
+            if (!address || !THE_GRAPH_API_URL) return [];
+            const response = await fetch(THE_GRAPH_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    query: GET_PLAYER_PARTIES_QUERY,
+                    variables: { owner: address.toLowerCase() },
+                }),
+            });
+            if (!response.ok) throw new Error('GraphQL Network response was not ok');
+            const { data } = await response.json();
+            
+            // 將 The Graph 回傳的數據轉換為我們前端的 PartyNft 型別
+            return data?.player?.parties?.map((p: any) => ({
+                id: BigInt(p.tokenId),
+                tokenId: BigInt(p.tokenId),
+                name: `隊伍 #${p.tokenId}`, // 暫時的名稱
+                image: '', // 暫時的圖片
+                description: '',
+                attributes: [],
+                contractAddress: getContract(bsc.id, 'party')?.address ?? '0x',
+                type: 'party',
+                totalPower: BigInt(p.totalPower),
+                totalCapacity: BigInt(p.totalCapacity),
+                heroIds: [], // 注意：這個查詢沒有獲取詳細的 heroIds，如果需要可以加入
+                relicIds: [],
+                partyRarity: p.partyRarity,
+                // 直接從 The Graph 獲取狀態
+                provisionsRemaining: BigInt(p.provisionsRemaining),
+                cooldownEndsAt: BigInt(p.cooldownEndsAt),
+                unclaimedRewards: BigInt(p.unclaimedRewards),
+                fatigueLevel: Number(p.fatigueLevel),
+            })) ?? [];
+        },
+        enabled: !!address && chainId === bsc.id,
+    });
+};
+
+// =================================================================
+// Section: 子元件 (簡化後)
+// =================================================================
+
+// PartyStatusCard 現在是一個純粹的 UI 元件
 interface PartyStatusCardProps {
-  party: PartyNft;
-  partyStatus: readonly [bigint, bigint, bigint, number] | undefined; // 直接接收狀態數據
-  isLoadingStatus: boolean; // 接收加載狀態
+  party: PartyNft & { provisionsRemaining: bigint; cooldownEndsAt: bigint; fatigueLevel: number; };
   dungeons: Dungeon[];
   onStartExpedition: (partyId: bigint, dungeonId: bigint, fee: bigint) => void;
   onRest: (partyId: bigint) => void;
@@ -44,13 +119,9 @@ interface PartyStatusCardProps {
   chainId: SupportedChainId;
 }
 
-const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, partyStatus, isLoadingStatus, dungeons, onStartExpedition, onRest, onBuyProvisions, isTxPending, isAnyTxPendingForThisParty, chainId }) => {
+const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onStartExpedition, onRest, onBuyProvisions, isTxPending, isAnyTxPendingForThisParty, chainId }) => {
     const [selectedDungeonId, setSelectedDungeonId] = useState<bigint>(1n);
-
-    // 僅在 chainId === bsc.id 時才呼叫 getContract
-    const dungeonMasterContract = chainId === bsc.id ? getContract(bsc.id, 'dungeonMaster') : null;
-
-    // 不再需要獨立獲取 partyStatus，因為它已從 props 傳入
+    const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
     
     const { data: explorationFee } = useReadContract({
         ...dungeonMasterContract,
@@ -58,33 +129,27 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, partyStatus, i
         query: { enabled: !!dungeonMasterContract }
     });
 
-    const { isOnCooldown, fatigueLevel, effectivePower, provisionsRemaining } = useMemo(() => {
-        if (!partyStatus) return { isOnCooldown: false, fatigueLevel: 0, effectivePower: BigInt(party.totalPower), provisionsRemaining: 0n };
-        const [provisions, cooldownEndsAt, , fatigue] = partyStatus;
+    const { isOnCooldown, effectivePower } = useMemo(() => {
         const power = BigInt(party.totalPower);
-        const effPower = power * (100n - BigInt(fatigue) * 2n) / 100n;
+        const effPower = power * (100n - BigInt(party.fatigueLevel) * 2n) / 100n;
         return {
-            isOnCooldown: BigInt(Math.floor(Date.now() / 1000)) < cooldownEndsAt,
-            fatigueLevel: fatigue,
+            isOnCooldown: BigInt(Math.floor(Date.now() / 1000)) < party.cooldownEndsAt,
             effectivePower: effPower,
-            provisionsRemaining: provisions
         };
-    }, [partyStatus, party.totalPower]);
+    }, [party]);
 
     const renderStatus = () => {
-        if (isLoadingStatus) return <span className="text-gray-400">讀取狀態...</span>;
         if (isAnyTxPendingForThisParty) return <span className="px-3 py-1 text-sm font-medium text-purple-300 bg-purple-900/50 rounded-full flex items-center gap-2"><LoadingSpinner size="h-3 w-3" />遠征中</span>;
         if (isOnCooldown) return <span className="px-3 py-1 text-sm font-medium text-yellow-300 bg-yellow-900/50 rounded-full">冷卻中...</span>;
-        if (provisionsRemaining === 0n) return <span className="px-3 py-1 text-sm font-medium text-orange-400 bg-orange-900/50 rounded-full">需要儲備</span>;
-        if (fatigueLevel > 0) return <span className="px-3 py-1 text-sm font-medium text-blue-300 bg-blue-900/50 rounded-full">需要休息</span>;
+        if (party.provisionsRemaining === 0n) return <span className="px-3 py-1 text-sm font-medium text-orange-400 bg-orange-900/50 rounded-full">需要儲備</span>;
+        if (party.fatigueLevel > 0) return <span className="px-3 py-1 text-sm font-medium text-blue-300 bg-blue-900/50 rounded-full">需要休息</span>;
         return <span className="px-3 py-1 text-sm font-medium text-green-300 bg-green-900/50 rounded-full">準備就緒</span>;
     };
 
     const renderAction = () => {
-        if (isLoadingStatus) return <div className="h-10 w-full rounded-lg bg-gray-700 animate-pulse"></div>;
         if (isOnCooldown || isAnyTxPendingForThisParty) return <ActionButton disabled className="w-full h-10">{isAnyTxPendingForThisParty ? '遠征中' : '冷卻中'}</ActionButton>;
-        if (provisionsRemaining === 0n) return <ActionButton onClick={() => onBuyProvisions(party.id)} className="w-full h-10 bg-orange-600 hover:bg-orange-500">購買儲備</ActionButton>;
-        if (fatigueLevel > 0) return <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10 bg-blue-600 hover:bg-blue-500">休息</ActionButton>;
+        if (party.provisionsRemaining === 0n) return <ActionButton onClick={() => onBuyProvisions(party.id)} className="w-full h-10 bg-orange-600 hover:bg-orange-500">購買儲備</ActionButton>;
+        if (party.fatigueLevel > 0) return <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10 bg-blue-600 hover:bg-blue-500">休息</ActionButton>;
         
         const fee = typeof explorationFee === 'bigint' ? explorationFee : 0n;
         return <ActionButton onClick={() => onStartExpedition(party.id, selectedDungeonId, fee)} isLoading={isTxPending} className="w-full h-10">開始遠征</ActionButton>;
@@ -98,16 +163,16 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, partyStatus, i
             </div>
             <div className="grid grid-cols-2 gap-2 mb-4 text-center">
                 <div><p className="text-sm text-gray-400">有效戰力</p><p className="font-bold text-2xl text-indigo-400">{effectivePower.toString()}</p></div>
-                <div><p className="text-sm text-gray-400">疲勞度</p><p className="font-bold text-xl text-red-400">{fatigueLevel} / 45</p></div>
+                <div><p className="text-sm text-gray-400">疲勞度</p><p className="font-bold text-xl text-red-400">{party.fatigueLevel} / 45</p></div>
             </div>
-            <p className="text-center text-xs text-gray-400 mb-2">剩餘儲備: {provisionsRemaining.toString()}</p>
+            <p className="text-center text-xs text-gray-400 mb-2">剩餘儲備: {party.provisionsRemaining.toString()}</p>
             <div className="mb-4">
                 <label className="text-xs text-gray-400">選擇地城:</label>
                 <select 
                     value={selectedDungeonId.toString()} 
                     onChange={(e) => setSelectedDungeonId(BigInt(e.target.value))}
                     className="w-full p-2 border rounded-lg bg-gray-900/80 border-gray-700 text-white mt-1"
-                    disabled={provisionsRemaining === 0n || isOnCooldown || isAnyTxPendingForThisParty}
+                    disabled={party.provisionsRemaining === 0n || isOnCooldown || isAnyTxPendingForThisParty}
                 >
                     {dungeons.map(d => <option key={d.id} value={d.id.toString()}>{d.id}. {d.name} (要求: {d.requiredPower.toString()})</option>)}
                 </select>
@@ -129,8 +194,13 @@ const DungeonInfoCard: React.FC<{ dungeon: Dungeon }> = ({ dungeon }) => (
     </div>
 );
 
+
+// =================================================================
+// Section: 主頁面元件
+// =================================================================
+
 const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setActivePage }) => {
-    const { address, chainId } = useAccount();
+    const { chainId } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction, transactions } = useTransactionStore();
 
@@ -143,36 +213,19 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
     }
 
     const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
-    
-    const { data: dungeonStorageAddress } = useReadContract({ ...dungeonMasterContract, functionName: 'dungeonStorage', query: { enabled: !!dungeonMasterContract } });
-
-    const dungeonStorageContract = useMemo(() => {
-        if (!dungeonStorageAddress) return null;
-        return { address: dungeonStorageAddress as `0x${string}`, abi: dungeonStorageABI, chainId: bsc.id };
-    }, [dungeonStorageAddress]);
-    
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
-    const { data: nfts, isLoading: isLoadingNfts } = useQuery({
-        queryKey: ['ownedNfts', address, chainId],
-        queryFn: () => fetchAllOwnedNfts(address!, chainId),
-        enabled: !!address,
-    });
+    // ★ 核心改造：使用新的 Hook 獲取隊伍數據
+    const { data: parties, isLoading: isLoadingParties } = usePlayerParties();
 
-    // ★★★ RPC 優化核心 #2：批量獲取所有隊伍的狀態 ★★★
-    const partyIds = useMemo(() => nfts?.parties.map(p => p.id) ?? [], [nfts]);
-    const { data: partyStatuses, isLoading: isLoadingStatuses } = useReadContracts({
-        contracts: partyIds.map(id => ({
-            ...dungeonStorageContract,
-            functionName: 'getPartyStatus',
-            args: [id],
-        })),
-        query: { enabled: !!dungeonStorageContract && partyIds.length > 0 }
-    });
-
+    // 獲取地城資訊的邏輯保持不變，因為這是全域數據
     const { data: dungeonsData, isLoading: isLoadingDungeons } = useReadContracts({
-        contracts: dungeonStorageContract ? Array.from({ length: 10 }, (_, i) => ({ ...dungeonStorageContract, functionName: 'getDungeon', args: [BigInt(i + 1)] })) : [],
-        query: { enabled: !!dungeonStorageContract }
+        contracts: Array.from({ length: 10 }, (_, i) => ({
+            ...getContract(bsc.id, 'dungeonStorage'),
+            functionName: 'getDungeon',
+            args: [BigInt(i + 1)],
+        })),
+        query: { enabled: !!getContract(bsc.id, 'dungeonStorage') }
     });
 
     const dungeons: Dungeon[] = useMemo(() => {
@@ -210,7 +263,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
         setIsProvisionModalOpen(true);
     };
 
-    const isLoading = isLoadingNfts || isLoadingDungeons || (partyIds.length > 0 && isLoadingStatuses);
+    const isLoading = isLoadingParties || isLoadingDungeons;
 
     if (isLoading) return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
 
@@ -221,26 +274,19 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
             </Modal>
             <div>
                 <h2 className="page-title">遠征指揮中心</h2>
-                {(!nfts || nfts.parties.length === 0) ? (
+                {(!parties || parties.length === 0) ? (
                     <EmptyState message="您還沒有任何隊伍可以派遣。">
                         <div className="flex flex-col sm:flex-row gap-4 justify-center mt-4">
-                            <ActionButton onClick={() => setActivePage('party')} className="w-48 h-12">
-                                前往創建隊伍
-                            </ActionButton>
-                            <ActionButton onClick={() => setActivePage('mint')} className="w-48 h-12 bg-teal-600 hover:bg-teal-500">
-                                前往鑄造
-                            </ActionButton>
+                            <ActionButton onClick={() => setActivePage('party')} className="w-48 h-12">前往創建隊伍</ActionButton>
+                            <ActionButton onClick={() => setActivePage('mint')} className="w-48 h-12 bg-teal-600 hover:bg-teal-500">前往鑄造</ActionButton>
                         </div>
                     </EmptyState>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {nfts.parties.map((party, index) => (
+                        {parties.map((party) => (
                             <PartyStatusCard
                                 key={party.id.toString()}
-                                party={party}
-                                // ★★★ RPC 優化核心 #3：將批量獲取的數據傳遞給子元件 ★★★
-                                partyStatus={partyStatuses?.[index]?.result as readonly [bigint, bigint, bigint, number] | undefined}
-                                isLoadingStatus={isLoadingStatuses}
+                                party={party as any} // Cast to include the status properties
                                 dungeons={dungeons}
                                 onStartExpedition={handleStartExpedition}
                                 onRest={handleRest}

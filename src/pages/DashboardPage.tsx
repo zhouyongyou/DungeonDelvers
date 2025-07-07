@@ -1,11 +1,12 @@
-// src/pages/DashboardPage.tsx (防崩潰優化版)
+// src/pages/DashboardPage.tsx (The Graph 改造版)
 
 import React, { useMemo } from 'react';
 import { useAccount, useReadContract, useReadContracts, useWriteContract } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
 import { formatEther } from 'viem';
-import { getContract, contracts, playerVaultABI } from '../config/contracts';
-import { fetchAllOwnedNfts } from '../api/nfts';
+import { getContract, contracts } from '../config/contracts';
+// 我們不再需要從這裡獲取 NFT，所以可以移除
+// import { fetchAllOwnedNfts } from '../api/nfts'; 
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import type { Page } from '../types/page';
@@ -15,13 +16,80 @@ import { Icons } from '../components/ui/icons';
 import { bsc } from 'wagmi/chains';
 import { TownBulletin } from '../components/ui/TownBulletin';
 
-// 輔助函式與子元件 (保持不變)
-const getLevelFromExp = (exp: bigint): number => {
-    if (exp < 100n) return 1;
-    // ★ 修正: 使用 Math.floor 確保整數等級
-    return Math.floor(Math.sqrt(Number(exp) / 100)) + 1;
+// =================================================================
+// Section: GraphQL 查詢與數據獲取 Hook
+// =================================================================
+
+// ★ 核心改造：從環境變數讀取 The Graph API URL，避免硬編碼
+const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
+
+// 專為儀表板設計的 GraphQL 查詢
+const GET_DASHBOARD_STATS_QUERY = `
+  query GetDashboardStats($owner: ID!) {
+    player(id: $owner) {
+      id
+      heroes {
+        id # 我們只需要數量，所以查詢 id 就好
+      }
+      relics {
+        id
+      }
+      parties {
+        id
+      }
+      profile {
+        level
+      }
+      vip {
+        id # 只需要知道是否存在
+      }
+      vault {
+        withdrawableBalance
+      }
+    }
+  }
+`;
+
+// 新的 Hook，專門用來獲取儀表板的統計數據
+const useDashboardStats = () => {
+    const { address, chainId } = useAccount();
+
+    const { data, isLoading, isError } = useQuery({
+        queryKey: ['dashboardStats', address, chainId],
+        queryFn: async () => {
+            if (!address || !THE_GRAPH_API_URL) return null; // 檢查 URL 是否存在
+            const response = await fetch(THE_GRAPH_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    query: GET_DASHBOARD_STATS_QUERY,
+                    variables: { owner: address.toLowerCase() },
+                }),
+            });
+            if (!response.ok) throw new Error('Network response was not ok');
+            const { data } = await response.json();
+            return data.player;
+        },
+        enabled: !!address && chainId === bsc.id && !!THE_GRAPH_API_URL, // 確保 URL 存在才啟用查詢
+    });
+
+    // 從查詢結果中解析數據
+    const stats = useMemo(() => {
+        return {
+            level: data?.profile?.level ? Number(data.profile.level) : 1,
+            heroCount: data?.heroes?.length ?? 0,
+            relicCount: data?.relics?.length ?? 0,
+            partyCount: data?.parties?.length ?? 0,
+            isVip: !!data?.vip,
+            withdrawableBalance: data?.vault?.withdrawableBalance ? BigInt(data.vault.withdrawableBalance) : 0n,
+        };
+    }, [data]);
+
+    return { stats, isLoading, isError };
 };
 
+
+// 輔助函式與子元件 (保持不變)
 const StatCard: React.FC<{ title: string; value: string | number; isLoading?: boolean, icon: React.ReactNode, className?: string }> = ({ title, value, isLoading, icon, className }) => (
     <div className={`card-bg p-4 rounded-xl shadow-lg flex items-center gap-4 ${className}`}>
         <div className="text-indigo-400 bg-black/10 p-3 rounded-lg">{icon}</div>
@@ -53,33 +121,21 @@ const ExternalLinkButton: React.FC<{ title: string; url: string; icon: React.Rea
     </a>
 );
 
-
-// ★ 核心修正 #1: useVaultAndTax Hook 增加防禦性
-const useVaultAndTax = () => {
+// 獲取稅率相關參數的 Hook (簡化版)
+const useTaxParams = () => {
     const { address, chainId } = useAccount();
     const isChainSupported = chainId === bsc.id;
 
-    // 使用 getContract 並處理可能為 null 的情況
     const dungeonCoreContract = getContract(isChainSupported ? chainId : undefined, 'dungeonCore');
-    const playerProfileContract = getContract(isChainSupported ? chainId : undefined, 'playerProfile');
+    const playerVaultContract = getContract(isChainSupported ? chainId : undefined, 'playerVault');
     const vipStakingContract = getContract(isChainSupported ? chainId : undefined, 'vipStaking');
+    const playerProfileContract = getContract(isChainSupported ? chainId : undefined, 'playerProfile');
     
-    const { data: playerVaultAddress } = useReadContract({ 
-        ...dungeonCoreContract, 
-        functionName: 'playerVaultAddress', 
-        query: { enabled: !!dungeonCoreContract }, 
-    });
-    
-    const playerVaultContract = useMemo(() => {
-        if (typeof playerVaultAddress === 'string') return { address: playerVaultAddress as `0x${string}`, abi: playerVaultABI };
-        return undefined;
-    }, [playerVaultAddress]);
-
-    const contractsArr = useMemo(() => {
-        // 確保所有合約都已成功載入
+    // 這個 Hook 現在只負責獲取合約層級的設定，不再獲取玩家個人數據
+    const contractsToRead = useMemo(() => {
         if (!isChainSupported || !playerVaultContract || !vipStakingContract || !playerProfileContract || !address) return [];
         return [
-            { ...playerVaultContract, functionName: 'playerInfo', args: [address] },
+            { ...playerVaultContract, functionName: 'playerInfo', args: [address] }, // 仍然需要 lastWithdrawTimestamp
             { ...playerVaultContract, functionName: 'smallWithdrawThresholdUSD' },
             { ...playerVaultContract, functionName: 'largeWithdrawThresholdUSD' },
             { ...playerVaultContract, functionName: 'standardInitialRate' },
@@ -87,23 +143,40 @@ const useVaultAndTax = () => {
             { ...playerVaultContract, functionName: 'decreaseRatePerPeriod' },
             { ...playerVaultContract, functionName: 'periodDuration' },
             { ...vipStakingContract, functionName: 'getVipTaxReduction', args: [address] },
-            { ...playerProfileContract, functionName: 'getLevel', args: [address] },
         ];
     }, [isChainSupported, playerVaultContract, vipStakingContract, playerProfileContract, address]);
 
     const { data: taxParams, isLoading: isLoadingTaxParams } = useReadContracts({
-        contracts: contractsArr,
-        query: { enabled: contractsArr.length > 0 }
+        contracts: contractsToRead,
+        query: { enabled: contractsToRead.length > 0 }
     });
 
-    const [ playerInfo, smallWithdrawThresholdUSD, largeWithdrawThresholdUSD, standardInitialRate, largeWithdrawInitialRate, decreaseRatePerPeriod, periodDuration, vipTaxReduction, playerLevel ] = useMemo(() => taxParams?.map(item => item.result) ?? [], [taxParams]);
+    return { taxParams, isLoadingTaxParams, dungeonCoreContract };
+};
+
+// =================================================================
+// Section: 主儀表板元件
+// =================================================================
+
+const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setActivePage }) => {
+    const { address, chainId } = useAccount();
+    const { addTransaction } = useTransactionStore();
+    const { showToast } = useAppToast();
     
-    const withdrawableBalance = useMemo(() => (Array.isArray(playerInfo) && typeof playerInfo[0] === 'bigint' ? playerInfo[0] : 0n), [playerInfo]);
+    const { stats, isLoading: isLoadingStats, isError: isGraphError } = useDashboardStats();
+    const { taxParams, isLoadingTaxParams, dungeonCoreContract } = useTaxParams();
     
-    const { data: withdrawableBalanceInUSD, isLoading: isLoadingUsdValue } = useReadContract({ ...dungeonCoreContract, functionName: 'getSoulShardAmountForUSD', args: [withdrawableBalance], query: { enabled: !!dungeonCoreContract && withdrawableBalance > 0n } });
+    const { writeContractAsync, isPending: isWithdrawing } = useWriteContract();
+
+    const withdrawableBalance = stats.withdrawableBalance;
+
+    const { data: withdrawableBalanceInUSD } = useReadContract({ ...dungeonCoreContract, functionName: 'getSoulShardAmountForUSD', args: [withdrawableBalance], query: { enabled: !!dungeonCoreContract && withdrawableBalance > 0n } });
     
     const currentTaxRate = useMemo(() => {
-        if (!taxParams || !Array.isArray(playerInfo) || playerInfo.length < 3) return 0;
+        if (!taxParams || !stats) return 0;
+        const [ playerInfo, smallWithdrawThresholdUSD, largeWithdrawThresholdUSD, standardInitialRate, largeWithdrawInitialRate, decreaseRatePerPeriod, periodDuration, vipTaxReduction ] = taxParams.map(item => item.result);
+        if (!playerInfo || !Array.isArray(playerInfo)) return 0;
+
         const lastWithdrawTimestamp = typeof playerInfo[1] === 'bigint' ? playerInfo[1] : 0n;
         const lastFreeWithdrawTimestamp = typeof playerInfo[2] === 'bigint' ? playerInfo[2] : 0n;
         const amountUSD = typeof withdrawableBalanceInUSD === 'bigint' ? withdrawableBalanceInUSD : 0n;
@@ -114,53 +187,24 @@ const useVaultAndTax = () => {
         const decRate = typeof decreaseRatePerPeriod === 'bigint' ? decreaseRatePerPeriod : 0n;
         const period = typeof periodDuration === 'bigint' ? periodDuration : 1n;
         const vipRed = typeof vipTaxReduction === 'bigint' ? vipTaxReduction : 0n;
-        const lvl = typeof playerLevel === 'bigint' ? playerLevel : 0n;
+        const levelReduction = BigInt(Math.floor(stats.level / 10)) * 100n;
+        
         const oneDay = 24n * 60n * 60n;
         if (amountUSD <= smallUSD && BigInt(Math.floor(Date.now() / 1000)) >= lastFreeWithdrawTimestamp + oneDay) return 0;
+        
         let initialRate = (amountUSD > largeUSD) ? largeInit : stdInit;
         const timeSinceLast = BigInt(Math.floor(Date.now() / 1000)) - lastWithdrawTimestamp;
         const periodsPassed = timeSinceLast / period;
         const timeDecay = periodsPassed * decRate;
-        const levelReduction = (lvl ? BigInt(Math.floor(Number(lvl) / 10)) : 0n) * 100n;
+        
         const totalReduction = timeDecay + vipRed + levelReduction;
         if (totalReduction >= initialRate) return 0;
         return Number(initialRate - totalReduction) / 100;
-    }, [taxParams, playerInfo, withdrawableBalanceInUSD, smallWithdrawThresholdUSD, largeWithdrawThresholdUSD, standardInitialRate, largeWithdrawInitialRate, decreaseRatePerPeriod, periodDuration, vipTaxReduction, playerLevel]);
+    }, [taxParams, stats, withdrawableBalanceInUSD]);
     
-    return { 
-        playerVaultContract, 
-        vaultInfo: (Array.isArray(playerInfo) && playerInfo.length >= 3) ? playerInfo as unknown as readonly [bigint, bigint, bigint] : undefined, 
-        currentTaxRate, 
-        isLoading: isLoadingTaxParams || isLoadingUsdValue,
-        isError: !playerVaultContract || !dungeonCoreContract, // ★ 新增: 導出錯誤狀態
-    };
-};
-
-const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setActivePage }) => {
-    const { address, chainId } = useAccount();
-    const { addTransaction } = useTransactionStore();
-    const { showToast } = useAppToast();
-
-    const { playerVaultContract, vaultInfo, currentTaxRate, isLoading: isLoadingVaultAndTax, isError: isVaultError } = useVaultAndTax();
-    const withdrawableBalance = vaultInfo?.[0] ?? 0n;
-
-    // ★ 核心修正 #2: 為每個 getContract 呼叫增加防禦性
-    const playerProfileContract = getContract(chainId as any, 'playerProfile');
-    const vipStakingContract = getContract(chainId as any, 'vipStaking');
-
-    const { data: profileTokenId } = useReadContract({ ...playerProfileContract, functionName: 'profileTokenOf', args: [address!], query: { enabled: !!address && !!playerProfileContract }, });
-    const { data: experience, isLoading: isLoadingProfile } = useReadContract({ ...playerProfileContract, functionName: 'playerExperience', args: [profileTokenId!], query: { enabled: !!profileTokenId && typeof profileTokenId === 'bigint' && profileTokenId > 0n }, });
-    const { data: nfts, isLoading: isLoadingNfts } = useQuery({ queryKey: ['ownedNfts', address, chainId], queryFn: () => fetchAllOwnedNfts(address!, chainId!), enabled: !!address && !!chainId });
-    const { data: vipStake, isLoading: isLoadingVip } = useReadContract({ ...vipStakingContract, functionName: 'userStakes', args: [address!], query: { enabled: !!address && !!vipStakingContract, select: (data: unknown) => (Array.isArray(data) && (data[0] as bigint) > 0n) ? '質押中' : '未質押', }, });
-    
-    const { writeContractAsync, isPending: isWithdrawing } = useWriteContract();
-    
-    const level = useMemo(() => typeof experience === 'bigint' ? getLevelFromExp(experience) : 1, [experience]);
-
     const externalMarkets = useMemo(() => {
         if (!chainId || chainId !== bsc.id) return [];
         const currentContracts = contracts[bsc.id];
-        // ★ 核心修正 #3: 增加對 currentContracts 的檢查
         if (!currentContracts) return [];
         return [
             { title: '英雄市場', address: currentContracts.hero?.address ?? '', icon: <Icons.Hero className="w-8 h-8"/> },
@@ -171,7 +215,8 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     }, [chainId]);
 
     const handleWithdraw = async () => {
-        if (!playerVaultContract || !vaultInfo || withdrawableBalance === 0n) return;
+        const playerVaultContract = getContract(chainId as any, 'playerVault');
+        if (!playerVaultContract || withdrawableBalance === 0n) return;
         try {
             const hash = await writeContractAsync({ ...playerVaultContract, functionName: 'withdraw', args: [withdrawableBalance] });
             addTransaction({ hash, description: '從金庫提領 $SoulShard' });
@@ -179,25 +224,15 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     };
 
     if (!chainId || chainId !== bsc.id) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <p className="text-lg text-gray-500">請連接到支援的網路 (BSC) 以檢視儀表板。</p>
-            </div>
-        );
+        return <div className="flex justify-center items-center h-64"><p className="text-lg text-gray-500">請連接到支援的網路 (BSC) 以檢視儀表板。</p></div>;
     }
     
-    // ★ 核心修正 #4: 增加對合約設定錯誤的全局處理
-    if (isVaultError) {
-         return (
-            <div className="card-bg p-10 rounded-xl text-center text-red-400">
-                <h3 className="text-xl font-bold">儀表板載入失敗</h3>
-                <p className="mt-2">無法讀取核心合約設定，請確認您的 <code>.env</code> 檔案是否配置正確。</p>
-            </div>
-        );
+    if (isGraphError) {
+         return <div className="card-bg p-10 rounded-xl text-center text-red-400"><h3 className="text-xl font-bold">儀表板載入失敗</h3><p className="mt-2">無法從 The Graph 獲取數據，請檢查 API 端點或稍後再試。</p></div>;
     }
 
-    const isLoading = isLoadingProfile || isLoadingNfts || isLoadingVip || isLoadingVaultAndTax;
-    if (isLoading && !vaultInfo) return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
+    const isLoading = isLoadingStats || isLoadingTaxParams;
+    if (isLoading && !stats) return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
 
     return (
         <section className="space-y-8">
@@ -207,7 +242,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                 <div className="lg:col-span-2 card-bg p-6 rounded-xl flex flex-col sm:flex-row items-center gap-6">
                     <div className="text-center flex-shrink-0">
                         <p className="text-sm text-gray-400">等級</p>
-                        <p className="text-6xl font-bold text-yellow-400">{level}</p>
+                        <p className="text-6xl font-bold text-yellow-400">{stats.level}</p>
                     </div>
                     <div className="w-full">
                         <h3 className="section-title text-xl mb-2">我的檔案</h3>
@@ -218,7 +253,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                     <h3 className="section-title text-xl">我的金庫</h3>
                     <p className="text-3xl font-bold text-teal-400">{parseFloat(formatEther(withdrawableBalance)).toFixed(4)}</p>
                     <p className="text-xs text-red-400">當前預估稅率: {currentTaxRate.toFixed(2)}%</p>
-                    <ActionButton onClick={handleWithdraw} isLoading={isWithdrawing} disabled={!vaultInfo || withdrawableBalance === 0n} className="mt-2 h-10 w-full">
+                    <ActionButton onClick={handleWithdraw} isLoading={isWithdrawing} disabled={withdrawableBalance === 0n} className="mt-2 h-10 w-full">
                         全部提領
                     </ActionButton>
                 </div>
@@ -228,10 +263,10 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                 <div className="lg:col-span-2">
                     <h3 className="section-title">資產快照</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <StatCard title="英雄總數" value={nfts?.heroes.length ?? 0} isLoading={isLoadingNfts} icon={<Icons.Hero className="w-6 h-6"/>} />
-                        <StatCard title="聖物總數" value={nfts?.relics.length ?? 0} isLoading={isLoadingNfts} icon={<Icons.Relic className="w-6 h-6"/>} />
-                        <StatCard title="隊伍總數" value={nfts?.parties.length ?? 0} isLoading={isLoadingNfts} icon={<Icons.Party className="w-6 h-6"/>} />
-                        <StatCard title="VIP 狀態" value={typeof vipStake === 'string' ? vipStake : '讀取中...'} isLoading={isLoadingVip} icon={<Icons.Vip className="w-6 h-6"/>} />
+                        <StatCard title="英雄總數" value={stats.heroCount} isLoading={isLoadingStats} icon={<Icons.Hero className="w-6 h-6"/>} />
+                        <StatCard title="聖物總數" value={stats.relicCount} isLoading={isLoadingStats} icon={<Icons.Relic className="w-6 h-6"/>} />
+                        <StatCard title="隊伍總數" value={stats.partyCount} isLoading={isLoadingStats} icon={<Icons.Party className="w-6 h-6"/>} />
+                        <StatCard title="VIP 狀態" value={stats.isVip ? '質押中' : '未質押'} isLoading={isLoadingStats} icon={<Icons.Vip className="w-6 h-6"/>} />
                     </div>
                 </div>
                 <div className="lg:col-span-1">
