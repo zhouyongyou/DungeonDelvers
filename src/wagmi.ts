@@ -10,7 +10,7 @@ import { bsc } from 'wagmi/chains';
 const alchemyMainnetRpc = import.meta.env.VITE_ALCHEMY_BSC_MAINNET_RPC_URL;
 const infuraMainnetRpc = import.meta.env.VITE_INFURA_BSC_MAINNET_RPC_URL;
 const ankrMainnetRpc = import.meta.env.VITE_ANKR_BSC_MAINNET_RPC_URL;
-const publicBscRpc = '[https://bsc-dataseed1.binance.org/](https://bsc-dataseed1.binance.org/)';
+const publicBscRpc = 'https://bsc-dataseed1.binance.org/';
 
 
 // =================================================================
@@ -21,9 +21,10 @@ const publicBscRpc = '[https://bsc-dataseed1.binance.org/](https://bsc-dataseed1
 //   - .filter(Boolean) 會自動過濾掉在 .env 中未設定的 RPC URL。
 // =================================================================
 export const wagmiConfig = createConfig({
-  chains: [bsc],
+  chains: [bsc], // ★ 核心修正：只保留 bsc 主網
   transports: {
     [bsc.id]: fallback([
+      // 依序嘗試使用您設定的 RPC，提高連線成功率
       http(alchemyMainnetRpc),
       http(infuraMainnetRpc),
       http(ankrMainnetRpc),

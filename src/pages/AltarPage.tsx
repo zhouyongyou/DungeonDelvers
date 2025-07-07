@@ -1,9 +1,9 @@
-// src/pages/AltarPage.tsx
+// src/pages/AltarPage.tsx (最終優化版)
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useReadContracts, useWriteContract, usePublicClient } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { formatEther, decodeEventLog } from 'viem';
+import { formatEther, decodeEventLog, type Abi } from 'viem';
 import { fetchAllOwnedNfts, fetchMetadata } from '../api/nfts';
 import { getContract, altarOfAscensionABI, heroABI, relicABI } from '../config/contracts';
 import { NftCard } from '../components/ui/NftCard';
@@ -176,6 +176,7 @@ const AltarPage: React.FC = () => {
     
     useEffect(resetSelections, [nftType, rarity]);
 
+    // ★★★ 程式碼優化：重構升級處理邏輯，使其更清晰健壯 ★★★
     const handleUpgrade = async () => {
         if (!currentRule || !altarContract || !publicClient) return;
         if (selectedNfts.length !== currentRule.materialsRequired) {
@@ -196,63 +197,63 @@ const AltarPage: React.FC = () => {
             
             const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
+            // 1. 從日誌中解析出升級結果 (outcome)
             const upgradeLog = receipt.logs.find(log => log.address.toLowerCase() === altarContract.address.toLowerCase());
-            
-            if (upgradeLog) {
-                const decodedUpgradeLog = decodeEventLog({ abi: altarOfAscensionABI, ...upgradeLog });
-                
-                if (decodedUpgradeLog.eventName !== 'UpgradeProcessed') {
-                    showToast("升星結果解析失敗：找不到對應事件", "error");
-                    return;
-                }
-
-                const outcome = Number((decodedUpgradeLog.args as any).outcome);
-
-                const mintEventName = nftType === 'hero' ? 'HeroMinted' : 'RelicMinted';
-                const tokenContractAbi = nftType === 'hero' ? heroABI : relicABI;
-
-                const mintedLogs = receipt.logs
-                    .filter(log => log.address.toLowerCase() === tokenContract.address.toLowerCase())
-                    .map(log => {
-                        try {
-                            return decodeEventLog({ abi: tokenContractAbi, ...log });
-                        } catch { return null; }
-                    })
-                    // ★ 核心修正：修正拼字錯誤，並確保 decodedLog 不為 null
-                    .filter((decodedLog): decodedLog is NonNullable<typeof decodedLog> => 
-                        decodedLog !== null && decodedLog.eventName === mintEventName
-                    );
-
-                const newNfts: AnyNft[] = await Promise.all(mintedLogs.map(async (log: any) => {
-                    const tokenId = log.args.tokenId;
-                    // ★ 核心修正：明確傳遞 ABI 給 readContract
-                    const tokenUri = await publicClient.readContract({ address: tokenContract.address, abi: tokenContract.abi, functionName: 'tokenURI', args: [tokenId] }) as string;
-                    const metadata = await fetchMetadata(tokenUri);
-                    const findAttr = (trait: string, defaultValue: any = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
-
-                    if (nftType === 'hero') {
-                        return { ...metadata, id: tokenId, type: 'hero', contractAddress: tokenContract.address, power: Number(findAttr('Power')), rarity: Number(findAttr('Rarity')) };
-                    } else {
-                        return { ...metadata, id: tokenId, type: 'relic', contractAddress: tokenContract.address, capacity: Number(findAttr('Capacity')), rarity: Number(findAttr('Rarity')) };
-                    }
-                }));
-
-                const outcomeMessages: Record<number, string> = {
-                    3: `大成功！您獲得了 ${newNfts.length} 個更高星級的 NFT！`,
-                    2: `恭喜！您成功獲得了 1 個更高星級的 NFT！`,
-                    1: `可惜，升星失敗了，但我們為您保留了 ${newNfts.length} 個材料。`,
-                    0: '升星失敗，所有材料都已銷毀。再接再厲！'
-                };
-                
-                const statusMap: UpgradeOutcomeStatus[] = ['total_fail', 'partial_fail', 'success', 'great_success'];
-
-                setUpgradeResult({
-                    status: statusMap[outcome] || 'total_fail',
-                    nfts: newNfts,
-                    message: outcomeMessages[outcome] || "發生未知錯誤"
-                });
+            if (!upgradeLog) {
+                showToast("升星結果解析失敗：找不到對應事件", "error");
+                return;
             }
+            const decodedUpgradeLog = decodeEventLog({ abi: altarOfAscensionABI, ...upgradeLog });
+            if (decodedUpgradeLog.eventName !== 'UpgradeProcessed') {
+                showToast("升星結果解析失敗：事件名稱不符", "error");
+                return;
+            }
+            const outcome = Number((decodedUpgradeLog.args as any).outcome);
 
+            // 2. 從日誌中解析出新鑄造的 NFT
+            const mintEventName = nftType === 'hero' ? 'HeroMinted' : 'RelicMinted';
+            const tokenContractAbi = nftType === 'hero' ? heroABI : relicABI;
+
+            const mintedLogs = receipt.logs
+                .filter(log => log.address.toLowerCase() === tokenContract.address.toLowerCase())
+                .map(log => {
+                    try { return decodeEventLog({ abi: tokenContractAbi, ...log }); } catch { return null; }
+                })
+                .filter((decodedLog): decodedLog is NonNullable<typeof decodedLog> => 
+                    decodedLog !== null && decodedLog.eventName === mintEventName
+                );
+
+            // 3. 獲取新 NFT 的元數據
+            const newNfts: AnyNft[] = await Promise.all(mintedLogs.map(async (log: any) => {
+                const tokenId = log.args.tokenId;
+                const tokenUri = await publicClient.readContract({ address: tokenContract.address, abi: tokenContract.abi as Abi, functionName: 'tokenURI', args: [tokenId] }) as string;
+                const metadata = await fetchMetadata(tokenUri);
+                const findAttr = (trait: string, defaultValue: any = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
+
+                if (nftType === 'hero') {
+                    return { ...metadata, id: tokenId, type: 'hero', contractAddress: tokenContract.address, power: Number(findAttr('Power')), rarity: Number(findAttr('Rarity')) };
+                } else {
+                    return { ...metadata, id: tokenId, type: 'relic', contractAddress: tokenContract.address, capacity: Number(findAttr('Capacity')), rarity: Number(findAttr('Rarity')) };
+                }
+            }));
+
+            // 4. 根據結果顯示對應的訊息
+            const outcomeMessages: Record<number, string> = {
+                3: `大成功！您獲得了 ${newNfts.length} 個更高星級的 NFT！`,
+                2: `恭喜！您成功獲得了 1 個更高星級的 NFT！`,
+                1: `可惜，升星失敗了，但我們為您保留了 ${newNfts.length} 個材料。`,
+                0: '升星失敗，所有材料都已銷毀。再接再厲！'
+            };
+            
+            const statusMap: UpgradeOutcomeStatus[] = ['total_fail', 'partial_fail', 'success', 'great_success'];
+
+            setUpgradeResult({
+                status: statusMap[outcome] || 'total_fail',
+                nfts: newNfts,
+                message: outcomeMessages[outcome] || "發生未知錯誤"
+            });
+
+            // 5. 清理並刷新數據
             resetSelections();
             queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
 

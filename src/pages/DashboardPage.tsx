@@ -1,8 +1,8 @@
-// src/pages/DashboardPage.tsx
+// src/pages/DashboardPage.tsx (Hooks 規則修正版)
 
 import React, { useMemo } from 'react';
 import { useAccount, useReadContract, useReadContracts, useWriteContract } from 'wagmi';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { formatEther } from 'viem';
 import { getContract, contracts, playerVaultABI } from '../config/contracts';
 import { fetchAllOwnedNfts } from '../api/nfts';
@@ -53,17 +53,28 @@ const ExternalLinkButton: React.FC<{ title: string; url: string; icon: React.Rea
 
 const useVaultAndTax = () => {
     const { address, chainId } = useAccount();
-    if (!chainId || chainId !== bsc.id) return { playerVaultContract: undefined, vaultInfo: undefined, currentTaxRate: 0, isLoading: true };
-    const dungeonCoreContract = getContract(bsc.id, 'dungeonCore');
-    const playerProfileContract = getContract(bsc.id, 'playerProfile');
-    const vipStakingContract = getContract(bsc.id, 'vipStaking');
-    const { data: playerVaultAddress } = useReadContract({ ...dungeonCoreContract, functionName: 'playerVaultAddress', query: { enabled: !!dungeonCoreContract }, });
+    
+    // ★ 修正：將條件返回移至 Hook 內部，確保外部元件的 Hook 順序不變
+    // 這樣做可以確保無論 chainId 是否匹配，此 Hook 內部調用的 Hooks 數量都是固定的。
+    const isChainSupported = chainId === bsc.id;
+
+    const dungeonCoreContract = getContract(chainId as any, 'dungeonCore');
+    const playerProfileContract = getContract(chainId as any, 'playerProfile');
+    const vipStakingContract = getContract(chainId as any, 'vipStaking');
+    
+    const { data: playerVaultAddress } = useReadContract({ 
+        ...dungeonCoreContract, 
+        functionName: 'playerVaultAddress', 
+        query: { enabled: isChainSupported && !!dungeonCoreContract }, 
+    });
+    
     const playerVaultContract = useMemo(() => {
         if (typeof playerVaultAddress === 'string') return { address: playerVaultAddress as `0x${string}`, abi: playerVaultABI };
         return undefined;
     }, [playerVaultAddress]);
+
     const contractsArr = useMemo(() => {
-        if (!playerVaultContract || !vipStakingContract || !playerProfileContract || !address) return [];
+        if (!isChainSupported || !playerVaultContract || !vipStakingContract || !playerProfileContract || !address) return [];
         return [
             { ...playerVaultContract, functionName: 'playerInfo', args: [address] },
             { ...playerVaultContract, functionName: 'smallWithdrawThresholdUSD' },
@@ -75,19 +86,19 @@ const useVaultAndTax = () => {
             { ...vipStakingContract, functionName: 'getVipTaxReduction', args: [address] },
             { ...playerProfileContract, functionName: 'getLevel', args: [address] },
         ];
-    }, [playerVaultContract, vipStakingContract, playerProfileContract, address]);
+    }, [isChainSupported, playerVaultContract, vipStakingContract, playerProfileContract, address]);
+
     const { data: taxParams, isLoading: isLoadingTaxParams } = useReadContracts({
         contracts: contractsArr,
         query: { enabled: contractsArr.length > 0 }
     });
+
     const [ playerInfo, smallWithdrawThresholdUSD, largeWithdrawThresholdUSD, standardInitialRate, largeWithdrawInitialRate, decreaseRatePerPeriod, periodDuration, vipTaxReduction, playerLevel ] = useMemo(() => taxParams?.map(item => item.result) ?? [], [taxParams]);
-    const withdrawableBalance = useMemo(() => {
-        if (Array.isArray(playerInfo) && playerInfo.length >= 3 && typeof playerInfo[0] === 'bigint' && typeof playerInfo[1] === 'bigint' && typeof playerInfo[2] === 'bigint') {
-            return playerInfo[0] as bigint;
-        }
-        return 0n;
-    }, [playerInfo]);
-    const { data: withdrawableBalanceInUSD, isLoading: isLoadingUsdValue } = useReadContract({ ...dungeonCoreContract, functionName: 'getSoulShardAmountForUSD', args: [withdrawableBalance], query: { enabled: !!dungeonCoreContract && withdrawableBalance > 0n } });
+    
+    const withdrawableBalance = useMemo(() => (Array.isArray(playerInfo) && typeof playerInfo[0] === 'bigint' ? playerInfo[0] : 0n), [playerInfo]);
+    
+    const { data: withdrawableBalanceInUSD, isLoading: isLoadingUsdValue } = useReadContract({ ...dungeonCoreContract, functionName: 'getSoulShardAmountForUSD', args: [withdrawableBalance], query: { enabled: isChainSupported && !!dungeonCoreContract && withdrawableBalance > 0n } });
+    
     const currentTaxRate = useMemo(() => {
         if (!taxParams || !Array.isArray(playerInfo) || playerInfo.length < 3) return 0;
         const lastWithdrawTimestamp = typeof playerInfo[1] === 'bigint' ? playerInfo[1] : 0n;
@@ -112,11 +123,10 @@ const useVaultAndTax = () => {
         if (totalReduction >= initialRate) return 0;
         return Number(initialRate - totalReduction) / 100;
     }, [taxParams, playerInfo, withdrawableBalanceInUSD, smallWithdrawThresholdUSD, largeWithdrawThresholdUSD, standardInitialRate, largeWithdrawInitialRate, decreaseRatePerPeriod, periodDuration, vipTaxReduction, playerLevel]);
+    
     return { 
         playerVaultContract, 
-        vaultInfo: (Array.isArray(playerInfo) && playerInfo.length >= 3 && typeof playerInfo[0] === 'bigint' && typeof playerInfo[1] === 'bigint' && typeof playerInfo[2] === 'bigint')
-            ? playerInfo as unknown as readonly [bigint, bigint, bigint]
-            : undefined, 
+        vaultInfo: (Array.isArray(playerInfo) && playerInfo.length >= 3) ? playerInfo as unknown as readonly [bigint, bigint, bigint] : undefined, 
         currentTaxRate, 
         isLoading: isLoadingTaxParams || isLoadingUsdValue 
     };
@@ -124,40 +134,35 @@ const useVaultAndTax = () => {
 
 const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setActivePage }) => {
     const { address, chainId } = useAccount();
-    const queryClient = useQueryClient();
     const { addTransaction } = useTransactionStore();
     const { showToast } = useAppToast();
 
-    if (!chainId || chainId !== bsc.id) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <p className="text-lg text-gray-500">請連接到支援的網路 (BSC) 以檢視儀表板。</p>
-            </div>
-        );
-    }
-
+    // ★★★ 核心修正：將所有 Hooks 調用移至元件的頂層 ★★★
+    // 這是修復 "Rendered more hooks than during the previous render" 錯誤的關鍵。
     const { playerVaultContract, vaultInfo, currentTaxRate, isLoading: isLoadingVaultAndTax } = useVaultAndTax();
     const withdrawableBalance = vaultInfo?.[0] ?? 0n;
 
-    const playerProfileContract = getContract(bsc.id, 'playerProfile');
-    const vipStakingContract = getContract(bsc.id, 'vipStaking');
+    const playerProfileContract = getContract(chainId as any, 'playerProfile');
+    const vipStakingContract = getContract(chainId as any, 'vipStaking');
 
     const { data: profileTokenId } = useReadContract({ ...playerProfileContract, functionName: 'profileTokenOf', args: [address!], query: { enabled: !!address && !!playerProfileContract }, });
     const { data: experience, isLoading: isLoadingProfile } = useReadContract({ ...playerProfileContract, functionName: 'playerExperience', args: [profileTokenId!], query: { enabled: !!profileTokenId && typeof profileTokenId === 'bigint' && profileTokenId > 0n }, });
-    const { data: nfts, isLoading: isLoadingNfts } = useQuery({ queryKey: ['ownedNfts', address, chainId], queryFn: () => fetchAllOwnedNfts(address!, chainId), enabled: !!address && !!chainId });
+    const { data: nfts, isLoading: isLoadingNfts } = useQuery({ queryKey: ['ownedNfts', address, chainId], queryFn: () => fetchAllOwnedNfts(address!, chainId!), enabled: !!address && !!chainId });
     const { data: vipStake, isLoading: isLoadingVip } = useReadContract({ ...vipStakingContract, functionName: 'userStakes', args: [address!], query: { enabled: !!address && !!vipStakingContract, select: (data: unknown) => (Array.isArray(data) && (data[0] as bigint) > 0n) ? '質押中' : '未質押', }, });
     
     const { writeContractAsync, isPending: isWithdrawing } = useWriteContract();
+    
     const level = useMemo(() => typeof experience === 'bigint' ? getLevelFromExp(experience) : 1, [experience]);
+
     const externalMarkets = useMemo(() => {
+        if (!chainId || chainId !== bsc.id) return [];
         const currentContracts = contracts[bsc.id];
-        if (!currentContracts) return [];
         return [
             { title: '英雄市場', address: currentContracts.hero?.address ?? '', icon: <Icons.Hero className="w-8 h-8"/> },
             { title: '聖物市場', address: currentContracts.relic?.address ?? '', icon: <Icons.Relic className="w-8 h-8"/> },
             { title: '隊伍市場', address: currentContracts.party?.address ?? '', icon: <Icons.Party className="w-8 h-8"/> },
             { title: 'VIP 市場', address: currentContracts.vipStaking?.address ?? '', icon: <Icons.Vip className="w-8 h-8"/> },
-        ].filter(m => m.address && typeof m.address === 'string' && m.address.length === 42);
+        ].filter(m => m.address && typeof m.address === 'string' && !m.address.includes('YOUR_'));
     }, [chainId]);
 
     const handleWithdraw = async () => {
@@ -165,9 +170,17 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
         try {
             const hash = await writeContractAsync({ ...playerVaultContract, functionName: 'withdraw', args: [withdrawableBalance] });
             addTransaction({ hash, description: '從金庫提領 $SoulShard' });
-            setTimeout(() => queryClient.invalidateQueries({ queryKey: ['playerInfo', address] }), 2000);
         } catch(e: any) { showToast(e.shortMessage || "提領失敗", "error"); }
     };
+
+    // 現在，條件渲染只影響 JSX 的輸出，而不會影響 Hooks 的調用順序
+    if (!chainId || chainId !== bsc.id) {
+        return (
+            <div className="flex justify-center items-center h-64">
+                <p className="text-lg text-gray-500">請連接到支援的網路 (BSC) 以檢視儀表板。</p>
+            </div>
+        );
+    }
 
     const isLoading = isLoadingProfile || isLoadingNfts || isLoadingVip || isLoadingVaultAndTax;
     if (isLoading && !vaultInfo) return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
@@ -197,7 +210,6 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                 </div>
             </div>
 
-            {/* ★ 新增：將資產快照和告示板並排顯示 */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
                     <h3 className="section-title">資產快照</h3>
@@ -205,7 +217,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                         <StatCard title="英雄總數" value={nfts?.heroes.length ?? 0} isLoading={isLoadingNfts} icon={<Icons.Hero className="w-6 h-6"/>} />
                         <StatCard title="聖物總數" value={nfts?.relics.length ?? 0} isLoading={isLoadingNfts} icon={<Icons.Relic className="w-6 h-6"/>} />
                         <StatCard title="隊伍總數" value={nfts?.parties.length ?? 0} isLoading={isLoadingNfts} icon={<Icons.Party className="w-6 h-6"/>} />
-                        <StatCard title="VIP 狀態" value={vipStake ?? '讀取中...'} isLoading={isLoadingVip} icon={<Icons.Vip className="w-6 h-6"/>} />
+                        <StatCard title="VIP 狀態" value={typeof vipStake === 'string' ? vipStake : '讀取中...'} isLoading={isLoadingVip} icon={<Icons.Vip className="w-6 h-6"/>} />
                     </div>
                 </div>
                 <div className="lg:col-span-1">
@@ -227,7 +239,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                 <h3 className="section-title">外部市場 (OKX NFT)</h3>
                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                     {externalMarkets.map(market => (
-                        market.address && !market.address.includes('YOUR_') ? (
+                        market.address ? (
                             <ExternalLinkButton
                                 key={market.title}
                                 title={market.title}

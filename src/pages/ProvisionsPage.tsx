@@ -51,7 +51,6 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
     });
 
     const totalRequiredAmount = useMemo(() => {
-        // 確保 requiredAmount 是 bigint 才進行計算
         const amountPerUnit = typeof requiredAmount === 'bigint' ? requiredAmount : 0n;
         return amountPerUnit * BigInt(quantity);
     }, [requiredAmount, quantity]);
@@ -62,11 +61,14 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
         query: { enabled: !!address && !!soulShardContract }
     });
 
+    // ★★★ RPC 優化核心：移除 refetchInterval ★★★
+    // 舊的輪詢設定 (`refetchInterval: 5000`) 會導致此頁面每 5 秒就請求一次金庫數據，造成不必要的 RPC 負載。
+    // 現在數據的更新已由全局的 useContractEvents Hook 透過事件監聽來處理，因此可以安全地移除此設定。
     const { data: vaultInfo } = useReadContract({
         ...playerVaultContract,
         functionName: 'playerInfo',
         args: [address!],
-        query: { enabled: !!address && !!playerVaultContract, refetchInterval: 5000 },
+        query: { enabled: !!address && !!playerVaultContract },
     });
     const vaultBalance = useMemo(() => (Array.isArray(vaultInfo) ? vaultInfo[0] as bigint : 0n), [vaultInfo]);
     

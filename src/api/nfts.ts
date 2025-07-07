@@ -29,7 +29,8 @@ const getClient = (chainId: number) => {
     const chain = chainId === bsc.id ? bsc : null;
     if (!chain) throw new Error("Unsupported chain for client creation");
     
-    const rpcUrl = import.meta.env.VITE_ALCHEMY_BSC_MAINNET_RPC_URL || '[https://bsc-dataseed1.binance.org/](https://bsc-dataseed1.binance.org/)';
+    // 從環境變數讀取 RPC URL，如果沒有則使用公開節點
+    const rpcUrl = import.meta.env.VITE_ALCHEMY_BSC_MAINNET_RPC_URL || 'https://bsc-dataseed1.binance.org/';
     return createPublicClient({ chain, transport: http(rpcUrl) });
 };
 
@@ -39,7 +40,7 @@ export async function fetchMetadata(uri: string): Promise<Omit<BaseNft, 'id' | '
             const json = Buffer.from(uri.substring('data:application/json;base64,'.length), 'base64').toString();
             return JSON.parse(json);
         } else if (uri.startsWith('ipfs://')) {
-            const ipfsUrl = uri.replace('ipfs://', '[https://ipfs.io/ipfs/](https://ipfs.io/ipfs/)');
+            const ipfsUrl = uri.replace('ipfs://', 'https://ipfs.io/ipfs/');
             const response = await fetch(ipfsUrl);
             if (!response.ok) throw new Error(`Failed to fetch from IPFS: ${response.statusText}`);
             return await response.json();
@@ -81,7 +82,7 @@ function parseToTypedNft(
 }
 
 // =================================================================
-// Section: NFT 數據獲取核心邏輯
+// Section: NFT 數據獲取核心邏輯 (RPC 優化版)
 // =================================================================
 
 async function fetchNftsForContract(
@@ -97,10 +98,13 @@ async function fetchNftsForContract(
     if (!contract) return [];
 
     try {
-        // ★★★ 核心修正：從最新區塊開始，分塊反向查詢 ★★★
+        // ★★★ RPC 優化核心：分塊反向查詢 (Chunked Reverse Query) ★★★
+        // 傳統方法是從創世區塊掃描到最新區塊，這非常慢且消耗 RPC 資源。
+        // 優化後的方法是從最新區塊開始，一塊一塊地往舊的歷史紀錄查詢。
+        // 這樣可以更快地找到用戶最近獲得的 NFT，並設定一個合理的查詢深度，避免掃描整個鏈。
         const toBlock = await client.getBlockNumber();
-        const CHUNK_SIZE = 499n; 
-        const MAX_SEARCH_BLOCKS = 57600n; // 大約 2 天的區塊量 (28800 blocks/day)
+        const CHUNK_SIZE = 1999n; // 每次查詢的區塊範圍，BSC 節點通常限制為 5000
+        const MAX_SEARCH_BLOCKS = 57600n; // 最大查詢深度，約等於 2 天的區塊量 (28800 blocks/day)
         const searchLimitBlock = toBlock > MAX_SEARCH_BLOCKS ? toBlock - MAX_SEARCH_BLOCKS : 0n;
         
         let allLogs = [];
@@ -125,26 +129,31 @@ async function fetchNftsForContract(
             if (startBlock === 0n) break; // 如果已掃描到創世區塊，則停止
         }
 
+        // 從日誌中獲取潛在的 Token ID 列表
         const potentialTokenIds = [...new Set(allLogs.map(log => log.args.tokenId).filter(id => id !== undefined))] as bigint[];
         if (potentialTokenIds.length === 0) return [];
         
+        // 使用 multicall 一次性驗證這些 NFT 的當前擁有者
         const ownerOfCalls = potentialTokenIds.map(id => ({
             address: contract.address, abi: contract.abi as Abi,
             functionName: 'ownerOf', args: [id],
         }));
         const ownersResults = await client.multicall({ contracts: ownerOfCalls, allowFailure: true });
 
+        // 過濾出真正屬於該用戶的 NFT
         const ownedTokenIds = potentialTokenIds.filter((_, index) => 
             ownersResults[index].status === 'success' && (ownersResults[index].result as Address).toLowerCase() === owner.toLowerCase()
         );
         if (ownedTokenIds.length === 0) return [];
 
+        // 使用 multicall 一次性獲取所有 NFT 的元數據 URI
         const uriCalls = ownedTokenIds.map(id => ({
             address: contract.address, abi: contract.abi as Abi,
             functionName: 'tokenURI', args: [id],
         }));
         const uriResults = await client.multicall({ contracts: uriCalls, allowFailure: true });
 
+        // 並行處理所有元數據的獲取和解析
         const nftPromises = ownedTokenIds.map(async (id, index) => {
             if (uriResults[index].status === 'success') {
                 const metadata = await fetchMetadata(uriResults[index].result as string);
@@ -169,6 +178,7 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
 
     const client = getClient(chainId);
 
+    // 並行獲取所有類型的 NFT
     const [heroes, relics, parties, vipCards] = await Promise.all([
         fetchNftsForContract(client, owner, 'hero', 'hero', chainId),
         fetchNftsForContract(client, owner, 'relic', 'relic', chainId),
@@ -176,6 +186,7 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
         fetchNftsForContract(client, owner, 'vipStaking', 'vip', chainId),
     ]);
 
+    // 如果有隊伍 NFT，則額外獲取其詳細構成
     if (parties.length > 0) {
         const partyContract = getContract(chainId, 'party');
         if (partyContract) {

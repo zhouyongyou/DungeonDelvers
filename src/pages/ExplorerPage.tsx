@@ -1,7 +1,7 @@
-// src/pages/ExplorerPage.tsx (最終修正版)
+// src/pages/ExplorerPage.tsx (最終優化版)
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { useAccount, useReadContracts, useReadContract } from 'wagmi';
+import React, { useState, useMemo } from 'react';
+import { useAccount, useReadContract, useReadContracts } from 'wagmi';
 import { getContract } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -9,7 +9,7 @@ import { formatEther, type Address, isAddress } from 'viem';
 import { bsc } from 'wagmi/chains';
 
 // =================================================================
-// Section: 可重用的查詢元件
+// Section: 可重用的查詢元件 (保持不變)
 // =================================================================
 
 interface QuerySectionProps {
@@ -45,14 +45,16 @@ const QuerySection: React.FC<QuerySectionProps> = ({ title, inputType, inputPlac
 };
 
 // =================================================================
-// Section: 各類查詢邏輯與顯示
+// Section: 各類查詢邏輯與顯示 (已重構)
 // =================================================================
 
+// 玩家檔案搜尋元件
 const PlayerSearchQuery: React.FC = () => {
     const [message, setMessage] = useState('請輸入玩家地址進行查詢。');
 
     const handleQuery = (address: string) => {
         if (isAddress(address)) {
+            // 直接導航到 Profile 頁面
             window.location.hash = `#/profile?address=${address}`;
         } else {
             setMessage('無效的錢包地址，請重新輸入。');
@@ -66,41 +68,47 @@ const PlayerSearchQuery: React.FC = () => {
     );
 };
 
-
+// ★★★ RPC 優化核心：重構並統一 NFT 查詢邏輯 ★★★
 const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
     const { chainId } = useAccount();
     const [submittedId, setSubmittedId] = useState<bigint | null>(null);
 
+    // 確保只在支援的鏈上運行
     if (!chainId || chainId !== bsc.id) {
         return <p className="text-gray-500">請連接到支援的網路。</p>;
     }
 
-    // 僅支援主網 getContract
     const contract = getContract(bsc.id, type);
     const title = { hero: '英雄', relic: '聖物', party: '隊伍' }[type];
 
+    // 準備批量查詢的合約呼叫
     const contractsToQuery = useMemo(() => {
         if (!submittedId || !contract) return [];
         const { address, abi } = contract;
-        const ownerCall = { address, abi, functionName: 'ownerOf', args: [submittedId] };
         const functionNameMap = { hero: 'getHeroProperties', relic: 'getRelicProperties', party: 'getPartyComposition' };
-        return [ownerCall, { address, abi, functionName: functionNameMap[type], args: [submittedId] }];
+        
+        return [
+            { address, abi, functionName: 'ownerOf', args: [submittedId] },
+            { address, abi, functionName: functionNameMap[type], args: [submittedId] }
+        ];
     }, [submittedId, contract, type]);
 
-    const { data, isLoading, isError, error, refetch } = useReadContracts({
+    // ★★★ 核心修正：使用 `enabled` 參數來控制查詢的觸發時機 ★★★
+    // 這取代了舊的 `useEffect` + `refetch` 模式，是 wagmi/react-query 的最佳實踐。
+    // 只有在 `submittedId` 有值且 `contractsToQuery` 陣列不為空時，查詢才會被觸發。
+    const { data, isLoading, isError, error } = useReadContracts({
         contracts: contractsToQuery as any,
-        query: { enabled: false }
+        query: { 
+            enabled: !!submittedId && contractsToQuery.length > 0,
+        }
     });
 
-    // ★ 核心修正：使用 useEffect 來觸發數據獲取
-    useEffect(() => {
-        if (submittedId !== null) {
-            refetch();
-        }
-    }, [submittedId, refetch]);
-
     const handleQuery = (id: string) => {
-        if (id) setSubmittedId(BigInt(id));
+        if (id && /^\d+$/.test(id)) {
+            setSubmittedId(BigInt(id));
+        } else {
+            setSubmittedId(null);
+        }
     };
 
     const renderResult = () => {
@@ -129,6 +137,7 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
     );
 };
 
+// 隊伍狀態查詢元件
 const PartyStatusQuery: React.FC = () => {
     const { chainId } = useAccount();
     const [submittedId, setSubmittedId] = useState<bigint | null>(null);
@@ -136,25 +145,21 @@ const PartyStatusQuery: React.FC = () => {
     if (!chainId || chainId !== bsc.id) {
         return <p className="text-gray-500">請連接到支援的網路。</p>;
     }
-    // 僅支援主網 getContract
     const contract = getContract(bsc.id, 'dungeonStorage');
 
-    const { data, isLoading, isError, refetch } = useReadContract({
+    const { data, isLoading, isError } = useReadContract({
         ...contract,
         functionName: 'getPartyStatus',
         args: [submittedId!],
-        query: { enabled: false }
+        query: { enabled: !!submittedId && !!contract }
     });
     
-    // ★ 核心修正：使用 useEffect 來觸發數據獲取
-    useEffect(() => {
-        if (submittedId !== null) {
-            refetch();
-        }
-    }, [submittedId, refetch]);
-    
     const handleQuery = (id: string) => {
-        if (id) setSubmittedId(BigInt(id));
+        if (id && /^\d+$/.test(id)) {
+            setSubmittedId(BigInt(id));
+        } else {
+            setSubmittedId(null);
+        }
     };
 
     const renderResult = () => {

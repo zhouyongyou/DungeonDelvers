@@ -1,6 +1,6 @@
-// src/pages/MintPage.tsx
+// src/pages/MintPage.tsx (延遲查詢優化版)
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useReadContract, useWriteContract, useBalance, usePublicClient } from 'wagmi';
 import { formatEther, maxUint256, type Abi, decodeEventLog } from 'viem';
 import { useAppToast } from '../hooks/useAppToast';
@@ -13,6 +13,27 @@ import { Modal } from '../components/ui/Modal';
 import { NftCard } from '../components/ui/NftCard';
 import type { AnyNft, NftAttribute } from '../types/nft';
 import { fetchMetadata } from '../api/nfts';
+
+// ★★★ 核心優化 #1：建立一個可重用的 useDebounce Hook ★★★
+// 這個 Hook 會接收一個值，並在該值停止變化一段時間後，才回傳最新的值。
+function useDebounce<T>(value: T, delay: number): T {
+    const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+    useEffect(() => {
+        // 設定一個計時器，在指定的延遲時間後更新值
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+
+        // 如果 value 在延遲時間內再次變化，則清除上一個計時器
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+
+    return debouncedValue;
+}
+
 
 // =================================================================
 // Section: 子元件 (保持不變)
@@ -47,23 +68,18 @@ const MintResultModal: React.FC<{ nft: AnyNft | null; onClose: () => void }> = (
 
 
 // =================================================================
-// Section: 型別定義與輔助 Hook (★ 已重構)
+// Section: 型別定義與輔助 Hook
 // =================================================================
 
 type PaymentSource = 'wallet' | 'vault';
 type SupportedChainId = typeof bsc.id;
 
-/**
- * @notice 獲取鑄造相關數據的自定義 Hook (已重構)
- * @dev ★ 核心優化：此 Hook 現在會回傳 isError 狀態，讓 UI 能處理價格讀取失敗的情況。
- */
 const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: PaymentSource, chainId: SupportedChainId) => {
     const { address } = useAccount();
     const contractConfig = getContract(chainId, type)!;
     const soulShardContract = getContract(chainId, 'soulShard')!;
     const playerVaultContract = getContract(chainId, 'playerVault')!;
 
-    // ★ 核心優化：從 useReadContract 中解構出 isError 狀態
     const { data: totalRequiredAmount, isLoading, isError } = useReadContract({
         address: contractConfig.address,
         abi: contractConfig.abi,
@@ -81,7 +97,7 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
         abi: playerVaultContract.abi,
         functionName: 'playerInfo',
         args: [address!],
-        query: { enabled: !!address, refetchInterval: 5000 },
+        query: { enabled: !!address },
     });
     const vaultBalance = useMemo(() => (Array.isArray(vaultInfo) ? vaultInfo[0] as bigint : 0n), [vaultInfo]);
 
@@ -109,14 +125,14 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
         balance: paymentSource === 'wallet' ? (walletBalance?.value ?? 0n) : vaultBalance,
         needsApproval,
         isLoading: isLoading,
-        isError: isError, // ★ 核心優化：將 isError 傳遞出去
+        isError: isError,
         platformFee: platformFee as bigint ?? 0n,
         refetchAllowance,
     };
 };
 
 // =================================================================
-// Section: MintCard 子元件 (★ 已更新)
+// Section: MintCard 子元件 (已更新)
 // =================================================================
 
 interface MintCardProps {
@@ -135,8 +151,12 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
     const [paymentSource, setPaymentSource] = useState<PaymentSource>('wallet');
     const [mintingResult, setMintingResult] = useState<AnyNft | null>(null);
 
-    // ★ 核心優化：從 useMintLogic 中解構出 isError
-    const { requiredAmount, balance, needsApproval, isLoading, isError, platformFee, refetchAllowance } = useMintLogic(type, quantity, paymentSource, chainId);
+    // ★★★ 核心優化 #2：使用 useDebounce Hook ★★★
+    // 我們不再直接使用 quantity 來查詢價格，而是使用 debouncedQuantity。
+    // 只有當用戶停止切換數量 300 毫秒後，debouncedQuantity 的值才會更新，從而觸發價格查詢。
+    const debouncedQuantity = useDebounce(quantity, 300);
+    
+    const { requiredAmount, balance, needsApproval, isLoading, isError, platformFee, refetchAllowance } = useMintLogic(type, debouncedQuantity, paymentSource, chainId);
     const { writeContractAsync, isPending: isMinting } = useWriteContract();
     
     const title = type === 'hero' ? '英雄' : '聖物';
@@ -225,7 +245,6 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
         : <ActionButton 
             onClick={handleMint} 
             isLoading={isMinting || isLoading}
-            // ★ 核心優化：當價格讀取失敗時，也禁用按鈕
             disabled={!address || isLoading || isError || balance < requiredAmount || requiredAmount === 0n} 
             className="w-48 h-12"
           >
@@ -259,7 +278,6 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
                 </p>
             </div>
 
-            {/* ★ 核心優化：重構價格顯示區塊，加入錯誤處理 */}
             <div className="text-center mb-4 min-h-[72px] flex-grow flex flex-col justify-center">
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center">
@@ -290,7 +308,7 @@ const MintCard: React.FC<MintCardProps> = ({ type, options, chainId }) => {
 };
 
 // =================================================================
-// Section: MintingInterface & MintPage 主元件 (保持不變)
+// Section: MintingInterface & MintPage 主元件
 // =================================================================
 
 const MintingInterface: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) => {
@@ -308,7 +326,6 @@ const MintingInterface: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
 const MintPage: React.FC = () => {
     const { chainId } = useAccount();
     
-    // ★ 優化：使用型別防衛，確保 chainId 是支援的類型
     const isSupportedChain = (id: number | undefined): id is SupportedChainId => id === bsc.id;
 
     return (

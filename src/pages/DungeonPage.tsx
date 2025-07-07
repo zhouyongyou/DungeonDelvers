@@ -1,4 +1,4 @@
-// src/pages/DungeonPage.tsx (RPC 優化版)
+// src/pages/DungeonPage.tsx (RPC 優化最終版)
 
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContracts, useReadContract, useWriteContract } from 'wagmi';
@@ -18,7 +18,6 @@ import ProvisionsPage from './ProvisionsPage';
 import { bsc } from 'wagmi/chains';
 
 // 僅支援主網 chainId 型別
-
 type SupportedChainId = typeof bsc.id; // 56
 
 interface Dungeon {
@@ -30,8 +29,12 @@ interface Dungeon {
   isInitialized: boolean;
 }
 
+// ★★★ RPC 優化核心 #1：修改 PartyStatusCard Props ★★★
+// 移除獨立的數據獲取邏輯，改為直接接收從父元件傳遞過來的 partyStatus。
 interface PartyStatusCardProps {
   party: PartyNft;
+  partyStatus: readonly [bigint, bigint, bigint, number] | undefined; // 直接接收狀態數據
+  isLoadingStatus: boolean; // 接收加載狀態
   dungeons: Dungeon[];
   onStartExpedition: (partyId: bigint, dungeonId: bigint, fee: bigint) => void;
   onRest: (partyId: bigint) => void;
@@ -41,19 +44,13 @@ interface PartyStatusCardProps {
   chainId: SupportedChainId;
 }
 
-const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onStartExpedition, onRest, onBuyProvisions, isTxPending, isAnyTxPendingForThisParty, chainId }) => {
+const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, partyStatus, isLoadingStatus, dungeons, onStartExpedition, onRest, onBuyProvisions, isTxPending, isAnyTxPendingForThisParty, chainId }) => {
     const [selectedDungeonId, setSelectedDungeonId] = useState<bigint>(1n);
 
     // 僅在 chainId === bsc.id 時才呼叫 getContract
     const dungeonMasterContract = chainId === bsc.id ? getContract(bsc.id, 'dungeonMaster') : null;
-    const dungeonStorageContract = chainId === bsc.id ? getContract(bsc.id, 'dungeonStorage') : null;
 
-    const { data: partyStatus, isLoading: isLoadingStatus } = useReadContract({
-        ...dungeonStorageContract,
-        functionName: 'getPartyStatus',
-        args: [party.id],
-        query: { enabled: !!dungeonStorageContract }
-    });
+    // 不再需要獨立獲取 partyStatus，因為它已從 props 傳入
     
     const { data: explorationFee } = useReadContract({
         ...dungeonMasterContract,
@@ -63,7 +60,7 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
 
     const { isOnCooldown, fatigueLevel, effectivePower, provisionsRemaining } = useMemo(() => {
         if (!partyStatus) return { isOnCooldown: false, fatigueLevel: 0, effectivePower: BigInt(party.totalPower), provisionsRemaining: 0n };
-        const [provisions, cooldownEndsAt, , fatigue] = partyStatus as unknown as readonly [bigint, bigint, bigint, number];
+        const [provisions, cooldownEndsAt, , fatigue] = partyStatus;
         const power = BigInt(party.totalPower);
         const effPower = power * (100n - BigInt(fatigue) * 2n) / 100n;
         return {
@@ -162,6 +159,17 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
         enabled: !!address,
     });
 
+    // ★★★ RPC 優化核心 #2：批量獲取所有隊伍的狀態 ★★★
+    const partyIds = useMemo(() => nfts?.parties.map(p => p.id) ?? [], [nfts]);
+    const { data: partyStatuses, isLoading: isLoadingStatuses } = useReadContracts({
+        contracts: partyIds.map(id => ({
+            ...dungeonStorageContract,
+            functionName: 'getPartyStatus',
+            args: [id],
+        })),
+        query: { enabled: !!dungeonStorageContract && partyIds.length > 0 }
+    });
+
     const { data: dungeonsData, isLoading: isLoadingDungeons } = useReadContracts({
         contracts: dungeonStorageContract ? Array.from({ length: 10 }, (_, i) => ({ ...dungeonStorageContract, functionName: 'getDungeon', args: [BigInt(i + 1)] })) : [],
         query: { enabled: !!dungeonStorageContract }
@@ -172,7 +180,6 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
         if (!dungeonsData) return [];
         return dungeonsData.map((d, i) => {
             if (d.status !== 'success' || !Array.isArray(d.result)) return null;
-            // 型別轉換加嚴: 先 unknown 再 as
             const [requiredPower, rewardAmountUSD, baseSuccessRate, isInitialized] = d.result as unknown as [bigint, bigint, number, boolean];
             return { id: i + 1, name: getDungeonName(i + 1), requiredPower, rewardAmountUSD, baseSuccessRate, isInitialized };
         }).filter((d): d is Dungeon => d !== null && d.isInitialized);
@@ -203,7 +210,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
         setIsProvisionModalOpen(true);
     };
 
-    const isLoading = isLoadingNfts || isLoadingDungeons;
+    const isLoading = isLoadingNfts || isLoadingDungeons || (partyIds.length > 0 && isLoadingStatuses);
 
     if (isLoading) return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
 
@@ -227,10 +234,13 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
                     </EmptyState>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {nfts.parties.map(party => (
+                        {nfts.parties.map((party, index) => (
                             <PartyStatusCard
                                 key={party.id.toString()}
                                 party={party}
+                                // ★★★ RPC 優化核心 #3：將批量獲取的數據傳遞給子元件 ★★★
+                                partyStatus={partyStatuses?.[index]?.result as readonly [bigint, bigint, bigint, number] | undefined}
+                                isLoadingStatus={isLoadingStatuses}
                                 dungeons={dungeons}
                                 onStartExpedition={handleStartExpedition}
                                 onRest={handleRest}

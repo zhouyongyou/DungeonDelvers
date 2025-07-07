@@ -1,4 +1,4 @@
-// src/pages/VipPage.tsx (重構版)
+// src/pages/VipPage.tsx (最終重構版)
 
 import React, { useState, useMemo } from 'react';
 import { useAccount, useWriteContract, useReadContract } from 'wagmi';
@@ -15,18 +15,18 @@ import { bsc, bscTestnet } from 'wagmi/chains';
 
 // VIP 卡片 SVG 顯示元件
 const VipCardDisplay: React.FC<{ tokenId: bigint | undefined, chainId: number | undefined }> = ({ tokenId, chainId }) => {
-    // ... (此元件程式碼未變更)
     if (!chainId || (chainId !== bsc.id && chainId !== bscTestnet.id)) {
         return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-500">網路不支援</div>;
     }
-    // 型別安全呼叫 getContract
     const vipStakingContract = chainId === bsc.id ? getContract(bsc.id, 'vipStaking') : chainId === bscTestnet.id ? getContract(bscTestnet.id as any, 'vipStaking') : null;
+    
     const { data: tokenURI, isLoading } = useReadContract({
         ...vipStakingContract,
         functionName: 'tokenURI',
         args: [tokenId!],
         query: { enabled: !!tokenId && tokenId > 0n && !!vipStakingContract },
     });
+
     const svgImage = useMemo(() => {
         if (!tokenURI) return null;
         try {
@@ -39,8 +39,10 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | undefined, chainId: number | 
             return null;
         }
     }, [tokenURI]);
+
     if (isLoading) return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center"><LoadingSpinner /></div>;
     if (!svgImage) return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-400 dark:text-gray-500">無 VIP 卡</div>;
+    
     return <img src={svgImage} alt="VIP Card" className="w-full h-auto rounded-xl shadow-lg" />;
 };
 
@@ -67,7 +69,8 @@ const VipPage: React.FC = () => {
         pendingUnstakeAmount,
         isCooldownOver,
         countdown,
-        allowance
+        allowance,
+        refetchAllowance
     } = useVipStatus();
 
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
@@ -83,7 +86,7 @@ const VipPage: React.FC = () => {
     }, [allowance, amount, mode]);
     
     const invalidateVipQueries = () => {
-        // ★ 優化：使用 queryClient.invalidateQueries({ queryKey: [...] }) 替代手動 refetch，更符合 react-query 的模式
+        // 使用 queryClient.invalidateQueries 讓相關數據失效，觸發自動重新獲取
         queryClient.invalidateQueries({ queryKey: ['userStakes', address, chainId] });
         queryClient.invalidateQueries({ queryKey: ['unstakeQueue', address, chainId] });
         queryClient.invalidateQueries({ queryKey: ['balance', address, chainId] });
@@ -121,8 +124,11 @@ const VipPage: React.FC = () => {
             if(txHash) {
                 addTransaction({ hash: txHash, description });
                 setAmount('');
-                // ★ 優化：等待一小段時間再刷新，給予 RPC 節點同步的時間
-                setTimeout(() => invalidateVipQueries(), 3000);
+                // 等待一小段時間再刷新，給予 RPC 節點同步的時間
+                setTimeout(() => {
+                    invalidateVipQueries();
+                    refetchAllowance();
+                }, 3000);
             }
         } catch (e: any) {
             if (!e.message.includes('User rejected')) showToast(e.shortMessage || `${action} 失敗`, "error");

@@ -1,4 +1,4 @@
-// src/hooks/useContractEvents.ts (RPC 優化核心檔案)
+// src/hooks/useContractEvents.ts
 
 import { useAccount, useWatchContractEvent } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
@@ -15,7 +15,7 @@ type DecodedLogWithArgs = {
 };
 
 /**
- * @notice 高階工廠函式，用於創建通用的事件處理器。
+ * @notice 高階工廠函式，用於創建通用的事件處理器，避免重複程式碼。
  * @dev 此函式封裝了日誌解碼、事件名稱匹配和使用者地址驗證的通用邏輯。
  * @param contract 要監聽的合約物件。
  * @param eventName 要監聽的事件名稱。
@@ -36,6 +36,7 @@ function createContractEventHandler(
     return (logs: Log[]) => {
         if (!contract || !userAddress) return;
 
+        // 如果需要檢查隊伍所有權，先從快取中獲取玩家擁有的隊伍 ID 列表
         const myPartyIds = checkPartyOwnership && queryClient
             ? (queryClient.getQueryData<AllNftCollections>(['ownedNfts', userAddress, contract.chainId])?.parties.map((p: PartyNft) => p.id) ?? [])
             : [];
@@ -44,10 +45,11 @@ function createContractEventHandler(
             try {
                 const decodedLog = decodeEventLog({ abi: contract.abi as Abi, ...log }) as DecodedLogWithArgs;
                 
+                // 只處理我們感興趣的事件
                 if (decodedLog.eventName === eventName) {
                     const args = decodedLog.args;
 
-                    // 檢查是否為隊伍特定事件
+                    // 案例1: 隊伍特定事件 (如遠征完成)，只處理屬於玩家的隊伍事件
                     if (checkPartyOwnership) {
                         if (args.partyId && myPartyIds.includes(args.partyId)) {
                             callback(decodedLog);
@@ -55,7 +57,7 @@ function createContractEventHandler(
                         return;
                     }
 
-                    // 通用檢查，涵蓋 owner, player, user 等常見欄位
+                    // 案例2: 通用事件，檢查事件參數中是否包含玩家地址
                     const userField = args.owner || args.player || args.user;
                     if (userField && userField.toLowerCase() === userAddress.toLowerCase()) {
                         callback(decodedLog);
@@ -69,9 +71,10 @@ function createContractEventHandler(
 }
 
 /**
- * @notice 全局合約事件監聽 Hook (已重構)
- * @dev ★ 核心優化：將 `invalidateAllUserData` 拆分為多個精準的失效函式，
- * 並根據事件類型，只刷新真正需要更新的數據，從根本上解決 RPC 請求風暴。
+ * @notice 全局合約事件監聽 Hook
+ * @dev ★★★ RPC 優化核心 ★★★
+ * 這個 Hook 是解決 RPC 爆炸問題的關鍵。它取代了所有定時輪詢。
+ * 我們為每種數據類型定義了精準的刷新函式，確保只在必要時才重新獲取數據。
  */
 export const useContractEvents = () => {
     const { address, chainId } = useAccount();
@@ -79,38 +82,43 @@ export const useContractEvents = () => {
     const { showExpeditionResult } = useExpeditionResult();
     const queryClient = useQueryClient();
     
+    // 確保只在支援的鏈上運行
     if (!chainId || (chainId !== bsc.id)) {
         return; 
     }
 
     // --- 精準的 Query Invalidation 函式 ---
     
-    // 使 NFT 和代幣餘額相關的查詢失效
+    // 當 NFT 資產或代幣餘額發生變化時呼叫
     const invalidateNftsAndBalance = () => {
         showToast('偵測到資產變動，正在更新...', 'info');
+        // 讓 'ownedNfts' 和 'balance' 相關的查詢失效，觸發 wagmi 重新獲取數據
         queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
         queryClient.invalidateQueries({ queryKey: ['balance', address, chainId] });
     };
 
-    // 使金庫和稅率相關的查詢失效
+    // 當金庫存入或取出時呼叫
     const invalidateVaultAndTax = () => {
         showToast('金庫資料已更新！', 'success');
+        // 刷新金庫資訊、稅率參數和代幣餘額
         queryClient.invalidateQueries({ queryKey: ['playerInfo', address, chainId] });
         queryClient.invalidateQueries({ queryKey: ['taxParams', address, chainId] });
         queryClient.invalidateQueries({ queryKey: ['balance', address, chainId] });
     };
     
-    // 使玩家檔案 (等級/經驗) 相關的查詢失效
+    // 當經驗值增加時呼叫
     const invalidateProfile = () => {
         showToast('經驗值已更新！', 'info');
+        // 刷新玩家檔案相關的所有數據
         queryClient.invalidateQueries({ queryKey: ['profileTokenOf', address] });
         queryClient.invalidateQueries({ queryKey: ['playerExperience'] });
+        queryClient.invalidateQueries({ queryKey: ['getLevel', address] });
     };
     
-    // 使隊伍狀態 (儲備/冷卻) 相關的查詢失效
+    // 當隊伍狀態 (儲備/冷卻/疲勞) 變化時呼叫
     const invalidatePartyStatus = (partyId?: bigint) => {
-        queryClient.invalidateQueries({ queryKey: ['partyStatuses', partyId?.toString()] });
-        queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] }); // 隊伍狀態也可能影響顯示
+        // 精準地只刷新特定隊伍的狀態
+        queryClient.invalidateQueries({ queryKey: ['getPartyStatus', partyId?.toString()] });
     };
 
     // --- 合約實例 ---
@@ -124,24 +132,24 @@ export const useContractEvents = () => {
 
     // --- 事件監聽設定 ---
     
-    // NFT 鑄造事件
+    // NFT 鑄造/創建事件 -> 刷新 NFT 列表和餘額
     useWatchContractEvent({ ...heroContract, chainId, eventName: 'HeroMinted', onLogs: createContractEventHandler(heroContract, 'HeroMinted', address, (log) => { showToast(`英雄 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); invalidateNftsAndBalance(); }) });
     useWatchContractEvent({ ...relicContract, chainId, eventName: 'RelicMinted', onLogs: createContractEventHandler(relicContract, 'RelicMinted', address, (log) => { showToast(`聖物 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); invalidateNftsAndBalance(); }) });
-    
-    // 隊伍與金庫事件
     useWatchContractEvent({ ...partyContract, chainId, eventName: 'PartyCreated', onLogs: createContractEventHandler(partyContract, 'PartyCreated', address, (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 創建成功！`, 'success'); invalidateNftsAndBalance(); }) });
+    
+    // 金庫事件 -> 刷新金庫相關數據
     useWatchContractEvent({ ...playerVaultContract, chainId, eventName: 'Deposited', onLogs: createContractEventHandler(playerVaultContract, 'Deposited', address, () => { invalidateVaultAndTax(); }) });
     useWatchContractEvent({ ...playerVaultContract, chainId, eventName: 'Withdrawn', onLogs: createContractEventHandler(playerVaultContract, 'Withdrawn', address, () => { invalidateVaultAndTax(); }) });
 
-    // ★ 新增：監聽玩家檔案經驗變化事件
+    // 玩家檔案事件 -> 刷新個人檔案數據
     useWatchContractEvent({ ...playerProfileContract, chainId, eventName: 'ExperienceAdded', onLogs: createContractEventHandler(playerProfileContract, 'ExperienceAdded', address, () => { invalidateProfile(); }) });
 
-    // 隊伍遠征相關事件
+    // 隊伍遠征相關事件 -> 刷新特定隊伍的狀態和玩家檔案
     useWatchContractEvent({ ...dungeonMasterContract, chainId, eventName: 'ExpeditionFulfilled', onLogs: createContractEventHandler(dungeonMasterContract, 'ExpeditionFulfilled', address, (log) => { const { success, reward, expGained } = log.args; showExpeditionResult({ success, reward, expGained }); invalidatePartyStatus(log.args.partyId); invalidateProfile(); }, true, queryClient) });
     useWatchContractEvent({ ...dungeonMasterContract, chainId, eventName: 'PartyRested', onLogs: createContractEventHandler(dungeonMasterContract, 'PartyRested', address, (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 已恢復活力！`, 'success'); invalidatePartyStatus(log.args.partyId); }, true, queryClient) });
     useWatchContractEvent({ ...dungeonMasterContract, chainId, eventName: 'ProvisionsBought', onLogs: createContractEventHandler(dungeonMasterContract, 'ProvisionsBought', address, (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 儲備補充成功！`, 'success'); invalidatePartyStatus(log.args.partyId); }, true, queryClient) });
     
-    // 升星祭壇事件
+    // 升星祭壇事件 -> 刷新 NFT 列表和餘額
     useWatchContractEvent({ ...altarOfAscensionContract, chainId, eventName: 'UpgradeProcessed', onLogs: createContractEventHandler(altarOfAscensionContract, 'UpgradeProcessed', address, (log) => {
         const { outcome } = log.args;
         const outcomeMessages: Record<number, string> = { 3: `⚜️ 大成功！獲得 2 個更高星級的 NFT！`, 2: `✨ 升星成功！獲得 1 個更高星級的 NFT！`, 1: `💔 升星失敗，但返還了部分材料。`, 0: `💀 升星完全失敗，所有材料已銷毀。` };

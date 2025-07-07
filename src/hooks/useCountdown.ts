@@ -1,4 +1,4 @@
-// src/hooks/useCountdown.ts (★ 全新檔案，從 useVipStatus 中抽離)
+// src/hooks/useCountdown.ts (★ 全新檔案)
 
 import { useState, useEffect } from 'react';
 
@@ -11,6 +11,7 @@ export const useCountdown = (targetTimestamp: number) => {
     const [now, setNow] = useState(Date.now() / 1000);
 
     useEffect(() => {
+        // 每秒更新一次當前時間
         const interval = setInterval(() => setNow(Date.now() / 1000), 1000);
         return () => clearInterval(interval);
     }, []);
