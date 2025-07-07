@@ -10,18 +10,19 @@ dataSources:
     source:
       address: "0xfc2a24E894236a6169d2353BE430a3d5828111D2"
       abi: Hero
-      startBlock: 53099902
+      startBlock: 53071315
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
-        - Player
         - Hero
+        - Player
       abis:
         - name: Hero
           file: ./abis/Hero.json
       eventHandlers:
+        # 核心修正：只監聽我們實際處理的事件
         - event: HeroMinted(indexed uint256,indexed address,uint8,uint256)
           handler: handleHeroMinted
         - event: Transfer(indexed address,indexed address,indexed uint256)
@@ -33,39 +34,41 @@ dataSources:
     source:
       address: "0xd86245Ddce19E8F94Bc30f0facf7bd111069FAf9"
       abi: Relic
-      startBlock: 53099905
+      startBlock: 53071315
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
-        - Player
         - Relic
+        - Player
       abis:
         - name: Relic
           file: ./abis/Relic.json
       eventHandlers:
+        # 核心修正：只監聽我們實際處理的事件
         - event: RelicMinted(indexed uint256,indexed address,uint8,uint8)
           handler: handleRelicMinted
         - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleTransfer
       file: ./src/relic.ts
+  # ===============================================================
+  # Party 合約
+  # ===============================================================
   - kind: ethereum
     name: Party
     network: bsc
     source:
       address: "0xf52b2eA7fa4456Fd80D2d623aF4fAf8D509F42D5"
       abi: Party
-      startBlock: 53099902
+      startBlock: 53071315 # 您可以填寫 Party 合約的實際部署區塊號以加快速度
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
-        - Player
         - Party
-        - Hero
-        - Relic
+        - Player
       abis:
         - name: Party
           file: ./abis/Party.json
@@ -75,19 +78,21 @@ dataSources:
         - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handlePartyTransfer
       file: ./src/party.ts
+  # ===============================================================
+  # PlayerProfile 合約
+  # ===============================================================
   - kind: ethereum
     name: PlayerProfile
     network: bsc
     source:
       address: "0x14F591Cb3bB8C14F1FF5e2D14Df663C174a6A4D3"
       abi: PlayerProfile
-      startBlock: 53099902
+      startBlock: 53071315 # 建議替換為 PlayerProfile 合約的實際部署區塊號
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
-        - Player
         - PlayerProfile
       abis:
         - name: PlayerProfile
@@ -98,19 +103,21 @@ dataSources:
         - event: ExperienceAdded(indexed uint256,uint256,uint256)
           handler: handleExperienceAdded
       file: ./src/player-profile.ts
+  # ===============================================================
+  # VIPStaking 合約
+  # ===============================================================
   - kind: ethereum
     name: VIPStaking
     network: bsc
     source:
       address: "0xF7281267c95Db139013EeB3c6D9156B85DDa40d5"
       abi: VIPStaking
-      startBlock: 53099902
+      startBlock: 53071315 # 建議替換為 VIPStaking 合約的實際部署區塊號
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
-        - Player
         - VIP
       abis:
         - name: VIPStaking
@@ -120,23 +127,26 @@ dataSources:
           handler: handleStaked
         - event: UnstakeClaimed(indexed address,uint256)
           handler: handleUnstakeClaimed
+        # 我們也需要監聽 Transfer 事件，來處理 VIP 卡 (SBT) 的鑄造
         - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleVipTransfer
       file: ./src/vip-staking.ts
+  # ===============================================================
+  # DungeonMaster 合約 (遊戲核心邏輯)
+  # ===============================================================
   - kind: ethereum
     name: DungeonMaster
     network: bsc
     source:
       address: "0xeB3616352d76af4083D2f0775E813DAe579CeB85"
       abi: DungeonMaster
-      startBlock: 53099902
+      startBlock: 53071315 # 建議替換為 DungeonMaster 合約的實際部署區塊號
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
-        - Party
-        - PlayerProfile
+        - Party # 我們會更新 Party 實體
       abis:
         - name: DungeonMaster
           file: ./abis/DungeonMaster.json
@@ -148,13 +158,16 @@ dataSources:
         - event: ProvisionsBought(indexed uint256,uint256,uint256)
           handler: handleProvisionsBought
       file: ./src/dungeon-master.ts
+  # ===============================================================
+  # PlayerVault 合約 (玩家金庫)
+  # ===============================================================
   - kind: ethereum
     name: PlayerVault
     network: bsc
     source:
       address: "0x2d2067B8a16Fa9C0E95e30b8CeD43cbAEE878395"
       abi: PlayerVault
-      startBlock: 53099902
+      startBlock: 53071315 # 建議替換為 PlayerVault 合約的實際部署區塊號
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9

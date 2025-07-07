@@ -7,56 +7,54 @@ import {
   afterAll
 } from "matchstick-as/assembly/index"
 import { Address, BigInt } from "@graphprotocol/graph-ts"
-import { Approval } from "../generated/schema"
-import { Approval as ApprovalEvent } from "../generated/Relic/Relic"
-import { handleApproval } from "../src/relic"
-import { createApprovalEvent } from "./relic-utils"
+import { Relic, Player } from "../generated/schema"
+import { RelicMinted } from "../generated/Relic/Relic"
+import { handleRelicMinted } from "../src/relic"
+import { createRelicMintedEvent } from "./relic-utils"
 
-// Tests structure (matchstick-as >=0.5.0)
-// https://thegraph.com/docs/en/subgraphs/developing/creating/unit-testing-framework/#tests-structure
-
-describe("Describe entity assertions", () => {
+// 測試 RelicMinted 事件的處理邏輯
+describe("Relic Entity", () => {
   beforeAll(() => {
-    let owner = Address.fromString("0x0000000000000000000000000000000000000001")
-    let approved = Address.fromString(
-      "0x0000000000000000000000000000000000000001"
+    // 1. 準備測試數據
+    let ownerAddress = Address.fromString("0x0000000000000000000000000000000000000001")
+    let tokenId = BigInt.fromI32(1)
+    let rarity = 4 // 史詩
+    let capacity = 4
+
+    // 2. 創建一個模擬的 RelicMinted 事件
+    let newRelicMintedEvent = createRelicMintedEvent(
+      tokenId,
+      ownerAddress,
+      rarity,
+      capacity
     )
-    let tokenId = BigInt.fromI32(234)
-    let newApprovalEvent = createApprovalEvent(owner, approved, tokenId)
-    handleApproval(newApprovalEvent)
+
+    // 3. 呼叫我們真正要測試的處理函式
+    handleRelicMinted(newRelicMintedEvent)
   })
 
   afterAll(() => {
     clearStore()
   })
 
-  // For more test scenarios, see:
-  // https://thegraph.com/docs/en/subgraphs/developing/creating/unit-testing-framework/#write-a-unit-test
-
-  test("Approval created and stored", () => {
-    assert.entityCount("Approval", 1)
-
-    // 0xa16081f360e3847006db660bae1c6d1b2e17ec2a is the default address used in newMockEvent() function
+  test("Player and Relic entities created and stored correctly", () => {
+    // 斷言 Player 實體
+    assert.entityCount("Player", 1)
     assert.fieldEquals(
-      "Approval",
-      "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
-      "owner",
+      "Player",
+      "0x0000000000000000000000000000000000000001",
+      "id",
       "0x0000000000000000000000000000000000000001"
     )
-    assert.fieldEquals(
-      "Approval",
-      "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
-      "approved",
-      "0x0000000000000000000000000000000000000001"
-    )
-    assert.fieldEquals(
-      "Approval",
-      "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
-      "tokenId",
-      "234"
-    )
 
-    // More assert options:
-    // https://thegraph.com/docs/en/subgraphs/developing/creating/unit-testing-framework/#asserts
+    // 斷言 Relic 實體
+    assert.entityCount("Relic", 1)
+    
+    let relicId = "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1"
+    
+    assert.fieldEquals("Relic", relicId, "tokenId", "1")
+    assert.fieldEquals("Relic", relicId, "owner", "0x0000000000000000000000000000000000000001")
+    assert.fieldEquals("Relic", relicId, "rarity", "4")
+    assert.fieldEquals("Relic", relicId, "capacity", "4")
   })
 })
