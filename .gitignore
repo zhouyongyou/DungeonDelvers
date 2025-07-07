@@ -1,3 +1,9 @@
+問題根源
+從您的截圖可以看到，所有待提交的檔案路徑都是 DDgraphql/dungeon-delvers/data/...。這表示 Git 正在追蹤 data 這個資料夾。這是因為您專案根目錄的 .gitignore 檔案中，沒有告訴 Git 要忽略這個特定的資料夾。
+
+步驟一：更新您的 .gitignore 檔案
+請將以下完整的內容，複製並完全覆蓋您專案根目錄下的 .gitignore 檔案。我在您原有的基礎上，新增了忽略 The Graph 本機數據資料夾的規則。
+
 # =======================================================================
 # 檔案: .gitignore
 # 說明: 告訴 Git 哪些檔案或資料夾不需要納入版本控制。
@@ -8,6 +14,11 @@
 # 由 'graph codegen' 指令自動生成
 generated/
 build/
+
+# ★★★【新增規則】★★★
+# 忽略 The Graph 在本機 docker 環境中產生的數據，
+# 這包括了 IPFS 和 Postgres 資料庫的檔案。
+DDgraphql/dungeon-delvers/data/
 
 ### 依賴 (Dependencies)
 # 絕不能將 node_modules 上傳到 Git。這個資料夾體積龐大，

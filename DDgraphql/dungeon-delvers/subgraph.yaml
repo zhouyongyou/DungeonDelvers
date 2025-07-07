@@ -16,43 +16,16 @@ dataSources:
       apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
-        - Approval
-        - ApprovalForAll
-        - AscensionAltarSet
-        - ContractsSet
-        - DungeonSvgLibrarySet
-        - DynamicSeedUpdated
-        - HeroMinted
-        - OwnershipTransferred
-        - Paused
-        - Transfer
-        - Unpaused
+        - Player
+        - Hero
       abis:
         - name: Hero
           file: ./abis/Hero.json
       eventHandlers:
-        - event: Approval(indexed address,indexed address,indexed uint256)
-          handler: handleApproval
-        - event: ApprovalForAll(indexed address,indexed address,bool)
-          handler: handleApprovalForAll
-        - event: AscensionAltarSet(indexed address)
-          handler: handleAscensionAltarSet
-        - event: ContractsSet(indexed address,indexed address)
-          handler: handleContractsSet
-        - event: DungeonSvgLibrarySet(indexed address)
-          handler: handleDungeonSvgLibrarySet
-        - event: DynamicSeedUpdated(uint256)
-          handler: handleDynamicSeedUpdated
         - event: HeroMinted(indexed uint256,indexed address,uint8,uint256)
           handler: handleHeroMinted
-        - event: OwnershipTransferred(indexed address,indexed address)
-          handler: handleOwnershipTransferred
-        - event: Paused(address)
-          handler: handlePaused
         - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleTransfer
-        - event: Unpaused(address)
-          handler: handleUnpaused
       file: ./src/hero.ts
   - kind: ethereum
     name: Relic
@@ -66,61 +39,33 @@ dataSources:
       apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
-        - RelicApproval
-        - RelicApprovalForAll
-        - RelicAscensionAltarSet
-        - RelicContractsSet
-        - RelicDungeonSvgLibrarySet
-        - RelicDynamicSeedUpdated
-        - RelicOwnershipTransferred
-        - RelicPaused
-        - RelicMinted
-        - RelicTransfer
-        - RelicUnpaused
+        - Player
+        - Relic
       abis:
         - name: Relic
           file: ./abis/Relic.json
       eventHandlers:
-        - event: Approval(indexed address,indexed address,indexed uint256)
-          handler: handleApproval
-        - event: ApprovalForAll(indexed address,indexed address,bool)
-          handler: handleApprovalForAll
-        - event: AscensionAltarSet(indexed address)
-          handler: handleAscensionAltarSet
-        - event: ContractsSet(indexed address,indexed address)
-          handler: handleContractsSet
-        - event: DungeonSvgLibrarySet(indexed address)
-          handler: handleDungeonSvgLibrarySet
-        - event: DynamicSeedUpdated(uint256)
-          handler: handleDynamicSeedUpdated
-        - event: OwnershipTransferred(indexed address,indexed address)
-          handler: handleOwnershipTransferred
-        - event: Paused(address)
-          handler: handlePaused
         - event: RelicMinted(indexed uint256,indexed address,uint8,uint8)
           handler: handleRelicMinted
         - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleTransfer
-        - event: Unpaused(address)
-          handler: handleUnpaused
       file: ./src/relic.ts
-      # ===============================================================
-      # Party 合約
-      # ===============================================================
-  - kind: ethereum/contract
+  - kind: ethereum
     name: Party
     network: bsc
     source:
       address: "0xf52b2eA7fa4456Fd80D2d623aF4fAf8D509F42D5"
       abi: Party
-      startBlock: 53099902 # 您可以填寫 Party 合約的實際部署區塊號以加快速度
+      startBlock: 53099902
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.7
+      apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
-        - PartyCreated
-        - Transfer
+        - Player
+        - Party
+        - Hero
+        - Relic
       abis:
         - name: Party
           file: ./abis/Party.json
@@ -130,21 +75,19 @@ dataSources:
         - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handlePartyTransfer
       file: ./src/party.ts
-      # ===============================================================
-      # PlayerProfile 合約
-      # ===============================================================
-  - kind: ethereum/contract
+  - kind: ethereum
     name: PlayerProfile
     network: bsc
     source:
       address: "0x14F591Cb3bB8C14F1FF5e2D14Df663C174a6A4D3"
       abi: PlayerProfile
-      startBlock: 53099902 # 建議替換為 PlayerProfile 合約的實際部署區塊號
+      startBlock: 53099902
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.7
+      apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
+        - Player
         - PlayerProfile
       abis:
         - name: PlayerProfile
@@ -155,21 +98,19 @@ dataSources:
         - event: ExperienceAdded(indexed uint256,uint256,uint256)
           handler: handleExperienceAdded
       file: ./src/player-profile.ts
-      # ===============================================================
-      # VIPStaking 合約
-      # ===============================================================
-  - kind: ethereum/contract
+  - kind: ethereum
     name: VIPStaking
     network: bsc
     source:
       address: "0xF7281267c95Db139013EeB3c6D9156B85DDa40d5"
       abi: VIPStaking
-      startBlock: 53099902 # 建議替換為 VIPStaking 合約的實際部署區塊號
+      startBlock: 53099902
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.7
+      apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
+        - Player
         - VIP
       abis:
         - name: VIPStaking
@@ -179,26 +120,23 @@ dataSources:
           handler: handleStaked
         - event: UnstakeClaimed(indexed address,uint256)
           handler: handleUnstakeClaimed
-        # 我們也需要監聽 Transfer 事件，來處理 VIP 卡 (SBT) 的鑄造
         - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleVipTransfer
       file: ./src/vip-staking.ts
-      # ===============================================================
-      # DungeonMaster 合約 (遊戲核心邏輯)
-      # ===============================================================
-  - kind: ethereum/contract
+  - kind: ethereum
     name: DungeonMaster
     network: bsc
     source:
       address: "0xeB3616352d76af4083D2f0775E813DAe579CeB85"
       abi: DungeonMaster
-      startBlock: 53099902 # 建議替換為 DungeonMaster 合約的實際部署區塊號
+      startBlock: 53099902
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.7
+      apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
-        - Party # 我們會更新 Party 實體
+        - Party
+        - PlayerProfile
       abis:
         - name: DungeonMaster
           file: ./abis/DungeonMaster.json
@@ -210,19 +148,16 @@ dataSources:
         - event: ProvisionsBought(indexed uint256,uint256,uint256)
           handler: handleProvisionsBought
       file: ./src/dungeon-master.ts
-      # ===============================================================
-      # PlayerVault 合約 (玩家金庫)
-      # ===============================================================
-  - kind: ethereum/contract
+  - kind: ethereum
     name: PlayerVault
     network: bsc
     source:
       address: "0x2d2067B8a16Fa9C0E95e30b8CeD43cbAEE878395"
       abi: PlayerVault
-      startBlock: 53099902 # 建議替換為 PlayerVault 合約的實際部署區塊號
+      startBlock: 53099902
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.7
+      apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
         - PlayerVault
