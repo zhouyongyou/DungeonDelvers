@@ -1,20 +1,26 @@
 # =======================================================================
 # 檔案: .gitignore
 # 說明: 告訴 Git 哪些檔案或資料夾不需要納入版本控制。
+# 適用於: React (Vite) + TypeScript + Solidity (The Graph/Hardhat)
 # =======================================================================
+
+### The Graph CLI 產物
+# 由 'graph codegen' 指令自動生成
+generated/
+build/
 
 ### 依賴 (Dependencies)
 # 絕不能將 node_modules 上傳到 Git。這個資料夾體積龐大，
 # 任何人在 clone 專案後都可以透過 `npm install` 重新安裝。
-/node_modules
+node_modules/
+jspm_packages/
 
-### 建構輸出 (Build Output)
-# `npm run build` 指令產生的打包檔案，每次建構都會重新生成。
-/dist
-/build
+### 前端建構輸出 (Build Output)
+# `npm run build` 指令產生的打包檔案
+dist/
 
 ### 日誌檔 (Logs)
-# 開發過程中產生的各種日誌檔。
+# 開發過程中產生的各種日誌檔
 logs
 *.log
 npm-debug.log*
@@ -22,8 +28,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-### 環境變數 (Environment Variables)
-# 這是最重要的忽略項之一！
+### 環境變數 (Environment Variables) - 極度重要！
 # 您的 .env 檔案中會包含私鑰、RPC URL 等敏感資訊，
 # 絕對不能上傳到公開的 GitHub。
 .env
@@ -31,22 +36,26 @@ pnpm-debug.log*
 .env.development
 .env.test
 .env.production
+.env.*
 .env.*.local
 
 ### 快取與臨時檔案 (Cache & Temp)
 .vite/
+.npm
 .eslintcache
 
 ### 編輯器與系統檔案 (Editor & System Files)
-# 忽略不同作業系統或程式碼編輯器自動產生的設定檔。
 .DS_Store
 .vscode/
 Thumbs.db
 
 ### 智慧合約與測試工具 (Smart Contract & Testing Tools)
-# 忽略 Hardhat 或 Foundry 等工具產生的快取和 artifact 檔案
-/artifacts
-/cache
-/coverage
+# Hardhat 或 Foundry 等工具產生的快取和 artifact 檔案
+artifacts/
+cache/
+coverage/
 coverage.json
-.DS_Store
+
+# Typechain 產生的型別檔案
+typechain/
+typechain-types/
