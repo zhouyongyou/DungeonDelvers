@@ -1,4 +1,4 @@
-// src/pages/MintPage.tsx (The Graph 改造版 - 已修正)
+// src/pages/MintPage.tsx (優化後最終版)
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useWriteContract, useBalance, usePublicClient, useReadContract } from 'wagmi';
@@ -19,7 +19,7 @@ import { fetchMetadata } from '../api/nfts';
 // Section: 數據獲取 Hooks
 // =================================================================
 
-// Debounce Hook (保持不變)
+// Debounce Hook 用於延遲處理用戶輸入，避免過多請求
 function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState<T>(value);
     useEffect(() => {
@@ -31,33 +31,35 @@ function useDebounce<T>(value: T, delay: number): T {
 
 type PaymentSource = 'wallet' | 'vault';
 
+/**
+ * @notice 處理鑄造邏輯的核心 Hook (優化版)
+ * @dev 此版本將價格查詢合併為單一 RPC 呼叫，提升效率並降低錯誤機率。
+ */
 const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: PaymentSource, chainId: typeof bsc.id) => {
     const { address } = useAccount();
     const contractConfig = getContract(chainId, type);
     const soulShardContract = getContract(chainId, 'soulShard');
     const playerVaultContract = getContract(chainId, 'playerVault');
-    const dungeonCoreContract = getContract(chainId, 'dungeonCore');
 
-    // ★ 修正 #1：明確傳遞參數給 useReadContract，避免類型錯誤
-    const { data: requiredAmountInUsd, isLoading: isLoadingPrice } = useReadContract({
+    // ★★★【核心優化】★★★
+    // 直接呼叫 Hero/Relic 合約的 getRequiredSoulShardAmount 函式。
+    // 這個函式內部會處理所有 USD 到 SoulShard 的轉換，將兩次鏈上讀取合併為一次。
+    const { data: requiredAmount, isLoading: isLoadingPrice, isError, error } = useReadContract({
         address: contractConfig?.address,
         abi: contractConfig?.abi,
-        functionName: 'mintPriceUSD',
+        functionName: 'getRequiredSoulShardAmount',
+        args: [BigInt(quantity)],
+        query: { enabled: !!contractConfig && quantity > 0 },
     });
+    
+    // 平台費用 (platformFee) 的讀取保持不變
     const { data: platformFee, isLoading: isLoadingFee } = useReadContract({
         address: contractConfig?.address,
         abi: contractConfig?.abi,
         functionName: 'platformFee',
     });
 
-    const { data: totalRequiredAmount, isLoading: isLoadingConversion, isError, error } = useReadContract({
-        address: dungeonCoreContract?.address,
-        abi: dungeonCoreContract?.abi,
-        functionName: 'getSoulShardAmountForUSD',
-        args: [typeof requiredAmountInUsd === 'bigint' ? requiredAmountInUsd * BigInt(quantity) : 0n],
-        query: { enabled: !!dungeonCoreContract && typeof requiredAmountInUsd === 'bigint' && quantity > 0 },
-    });
-
+    // 獲取錢包和金庫餘額的邏輯保持不變
     const { data: walletBalance } = useBalance({ address, token: soulShardContract?.address });
     const { data: vaultInfo } = useReadContract({
         address: playerVaultContract?.address,
@@ -68,6 +70,7 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     });
     const vaultBalance = useMemo(() => (vaultInfo && Array.isArray(vaultInfo) ? vaultInfo[0] : 0n), [vaultInfo]);
 
+    // 獲取授權狀態的邏輯保持不變
     const { data: allowance, refetch: refetchAllowance } = useReadContract({
         address: soulShardContract?.address,
         abi: soulShardContract?.abi,
@@ -76,7 +79,7 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
         query: { enabled: !!address && !!contractConfig && paymentSource === 'wallet' },
     });
 
-    const finalRequiredAmount = totalRequiredAmount ?? 0n;
+    const finalRequiredAmount = requiredAmount ?? 0n;
     const finalPlatformFee = platformFee ?? 0n;
 
     const needsApproval = useMemo(() => {
@@ -88,7 +91,7 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
         requiredAmount: finalRequiredAmount,
         balance: paymentSource === 'wallet' ? (walletBalance?.value ?? 0n) : vaultBalance,
         needsApproval,
-        isLoading: isLoadingPrice || isLoadingFee || isLoadingConversion,
+        isLoading: isLoadingPrice || isLoadingFee, // 簡化後的載入狀態
         isError,
         error,
         platformFee: finalPlatformFee,
@@ -97,7 +100,7 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
 };
 
 // =================================================================
-// Section: 子元件與主頁面 (UI 邏輯保持不變)
+// Section: 子元件與主頁面
 // =================================================================
 
 const RarityProbabilities: React.FC = () => (
@@ -219,7 +222,7 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
             </div>
             <div className="text-center mb-4 min-h-[72px] flex-grow flex flex-col justify-center">
                 {isLoading ? <div className="flex flex-col items-center justify-center"><LoadingSpinner color="border-gray-500" /><p className="text-sm text-gray-500 mt-2">讀取價格中...</p></div>
-                : isError ? <div className="text-red-500 text-center"><p className="font-bold">價格讀取失敗</p><p className="text-xs mt-1">{(error as any)?.shortMessage?.includes('DungeonCore') ? '原因：Hero/Relic 合約尚未設定總機地址。' : '請檢查合約串接或網路連線。'}</p></div>
+                : isError ? <div className="text-red-500 text-center"><p className="font-bold">價格讀取失敗</p><p className="text-xs mt-1">{(error as any)?.shortMessage || '請檢查合約狀態或網路連線。'}</p></div>
                 : (<div><p className="text-lg text-gray-500 dark:text-gray-400">總價:</p><p className="font-bold text-yellow-500 dark:text-yellow-400 text-2xl">{parseFloat(formatEther(typeof requiredAmount === 'bigint' ? requiredAmount : 0n)).toFixed(4)}</p><p className="text-xs text-gray-500">$SoulShard + {formatEther(typeof platformFee === 'bigint' ? platformFee * BigInt(quantity) : 0n)} BNB</p></div>)}
             </div>
             {actionButton}

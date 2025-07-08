@@ -8,9 +8,9 @@ dataSources:
     name: Hero
     network: bsc
     source:
-      address: "0xd895BC3958604B93CcB6F63923487299A059bE21" # 將這裡的地址換成您新部署的地址
+      address: "0x435a7923F895923cD36AA2519885B1ba476FAfe1" # 將這裡的地址換成您新部署的地址
       abi: Hero
-      startBlock: 53278667
+      startBlock: 53291727
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -32,9 +32,9 @@ dataSources:
     name: Relic
     network: bsc
     source:
-      address: "0x6f58C391a481D31ebEF77cFD2cD6245967719C00" # 將這裡的地址換成您新部署的地址
+      address: "0x3aEF955F03664376dfCA8DfE809bb5bFf569113f" # 將這裡的地址換成您新部署的地址
       abi: Relic
-      startBlock: 53278667
+      startBlock: 53291727
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -59,9 +59,9 @@ dataSources:
     name: Party
     network: bsc
     source:
-      address: "0x85c3Da749b9c22e31D3361B5448013D7f95C79ba" # 將這裡的地址換成您新部署的地址
+      address: "0xB3501217DEd7d50b3C1Dd34EeACcf56F6D137865" # 將這裡的地址換成您新部署的地址
       abi: Party
-      startBlock: 53278667 # 您可以填寫 Party 合約的實際部署區塊號以加快速度
+      startBlock: 53291727 # 您可以填寫 Party 合約的實際部署區塊號以加快速度
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -86,9 +86,9 @@ dataSources:
     name: PlayerProfile
     network: bsc
     source:
-      address: "0x7778194452c7c095b374a0faBC24ed92eEb27f84" # 將這裡的地址換成您新部署的地址
+      address: "0x0DefA68504A0ddF9Ad528d60322F2bE3170E8E4a" # 將這裡的地址換成您新部署的地址
       abi: PlayerProfile
-      startBlock: 53278667 # 建議替換為 PlayerProfile 合約的實際部署區塊號
+      startBlock: 53291727 # 建議替換為 PlayerProfile 合約的實際部署區塊號
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -112,9 +112,9 @@ dataSources:
     name: VIPStaking
     network: bsc
     source:
-      address: "0x0D4B8b5B9e3afF8B6b55Ff2a799837CbcA747088" # 將這裡的地址換成您新部署的地址
+      address: "0x4b3737442BaDd051c1e757cc67745CC27Dc64294" # 將這裡的地址換成您新部署的地址
       abi: VIPStaking
-      startBlock: 53278667 # 建議替換為 VIPStaking 合約的實際部署區塊號
+      startBlock: 53291727 # 建議替換為 VIPStaking 合約的實際部署區塊號
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -140,9 +140,9 @@ dataSources:
     name: DungeonMaster
     network: bsc
     source:
-      address: "0x56FC1Ef71B201bA35F20c25342ec7C1C497D08d8" # 將這裡的地址換成您新部署的地址
+      address: "0x5428F3614CA104960C3c396838F104d9D51c8a7e" # 將這裡的地址換成您新部署的地址
       abi: DungeonMaster
-      startBlock: 53278667 # 建議替換為 DungeonMaster 合約的實際部署區塊號
+      startBlock: 53291727 # 建議替換為 DungeonMaster 合約的實際部署區塊號
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -168,9 +168,9 @@ dataSources:
     name: PlayerVault
     network: bsc
     source:
-      address: "0x980733588f06c2711266948dD140C37e817647e4" # 將這裡的地址換成您新部署的地址
+      address: "0x7906Bb9a54e89FbA64F9b5517f88c83b97aDa09A" # 將這裡的地址換成您新部署的地址
       abi: PlayerVault
-      startBlock: 53278667 # 建議替換為 PlayerVault 合約的實際部署區塊號
+      startBlock: 53291727 # 建議替換為 PlayerVault 合約的實際部署區塊號
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -196,9 +196,9 @@ dataSources:
     name: AltarOfAscension
     network: bsc
     source:
-      address: "0x23D4A3a425A4f94fF542D601ff5c0a3295718d40" # ✅ 已更新為您的最新 Altar 地址
+      address: "0x8bcE107b2E8C959710c8762cae613C636c86Eb41" # ✅ 已更新為您的最新 Altar 地址
       abi: AltarOfAscension
-      startBlock: 53278667 # 部署後請更新為最新的區塊號
+      startBlock: 53291727 # 部署後請更新為最新的區塊號
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -212,4 +212,3 @@ dataSources:
         - event: UpgradeProcessed(indexed address,indexed address,uint8,uint8)
           handler: handleUpgradeProcessed
       file: ./src/altar-of-ascension.ts
-

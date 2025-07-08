@@ -1,4 +1,4 @@
-// interfaces.sol (已修正)
+// contracts/interfaces.sol (最終修正版)
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -38,14 +38,16 @@ interface IDungeonCore {
 }
 
 interface IOracle {
+    // ★★★【核心修正 1】★★★
+    // 與 Oracle.sol 保持一致，getAmountOut 函式現在只需要 2 個參數。
     function getAmountOut(address tokenIn, uint256 amountIn) external view returns (uint256);
 }
 
 interface IPlayerVault {
-    function soulShardToken() external view returns (IERC20);
+    // ★★★【核心修正 2】★★★
+    // 將 spend 函式名稱改為與 PlayerVault.sol 中完全一致的 spendForGame。
     function spendForGame(address _player, uint256 _amount) external;
     function deposit(address _player, uint256 _amount) external;
-    // ★ 新增：查詢總佣金的函式
     function getTotalCommissionPaid(address _user) external view returns (uint256);
 }
 
@@ -54,7 +56,6 @@ interface IDungeonMaster {
 }
 
 interface IDungeonStorage {
-    // ★ 修改：將結構體定義移至此處，以便其他合約引用
     struct Dungeon {
         uint256 requiredPower;
         uint256 rewardAmountUSD;
@@ -75,7 +76,6 @@ interface IDungeonStorage {
         uint256 dungeonId;
     }
     
-    // ★ 新增：NUM_DUNGEONS 的 getter
     function NUM_DUNGEONS() external view returns (uint256);
     function getDungeon(uint256 dungeonId) external view returns (Dungeon memory);
     function getPartyStatus(uint256 partyId) external view returns (PartyStatus memory);

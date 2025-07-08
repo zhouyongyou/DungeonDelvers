@@ -1,46 +1,25 @@
-// DungeonCore.sol
+// contracts/DungeonCore.sol (最終修正版)
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-// --- 介面定義 ---
-// 這裡定義了 DungeonCore 需要與之互動的所有衛星合約的關鍵功能。
-
-interface IOracle {
-    function getAmountOut(address tokenIn, address tokenOut, uint256 amountIn) external view returns (uint256);
-}
-
-interface IPlayerVault {
-    function spend(address player, uint256 amount) external;
-}
-
-interface IDungeonMaster {
-    function isPartyLocked(uint256 partyId) external view returns (bool);
-}
+import "./interfaces.sol";
 
 /**
  * @title DungeonCore (架構核心版)
  * @notice 系統的中心樞紐，負責註冊和管理所有衛星合約，並作為它們之間溝通的橋樑。
- * @dev 本合約本身不包含複雜的遊戲邏輯，而是將具體實現委派給專門的模塊。
+ * @dev 此版本修正了對 Oracle 和 PlayerVault 合約的呼叫方式，確保參數匹配。
  */
 contract DungeonCore is Ownable {
 
     // --- 狀態變數 ---
-    // 這裡儲存了系統中所有核心模塊的地址。
-    
-    // 基礎代幣與價格預言機
     address public usdTokenAddress;
     address public soulShardTokenAddress;
     address public oracleAddress;
-
-    // 核心 NFT 合約
     address public heroContractAddress;
     address public relicContractAddress;
     address public partyContractAddress;
-
-    // 核心功能模塊
     address public playerVaultAddress;
     address public dungeonMasterAddress;
     address public altarOfAscensionAddress;
@@ -48,7 +27,6 @@ contract DungeonCore is Ownable {
     address public vipStakingAddress;
 
     // --- 事件 ---
-    // 為每個地址的更新都定義了事件，方便追蹤鏈上變更。
     event OracleSet(address indexed newAddress);
     event PlayerVaultSet(address indexed newAddress);
     event DungeonMasterSet(address indexed newAddress);
@@ -59,7 +37,6 @@ contract DungeonCore is Ownable {
     event PlayerProfileSet(address indexed newAddress);
     event VipStakingSet(address indexed newAddress);
 
-    // --- 建構函式 ---
     constructor(
         address _initialOwner,
         address _usdToken,
@@ -70,54 +47,34 @@ contract DungeonCore is Ownable {
         soulShardTokenAddress = _soulShardToken;
     }
 
-    // --- 外部查詢與委派函式 ---
-    // 這些是提供給其他合約（如 Hero, Relic）呼叫的入口。
-    // DungeonCore 收到請求後，會轉發給對應的專業合約處理。
-
-    /**
-     * @notice 根據輸入的 USD 金額，查詢需要多少 SoulShard 代幣。
-     * @dev 將計算邏輯委派給 Oracle 合約。
-     * @param _amountUSD 以 18 位小數表示的 USD 金額。
-     * @return 等值的 SoulShard 代幣數量。
-     */
     function getSoulShardAmountForUSD(uint256 _amountUSD) external view returns (uint256) {
         require(oracleAddress != address(0), "Oracle not set");
-        return IOracle(oracleAddress).getAmountOut(usdTokenAddress, soulShardTokenAddress, _amountUSD);
+        // ★★★【核心修正 1】★★★
+        // 呼叫 IOracle 介面中已修正的 getAmountOut 函式 (2個參數)。
+        return IOracle(oracleAddress).getAmountOut(usdTokenAddress, _amountUSD);
     }
 
-    /**
-     * @notice 從玩家的金庫中花費 SoulShard 代幣。
-     * @dev 將扣款邏輯委派給 PlayerVault 合約。
-     * @param player 要扣款的玩家地址。
-     * @param amount 要花費的代幣數量。
-     */
     function spendFromVault(address player, uint256 amount) external {
         require(playerVaultAddress != address(0), "PlayerVault not set");
-        // 驗證呼叫者是否為授權的遊戲合約（例如 Hero, Relic）
         require(
             msg.sender == heroContractAddress || 
             msg.sender == relicContractAddress ||
-            msg.sender == altarOfAscensionAddress, // 假設祭壇也需要花費
+            msg.sender == altarOfAscensionAddress,
             "DungeonCore: Caller not authorized to spend"
         );
-        IPlayerVault(playerVaultAddress).spend(player, amount);
+        // ★★★【核心修正 2】★★★
+        // 呼叫 IPlayerVault 介面中已修正的 spendForGame 函式。
+        IPlayerVault(playerVaultAddress).spendForGame(player, amount);
     }
 
-    /**
-     * @notice 查詢一個隊伍是否被地城主鎖定（例如正在冒險中）。
-     * @dev 將查詢邏輯委派給 DungeonMaster 合約。
-     * @param partyId 要查詢的隊伍 NFT ID。
-     * @return 如果被鎖定則返回 true，否則返回 false。
-     */
     function isPartyLocked(uint256 partyId) external view returns (bool) {
         if (dungeonMasterAddress == address(0)) {
-            return false; // 如果還沒設定 DungeonMaster，則預設所有隊伍都未鎖定
+            return false;
         }
         return IDungeonMaster(dungeonMasterAddress).isPartyLocked(partyId);
     }
 
-    // --- Owner 管理函式 ---
-    // 這些 set 函式是整個系統的「總開關」，只能由擁有者呼叫，用來組裝和升級系統。
+    // --- Owner 管理函式 (保持不變) ---
     
     function setOracle(address _newAddress) external onlyOwner {
         oracleAddress = _newAddress;
