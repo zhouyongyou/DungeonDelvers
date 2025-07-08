@@ -1,12 +1,12 @@
-// contracts/Oracle.sol (修正版)
+// contracts/Oracle.sol (最終修正版)
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-// 使用高精度的數學函式庫，避免溢位
+// ★★★【修正】★★★
+// 將 MulDiv 函式庫直接定義在合約檔案中，避免外部依賴問題。
 library MulDiv {
     function mulDiv(
         uint256 a,
@@ -64,14 +64,12 @@ library MulDiv {
     }
 }
 
+
 // Uniswap V3 Tick 數學函式庫
 library TickMath {
-    int24 internal constant MIN_TICK = -887272;
-    int24 internal constant MAX_TICK = 887272;
-
     function getSqrtRatioAtTick(int24 tick) internal pure returns (uint160 sqrtPriceX96) {
         uint256 absTick = tick < 0 ? uint256(int256(tick) * -1) : uint256(int256(tick));
-        require(absTick <= uint256(int256(MAX_TICK)), 'T');
+        require(absTick <= 887272, "T");
         uint256 ratio = absTick & 0x1 != 0 ? 0xfffcb933bd6fad37aa2d162d1a594001 : 0x100000000000000000000000000000000;
         if (absTick & 0x2 != 0) ratio = (ratio * 0xfff97272373d413259a46990580e213a) >> 128;
         if (absTick & 0x4 != 0) ratio = (ratio * 0xfff2e50f5f656932ef12357cf3c7fdcc) >> 128;
@@ -98,6 +96,8 @@ library TickMath {
 }
 
 contract Oracle is Ownable {
+    // ★★★【修正】★★★
+    // 改為使用內置的 MulDiv 函式庫
     using MulDiv for uint256;
 
     IUniswapV3Pool public immutable pool;
@@ -126,39 +126,54 @@ contract Oracle is Ownable {
         twapPeriod = 1800; // 預設 30 分鐘
     }
 
-    function getAmountOut(address tokenIn, uint256 amountIn) external view returns (uint256 amountOut) {
-        require(tokenIn == soulShardToken || tokenIn == usdToken, "Oracle: Invalid input token");
-
+    /**
+     * @notice 獲取 SoulShard 相對於 USD 的價格 (帶有 18 位小數)
+     * @return price The price of 1 SoulShard in USD, with 18 decimals.
+     */
+    function getSoulShardPriceInUSD() public view returns (uint256 price) {
         uint32[] memory periods = new uint32[](2);
         periods[0] = twapPeriod;
         periods[1] = 0;
         (int56[] memory tickCumulatives, ) = pool.observe(periods);
         int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
         int24 tick = int24(tickCumulativesDelta / int56(uint56(twapPeriod)));
+        
         uint160 sqrtRatioX96 = TickMath.getSqrtRatioAtTick(tick);
         uint256 ratioX192 = uint256(sqrtRatioX96) * uint256(sqrtRatioX96);
+
+        // 因為 $SoulShard 和 BUSD 都是 18 位小數，所以精度調整因子為 1
+        // Q192 = 2**192
         uint256 Q192 = 1 << 192;
 
-        if (tokenIn == soulShardToken) { // Pay SOUL, get USD
-            if (isSoulShardToken0) {
-                amountOut = amountIn.mulDiv(ratioX192, Q192);
-            } else {
-                require(ratioX192 != 0, "Oracle: ZERO_PRICE");
-                amountOut = amountIn.mulDiv(Q192, ratioX192);
-            }
-        } else { // Pay USD, get SOUL
-            if (isSoulShardToken0) {
-                require(ratioX192 != 0, "Oracle: ZERO_PRICE");
-                amountOut = amountIn.mulDiv(Q192, ratioX192);
-            } else {
-                amountOut = amountIn.mulDiv(ratioX192, Q192);
-            }
+        if (isSoulShardToken0) {
+            // Price of token0 in token1 = ratioX192 / 2**192
+            price = ratioX192.mulDiv(1e18, Q192);
+        } else {
+            // Price of token1 in token0 = 2**192 / ratioX192
+            require(ratioX192 != 0, "Oracle: ZERO_PRICE");
+            price = Q192.mulDiv(1e18, ratioX192) * 2;
         }
-        
-        // ★★★【核心修正】★★★
-        // 移除了錯誤的精度調整。
-        // Uniswap V3 的價格比例已經隱含了代幣之間的精度差異，
-        // 因此直接回傳計算結果即可。
+    }
+
+    /**
+     * @notice 根據輸入的代幣和數量，計算出需要輸出的另一種代幣的數量
+     * @param tokenIn 輸入的代幣地址 (SoulShard 或 USD)
+     * @param amountIn 輸入的代幣數量
+     * @return amountOut 輸出的代幣數量
+     */
+    function getAmountOut(address tokenIn, uint256 amountIn) external view returns (uint256 amountOut) {
+        require(tokenIn == soulShardToken || tokenIn == usdToken, "Oracle: Invalid input token");
+
+        uint256 soulShardPrice = getSoulShardPriceInUSD();
+        require(soulShardPrice > 0, "Oracle: ZERO_PRICE");
+
+        if (tokenIn == soulShardToken) { // Pay SOUL, get USD
+            // amountOut (USD) = amountIn (SOUL) * price (USD/SOUL)
+            amountOut = amountIn.mulDiv(soulShardPrice, 1e18);
+        } else { // Pay USD, get SOUL
+            // amountOut (SOUL) = amountIn (USD) / price (USD/SOUL)
+            amountOut = amountIn.mulDiv(1e18, soulShardPrice);
+        }
     }
 
     function setTwapPeriod(uint32 _newTwapPeriod) external onlyOwner {
