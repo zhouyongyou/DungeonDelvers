@@ -7,17 +7,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
+import "@openzeppelin/contracts/utils/Strings.sol"; // ★ 新增
 import "./interfaces.sol";
-
-// 專為 Relic 設計的 SVG 函式庫介面
-interface IDungeonRelicSVGLibrary {
-    struct RelicData {
-        uint8 rarity;
-        uint8 capacity;
-    }
-    function buildRelicURI(RelicData memory _data, uint256 _tokenId) external pure returns (string memory);
-}
 
 /**
  * @title Relic (聖物 NFT - 重構版)
@@ -25,11 +16,19 @@ interface IDungeonRelicSVGLibrary {
  */
 contract Relic is ERC721, Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
-
+    using Strings for uint256; // ★ 新增
+    string public baseURI; // ★ 新增
+    
+    // ★ 修改：直接在 Relic 合約中儲存屬性
+    struct RelicData {
+        uint8 rarity;
+        uint8 capacity;
+    }
+    mapping(uint256 => RelicData) public relicData;
+    
     // --- 狀態變數 ---
     IDungeonCore public dungeonCore;
     IERC20 public soulShardToken;
-    IDungeonRelicSVGLibrary public dungeonSvgLibrary;
     address public ascensionAltarAddress;
 
     uint256 public dynamicSeed;
@@ -37,13 +36,11 @@ contract Relic is ERC721, Ownable, ReentrancyGuard, Pausable {
     uint256 public mintPriceUSD = 2 * 1e18; // * 10**18
     uint256 public platformFee = 0.0003 ether; // 0.0003 BNB
     
-    mapping(uint256 => IDungeonRelicSVGLibrary.RelicData) public relicData;
-
     // --- 事件 ---
     event RelicMinted(uint256 indexed tokenId, address indexed owner, uint8 rarity, uint8 capacity);
     event DynamicSeedUpdated(uint256 newSeed);
     event ContractsSet(address indexed core, address indexed token);
-    event DungeonSvgLibrarySet(address indexed newAddress);
+    event BaseURISet(string newBaseURI); // ★ 新增事件
     event AscensionAltarSet(address indexed newAddress);
     
     // --- 修飾符 ---
@@ -98,10 +95,7 @@ contract Relic is ERC721, Ownable, ReentrancyGuard, Pausable {
 
     function _mintRelic(address _to, uint8 _rarity, uint8 _capacity) private returns (uint256) {
         uint256 tokenId = _nextTokenId;
-        relicData[tokenId] = IDungeonRelicSVGLibrary.RelicData({
-            rarity: _rarity,
-            capacity: _capacity
-        });
+        relicData[tokenId] = RelicData({ rarity: _rarity, capacity: _capacity });
         _safeMint(_to, tokenId);
         _nextTokenId++;
         emit RelicMinted(tokenId, _to, _rarity, _capacity);
@@ -141,26 +135,26 @@ contract Relic is ERC721, Ownable, ReentrancyGuard, Pausable {
     }
 
     // --- 元數據 URI ---
-
+    // ★★★【核心修改】★★★
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        ownerOf(tokenId); 
-        require(address(dungeonSvgLibrary) != address(0), "Relic: SVG Library not set");
-        
-        IDungeonRelicSVGLibrary.RelicData memory data = relicData[tokenId];
-        return dungeonSvgLibrary.buildRelicURI(data, tokenId);
+        _requireOwned(tokenId);
+        require(bytes(baseURI).length > 0, "Relic: baseURI not set");
+        return string(abi.encodePacked(baseURI, tokenId.toString()));
     }
 
     // --- 外部查詢 ---
 
     function getRequiredSoulShardAmount(uint256 _quantity) public view returns (uint256) {
         require(address(dungeonCore) != address(0), "DungeonCore address not set");
-        uint256 totalCostUSD = mintPriceUSD * _quantity;
-        return dungeonCore.getSoulShardAmountForUSD(totalCostUSD);
+        if (_quantity == 0) return 0;
+        uint256 priceForOne = dungeonCore.getSoulShardAmountForUSD(mintPriceUSD);
+        return priceForOne * _quantity;
     }
 
-    function getRelicProperties(uint256 tokenId) external view returns (IDungeonRelicSVGLibrary.RelicData memory) {
-        ownerOf(tokenId); 
-        return relicData[tokenId];
+    function getRelicProperties(uint256 tokenId) external view returns (uint8 rarity, uint8 capacity) {
+        _requireOwned(tokenId);
+        RelicData memory data = relicData[tokenId];
+        return (data.rarity, data.capacity);
     }
 
     // --- Owner 管理函式 ---
@@ -174,9 +168,10 @@ contract Relic is ERC721, Ownable, ReentrancyGuard, Pausable {
         emit ContractsSet(address(dungeonCore), _address);
     }
 
-    function setDungeonSvgLibrary(address _address) public onlyOwner {
-        dungeonSvgLibrary = IDungeonRelicSVGLibrary(_address);
-        emit DungeonSvgLibrarySet(_address);
+    // ★ 新增：設定 baseURI 的函式
+    function setBaseURI(string memory _newBaseURI) external onlyOwner {
+        baseURI = _newBaseURI;
+        emit BaseURISet(_newBaseURI);
     }
 
     function setAscensionAltarAddress(address _address) public onlyOwner {

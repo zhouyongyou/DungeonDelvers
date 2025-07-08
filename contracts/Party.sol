@@ -7,37 +7,20 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
-
-// 導入統一的介面檔案
+import "@openzeppelin/contracts/utils/Strings.sol"; // ★ 新增
 import "./interfaces.sol";
 
-// 專為 Party 設計的 SVG 函式庫介面
-interface IDungeonPartySVGLibrary {
-    struct PartyData {
-        uint256 totalPower;
-        uint256 heroCount;
-        uint256 capacity;
-        uint8 partyRarity;
-    }
-    function buildPartyURI(PartyData memory _data, uint256 _tokenId) external pure returns (string memory);
-}
-
-/**
- * @title Party (獨立依賴管理版)
- * @notice 參照 Hero/Relic 架構改造，實現了鏈上元數據和更高的安全性。
- * @dev Party 合約本身是一個 NFT，它會實際持有（託管）組隊用的 Hero 和 Relic NFT。
- */
 contract Party is ERC721, Ownable, ReentrancyGuard, Pausable, ERC721Holder {
-    
+    using Strings for uint256; // ★ 新增
+    string public baseURI; // ★ 新增
+
     // --- 狀態變數 ---
     IHero public heroContract;
     IRelic public relicContract;
     IDungeonCore public dungeonCoreContract;
-    IDungeonPartySVGLibrary public dungeonSvgLibrary;
 
     // ★ 新增：創建隊伍的平台費用，0.001 BNB
     uint256 public platformFee = 0.001 ether;
-
     struct PartyComposition {
         uint256[] heroIds;
         uint256[] relicIds;
@@ -62,7 +45,7 @@ contract Party is ERC721, Ownable, ReentrancyGuard, Pausable, ERC721Holder {
     event HeroContractSet(address indexed newAddress);
     event RelicContractSet(address indexed newAddress);
     event DungeonCoreSet(address indexed newAddress);
-    event DungeonSvgLibrarySet(address indexed newAddress);
+    event BaseURISet(string newBaseURI); // ★ 新增事件
     event OperatorApprovalSet(address indexed operator, bool approved);
 
     // --- 建構函式 ---
@@ -136,22 +119,13 @@ contract Party is ERC721, Ownable, ReentrancyGuard, Pausable, ERC721Holder {
     }
     
     // --- 元數據 URI ---
+    // ★★★【核心修改】★★★
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        ownerOf(tokenId);
-        require(address(dungeonSvgLibrary) != address(0), "Party: SVG Library not set");
-        
-        PartyComposition storage party = partyCompositions[tokenId];
-        
-        IDungeonPartySVGLibrary.PartyData memory data = IDungeonPartySVGLibrary.PartyData({
-            totalPower: party.totalPower,
-            heroCount: party.heroIds.length,
-            capacity: party.totalCapacity,
-            partyRarity: party.partyRarity
-        });
-
-        return dungeonSvgLibrary.buildPartyURI(data, tokenId);
+        _requireOwned(tokenId);
+        require(bytes(baseURI).length > 0, "Party: baseURI not set");
+        return string(abi.encodePacked(baseURI, tokenId.toString()));
     }
-
+    
     // --- Owner 管理函式 ---
     function setHeroContract(address _heroAddress) public onlyOwner {
         heroContract = IHero(_heroAddress);
@@ -168,9 +142,10 @@ contract Party is ERC721, Ownable, ReentrancyGuard, Pausable, ERC721Holder {
         emit DungeonCoreSet(_coreAddress);
     }
 
-    function setDungeonSvgLibrary(address _address) public onlyOwner {
-        dungeonSvgLibrary = IDungeonPartySVGLibrary(_address);
-        emit DungeonSvgLibrarySet(_address);
+    // ★ 新增：設定 baseURI 的函式
+    function setBaseURI(string memory _newBaseURI) external onlyOwner {
+        baseURI = _newBaseURI;
+        emit BaseURISet(_newBaseURI);
     }
 
     function setOperatorApproval(address operator, bool approved) external onlyOwner {

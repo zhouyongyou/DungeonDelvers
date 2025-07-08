@@ -7,27 +7,18 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/utils/Strings.sol"; // ★ 新增
 import "./interfaces.sol";
-
-interface IVIPSVGLibrary {
-    struct VIPCardData {
-        uint256 tokenId;
-        uint256 level;
-        uint256 stakedValueUSD;
-        uint256 nextLevelRequirementUSD;
-        uint256 currentLevelRequirementUSD;
-    }
-    function buildTokenURI(VIPCardData memory data) external pure returns (string memory);
-}
 
 contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
+    using Strings for uint256; // ★ 新增
 
     // --- 狀態變數 ---
     IDungeonCore public dungeonCore;
     IERC20 public soulShardToken;
-    IVIPSVGLibrary public vipSvgLibrary;
-
+    string public baseURI; // ★ 新增
+    
     uint256 private _nextTokenId;
     uint256 public unstakeCooldown;
     uint256 public totalPendingUnstakes;
@@ -50,7 +41,7 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
     event UnstakeClaimed(address indexed user, uint256 amount);
     event DungeonCoreSet(address indexed newAddress);
     event SoulShardTokenSet(address indexed newAddress);
-    event VIPSVGLibrarySet(address indexed newAddress);
+    event BaseURISet(string newBaseURI); // ★ 新增事件
 
     // --- 構造函數 ---
     constructor(address initialOwner) ERC721("Dungeon Delvers VIP", "DDV") Ownable(initialOwner) {
@@ -118,52 +109,24 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
     function getVipLevel(address _user) public view returns (uint8) {
         uint256 stakedAmount = userStakes[_user].amount;
         if (stakedAmount == 0 || address(dungeonCore) == address(0)) return 0;
-
-        // ★ 核心修正：呼叫 getAmountOut 時只傳入 2 個參數
         uint256 stakedValueUSD = IOracle(dungeonCore.oracle()).getAmountOut(
             address(soulShardToken), stakedAmount
         );
         
-        // ★★★【最終等級計算修正】★★★
-        // 從 DungeonCore 獲取正確的 USD 精度，而不是硬編碼 1e18
         uint8 usdDecimals = dungeonCore.usdDecimals();
         require(usdDecimals > 0, "VIP: USD decimals not set in Core");
         uint256 usdValue = stakedValueUSD / (10**usdDecimals);
         
-        // 等級計算公式: level = sqrt(USD價值 / 100)
         if (usdValue < 100) return 0;
         uint256 level = Math.sqrt(usdValue / 100);
         return uint8(level);
     }
     
+    // ★★★【核心修改】★★★
     function tokenURI(uint256 _tokenId) public view override returns (string memory) {
-        address owner = ownerOf(_tokenId);
-        require(address(vipSvgLibrary) != address(0), "VIP: SVG Library not set");
-        
-        uint256 stakedAmount = userStakes[owner].amount;
-        
-        uint256 stakedValueUSD = 0;
-        if (stakedAmount > 0) {
-            // ★ 核心修正：呼叫 getAmountOut 時只傳入 2 個參數
-            stakedValueUSD = IOracle(dungeonCore.oracle()).getAmountOut(
-                address(soulShardToken), stakedAmount
-            );
-        }
-
-        uint256 level = uint256(getVipLevel(owner));
-        uint256 nextLevel = level + 1;
-        uint8 usdDecimals = dungeonCore.usdDecimals();
-        require(usdDecimals > 0, "VIP: USD decimals not set in Core");
-        
-        IVIPSVGLibrary.VIPCardData memory data = IVIPSVGLibrary.VIPCardData({
-            tokenId: _tokenId,
-            level: level,
-            stakedValueUSD: stakedValueUSD,
-            nextLevelRequirementUSD: nextLevel * nextLevel * 100 * (10**usdDecimals),
-            currentLevelRequirementUSD: level * level * 100 * (10**usdDecimals)
-        });
-
-        return vipSvgLibrary.buildTokenURI(data);
+        _requireOwned(_tokenId);
+        require(bytes(baseURI).length > 0, "VIP: baseURI not set");
+        return string(abi.encodePacked(baseURI, _tokenId.toString()));
     }
     
     // --- Owner 管理函式 ---
@@ -177,9 +140,10 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
         emit SoulShardTokenSet(_newAddress);
     }
     
-    function setVipSvgLibrary(address _newAddress) external onlyOwner {
-        vipSvgLibrary = IVIPSVGLibrary(_newAddress);
-        emit VIPSVGLibrarySet(_newAddress);
+    // ★ 新增：設定 baseURI 的函式
+    function setBaseURI(string memory _newBaseURI) external onlyOwner {
+        baseURI = _newBaseURI;
+        emit BaseURISet(_newBaseURI);
     }
 
     function setUnstakeCooldown(uint256 _newCooldown) external onlyOwner {
