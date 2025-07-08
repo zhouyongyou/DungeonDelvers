@@ -24,7 +24,7 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
 
     // --- 事件 ---
     event ProvisionsBought(uint256 indexed partyId, uint256 amount, uint256 cost);
-event ExpeditionFulfilled(address indexed player, uint256 indexed partyId, bool success, uint256 reward, uint256 expGained);
+    event ExpeditionFulfilled(address indexed player, uint256 indexed partyId, bool success, uint256 reward, uint256 expGained);
     event RewardsBanked(address indexed user, uint256 indexed partyId, uint256 amount);
     event PartyRested(uint256 indexed partyId, uint256 costInSoulShard);
     event DynamicSeedUpdated(uint256 newSeed);
@@ -214,7 +214,7 @@ event ExpeditionFulfilled(address indexed player, uint256 indexed partyId, bool 
     }
 
     function setProvisionPriceUSD(uint256 _newPrice) external onlyOwner {
-        provisionPriceUSD = _newPrice;
+        provisionPriceUSD = _newPrice * 1e18;
     }
 
     function setExplorationFee(uint256 _newFee) external onlyOwner {

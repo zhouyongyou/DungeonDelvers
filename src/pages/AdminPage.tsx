@@ -14,7 +14,7 @@ import { useTransactionStore } from '../stores/useTransactionStore';
 type SupportedChainId = typeof bsc.id;
 
 // =================================================================
-// Section: 可重用的 UI 子元件
+// Section: 可重用的 UI 子元件 (優化版)
 // =================================================================
 
 const AdminSection: React.FC<{ title: string; children: ReactNode }> = ({ title, children }) => (
@@ -83,7 +83,7 @@ const AddressSettingRow: React.FC<{ title: string; description: string; readSour
     );
 };
 
-const SettingRow: React.FC<{ label: string; readSource: string; contract: NonNullable<ReturnType<typeof getContract>>; functionName: string; currentValue?: any; isLoading: boolean; isEther?: boolean; isBasisPoints?: boolean; placeholders?: string[]; }> = ({ label, readSource, contract, functionName, currentValue, isLoading, isEther = false, isBasisPoints = false, placeholders = ['輸入新值'] }) => {
+const SettingRow: React.FC<{ label: string; readSource: string; contract: NonNullable<ReturnType<typeof getContract>>; functionName: string; currentValue?: any; isLoading: boolean; unit?: 'USD' | 'BNB' | '‱' | '無'; placeholders?: string[]; }> = ({ label, readSource, contract, functionName, currentValue, isLoading, unit = '無', placeholders = ['輸入新值'] }) => {
     const [inputValues, setInputValues] = useState<string[]>(new Array(placeholders.length).fill(''));
     const { showToast } = useAppToast();
     const { writeContractAsync, isPending } = useWriteContract();
@@ -91,9 +91,13 @@ const SettingRow: React.FC<{ label: string; readSource: string; contract: NonNul
     const handleUpdate = async () => {
         if (inputValues.some(v => !v)) return;
         try {
-            const valuesToSet = inputValues.map((val, index) => {
-                if (placeholders[index]?.toLowerCase().includes('usd')) return parseEther(val);
-                if (placeholders[index]?.toLowerCase().includes('bnb')) return parseEther(val);
+            // ★★★【核心修正】★★★
+            // 現在，前端只負責傳送管理者輸入的原始字串。
+            // 對於 BNB，我們仍然使用 parseEther。
+            // 對於 USD，我們不再使用 parseEther，因為合約端會處理 * 1e18。
+            const valuesToSet = inputValues.map((val) => {
+                if (unit === 'BNB') return parseEther(val);
+                // 對於 USD 和其他所有數值，直接轉換為 BigInt
                 return BigInt(val);
             });
             await writeContractAsync({ address: contract.address, abi: contract.abi as Abi, functionName, args: valuesToSet });
@@ -103,7 +107,8 @@ const SettingRow: React.FC<{ label: string; readSource: string; contract: NonNul
         }
     };
     
-    const displayValue = isLoading ? <LoadingSpinner size="h-4 w-4" /> : currentValue === undefined || currentValue === null ? 'N/A' : isEther ? `${formatEther(currentValue ?? 0n)}` : isBasisPoints ? `${(Number(currentValue ?? 0n) / 100).toFixed(2)}%` : currentValue.toString();
+    // 顯示邏輯保持不變，依然使用 formatEther 來美化顯示
+    const displayValue = isLoading ? <LoadingSpinner size="h-4 w-4" /> : currentValue === undefined || currentValue === null ? 'N/A' : (unit === 'USD' || unit === 'BNB') ? `${formatEther(currentValue ?? 0n)}` : unit === '‱' ? `${(Number(currentValue ?? 0n) / 100).toFixed(2)}%` : currentValue.toString();
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
@@ -121,9 +126,8 @@ const SettingRow: React.FC<{ label: string; readSource: string; contract: NonNul
     );
 };
 
-// =================================================================
-// Section: 複雜參數管理元件
-// =================================================================
+// ... 其餘元件 (DungeonManager, AltarRuleManager, AdminPageContent, AdminPage) 保持不變 ...
+// (此處省略未變更的程式碼以保持簡潔)
 
 const DungeonManager: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) => {
     const { showToast } = useAppToast();
@@ -274,13 +278,7 @@ const AltarRuleManager: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     );
 };
 
-
-// =================================================================
-// Section: AdminPageContent (核心邏輯元件)
-// =================================================================
-
 const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) => {
-    // ... (AdminPageContent 的所有內部邏輯保持不變) ...
     const { address } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
@@ -356,8 +354,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         contract: NonNullable<ReturnType<typeof getContract>>;
         getter: string;
         setter: string;
-        isEther?: boolean;
-        isBasisPoints?: boolean;
+        unit?: 'USD' | 'BNB' | '‱' | '無';
         placeholders?: string[];
     };
     
@@ -371,20 +368,19 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
             vipStaking: getContract(chainId, 'vipStaking'),
         };
         const config = [
-            { key: 'heroMintPrice', label: "英雄鑄造價", contract: contracts.hero, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', isEther: true, placeholders: ['新價格 (USD)'] },
-            { key: 'relicMintPrice', label: "聖物鑄造價", contract: contracts.relic, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', isEther: true, placeholders: ['新價格 (USD)'] },
-            { key: 'provisionPrice', label: "儲備購買價", contract: contracts.dungeonMaster, getter: 'provisionPriceUSD', setter: 'setProvisionPriceUSD', isEther: true, placeholders: ['新價格 (USD)'] },
-            { key: 'heroFee', label: "英雄平台費", contract: contracts.hero, getter: 'platformFee', setter: 'setPlatformFee', isEther: true, placeholders: ['新費用 (BNB)'] },
-            { key: 'relicFee', label: "聖物平台費", contract: contracts.relic, getter: 'platformFee', setter: 'setPlatformFee', isEther: true, placeholders: ['新費用 (BNB)'] },
-            { key: 'partyFee', label: "隊伍平台費", contract: contracts.party, getter: 'platformFee', setter: 'setPlatformFee', isEther: true, placeholders: ['新費用 (BNB)'] },
-            { key: 'explorationFee', label: "遠征探索費", contract: contracts.dungeonMaster, getter: 'explorationFee', setter: 'setExplorationFee', isEther: true, placeholders: ['新費用 (BNB)'] },
-            { key: 'restDivisor', label: "休息成本係數", contract: contracts.dungeonMaster, getter: 'restCostPowerDivisor', setter: 'setRestCostPowerDivisor', placeholders: ['新係數 (戰力/USD)'] },
-            { key: 'vipCooldown', label: "VIP 取消質押冷卻 (秒)", contract: contracts.vipStaking, getter: 'unstakeCooldown', setter: 'setUnstakeCooldown', placeholders: ['新冷卻時間 (秒)'] },
-            { key: 'taxParams', label: "稅務參數", contract: contracts.playerVault, getter: 'standardInitialRate', setter: 'setTaxParameters', isBasisPoints: true, placeholders: ['標準稅率 (‱)', '大額稅率 (‱)', '衰減率 (‱)', '週期(秒)'] },
-            { key: 'commissionRate', label: "邀請佣金率", contract: contracts.playerVault, getter: 'commissionRate', setter: 'setCommissionRate', isBasisPoints: true, placeholders: ['新佣金率 (萬分位)'] },
-            { key: 'withdrawThresholds', label: "提現門檻 (USD)", contract: contracts.playerVault, getter: 'smallWithdrawThresholdUSD', setter: 'setWithdrawThresholds', isEther: true, placeholders: ['小額門檻 (USD)', '大額門檻 (USD)'] },
+            { key: 'heroMintPrice', label: "英雄鑄造價", contract: contracts.hero, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] },
+            { key: 'relicMintPrice', label: "聖物鑄造價", contract: contracts.relic, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] },
+            { key: 'provisionPrice', label: "儲備購買價", contract: contracts.dungeonMaster, getter: 'provisionPriceUSD', setter: 'setProvisionPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] },
+            { key: 'heroFee', label: "英雄平台費", contract: contracts.hero, getter: 'platformFee', setter: 'setPlatformFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
+            { key: 'relicFee', label: "聖物平台費", contract: contracts.relic, getter: 'platformFee', setter: 'setPlatformFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
+            { key: 'partyFee', label: "隊伍平台費", contract: contracts.party, getter: 'platformFee', setter: 'setPlatformFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
+            { key: 'explorationFee', label: "遠征探索費", contract: contracts.dungeonMaster, getter: 'explorationFee', setter: 'setExplorationFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
+            { key: 'restDivisor', label: "休息成本係數", contract: contracts.dungeonMaster, getter: 'restCostPowerDivisor', setter: 'setRestCostPowerDivisor', unit: '無', placeholders: ['新係數 (戰力/USD)'] },
+            { key: 'vipCooldown', label: "VIP 取消質押冷卻 (秒)", contract: contracts.vipStaking, getter: 'unstakeCooldown', setter: 'setUnstakeCooldown', unit: '無', placeholders: ['新冷卻時間 (秒)'] },
+            { key: 'taxParams', label: "稅務參數", contract: contracts.playerVault, getter: 'standardInitialRate', setter: 'setTaxParameters', unit: '‱', placeholders: ['標準稅率 (‱)', '大額稅率 (‱)', '衰減率 (‱)', '週期(秒)'] },
+            { key: 'commissionRate', label: "邀請佣金率", contract: contracts.playerVault, getter: 'commissionRate', setter: 'setCommissionRate', unit: '‱', placeholders: ['新佣金率 (萬分位)'] },
+            { key: 'withdrawThresholds', label: "提現門檻 (USD)", contract: contracts.playerVault, getter: 'smallWithdrawThresholdUSD', setter: 'setWithdrawThresholds', unit: 'USD', placeholders: ['小額門檻 (USD)', '大額門檻 (USD)'] },
         ];
-        // 型別修正：直接用 as 斷言，避免 type predicate 報錯
         return config.filter((c) => !!c.contract && !!c.contract.address) as ParameterConfigItem[];
     }, [chainId]);
 
@@ -484,7 +480,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
             </AdminSection>
             
             <AdminSection title="核心價格管理 (USD)">
-                {parameterConfig.filter(p => p.label.includes('價')).map((p) => {
+                {parameterConfig.filter(p => p.unit === 'USD').map((p) => {
                     const { key, setter, ...rest } = p;
                     return (
                         <SettingRow
@@ -500,7 +496,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
             </AdminSection>
 
             <AdminSection title="平台費用管理 (BNB)">
-                 {parameterConfig.filter(p => p.label.includes('費')).map((p) => {
+                 {parameterConfig.filter(p => p.unit === 'BNB').map((p) => {
                     const { key, setter, ...rest } = p;
                     return (
                         <SettingRow
@@ -566,14 +562,8 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     );
 };
 
-
-// =================================================================
-// Section: AdminPage (入口元件)
-// =================================================================
-
 const AdminPage: React.FC = () => {
     const { chainId } = useAccount();
-    // ★ 核心修正：移除對 bscTestnet 的判斷
     const isSupportedChain = (id: number | undefined): id is SupportedChainId => id === bsc.id;
 
     return (

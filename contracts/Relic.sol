@@ -34,7 +34,7 @@ contract Relic is ERC721, Ownable, ReentrancyGuard, Pausable {
 
     uint256 public dynamicSeed;
     uint256 private _nextTokenId;
-    uint256 public mintPriceUSD = 2; // * 10**18
+    uint256 public mintPriceUSD = 2 * 1e18; // * 10**18
     uint256 public platformFee = 0.0003 ether; // 0.0003 BNB
     
     mapping(uint256 => IDungeonRelicSVGLibrary.RelicData) public relicData;
@@ -185,7 +185,7 @@ contract Relic is ERC721, Ownable, ReentrancyGuard, Pausable {
     }
     
     function setMintPriceUSD(uint256 _newPrice) external onlyOwner {
-        mintPriceUSD = _newPrice;
+        mintPriceUSD = _newPrice * 1e18;
     }
     
     function pause() external onlyOwner { _pause(); }

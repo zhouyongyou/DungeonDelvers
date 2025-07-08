@@ -9,8 +9,8 @@ import { Player, Party, Hero, Relic } from "../generated/schema"
 
 // 建議：將合約地址定義為常數，方便管理
 // 注意：請確保這些地址是您最終部署的 Hero 和 Relic 合約地址
-const HERO_CONTRACT = "0x435a7923F895923cD36AA2519885B1ba476FAfe1"
-const RELIC_CONTRACT = "0x3aEF955F03664376dfCA8DfE809bb5bFf569113f"
+const HERO_CONTRACT = "0x5a841A2a0bE5C1387FC0ECD9eBA75E225CcA10e2"
+const RELIC_CONTRACT = "0x24dad2fc68577eADF10Eb7448A7d0D96803BA0C9"
 
 // 處理創建隊伍事件
 export function handlePartyCreated(event: PartyCreated): void {

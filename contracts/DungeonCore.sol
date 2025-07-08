@@ -6,6 +6,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces.sol";
 
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+
 /**
  * @title DungeonCore (架構核心版)
  * @notice 系統的中心樞紐，負責註冊和管理所有衛星合約，並作為它們之間溝通的橋樑。
@@ -26,6 +28,8 @@ contract DungeonCore is Ownable {
     address public playerProfileAddress;
     address public vipStakingAddress;
 
+    uint8 public usdDecimals;
+
     // --- 事件 ---
     event OracleSet(address indexed newAddress);
     event PlayerVaultSet(address indexed newAddress);
@@ -45,13 +49,13 @@ contract DungeonCore is Ownable {
         require(_usdToken != address(0) && _soulShardToken != address(0), "Token addresses cannot be zero");
         usdTokenAddress = _usdToken;
         soulShardTokenAddress = _soulShardToken;
+        usdDecimals = IERC20Metadata(_usdToken).decimals();
     }
 
     function getSoulShardAmountForUSD(uint256 _amountUSD) external view returns (uint256) {
         require(oracleAddress != address(0), "Oracle not set");
-        // ★★★【核心修正 1】★★★
-        // 呼叫 IOracle 介面中已修正的 getAmountOut 函式 (2個參數)。
-        return IOracle(oracleAddress).getAmountOut(usdTokenAddress, _amountUSD);
+        uint256 scaledAmount = (_amountUSD * (10**usdDecimals)) / 1e18;
+        return IOracle(oracleAddress).getAmountOut(usdTokenAddress, scaledAmount);
     }
 
     function spendFromVault(address player, uint256 amount) external {
@@ -62,8 +66,6 @@ contract DungeonCore is Ownable {
             msg.sender == altarOfAscensionAddress,
             "DungeonCore: Caller not authorized to spend"
         );
-        // ★★★【核心修正 2】★★★
-        // 呼叫 IPlayerVault 介面中已修正的 spendForGame 函式。
         IPlayerVault(playerVaultAddress).spendForGame(player, amount);
     }
 

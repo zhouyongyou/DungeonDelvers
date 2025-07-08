@@ -1,16 +1,74 @@
+// contracts/Oracle.sol (已修正)
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces.sol"; // 假設所有外部介面都在此檔案中
+import "./interfaces.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-/// @title TickMath library for computing sqrt prices from ticks and vice versa
-/// @notice Computes sqrt price for ticks of size 1.0001, i.e. sqrt(1.0001^tick) as fixed point Q64.96 numbers.
-/// @dev This is the full, audited library from Uniswap V3.
+// ★★★【核心修正 1】★★★
+// 引入一個安全的數學函式庫來處理大數乘除，避免溢位。
+// Library from Solmate: https://github.com/transmissions11/solmate/blob/main/src/utils/MulDiv.sol
+library MulDiv {
+    function mulDiv(
+        uint256 a,
+        uint256 b,
+        uint256 denominator
+    ) internal pure returns (uint256 result) {
+        uint256 prod0; 
+        uint256 prod1; 
+        assembly {
+            let mm := mulmod(a, b, not(0))
+            prod0 := mul(a, b)
+            prod1 := sub(mm, prod0)
+            if lt(mm, prod0) {
+                prod1 := sub(prod1, 1)
+            }
+        }
+
+        if (prod1 == 0) {
+            require(denominator > 0, "ZERO_DENOMINATOR");
+            result = prod0 / denominator;
+            return result;
+        }
+
+        require(denominator > prod1, "OVERFLOW");
+
+        uint256 remainder;
+        assembly {
+            remainder := mulmod(a, b, denominator)
+            prod0 := sub(prod0, remainder)
+            prod1 := sub(prod1, mul(0, remainder))
+            if lt(prod0, remainder) {
+                prod1 := sub(prod1, 1)
+            }
+        }
+
+        uint256 twos = (~denominator + 1) & denominator;
+        assembly {
+            denominator := div(denominator, twos)
+        }
+        assembly {
+            prod0 := div(prod0, twos)
+        }
+        
+        assembly {
+            let inv := mul(3, denominator)
+            inv := xor(inv, 2)
+            inv := mul(inv, sub(2, mul(denominator, inv)))
+            inv := mul(inv, sub(2, mul(denominator, inv)))
+            inv := mul(inv, sub(2, mul(denominator, inv)))
+            inv := mul(inv, sub(2, mul(denominator, inv)))
+            inv := mul(inv, sub(2, mul(denominator, inv)))
+            inv := mul(inv, sub(2, mul(denominator, inv)))
+            result := mul(prod0, inv)
+        }
+    }
+}
+
 library TickMath {
     int24 internal constant MIN_TICK = -887272;
     int24 internal constant MAX_TICK = 887272;
-
     uint160 internal constant MIN_SQRT_RATIO = 4295128739;
     uint160 internal constant MAX_SQRT_RATIO = 1461446703485210103287273052203988822378723970342;
 
@@ -42,98 +100,75 @@ library TickMath {
     }
 }
 
-
-/**
- * @title Oracle (最終防呆版)
- * @notice 負責從 PancakeSwap V3 的流動性池中，安全地讀取時間加權平均價格 (TWAP)。
- * @dev 此版本在部署時自動校準 Token0/1 順序，並將關鍵參數設為不可變，以提升安全性。
- */
 contract Oracle is Ownable {
+    using MulDiv for uint256;
 
-    // --- 狀態變數 ---
     IUniswapV3Pool public immutable pool;
     address public immutable soulShardToken;
     address public immutable usdToken;
-    
-    // 這個布林值在部署時被永久設定，用於記錄 SoulShard 是否為池中的 Token0
     bool private immutable isSoulShardToken0;
     
+    uint8 public immutable soulShardDecimals;
+    uint8 public immutable usdDecimals;
+    
     uint32 public twapPeriod;
-
-    // --- 事件 ---
     event TwapPeriodUpdated(uint32 newTwapPeriod);
 
-    /**
-     * @param _poolAddress PancakeSwap V3 流動性池的地址。
-     * @param _soulShardTokenAddress 您的遊戲代幣地址。
-     * @param _usdTokenAddress 您的穩定幣地址。
-     */
     constructor(
         address _poolAddress,
         address _soulShardTokenAddress,
         address _usdTokenAddress
-    ) Ownable(msg.sender) { // 將部署者設為擁有者
+    ) Ownable(msg.sender) {
         require(_poolAddress != address(0) && _soulShardTokenAddress != address(0) && _usdTokenAddress != address(0), "Oracle: Zero address");
         
         pool = IUniswapV3Pool(_poolAddress);
         soulShardToken = _soulShardTokenAddress;
         usdToken = _usdTokenAddress;
 
-        // 自動校準並記錄代幣順序
         address token0 = pool.token0();
         require(token0 == soulShardToken || token0 == usdToken, "Oracle: Pool tokens mismatch");
         isSoulShardToken0 = (soulShardToken == token0);
 
-        // 設定初始的 TWAP 週期，例如 30 分鐘
+        soulShardDecimals = IERC20Metadata(_soulShardTokenAddress).decimals();
+        usdDecimals = IERC20Metadata(_usdTokenAddress).decimals();
+
         twapPeriod = 1800; 
     }
 
-    /**
-     * @notice 根據輸入的 tokenIn 數量，計算能兌換多少 tokenOut。
-     * @param tokenIn 支付的代幣地址 (必須是 SoulShard 或 USD)。
-     * @param amountIn 支付的代幣數量。
-     * @return amountOut 得到的代幣數量。
-     */
     function getAmountOut(address tokenIn, uint256 amountIn) external view returns (uint256 amountOut) {
         require(tokenIn == soulShardToken || tokenIn == usdToken, "Oracle: Invalid input token");
 
-        // 1. 從池子獲取時間加權平均 Tick
         uint32[] memory periods = new uint32[](2);
         periods[0] = twapPeriod;
         periods[1] = 0;
         (int56[] memory tickCumulatives, ) = pool.observe(periods);
         int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
         int24 tick = int24(tickCumulativesDelta / int56(uint56(twapPeriod)));
-
-        // 2. 將 Tick 轉換為價格的平方根
         uint160 sqrtRatioX96 = TickMath.getSqrtRatioAtTick(tick);
-        
-        // 3. 計算價格 (Q128.128 格式)
         uint256 ratioX192 = uint256(sqrtRatioX96) * uint256(sqrtRatioX96);
+        uint256 Q192 = 1 << 192;
 
-        // 4. 根據代幣順序和輸入代幣，計算最終輸出
-        if (tokenIn == soulShardToken) { // 如果支付 SoulShard, 想得到 USD
-            if (isSoulShardToken0) { // SoulShard 是 Token0, USD 是 Token1
-                // 原始價格 ratioX192 代表 Token1/Token0 (USD/SOUL)
-                amountOut = (amountIn * ratioX192) >> 192;
-            } else { // SoulShard 是 Token1, USD 是 Token0
-                // 原始價格 ratioX192 代表 Token1/Token0 (SOUL/USD)
-                // 我們需要取倒數
-                amountOut = (amountIn * (1 << 192)) / ratioX192;
+        if (tokenIn == soulShardToken) { // Pay SOUL, get USD
+            uint256 result;
+            if (isSoulShardToken0) { // SOUL is token0, price is USD/SOUL
+                result = amountIn.mulDiv(ratioX192, Q192);
+            } else { // SOUL is token1, price is SOUL/USD
+                require(ratioX192 != 0, "Oracle: ZERO_PRICE");
+                result = amountIn.mulDiv(Q192, ratioX192);
             }
-        } else { // 如果支付 USD, 想得到 SoulShard
-            if (isSoulShardToken0) { // SoulShard 是 Token0, USD 是 Token1
-                // 原始價格 ratioX192 代表 Token1/Token0 (USD/SOUL)
-                // 我們需要取倒數
-                amountOut = (amountIn * (1 << 192)) / ratioX192;
-            } else { // SoulShard 是 Token1, USD 是 Token0
-                // 原始價格 ratioX192 代表 Token1/Token0 (SOUL/USD)
-                amountOut = (amountIn * ratioX192) >> 192;
+            amountOut = result * (10**usdDecimals) / (10**soulShardDecimals);
+        } else { // Pay USD, get SOUL
+            uint256 result;
+            if (isSoulShardToken0) { // SOUL is token0, price is USD/SOUL
+                require(ratioX192 != 0, "Oracle: ZERO_PRICE");
+                result = amountIn.mulDiv(Q192, ratioX192);
+            } else { // SOUL is token1, price is SOUL/USD
+                result = amountIn.mulDiv(ratioX192, Q192);
             }
+            amountOut = result * (10**soulShardDecimals) / (10**usdDecimals);
         }
     }
 
-    // --- Owner 管理函式 ---
     function setTwapPeriod(uint32 _newTwapPeriod) external onlyOwner {
         require(_newTwapPeriod > 0, "Oracle: TWAP period must be > 0");
         twapPeriod = _newTwapPeriod;
