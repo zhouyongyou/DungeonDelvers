@@ -1,3 +1,5 @@
+// DDgraphql/dungeon-delvers/src/party.ts (修正後版本)
+
 import { BigInt } from "@graphprotocol/graph-ts"
 import {
   PartyCreated,
@@ -6,8 +8,9 @@ import {
 import { Player, Party, Hero, Relic } from "../generated/schema"
 
 // 建議：將合約地址定義為常數，方便管理
-const HERO_CONTRACT = "0xfc2a24e894236a6169d2353be430a3d5828111d2"
-const RELIC_CONTRACT = "0xd86245ddce19e8f94bc30f0facf7bd111069faf9"
+// 注意：請確保這些地址是您最終部署的 Hero 和 Relic 合約地址
+const HERO_CONTRACT = "0xd895BC3958604B93CcB6F63923487299A059bE21"
+const RELIC_CONTRACT = "0x6f58C391a481D31ebEF77cFD2cD6245967719C00"
 
 // 處理創建隊伍事件
 export function handlePartyCreated(event: PartyCreated): void {
@@ -28,6 +31,8 @@ export function handlePartyCreated(event: PartyCreated): void {
     let heroId = HERO_CONTRACT + "-" + heroIds[i].toString()
     let hero = Hero.load(heroId)
     if (hero) {
+      // 核心修正：我們只需要設定 Hero 的 party 欄位。
+      // The Graph 會自動處理 Party 實體上的 heroes 陣列。
       hero.party = party.id
       hero.save()
     }
@@ -39,6 +44,7 @@ export function handlePartyCreated(event: PartyCreated): void {
     let relicId = RELIC_CONTRACT + "-" + relicIds[i].toString()
     let relic = Relic.load(relicId)
     if (relic) {
+      // 核心修正：同樣，只需要設定 Relic 的 party 欄位。
       relic.party = party.id
       relic.save()
     }
@@ -50,12 +56,12 @@ export function handlePartyCreated(event: PartyCreated): void {
   party.unclaimedRewards = BigInt.fromI32(0)
   party.fatigueLevel = 0
   
-  // 這些數據需要從合約讀取，但 mapping 中無法直接 call 合約
-  // 理想情況下，這些數據也應該包含在 PartyCreated 事件的參數中
-  // 此處暫時設為 0，未來可透過 call handlers 或其他方式補全
-  party.totalPower = BigInt.fromI32(0)
-  party.totalCapacity = BigInt.fromI32(0)
-  party.partyRarity = 0
+  // ★★★ 核心優化 ★★★
+  // 這些欄位將在您更新 PartyCreated 事件並重新執行 `graph codegen` 後生效。
+  // 在那之前，TypeScript 會報錯，這是正常的。
+  party.totalPower = event.params.totalPower
+  party.totalCapacity = event.params.totalCapacity
+  party.partyRarity = event.params.partyRarity
 
   party.save()
 }

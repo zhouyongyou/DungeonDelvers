@@ -25,13 +25,14 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
     party.cooldownEndsAt = event.block.timestamp.plus(BigInt.fromI32(24 * 60 * 60)) // 24 小時冷卻
     party.save()
 
-    // 更新玩家經驗值
-    let ownerAddress = party.owner
-    let profile = PlayerProfile.load(ownerAddress)
-    if (profile) {
-      profile.experience = profile.experience.plus(event.params.expGained)
-      // 等級的計算可以在前端完成，或在此處也計算一次
-      profile.save()
+  // +++ 新增的邏輯：直接更新玩家檔案 +++
+  let playerAddress = event.params.player; // 直接從事件獲取玩家地址！
+  let profile = PlayerProfile.load(playerAddress);
+  if (profile) {
+    profile.experience = profile.experience.plus(event.params.expGained);
+    // 等級計算可以在前端做，也可以在這裡做，取決於您的需求
+    // profile.level = calculateLevel(profile.experience);
+    profile.save();
     }
   }
 }

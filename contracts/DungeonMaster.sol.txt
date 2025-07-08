@@ -24,7 +24,7 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
 
     // --- 事件 ---
     event ProvisionsBought(uint256 indexed partyId, uint256 amount, uint256 cost);
-    event ExpeditionFulfilled(uint256 indexed partyId, bool success, uint256 reward, uint256 expGained);
+event ExpeditionFulfilled(address indexed player, uint256 indexed partyId, bool success, uint256 reward, uint256 expGained);
     event RewardsBanked(address indexed user, uint256 indexed partyId, uint256 amount);
     event PartyRested(uint256 indexed partyId, uint256 costInSoulShard);
     event DynamicSeedUpdated(uint256 newSeed);
@@ -113,7 +113,7 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
         dynamicSeed = uint256(keccak256(abi.encodePacked(dynamicSeed, randomValue, success ? 1 : 0)));
         dungeonStorage.setPartyStatus(_partyId, _partyStatus);
 
-        emit ExpeditionFulfilled(_partyId, success, reward, expGained);
+        emit ExpeditionFulfilled(_requester, _partyId, success, reward, expGained);
     }
 
     // ★ 核心修正：移除 view 關鍵字，因為此函式會透過 try/catch 呼叫一個會修改狀態的函式

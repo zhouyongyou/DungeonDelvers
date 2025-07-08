@@ -35,7 +35,7 @@ contract PlayerProfile is ERC721, Ownable {
 
     // --- 事件 ---
     event ProfileCreated(address indexed player, uint256 indexed tokenId);
-    event ExperienceAdded(uint256 indexed tokenId, uint256 amount, uint256 newTotalExperience);
+    event ExperienceAdded(address indexed player, uint256 indexed tokenId, uint256 amount, uint256 newTotalExperience);
     event DungeonCoreSet(address indexed newAddress);
     event ProfileSVGLibrarySet(address indexed newAddress);
 
@@ -73,7 +73,8 @@ contract PlayerProfile is ERC721, Ownable {
         uint256 tokenId = profileTokenOf[_player];
         require(tokenId != 0, "PlayerProfile: Player does not have a profile");
         playerExperience[tokenId] += _amount;
-        emit ExperienceAdded(tokenId, _amount, playerExperience[tokenId]);
+        // 在 emit 事件時，把 _player 也放進去
+        emit ExperienceAdded(_player, tokenId, _amount, playerExperience[tokenId]);
     }
     
     // --- 元數據 URI ---

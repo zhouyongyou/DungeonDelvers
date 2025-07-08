@@ -49,7 +49,15 @@ contract Party is ERC721, Ownable, ReentrancyGuard, Pausable, ERC721Holder {
     uint256 private _nextTokenId;
 
     // --- 事件 ---
-    event PartyCreated(uint256 indexed partyId, address indexed owner, uint256[] heroIds, uint256[] relicIds);
+    event PartyCreated(
+        uint256 indexed partyId,
+        address indexed owner,
+        uint256[] heroIds,
+        uint256[] relicIds,
+        uint256 totalPower,
+        uint256 totalCapacity,
+        uint8 partyRarity
+    );
     event PlatformFeeSet(uint256 newFee);
     event HeroContractSet(address indexed newAddress);
     event RelicContractSet(address indexed newAddress);
@@ -111,9 +119,20 @@ contract Party is ERC721, Ownable, ReentrancyGuard, Pausable, ERC721Holder {
             partyRarity: _calculatePartyRarity(totalCapacity)
         });
         
+        // +++ 修改後的 createParty 函式結尾 +++
+        uint8 partyRarity = _calculatePartyRarity(totalCapacity); // 假設您有這個函式
+        partyCompositions[partyId] = PartyComposition({
+            heroIds: _heroIds,
+            relicIds: _relicIds,
+            totalPower: totalPower,
+            totalCapacity: totalCapacity,
+            partyRarity: partyRarity
+        });
+
         _safeMint(msg.sender, partyId);
         _nextTokenId++;
-        emit PartyCreated(partyId, msg.sender, _heroIds, _relicIds);
+        // 將計算好的屬性一起 emit 出去
+		emit PartyCreated(partyId, msg.sender, _heroIds, _relicIds, totalPower, totalCapacity, partyRarity);
     }
     
     // --- 元數據 URI ---

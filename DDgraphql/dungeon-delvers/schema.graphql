@@ -1,76 +1,78 @@
-# ===============================================================
-# 玩家是所有數據的中心。
-# 它的 ID 就是錢包地址。
-# @entity(immutable: true) 表示一個 Player 實體一旦創建，
-# 除了關聯的列表外，其自身欄位（如 ID）不會再改變。
-# ===============================================================
+# DDgraphql/dungeon-delvers/schema.graphql (修正後版本)
+
 type Player @entity(immutable: true) {
-  id: Bytes! # 玩家的錢包地址
+  id: Bytes! # player address
   heroes: [Hero!]! @derivedFrom(field: "owner")
   relics: [Relic!]! @derivedFrom(field: "owner")
   parties: [Party!]! @derivedFrom(field: "owner")
-  profile: PlayerProfile @entity(field: "id") # 1-to-1 關係
-  vip: VIP @entity(field: "id") # 1-to-1 關係
-  vault: PlayerVault @entity(field: "id") # 1-to-1 關係
+  profile: PlayerProfile @derivedFrom(field: "player")
+  vip: VIP @derivedFrom(field: "player")
+  vault: PlayerVault @derivedFrom(field: "player")
+  upgradeAttempts: [UpgradeAttempt!]! @derivedFrom(field: "player")
 }
 
-# ===============================================================
-# NFT 實體
-# @entity(immutable: false) 表示這些實體的屬性可能會改變。
-# 例如，一個 Hero 的 owner 可能會因為 Transfer 事件而改變。
-# ===============================================================
+# --- 修正：為所有可變的實體加上 (immutable: false) ---
+
 type Hero @entity(immutable: false) {
-  id: ID! # 格式: contractAddress-tokenId
+  id: ID! # contract address - token id
   tokenId: BigInt!
   owner: Player!
-  power: BigInt!
   rarity: Int!
-  party: Party # 英雄可能屬於某個隊伍
+  power: BigInt!
+  party: Party
 }
 
 type Relic @entity(immutable: false) {
-  id: ID! # 格式: contractAddress-tokenId
+  id: ID! # contract address - token id
   tokenId: BigInt!
   owner: Player!
-  capacity: Int!
   rarity: Int!
-  party: Party # 聖物可能屬於某個隊伍
+  capacity: Int!
+  party: Party
 }
 
 type Party @entity(immutable: false) {
-  id: ID! # 格式: contractAddress-tokenId
+  id: ID! # contract address - token id
   tokenId: BigInt!
   owner: Player!
-  heroes: [Hero!]! @derivedFrom(field: "party")
-  relics: [Relic!]! @derivedFrom(field: "party")
   totalPower: BigInt!
   totalCapacity: BigInt!
   partyRarity: Int!
-  # 隊伍狀態，這些都會頻繁更新
   provisionsRemaining: BigInt!
   cooldownEndsAt: BigInt!
   unclaimedRewards: BigInt!
   fatigueLevel: Int!
+  heroes: [Hero!] @derivedFrom(field: "party")
+  relics: [Relic!] @derivedFrom(field: "party")
 }
 
-# ===============================================================
-# 玩家狀態實體
-# 這些實體與玩家地址綁定，自身欄位會更新，但實體本身不會被刪除。
-# ===============================================================
 type PlayerProfile @entity(immutable: false) {
-  id: Bytes! # 玩家地址
-  level: Int!
+  id: Bytes! # player address
+  player: Player! # <-- 修正：新增了指向 Player 的關聯
   experience: BigInt!
+  level: Int!
 }
 
 type VIP @entity(immutable: false) {
-  id: Bytes! # 玩家地址
+  id: Bytes! # player address
+  player: Player! # <-- 修正：新增了指向 Player 的關聯
+  tokenId: BigInt
   stakedAmount: BigInt!
-  tokenId: BigInt # VIP 卡的 Token ID，可能不存在
 }
 
 type PlayerVault @entity(immutable: false) {
-  id: Bytes! # 玩家地址
+  id: Bytes! # player address
+  player: Player! # <-- 修正：新增了指向 Player 的關聯
   withdrawableBalance: BigInt!
   totalCommissionPaid: BigInt!
+  referrer: Bytes
+}
+
+type UpgradeAttempt @entity(immutable: false) {
+  id: ID! # tx hash - log index
+  player: Player!
+  tokenContract: Bytes!
+  targetRarity: Int!
+  outcome: String! # e.g., "Success", "Failure"
+  timestamp: BigInt!
 }

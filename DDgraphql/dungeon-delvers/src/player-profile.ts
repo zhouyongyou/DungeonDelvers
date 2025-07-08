@@ -42,28 +42,27 @@ export function handleProfileCreated(event: ProfileCreated): void {
   profile.save()
 }
 
-// 處理 ExperienceAdded 事件
+// +++ 修改後的 handleExperienceAdded 函式 +++
 export function handleExperienceAdded(event: ExperienceAdded): void {
-  // 發現一個教學點：目前的 ExperienceAdded 事件只提供了 tokenId，
-  // 沒有直接提供 player address，這使得我們很難將經驗值更新到對應的 PlayerProfile。
-  // 一個健壯的解決方案是在 PlayerProfile.sol 的 ExperienceAdded 事件中也把 player address 作為 indexed 參數。
+  // 現在可以直接從事件參數中獲取 player 地址！
+  let playerAddress = event.params.player;
 
-  // 鑑於目前的合約，我們只能記錄一個警告。
-  // 在一個完整的專案中，我們會回頭去修改合約事件來解決這個問題。
-  log.warning(
-    "handleExperienceAdded was called for tokenId {}, but the event does not include the player address. Cannot update experience. Please consider adding 'indexed address player' to the ExperienceAdded event in PlayerProfile.sol",
-    [event.params.tokenId.toString()]
-  );
+  // 注意：PlayerProfile 的 ID 就是玩家的地址
+  let profile = PlayerProfile.load(playerAddress);
 
-  // 如果事件包含 player address，正確的邏輯會是這樣：
-  /*
-  let playerAddress = event.params.player 
-  let profile = PlayerProfile.load(playerAddress)
   if (profile) {
-    profile.experience = event.params.newTotalExperience
-    profile.level = calculateLevel(profile.experience)
-    profile.save()
-  }
-  */
-}
+    profile.experience = event.params.newTotalExperience;
 
+    // 您可以在這裡也計算並儲存等級
+    // (假設您已經有 calculateLevel 函式)
+    // profile.level = calculateLevel(profile.experience);
+
+    profile.save();
+  } else {
+    // 正常情況下，有經驗增加時 profile 必定存在。
+    // 但為了程式健壯性，可以加上日誌。
+    log.warning("ExperienceAdded event for a non-existent profile: {}", [
+      playerAddress.toHexString()
+    ]);
+  }
+}
