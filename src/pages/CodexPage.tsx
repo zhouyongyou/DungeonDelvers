@@ -3,8 +3,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
-// 不再需要從 nfts.ts 獲取所有 NFT
-// import { fetchAllOwnedNfts } from '../api/nfts';
 import { NftCard } from '../components/ui/NftCard';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -23,7 +21,8 @@ const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
 const GET_OWNED_RARITIES_QUERY = `
   query GetOwnedRarities($owner: ID!) {
     player(id: $owner) {
-      heroes(first: 1000) { # 假設玩家不會擁有超過1000種不同稀有度的英雄
+      # ★★★ 核心修正：將 "heroes" 改為 "heros" ★★★
+      heros(first: 1000) { # 假設玩家不會擁有超過1000種不同稀有度的英雄
         rarity
       }
       relics(first: 1000) {
@@ -107,11 +106,13 @@ const useOwnedCodexIdentifiers = () => {
             });
             if (!response.ok) throw new Error('GraphQL Network response was not ok');
             const { data } = await response.json();
-            const ownedHeroRarities = new Set<number>(data?.player?.heroes?.map((h: { rarity: number }) => h.rarity) ?? []);
+            const ownedHeroRarities = new Set<number>(data?.player?.heros?.map((h: { rarity: number }) => h.rarity) ?? []);
             const ownedRelicRarities = new Set<number>(data?.player?.relics?.map((r: { rarity: number }) => r.rarity) ?? []);
             return { ownedHeroRarities, ownedRelicRarities };
         },
         enabled: !!address && chainId === bsc.id,
+        // ★★★ 網路優化：增加 staleTime，避免不必要的重複請求 ★★★
+        staleTime: 1000 * 60, // 60 秒
     });
     return { identifiers: data, isLoadingIdentifiers: isLoading };
 };

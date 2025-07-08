@@ -2,7 +2,7 @@
 
 type Player @entity(immutable: true) {
   id: Bytes! # player address
-  heroes: [Hero!]! @derivedFrom(field: "owner")
+  heros: [Hero!]! @derivedFrom(field: "owner")
   relics: [Relic!]! @derivedFrom(field: "owner")
   parties: [Party!]! @derivedFrom(field: "owner")
   profile: PlayerProfile @derivedFrom(field: "player")
@@ -42,7 +42,7 @@ type Party @entity(immutable: false) {
   cooldownEndsAt: BigInt!
   unclaimedRewards: BigInt!
   fatigueLevel: Int!
-  heroes: [Hero!] @derivedFrom(field: "party")
+  heros: [Hero!] @derivedFrom(field: "party")
   relics: [Relic!] @derivedFrom(field: "party")
 }
 

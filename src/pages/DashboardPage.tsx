@@ -5,8 +5,6 @@ import { useAccount, useReadContract, useReadContracts, useWriteContract } from 
 import { useQuery } from '@tanstack/react-query';
 import { formatEther } from 'viem';
 import { getContract, contracts } from '../config/contracts';
-// 我們不再需要從這裡獲取 NFT，所以可以移除
-// import { fetchAllOwnedNfts } from '../api/nfts'; 
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import type { Page } from '../types/page';
@@ -20,7 +18,6 @@ import { TownBulletin } from '../components/ui/TownBulletin';
 // Section: GraphQL 查詢與數據獲取 Hook
 // =================================================================
 
-// ★ 核心改造：從環境變數讀取 The Graph API URL，避免硬編碼
 const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
 
 // 專為儀表板設計的 GraphQL 查詢
@@ -28,8 +25,8 @@ const GET_DASHBOARD_STATS_QUERY = `
   query GetDashboardStats($owner: ID!) {
     player(id: $owner) {
       id
-      heroes {
-        id # 我們只需要數量，所以查詢 id 就好
+      heros {
+        id
       }
       relics {
         id
@@ -41,7 +38,7 @@ const GET_DASHBOARD_STATS_QUERY = `
         level
       }
       vip {
-        id # 只需要知道是否存在
+        id
       }
       vault {
         withdrawableBalance
@@ -57,7 +54,7 @@ const useDashboardStats = () => {
     const { data, isLoading, isError } = useQuery({
         queryKey: ['dashboardStats', address, chainId],
         queryFn: async () => {
-            if (!address || !THE_GRAPH_API_URL) return null; // 檢查 URL 是否存在
+            if (!address || !THE_GRAPH_API_URL) return null;
             const response = await fetch(THE_GRAPH_API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -70,14 +67,16 @@ const useDashboardStats = () => {
             const { data } = await response.json();
             return data.player;
         },
-        enabled: !!address && chainId === bsc.id && !!THE_GRAPH_API_URL, // 確保 URL 存在才啟用查詢
+        enabled: !!address && chainId === bsc.id && !!THE_GRAPH_API_URL,
+        // ★★★ 網路優化：增加 staleTime，避免不必要的重複請求 ★★★
+        staleTime: 1000 * 60, // 60 秒
     });
 
     // 從查詢結果中解析數據
     const stats = useMemo(() => {
         return {
             level: data?.profile?.level ? Number(data.profile.level) : 1,
-            heroCount: data?.heroes?.length ?? 0,
+            heroCount: data?.heros?.length ?? 0,
             relicCount: data?.relics?.length ?? 0,
             partyCount: data?.parties?.length ?? 0,
             isVip: !!data?.vip,

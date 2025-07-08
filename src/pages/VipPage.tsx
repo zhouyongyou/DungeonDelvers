@@ -52,7 +52,8 @@ const useVipData = () => {
             });
             if (!response.ok) throw new Error('GraphQL Network response was not ok');
             const { data } = await response.json();
-            return data.player?.vip;
+            // ★★★ 核心修正：確保在找不到資料時回傳 null 而不是 undefined ★★★
+            return data.player?.vip ?? null;
         },
         enabled: !!address && chainId === bsc.id,
     });

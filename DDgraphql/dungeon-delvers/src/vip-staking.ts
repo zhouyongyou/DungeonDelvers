@@ -18,6 +18,8 @@ export function handleStaked(event: Staked): void {
   if (!vip) {
     vip = new VIP(event.params.user)
     vip.stakedAmount = BigInt.fromI32(0)
+    // ★★★ 核心修正 #1：確保新創建的 VIP 實體有關聯的 player ★★★
+    vip.player = player.id
   }
   
   vip.stakedAmount = vip.stakedAmount.plus(event.params.amount)
@@ -50,6 +52,8 @@ export function handleVipTransfer(event: VipTransfer): void {
       vip.stakedAmount = BigInt.fromI32(0)
     }
     
+    // ★★★ 核心修正 #2：為 VIP 實體設定必要的 player 關聯欄位 ★★★
+    vip.player = player.id
     vip.tokenId = event.params.tokenId
     vip.save()
   }

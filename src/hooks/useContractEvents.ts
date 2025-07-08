@@ -14,6 +14,9 @@ type DecodedLogWithArgs = {
     args: any;
 };
 
+// ★★★ 網路優化：定義一個較長的輪詢間隔，減少 RPC 請求壓力 ★★★
+const POLLING_INTERVAL = 12_000; // 12 秒
+
 /**
  * @notice 高階工廠函式，用於創建通用的事件處理器，避免重複程式碼。
  * @dev 此函式封裝了日誌解碼、事件名稱匹配和使用者地址驗證的通用邏輯。
@@ -130,27 +133,27 @@ export const useContractEvents = () => {
     const altarOfAscensionContract = getContract(chainId, 'altarOfAscension');
     const playerProfileContract = getContract(chainId, 'playerProfile');
 
-    // --- 事件監聽設定 ---
+    // --- 事件監聽設定 (已加入 pollingInterval) ---
     
     // NFT 鑄造/創建事件 -> 刷新 NFT 列表和餘額
-    useWatchContractEvent({ ...heroContract, chainId, eventName: 'HeroMinted', onLogs: createContractEventHandler(heroContract, 'HeroMinted', address, (log) => { showToast(`英雄 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); invalidateNftsAndBalance(); }) });
-    useWatchContractEvent({ ...relicContract, chainId, eventName: 'RelicMinted', onLogs: createContractEventHandler(relicContract, 'RelicMinted', address, (log) => { showToast(`聖物 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); invalidateNftsAndBalance(); }) });
-    useWatchContractEvent({ ...partyContract, chainId, eventName: 'PartyCreated', onLogs: createContractEventHandler(partyContract, 'PartyCreated', address, (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 創建成功！`, 'success'); invalidateNftsAndBalance(); }) });
+    useWatchContractEvent({ ...heroContract, chainId, eventName: 'HeroMinted', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(heroContract, 'HeroMinted', address, (log) => { showToast(`英雄 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); invalidateNftsAndBalance(); }) });
+    useWatchContractEvent({ ...relicContract, chainId, eventName: 'RelicMinted', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(relicContract, 'RelicMinted', address, (log) => { showToast(`聖物 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); invalidateNftsAndBalance(); }) });
+    useWatchContractEvent({ ...partyContract, chainId, eventName: 'PartyCreated', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(partyContract, 'PartyCreated', address, (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 創建成功！`, 'success'); invalidateNftsAndBalance(); }) });
     
     // 金庫事件 -> 刷新金庫相關數據
-    useWatchContractEvent({ ...playerVaultContract, chainId, eventName: 'Deposited', onLogs: createContractEventHandler(playerVaultContract, 'Deposited', address, () => { invalidateVaultAndTax(); }) });
-    useWatchContractEvent({ ...playerVaultContract, chainId, eventName: 'Withdrawn', onLogs: createContractEventHandler(playerVaultContract, 'Withdrawn', address, () => { invalidateVaultAndTax(); }) });
+    useWatchContractEvent({ ...playerVaultContract, chainId, eventName: 'Deposited', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(playerVaultContract, 'Deposited', address, () => { invalidateVaultAndTax(); }) });
+    useWatchContractEvent({ ...playerVaultContract, chainId, eventName: 'Withdrawn', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(playerVaultContract, 'Withdrawn', address, () => { invalidateVaultAndTax(); }) });
 
     // 玩家檔案事件 -> 刷新個人檔案數據
-    useWatchContractEvent({ ...playerProfileContract, chainId, eventName: 'ExperienceAdded', onLogs: createContractEventHandler(playerProfileContract, 'ExperienceAdded', address, () => { invalidateProfile(); }) });
+    useWatchContractEvent({ ...playerProfileContract, chainId, eventName: 'ExperienceAdded', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(playerProfileContract, 'ExperienceAdded', address, () => { invalidateProfile(); }) });
 
     // 隊伍遠征相關事件 -> 刷新特定隊伍的狀態和玩家檔案
-    useWatchContractEvent({ ...dungeonMasterContract, chainId, eventName: 'ExpeditionFulfilled', onLogs: createContractEventHandler(dungeonMasterContract, 'ExpeditionFulfilled', address, (log) => { const { success, reward, expGained } = log.args; showExpeditionResult({ success, reward, expGained }); invalidatePartyStatus(log.args.partyId); invalidateProfile(); }, true, queryClient) });
-    useWatchContractEvent({ ...dungeonMasterContract, chainId, eventName: 'PartyRested', onLogs: createContractEventHandler(dungeonMasterContract, 'PartyRested', address, (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 已恢復活力！`, 'success'); invalidatePartyStatus(log.args.partyId); }, true, queryClient) });
-    useWatchContractEvent({ ...dungeonMasterContract, chainId, eventName: 'ProvisionsBought', onLogs: createContractEventHandler(dungeonMasterContract, 'ProvisionsBought', address, (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 儲備補充成功！`, 'success'); invalidatePartyStatus(log.args.partyId); }, true, queryClient) });
+    useWatchContractEvent({ ...dungeonMasterContract, chainId, eventName: 'ExpeditionFulfilled', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(dungeonMasterContract, 'ExpeditionFulfilled', address, (log) => { const { success, reward, expGained } = log.args; showExpeditionResult({ success, reward, expGained }); invalidatePartyStatus(log.args.partyId); invalidateProfile(); }, true, queryClient) });
+    useWatchContractEvent({ ...dungeonMasterContract, chainId, eventName: 'PartyRested', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(dungeonMasterContract, 'PartyRested', address, (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 已恢復活力！`, 'success'); invalidatePartyStatus(log.args.partyId); }, true, queryClient) });
+    useWatchContractEvent({ ...dungeonMasterContract, chainId, eventName: 'ProvisionsBought', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(dungeonMasterContract, 'ProvisionsBought', address, (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 儲備補充成功！`, 'success'); invalidatePartyStatus(log.args.partyId); }, true, queryClient) });
     
     // 升星祭壇事件 -> 刷新 NFT 列表和餘額
-    useWatchContractEvent({ ...altarOfAscensionContract, chainId, eventName: 'UpgradeProcessed', onLogs: createContractEventHandler(altarOfAscensionContract, 'UpgradeProcessed', address, (log) => {
+    useWatchContractEvent({ ...altarOfAscensionContract, chainId, eventName: 'UpgradeProcessed', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(altarOfAscensionContract, 'UpgradeProcessed', address, (log) => {
         const { outcome } = log.args;
         const outcomeMessages: Record<number, string> = { 3: `⚜️ 大成功！獲得 2 個更高星級的 NFT！`, 2: `✨ 升星成功！獲得 1 個更高星級的 NFT！`, 1: `💔 升星失敗，但返還了部分材料。`, 0: `💀 升星完全失敗，所有材料已銷毀。` };
         const message = outcomeMessages[outcome] || "升星處理完成。";

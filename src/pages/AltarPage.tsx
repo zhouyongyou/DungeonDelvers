@@ -4,8 +4,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useReadContracts, useWriteContract, usePublicClient } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatEther, decodeEventLog, type Abi } from 'viem';
-// 不再需要從 nfts.ts 獲取所有 NFT
-// import { fetchAllOwnedNfts } from '../api/nfts'; 
 import { fetchMetadata } from '../api/nfts';
 import { getContract, altarOfAscensionABI, heroABI, relicABI } from '../config/contracts';
 import { NftCard } from '../components/ui/NftCard';
@@ -27,7 +25,8 @@ const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
 // ★ 核心改造：專為祭壇設計的、可篩選星級的 GraphQL 查詢
 const GET_FILTERED_NFTS_QUERY = `
   query GetFilteredNfts($owner: ID!, $rarity: Int!) {
-    heroes(where: { owner: $owner, rarity: $rarity }) {
+    # ★★★ 核心修正：將 "heroes" 改為 "heros" ★★★
+    heros(where: { owner: $owner, rarity: $rarity }) {
       id
       tokenId
       power
@@ -62,7 +61,7 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
             if (!response.ok) throw new Error('GraphQL Network response was not ok');
             const { data } = await response.json();
 
-            const assets = nftType === 'hero' ? data.heroes : data.relics;
+            const assets = nftType === 'hero' ? data.heros : data.relics;
             if (!assets) return [];
 
             // 將 The Graph 的數據轉換為前端的型別
@@ -79,6 +78,8 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
             }));
         },
         enabled: !!address && chainId === bsc.id && rarity > 0,
+        // ★★★ 網路優化：增加 staleTime，避免不必要的重複請求 ★★★
+        staleTime: 1000 * 30, // 30 秒
     });
 };
 
