@@ -146,12 +146,12 @@ contract Oracle is Ownable {
         uint256 Q192 = 1 << 192;
 
         if (isSoulShardToken0) {
-            // Price of token0 in token1 = ratioX192 / 2**192
-            price = ratioX192.mulDiv(1e18, Q192);
-        } else {
-            // Price of token1 in token0 = 2**192 / ratioX192
             require(ratioX192 != 0, "Oracle: ZERO_PRICE");
-            price = Q192.mulDiv(1e18, ratioX192) * 2;
+            price = Q192.mulDiv(1e18, ratioX192);  
+            
+        } else {
+            require(ratioX192 != 0, "Oracle: ZERO_PRICE");
+            price = Q192.mulDiv(1e18, ratioX192);
         }
     }
 
