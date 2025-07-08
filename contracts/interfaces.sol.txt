@@ -31,6 +31,7 @@ interface IDungeonCore {
     function altarOfAscension() external view returns (address);
     function heroContract() external view returns (address);
     function relicContract() external view returns (address);
+    function usdDecimals() external view returns (uint8); // ★★★ 核心修正：確保此函式已宣告
 
     // --- Core Logic Functions ---
     function getSoulShardAmountForUSD(uint256 _amountUSD) external view returns (uint256);
@@ -38,14 +39,10 @@ interface IDungeonCore {
 }
 
 interface IOracle {
-    // ★★★【核心修正 1】★★★
-    // 與 Oracle.sol 保持一致，getAmountOut 函式現在只需要 2 個參數。
     function getAmountOut(address tokenIn, uint256 amountIn) external view returns (uint256);
 }
 
 interface IPlayerVault {
-    // ★★★【核心修正 2】★★★
-    // 將 spend 函式名稱改為與 PlayerVault.sol 中完全一致的 spendForGame。
     function spendForGame(address _player, uint256 _amount) external;
     function deposit(address _player, uint256 _amount) external;
     function getTotalCommissionPaid(address _user) external view returns (uint256);
@@ -129,4 +126,5 @@ interface IPlayerProfile {
 
 interface IVIPStaking {
     function getVipLevel(address user) external view returns (uint8);
+    function getVipTaxReduction(address user) external view returns (uint256);
 }

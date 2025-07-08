@@ -124,8 +124,15 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
             address(soulShardToken), stakedAmount
         );
         
+        // ★★★【最終等級計算修正】★★★
+        // 從 DungeonCore 獲取正確的 USD 精度，而不是硬編碼 1e18
+        uint8 usdDecimals = dungeonCore.usdDecimals();
+        require(usdDecimals > 0, "VIP: USD decimals not set in Core");
+        uint256 usdValue = stakedValueUSD / (10**usdDecimals);
+        
         // 等級計算公式: level = sqrt(USD價值 / 100)
-        uint256 level = Math.sqrt(stakedValueUSD / 1e18 / 100);
+        if (usdValue < 100) return 0;
+        uint256 level = Math.sqrt(usdValue / 100);
         return uint8(level);
     }
     
@@ -145,13 +152,15 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
 
         uint256 level = uint256(getVipLevel(owner));
         uint256 nextLevel = level + 1;
+        uint8 usdDecimals = dungeonCore.usdDecimals();
+        require(usdDecimals > 0, "VIP: USD decimals not set in Core");
         
         IVIPSVGLibrary.VIPCardData memory data = IVIPSVGLibrary.VIPCardData({
             tokenId: _tokenId,
             level: level,
             stakedValueUSD: stakedValueUSD,
-            nextLevelRequirementUSD: nextLevel * nextLevel * 100 * 1e18,
-            currentLevelRequirementUSD: level * level * 100 * 1e18
+            nextLevelRequirementUSD: nextLevel * nextLevel * 100 * (10**usdDecimals),
+            currentLevelRequirementUSD: level * level * 100 * (10**usdDecimals)
         });
 
         return vipSvgLibrary.buildTokenURI(data);

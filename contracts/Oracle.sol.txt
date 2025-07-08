@@ -156,7 +156,8 @@ contract Oracle is Ownable {
                 require(ratioX192 != 0, "Oracle: ZERO_PRICE");
                 result = amountIn.mulDiv(Q192, ratioX192);
             }
-            amountOut = result * (10**usdDecimals) / (10**soulShardDecimals);
+            // ★★★【核心修正】★★★ 使用 mulDiv 進行安全的精度調整
+            amountOut = result.mulDiv(10**usdDecimals, 10**soulShardDecimals);
         } else { // Pay USD, get SOUL
             uint256 result;
             if (isSoulShardToken0) { // SOUL is token0, price is USD/SOUL
@@ -165,7 +166,8 @@ contract Oracle is Ownable {
             } else { // SOUL is token1, price is SOUL/USD
                 result = amountIn.mulDiv(ratioX192, Q192);
             }
-            amountOut = result * (10**soulShardDecimals) / (10**usdDecimals);
+            // ★★★【核心修正】★★★ 使用 mulDiv 進行安全的精度調整
+            amountOut = result.mulDiv(10**soulShardDecimals, 10**usdDecimals);
         }
     }
 
