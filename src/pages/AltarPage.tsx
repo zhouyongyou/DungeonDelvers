@@ -25,8 +25,7 @@ const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
 // ★ 核心改造：專為祭壇設計的、可篩選星級的 GraphQL 查詢
 const GET_FILTERED_NFTS_QUERY = `
   query GetFilteredNfts($owner: ID!, $rarity: Int!) {
-    # ★★★ 核心修正：將 "heroes" 改為 "heros" ★★★
-    heros(where: { owner: $owner, rarity: $rarity }) {
+    heroes(where: { owner: $owner, rarity: $rarity }) {
       id
       tokenId
       power
@@ -61,7 +60,7 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
             if (!response.ok) throw new Error('GraphQL Network response was not ok');
             const { data } = await response.json();
 
-            const assets = nftType === 'hero' ? data.heros : data.relics;
+            const assets = nftType === 'hero' ? data.heroes : data.relics;
             if (!assets) return [];
 
             // 將 The Graph 的數據轉換為前端的型別

@@ -1,8 +1,7 @@
-// src/pages/VipPage.tsx (The Graph 改造版)
+// src/pages/VipPage.tsx (最終修正版)
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useWriteContract, usePublicClient, useReadContract, useBalance } from 'wagmi';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatEther, maxUint256, parseEther } from 'viem';
 import { Buffer } from 'buffer';
 import { getContract } from '../config/contracts';
@@ -14,67 +13,60 @@ import { useCountdown } from '../hooks/useCountdown';
 import { bsc } from 'wagmi/chains';
 
 // =================================================================
-// Section: GraphQL 查詢與數據獲取 Hooks
+// Section: 數據獲取 Hook (RPC-First Approach)
 // =================================================================
 
-const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
-
-// 查詢玩家的 VIP 核心數據
-const GET_VIP_DATA_QUERY = `
-  query GetVipData($owner: ID!) {
-    player(id: $owner) {
-      vip {
-        tokenId
-        stakedAmount
-      }
-    }
-  }
-`;
-
-// ★ 核心改造：新的 Hook，用於獲取 VIP 數據
-const useVipData = () => {
+/**
+ * @notice 專門用於獲取和管理 VIP 頁面所有狀態的自定義 Hook。
+ * @dev ★★★【核心修正】★★★
+ * 此版本採用「RPC 優先」策略。所有關鍵數據（質押數量、TokenID、等級）
+ * 都直接透過 useReadContract 從鏈上讀取，確保交易後的即時一致性，
+ * 徹底解決了 The Graph 索引延遲導致的 UI 更新問題。
+ */
+const useVipStatus = () => {
     const { address, chainId } = useAccount();
-    const vipStakingContract = getContract(chainId as any, 'vipStaking');
-    const soulShardContract = getContract(chainId as any, 'soulShard');
 
-    // 步驟 1: 從 The Graph 快速獲取基礎質押數據 (stakedAmount, tokenId)
-    const { data: graphData, isLoading: isLoadingGraph, isError: isGraphError } = useQuery({
-        queryKey: ['vipData', address],
-        queryFn: async () => {
-            if (!address || !THE_GRAPH_API_URL) return null;
-            const response = await fetch(THE_GRAPH_API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    query: GET_VIP_DATA_QUERY,
-                    variables: { owner: address.toLowerCase() },
-                }),
-            });
-            if (!response.ok) throw new Error('GraphQL Network response was not ok');
-            const { data } = await response.json();
-            // ★★★ 核心修正：確保在找不到資料時回傳 null 而不是 undefined ★★★
-            return data.player?.vip ?? null;
-        },
-        enabled: !!address && chainId === bsc.id,
+    const isSupportedChain = chainId === bsc.id;
+
+    // 依賴鏈 ID 獲取合約實例
+    const vipStakingContract = useMemo(() => isSupportedChain ? getContract(chainId, 'vipStaking') : null, [chainId, isSupportedChain]);
+    const soulShardContract = useMemo(() => isSupportedChain ? getContract(chainId, 'soulShard') : null, [chainId, isSupportedChain]);
+
+    // 1. 直接從鏈上讀取 userStakes，獲取最即時的質押數量和 tokenId
+    const { data: stakeInfo, isLoading: isLoadingStakeInfo, refetch: refetchStakeInfo } = useReadContract({
+        ...vipStakingContract,
+        functionName: 'userStakes',
+        args: [address!],
+        query: { enabled: !!address && !!vipStakingContract }
     });
 
-    const stakedAmount = useMemo(() => graphData?.stakedAmount ? BigInt(graphData.stakedAmount) : 0n, [graphData]);
-    const tokenId = useMemo(() => graphData?.tokenId ? BigInt(graphData.tokenId) : null, [graphData]);
+    // 2. 直接從鏈上讀取其他所有相關數據
+    const { data: soulShardBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useBalance({ address, token: soulShardContract?.address, query: { enabled: !!address && !!soulShardContract } });
+    const { data: vipLevel, isLoading: isLoadingVipLevel, refetch: refetchVipLevel } = useReadContract({ ...vipStakingContract, functionName: 'getVipLevel', args: [address!], query: { enabled: !!address && !!vipStakingContract } });
+    const { data: taxReduction, isLoading: isLoadingTax, refetch: refetchTaxReduction } = useReadContract({ ...vipStakingContract, functionName: 'getVipTaxReduction', args: [address!], query: { enabled: !!address && !!vipStakingContract } });
+    const { data: unstakeQueue, isLoading: isLoadingQueue, refetch: refetchUnstakeQueue } = useReadContract({ ...vipStakingContract, functionName: 'unstakeQueue', args: [address!], query: { enabled: !!address && !!vipStakingContract } });
+    const { data: allowance, isLoading: isLoadingAllowance, refetch: refetchAllowance } = useReadContract({ ...soulShardContract, functionName: 'allowance', args: [address!, vipStakingContract?.address!], query: { enabled: !!address && !!vipStakingContract && !!soulShardContract } });
 
-    // 步驟 2: 繼續使用 RPC 獲取需要即時計算或與交易相關的數據
-    const { data: soulShardBalance, isLoading: isLoadingBalance } = useBalance({ address, token: soulShardContract?.address });
-    const { data: vipLevel, isLoading: isLoadingVipLevel } = useReadContract({ ...vipStakingContract, functionName: 'getVipLevel', args: [address!], query: { enabled: !!address } });
-    const { data: taxReduction, isLoading: isLoadingTax } = useReadContract({ ...vipStakingContract, functionName: 'getVipTaxReduction', args: [address!], query: { enabled: !!address } });
-    const { data: unstakeQueue, isLoading: isLoadingQueue } = useReadContract({ ...vipStakingContract, functionName: 'unstakeQueue', args: [address!], query: { enabled: !!address } });
-    const { data: allowance, isLoading: isLoadingAllowance, refetch: refetchAllowance } = useReadContract({ ...soulShardContract, functionName: 'allowance', args: [address!, vipStakingContract?.address!], query: { enabled: !!address } });
-    
-    const pendingUnstakeAmount = useMemo(() => (unstakeQueue as any)?.[0] ?? 0n, [unstakeQueue]);
-    const unstakeAvailableAt = useMemo(() => Number((unstakeQueue as any)?.[1] ?? 0n), [unstakeQueue]);
+    // 3. 從讀取到的數據中計算衍生狀態
+    const stakedAmount = useMemo(() => (stakeInfo as readonly [bigint, bigint])?.[0] ?? 0n, [stakeInfo]);
+    const tokenId = useMemo(() => (stakeInfo as readonly [bigint, bigint])?.[1], [stakeInfo]);
+    const pendingUnstakeAmount = useMemo(() => (unstakeQueue as readonly [bigint, bigint])?.[0] ?? 0n, [unstakeQueue]);
+    const unstakeAvailableAt = useMemo(() => Number((unstakeQueue as readonly [bigint, bigint])?.[1] ?? 0n), [unstakeQueue]);
+
     const { isOver: isCooldownOver, formatted: countdown } = useCountdown(unstakeAvailableAt);
 
+    // 4. 提供一個統一的刷新函式，方便在交易後更新所有數據
+    const refetchAll = () => {
+        refetchStakeInfo();
+        refetchBalance();
+        refetchVipLevel();
+        refetchTaxReduction();
+        refetchUnstakeQueue();
+        refetchAllowance();
+    };
+
     return {
-        isLoading: isLoadingGraph || isLoadingBalance || isLoadingVipLevel || isLoadingTax || isLoadingQueue || isLoadingAllowance,
-        isGraphError,
+        isLoading: isLoadingStakeInfo || isLoadingBalance || isLoadingVipLevel || isLoadingTax || isLoadingQueue || isLoadingAllowance,
         vipStakingContract,
         soulShardContract,
         soulShardBalance: soulShardBalance?.value ?? 0n,
@@ -86,15 +78,17 @@ const useVipData = () => {
         isCooldownOver,
         countdown,
         allowance: allowance ?? 0n,
-        refetchAllowance,
+        refetchAll,
     };
 };
 
+
 // =================================================================
-// Section: 子元件與主頁面 (UI 邏輯保持不變)
+// Section: 子元件與主頁面
 // =================================================================
 
 const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undefined }> = ({ tokenId, chainId }) => {
+    // ... (此元件程式碼保持不變)
     if (!chainId || (chainId !== bsc.id)) {
         return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-500">網路不支援</div>;
     }
@@ -130,29 +124,20 @@ const VipPage: React.FC = () => {
     const { chainId } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
-    const queryClient = useQueryClient();
     const publicClient = usePublicClient();
 
     const [amount, setAmount] = useState('');
     const [mode, setMode] = useState<'stake' | 'unstake'>('stake');
     const [isAwaitingStakeAfterApproval, setIsAwaitingStakeAfterApproval] = useState(false);
     
+    // ★★★【核心修正】★★★
+    // 使用我們新的、基於 RPC 的 Hook
     const {
-        isLoading, isGraphError, vipStakingContract, soulShardContract,
+        isLoading, vipStakingContract, soulShardContract,
         soulShardBalance, stakedAmount, tokenId, vipLevel, taxReduction,
-        pendingUnstakeAmount, isCooldownOver, countdown, allowance, refetchAllowance
-    } = useVipData();
+        pendingUnstakeAmount, isCooldownOver, countdown, allowance, refetchAll
+    } = useVipStatus();
 
-    const invalidateVipQueries = () => {
-        queryClient.invalidateQueries({ queryKey: ['vipData'] });
-        queryClient.invalidateQueries({ queryKey: ['getVipLevel'] });
-        queryClient.invalidateQueries({ queryKey: ['getVipTaxReduction'] });
-        queryClient.invalidateQueries({ queryKey: ['unstakeQueue'] });
-        queryClient.invalidateQueries({ queryKey: ['balance'] });
-        queryClient.invalidateQueries({ queryKey: ['allowance'] });
-        queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
-    };
-    
     const getTxDescription = (functionName: string, txAmount: string): string => {
         switch(functionName) {
             case 'approve': return '批准 VIP 合約';
@@ -171,23 +156,27 @@ const VipPage: React.FC = () => {
                 await publicClient?.waitForTransactionReceipt({ hash });
                 if (functionName === 'approve') {
                     showToast('授權成功！將自動為您質押...', 'success');
-                    await refetchAllowance();
                     setIsAwaitingStakeAfterApproval(true);
                 } else {
                     showToast(`${getTxDescription(functionName as string, amount)} 已成功！`, 'success');
                     if (functionName !== 'approve') setAmount('');
-                    invalidateVipQueries();
+                    refetchAll(); // ★★★【核心修正】★★★ 交易成功後，刷新所有鏈上數據
                 }
             },
             onError: (error: any) => { if (!error.message.includes('User rejected')) showToast(error.shortMessage || "交易失敗", "error"); }
         }
     });
-
+    
+    // 授權成功後自動觸發質押
     useEffect(() => {
-        if (isAwaitingStakeAfterApproval && !isTxPending) {
-            setIsAwaitingStakeAfterApproval(false);
-            if (mode === 'stake' && amount) handleStake();
+        async function Cb() {
+            if (isAwaitingStakeAfterApproval && !isTxPending) {
+                await refetchAll(); // 先刷新一次確保 allowance 更新
+                setIsAwaitingStakeAfterApproval(false);
+                if (mode === 'stake' && amount) handleStake();
+            }
         }
+        Cb();
     }, [isAwaitingStakeAfterApproval, isTxPending, allowance]);
 
     const needsApproval = useMemo(() => {
@@ -223,11 +212,8 @@ const VipPage: React.FC = () => {
     if (!chainId || chainId !== bsc.id) {
         return <section><h2 className="page-title">VIP 質押中心</h2><div className="card-bg p-10 rounded-xl text-center text-gray-400"><p>請連接到支援的網路以使用 VIP 功能。</p></div></section>;
     }
-    if (isGraphError) {
-        return <section><h2 className="page-title">VIP 質押中心</h2><div className="card-bg p-10 rounded-xl text-center text-red-400"><h3 className="text-xl font-bold">資料載入失敗</h3><p className="mt-2">無法從 The Graph 獲取 VIP 數據，請檢查 API 端點或稍後再試。</p></div></section>;
-    }
     
-    const hasStaked = stakedAmount > 0n || (tokenId !== null);
+    const hasStaked = stakedAmount > 0n || (tokenId !== null && tokenId > 0n);
 
     return (
         <section className="space-y-8 max-w-5xl mx-auto">

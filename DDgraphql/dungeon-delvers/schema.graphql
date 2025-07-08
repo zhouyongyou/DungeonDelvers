@@ -1,78 +1,153 @@
-# DDgraphql/dungeon-delvers/schema.graphql (修正後版本)
+# =================================================================
+# 玩家核心實體 (Player Core Entities)
+# =================================================================
 
+# 代表一個獨立的玩家錢包地址
+# ★★★【優化】★★★
+# (immutable: true) 表示這個實體一旦創建就不會再被修改，
+# 這能讓 The Graph 對其進行性能優化。玩家地址確實符合這個特性。
 type Player @entity(immutable: true) {
-  id: Bytes! # player address
-  heros: [Hero!]! @derivedFrom(field: "owner")
+  "玩家的錢包地址"
+  id: Bytes!
+  "該玩家擁有的所有英雄 NFT"
+  heroes: [Hero!]! @derivedFrom(field: "owner")
+  "該玩家擁有的所有聖物 NFT"
   relics: [Relic!]! @derivedFrom(field: "owner")
+  "該玩家擁有的所有隊伍 NFT"
   parties: [Party!]! @derivedFrom(field: "owner")
+  "玩家的個人檔案 (SBT)"
   profile: PlayerProfile @derivedFrom(field: "player")
+  "玩家的 VIP 狀態"
   vip: VIP @derivedFrom(field: "player")
+  "玩家的遊戲內金庫"
   vault: PlayerVault @derivedFrom(field: "player")
+  "該玩家所有的升星嘗試記錄"
   upgradeAttempts: [UpgradeAttempt!]! @derivedFrom(field: "player")
 }
 
-# --- 修正：為所有可變的實體加上 (immutable: false) ---
+# ★★★【修正】★★★
+# 所有可能會被更新的實體，都必須明確標示為 (immutable: false)。
 
-type Hero @entity(immutable: false) {
-  id: ID! # contract address - token id
-  tokenId: BigInt!
-  owner: Player!
-  rarity: Int!
-  power: BigInt!
-  party: Party
-}
-
-type Relic @entity(immutable: false) {
-  id: ID! # contract address - token id
-  tokenId: BigInt!
-  owner: Player!
-  rarity: Int!
-  capacity: Int!
-  party: Party
-}
-
-type Party @entity(immutable: false) {
-  id: ID! # contract address - token id
-  tokenId: BigInt!
-  owner: Player!
-  totalPower: BigInt!
-  totalCapacity: BigInt!
-  partyRarity: Int!
-  provisionsRemaining: BigInt!
-  cooldownEndsAt: BigInt!
-  unclaimedRewards: BigInt!
-  fatigueLevel: Int!
-  heros: [Hero!] @derivedFrom(field: "party")
-  relics: [Relic!] @derivedFrom(field: "party")
-}
-
+# 玩家的個人檔案，記錄經驗與等級
 type PlayerProfile @entity(immutable: false) {
-  id: Bytes! # player address
-  player: Player! # <-- 修正：新增了指向 Player 的關聯
+  "使用玩家地址作為 ID，確保一對一關聯"
+  id: Bytes!
+  "關聯的玩家"
+  player: Player!
+  "玩家的 SBT Token ID"
+  tokenId: BigInt!
+  "累積的總經驗值 (會變動)"
   experience: BigInt!
+  "計算出的等級 (會變動)"
   level: Int!
 }
 
+# 玩家的遊戲內金庫
+type PlayerVault @entity(immutable: false) {
+  "使用玩家地址作為 ID"
+  id: Bytes!
+  "關聯的玩家"
+  player: Player!
+  "當前可提領的 $SoulShard 餘額 (會變動)"
+  withdrawableBalance: BigInt!
+  "該玩家的邀請人地址 (只會設定一次)"
+  referrer: Bytes
+  "該玩家作為邀請人，賺取的總佣金 (會變動)"
+  totalCommissionPaid: BigInt!
+}
+
+# =================================================================
+# NFT 資產實體 (NFT Asset Entities)
+# =================================================================
+
+# 英雄 NFT
+type Hero @entity(immutable: false) {
+  "唯一 ID，格式為：合約地址-TokenID"
+  id: ID!
+  "NFT 的 Token ID"
+  tokenId: BigInt!
+  "當前的擁有者 (可能會轉移)"
+  owner: Player!
+  "稀有度 (1-5)"
+  rarity: Int!
+  "戰力"
+  power: BigInt!
+  "所屬的隊伍 (可能會加入或離開隊伍)"
+  party: Party
+}
+
+# 聖物 NFT
+type Relic @entity(immutable: false) {
+  "唯一 ID，格式為：合約地址-TokenID"
+  id: ID!
+  "NFT 的 Token ID"
+  tokenId: BigInt!
+  "當前的擁有者 (可能會轉移)"
+  owner: Player!
+  "稀有度 (1-5)"
+  rarity: Int!
+  "容量"
+  capacity: Int!
+  "所屬的隊伍 (可能會加入或離開隊伍)"
+  party: Party
+}
+
+# 隊伍 NFT
+type Party @entity(immutable: false) {
+  "唯一 ID，格式為：合約地址-TokenID"
+  id: ID!
+  "NFT 的 Token ID"
+  tokenId: BigInt!
+  "當前的擁有者 (可能會轉移)"
+  owner: Player!
+  "隊伍中的英雄列表"
+  heroes: [Hero!]! @derivedFrom(field: "party")
+  "隊伍中的聖物列表"
+  relics: [Relic!]! @derivedFrom(field: "party")
+  "隊伍總戰力"
+  totalPower: BigInt!
+  "隊伍總容量"
+  totalCapacity: BigInt!
+  "隊伍稀有度 (由總容量決定)"
+  partyRarity: Int!
+  "剩餘的遠征儲備數量 (會變動)"
+  provisionsRemaining: BigInt!
+  "遠征冷卻結束的時間戳 (會變動)"
+  cooldownEndsAt: BigInt!
+  "待領取的獎勵總額 (會變動)"
+  unclaimedRewards: BigInt!
+  "疲勞度等級 (會變動)"
+  fatigueLevel: Int!
+}
+
+# VIP 卡 (SBT)
 type VIP @entity(immutable: false) {
-  id: Bytes! # player address
-  player: Player! # <-- 修正：新增了指向 Player 的關聯
-  tokenId: BigInt
+  "使用玩家地址作為 ID"
+  id: Bytes!
+  "關聯的玩家"
+  player: Player!
+  "VIP 卡的 Token ID"
+  tokenId: BigInt!
+  "質押的 $SoulShard 數量 (會變動)"
   stakedAmount: BigInt!
 }
 
-type PlayerVault @entity(immutable: false) {
-  id: Bytes! # player address
-  player: Player! # <-- 修正：新增了指向 Player 的關聯
-  withdrawableBalance: BigInt!
-  totalCommissionPaid: BigInt!
-  referrer: Bytes
-}
+# =================================================================
+# 遊戲事件記錄 (Game Event Records)
+# =================================================================
 
-type UpgradeAttempt @entity(immutable: false) {
-  id: ID! # tx hash - log index
+# 升星嘗試記錄
+type UpgradeAttempt @entity(immutable: true) { # 升星記錄一旦創建就不會改變
+  "唯一 ID，格式為：交易雜湊-日誌索引"
+  id: ID!
+  "執行升星的玩家"
   player: Player!
+  "被升星的 NFT 合約地址"
   tokenContract: Bytes!
+  "升星的目標稀有度"
   targetRarity: Int!
-  outcome: String! # e.g., "Success", "Failure"
+  "升星結果 (例如: Success, Failure)"
+  outcome: String!
+  "事件發生的時間戳"
   timestamp: BigInt!
 }

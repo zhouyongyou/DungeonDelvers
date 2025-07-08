@@ -21,8 +21,7 @@ const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
 const GET_OWNED_RARITIES_QUERY = `
   query GetOwnedRarities($owner: ID!) {
     player(id: $owner) {
-      # ★★★ 核心修正：將 "heroes" 改為 "heros" ★★★
-      heros(first: 1000) { # 假設玩家不會擁有超過1000種不同稀有度的英雄
+      heroes(first: 1000) { # 假設玩家不會擁有超過1000種不同稀有度的英雄
         rarity
       }
       relics(first: 1000) {
@@ -106,7 +105,7 @@ const useOwnedCodexIdentifiers = () => {
             });
             if (!response.ok) throw new Error('GraphQL Network response was not ok');
             const { data } = await response.json();
-            const ownedHeroRarities = new Set<number>(data?.player?.heros?.map((h: { rarity: number }) => h.rarity) ?? []);
+            const ownedHeroRarities = new Set<number>(data?.player?.heroes?.map((h: { rarity: number }) => h.rarity) ?? []);
             const ownedRelicRarities = new Set<number>(data?.player?.relics?.map((r: { rarity: number }) => r.rarity) ?? []);
             return { ownedHeroRarities, ownedRelicRarities };
         },

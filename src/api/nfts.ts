@@ -27,8 +27,7 @@ const GET_PLAYER_ASSETS_QUERY = `
   query GetPlayerAssets($owner: ID!) {
     player(id: $owner) {
       id
-      # ★★★ 核心修正：將 "heroes" 改為 "heros" ★★★
-      heros {
+      heroes {
         id
         tokenId
         power
@@ -46,7 +45,7 @@ const GET_PLAYER_ASSETS_QUERY = `
         totalPower
         totalCapacity
         partyRarity
-        heros {
+        heroes {
           id
           tokenId
         }
@@ -148,14 +147,14 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
         // --- 步驟 2: 批量獲取動態元數據 (tokenURI) ---
         const client = getClient(chainId);
         const contractsMap = {
-            heros: getContract(chainId, 'hero'),
+            heroes: getContract(chainId, 'hero'),
             relics: getContract(chainId, 'relic'),
             parties: getContract(chainId, 'party'),
             vipCards: getContract(chainId, 'vipStaking'),
         };
 
         const uriCalls: any[] = [];
-        if (playerAssets.heros?.length) uriCalls.push(...playerAssets.heros.map((h: any) => ({ ...contractsMap.heros, functionName: 'tokenURI', args: [BigInt(h.tokenId)] })));
+        if (playerAssets.heroes?.length) uriCalls.push(...playerAssets.heroes.map((h: any) => ({ ...contractsMap.heroes, functionName: 'tokenURI', args: [BigInt(h.tokenId)] })));
         if (playerAssets.relics?.length) uriCalls.push(...playerAssets.relics.map((r: any) => ({ ...contractsMap.relics, functionName: 'tokenURI', args: [BigInt(r.tokenId)] })));
         if (playerAssets.parties?.length) uriCalls.push(...playerAssets.parties.map((p: any) => ({ ...contractsMap.parties, functionName: 'tokenURI', args: [BigInt(p.tokenId)] })));
         if (playerAssets.vip) uriCalls.push({ ...contractsMap.vipCards, functionName: 'tokenURI', args: [BigInt(playerAssets.vip.tokenId)] });
@@ -182,7 +181,7 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
                 switch (type) {
                     case 'hero': return { ...baseNft, type: 'hero', power: Number(asset.power), rarity: Number(asset.rarity) };
                     case 'relic': return { ...baseNft, type: 'relic', capacity: Number(asset.capacity), rarity: Number(asset.rarity) };
-                    case 'party': return { ...baseNft, type: 'party', totalPower: BigInt(asset.totalPower), totalCapacity: BigInt(asset.totalCapacity), heroIds: asset.heros.map((h:any) => BigInt(h.tokenId)), relicIds: asset.relics.map((r:any) => BigInt(r.tokenId)), partyRarity: Number(asset.partyRarity) };
+                    case 'party': return { ...baseNft, type: 'party', totalPower: BigInt(asset.totalPower), totalCapacity: BigInt(asset.totalCapacity), heroIds: asset.heroes.map((h:any) => BigInt(h.tokenId)), relicIds: asset.relics.map((r:any) => BigInt(r.tokenId)), partyRarity: Number(asset.partyRarity) };
                     case 'vip': return { ...baseNft, type: 'vip', level: Number(findAttr('VIP Level')) };
                     default: return null;
                 }
@@ -190,7 +189,7 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
         };
 
         const [heroes, relics, parties, vipCards] = await Promise.all([
-            parseNfts(playerAssets.heros, 'hero'),
+            parseNfts(playerAssets.heroes, 'hero'),
             parseNfts(playerAssets.relics, 'relic'),
             parseNfts(playerAssets.parties, 'party'),
             playerAssets.vip ? parseNfts([playerAssets.vip], 'vip') : Promise.resolve([]),
