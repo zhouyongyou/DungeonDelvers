@@ -135,37 +135,49 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
         };
 
         const uriCalls: any[] = [];
-        if (playerAssets.heroes?.length) uriCalls.push(...playerAssets.heroes.map((h: any) => ({ ...contractsMap.heroes, functionName: 'tokenURI', args: [BigInt(h.tokenId)] })));
-        if (playerAssets.relics?.length) uriCalls.push(...playerAssets.relics.map((r: any) => ({ ...contractsMap.relics, functionName: 'tokenURI', args: [BigInt(r.tokenId)] })));
-        if (playerAssets.parties?.length) uriCalls.push(...playerAssets.parties.map((p: any) => ({ ...contractsMap.parties, functionName: 'tokenURI', args: [BigInt(p.tokenId)] })));
-        if (playerAssets.vip) uriCalls.push({ ...contractsMap.vipCards, functionName: 'tokenURI', args: [BigInt(playerAssets.vip.tokenId)] });
+        if (playerAssets.heroes?.length && contractsMap.heroes) uriCalls.push(...playerAssets.heroes.map((h: any) => ({ ...contractsMap.heroes, functionName: 'tokenURI', args: [BigInt(h.tokenId)] })));
+        if (playerAssets.relics?.length && contractsMap.relics) uriCalls.push(...playerAssets.relics.map((r: any) => ({ ...contractsMap.relics, functionName: 'tokenURI', args: [BigInt(r.tokenId)] })));
+        if (playerAssets.parties?.length && contractsMap.parties) uriCalls.push(...playerAssets.parties.map((p: any) => ({ ...contractsMap.parties, functionName: 'tokenURI', args: [BigInt(p.tokenId)] })));
+        if (playerAssets.vip && contractsMap.vipCards) uriCalls.push({ ...contractsMap.vipCards, functionName: 'tokenURI', args: [BigInt(playerAssets.vip.tokenId)] });
 
         const uriResults = uriCalls.length > 0 ? await client.multicall({ contracts: uriCalls, allowFailure: true }) : [];
 
         let uriIndex = 0;
         
-        // ★★★ 核心修正：將 parseNfts 函式變得更穩健 ★★★
+        // ★★★ 核心修正：使用更穩健的 key mapping 來查找合約地址 ★★★
         const parseNfts = async (assets: any[], type: NftType): Promise<any[]> => {
             if (!assets || assets.length === 0) return [];
             
+            // 建立一個從 NftType (單數) 到 contractsMap key (複數) 的映射
+            const keyMap: Record<NftType, keyof typeof contractsMap> = {
+                hero: 'heroes',
+                relic: 'relics',
+                party: 'parties',
+                vip: 'vipCards',
+            };
+            const contractKey = keyMap[type];
+            const contractConfig = contractsMap[contractKey];
+
+            // 如果找不到對應的合約設定，直接返回空陣列並印出警告
+            if (!contractConfig) {
+                console.warn(`在 contractsMap 中找不到 '${contractKey}' 的設定`);
+                return [];
+            }
+            const contractAddress = contractConfig.address;
+
             return Promise.all(assets.map(async (asset) => {
                 const uriResult = uriResults[uriIndex++];
                 let metadata: Omit<BaseNft, 'id' | 'contractAddress' | 'type'>;
 
-                // 如果 tokenURI 請求成功，就去獲取元數據
-                if (uriResult.status === 'success') {
+                if (uriResult && uriResult.status === 'success') {
                     metadata = await fetchMetadata(uriResult.result as string);
                 } else {
-                    // 如果 tokenURI 請求失敗，則使用一個預設的元數據物件
-                    // 這樣可以確保 NFT 仍然會被顯示，而不是直接消失
                     console.warn(`無法獲取 ${type} #${asset.tokenId} 的 tokenURI`);
                     metadata = { name: `${type.charAt(0).toUpperCase() + type.slice(1)} #${asset.tokenId}`, description: '無法載入元數據', image: '', attributes: [] };
                 }
 
                 const findAttr = (trait: string, defaultValue: any = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
-                const contractAddress = (contractsMap[type === 'vip' ? 'vipCards' : `${type}s` as keyof typeof contractsMap]!).address;
-
-                // 根據 NFT 類型，組合最終的物件
+                
                 const baseNft = { ...metadata, id: BigInt(asset.tokenId), contractAddress };
 
                 switch (type) {
@@ -185,7 +197,6 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
             playerAssets.vip ? parseNfts([playerAssets.vip], 'vip') : Promise.resolve([]),
         ]);
 
-        // 現在 filter(Boolean) 只是為了過濾掉預期外的 null，而不是因為網路錯誤
         return {
             heroes: heroes.filter(Boolean) as HeroNft[],
             relics: relics.filter(Boolean) as RelicNft[],
