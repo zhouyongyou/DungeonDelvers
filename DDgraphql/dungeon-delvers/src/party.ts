@@ -1,65 +1,54 @@
-// =================================================================
-// 檔案: DDgraphql/dungeondelvers/src/party.ts
-// =================================================================
-import { BigInt, dataSource, Address } from "@graphprotocol/graph-ts"
-import { PartyCreated, Transfer as PartyTransfer } from "../generated/Party/Party"
-import { Player, Party, Hero, Relic } from "../generated/schema"
+// DDgraphql/dungeondelvers/src/party.ts (最終加固版)
+import { PartyCreated, Transfer } from "../generated/Party/Party"
+import { Party } from "../generated/schema"
+import { getOrCreatePlayer } from "./common"
+import { log, dataSource } from "@graphprotocol/graph-ts"
 
-// ★ 修正：將地址定義為常數，並從環境變數或預設值讀取
-const HERO_CONTRACT = Address.fromString("0x347752f8166d270ede722c3f31a10584bc2867b3");
-const RELIC_CONTRACT = Address.fromString("0x06994fb1ec1ba0238d8ca9539dabdbef090a5b53");
+// ★ 核心修正：從 subgraph.yaml 的 context 中安全地獲取地址，避免硬編碼
+let heroContractAddress = dataSource.context().getString("heroAddress")
+let relicContractAddress = dataSource.context().getString("relicAddress")
 
 export function handlePartyCreated(event: PartyCreated): void {
-  let player = Player.load(event.params.owner)
-  if (!player) {
-    player = new Player(event.params.owner);
-    player.save()
-  }
-  let partyId = event.address.toHexString() + "-" + event.params.partyId.toString()
-  let party = new Party(partyId)
-  party.tokenId = event.params.partyId
-  party.owner = player.id
-  
-  let heroIds = event.params.heroIds
-  for (let i = 0; i < heroIds.length; i++) {
-    let heroId = HERO_CONTRACT.toHexString() + "-" + heroIds[i].toString()
-    let hero = Hero.load(heroId)
-    if (hero) {
-      hero.party = party.id
-      hero.save()
-    }
-  }
+    let player = getOrCreatePlayer(event.params.owner)
 
-  let relicIds = event.params.relicIds
-  for (let i = 0; i < relicIds.length; i++) {
-    let relicId = RELIC_CONTRACT.toHexString() + "-" + relicIds[i].toString()
-    let relic = Relic.load(relicId)
-    if (relic) {
-      relic.party = party.id
-      relic.save()
+    let partyId = event.address.toHexString().concat("-").concat(event.params.partyId.toString())
+    let party = new Party(partyId)
+    party.owner = player.id
+    party.tokenId = event.params.partyId
+    party.contractAddress = event.address
+    party.totalPower = event.params.totalPower
+    party.totalCapacity = event.params.totalCapacity
+    party.partyRarity = event.params.partyRarity
+    party.fatigueLevel = 0
+    party.provisionsRemaining = event.params.relicIds.length
+    party.cooldownEndsAt = event.block.timestamp
+    party.unclaimedRewards = event.params.totalPower 
+
+    let heroIds: string[] = []
+    for (let i = 0; i < event.params.heroIds.length; i++) {
+        let heroId = heroContractAddress.toLowerCase().concat("-").concat(event.params.heroIds[i].toString())
+        heroIds.push(heroId)
     }
-  }
-  
-  party.provisionsRemaining = BigInt.fromI32(0)
-  party.cooldownEndsAt = BigInt.fromI32(0)
-  party.unclaimedRewards = BigInt.fromI32(0)
-  party.fatigueLevel = 0
-  party.totalPower = event.params.totalPower
-  party.totalCapacity = event.params.totalCapacity
-  party.partyRarity = event.params.partyRarity
-  party.save()
+    party.heroes = heroIds
+
+    let relicIds: string[] = []
+    for (let i = 0; i < event.params.relicIds.length; i++) {
+        let relicId = relicContractAddress.toLowerCase().concat("-").concat(event.params.relicIds[i].toString())
+        relicIds.push(relicId)
+    }
+    party.relics = relicIds
+    
+    party.save()
 }
 
-export function handlePartyTransfer(event: PartyTransfer): void {
-  let partyId = event.address.toHexString() + "-" + event.params.tokenId.toString()
-  let party = Party.load(partyId)
-  if (party) {
-    let newOwner = Player.load(event.params.to)
-    if (!newOwner) {
-      newOwner = new Player(event.params.to)
-      newOwner.save()
+export function handlePartyTransfer(event: Transfer): void {
+    let partyId = event.address.toHexString().concat("-").concat(event.params.tokenId.toString())
+    let party = Party.load(partyId)
+    if (party) {
+        let newOwner = getOrCreatePlayer(event.params.to)
+        party.owner = newOwner.id
+        party.save()
+    } else {
+        log.warning("Transfer handled for a Party that doesn't exist in the subgraph: {}", [partyId])
     }
-    party.owner = newOwner.id
-    party.save()
-  }
 }
