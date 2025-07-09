@@ -1,5 +1,5 @@
 import { PartyCreated, Transfer } from "../generated/Party/Party"
-import { Party } from "../generated/schema"
+import { Party, Hero, Relic } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { log } from "@graphprotocol/graph-ts"
 
@@ -8,9 +8,28 @@ let heroContractAddress = "0x347752f8166D270EDE722C3F31A10584bC2867b3"
 let relicContractAddress = "0x06994Fb1eC1Ba0238d8CA9539dAbdbEF090A5b53"
 
 export function handlePartyCreated(event: PartyCreated): void {
+    // 參數驗證
+    if (!event.params.owner || event.params.owner.toHexString() === '0x0000000000000000000000000000000000000000') {
+        log.error('Invalid owner address in PartyCreated event: {}', [event.transaction.hash.toHexString()]);
+        return;
+    }
+
+    if (event.params.partyRarity < 1 || event.params.partyRarity > 5) {
+        log.error('Invalid party rarity {} in PartyCreated event: {}', [event.params.partyRarity.toString(), event.transaction.hash.toHexString()]);
+        return;
+    }
+
     let player = getOrCreatePlayer(event.params.owner)
 
     let partyId = event.address.toHexString().concat("-").concat(event.params.partyId.toString())
+    
+    // 檢查是否已存在（防止重複處理）
+    let existingParty = Party.load(partyId);
+    if (existingParty) {
+        log.warning('Party already exists: {}', [partyId]);
+        return;
+    }
+    
     let party = new Party(partyId)
     party.owner = player.id
     party.tokenId = event.params.partyId
@@ -22,24 +41,41 @@ export function handlePartyCreated(event: PartyCreated): void {
     party.provisionsRemaining = event.params.relicIds.length
     party.cooldownEndsAt = event.block.timestamp
     party.unclaimedRewards = event.params.totalPower 
+    party.createdAt = event.block.timestamp
 
+    // 批量處理英雄關聯
     let heroIds: string[] = []
     for (let i = 0; i < event.params.heroIds.length; i++) {
-        // ★ 核心修正：使用硬編碼的地址
         let heroId = heroContractAddress.toLowerCase().concat("-").concat(event.params.heroIds[i].toString())
-        heroIds.push(heroId)
+        
+        // 驗證英雄是否存在
+        let hero = Hero.load(heroId);
+        if (hero && hero.owner == player.id) {
+            heroIds.push(heroId);
+        } else {
+            log.warning('Hero not found or not owned by player: {} for party: {}', [heroId, partyId]);
+        }
     }
     party.heroes = heroIds
 
+    // 批量處理聖物關聯
     let relicIds: string[] = []
     for (let i = 0; i < event.params.relicIds.length; i++) {
-        // ★ 核心修正：使用硬編碼的地址
         let relicId = relicContractAddress.toLowerCase().concat("-").concat(event.params.relicIds[i].toString())
-        relicIds.push(relicId)
+        
+        // 驗證聖物是否存在
+        let relic = Relic.load(relicId);
+        if (relic && relic.owner == player.id) {
+            relicIds.push(relicId);
+        } else {
+            log.warning('Relic not found or not owned by player: {} for party: {}', [relicId, partyId]);
+        }
     }
     party.relics = relicIds
     
     party.save()
+    
+    log.info('Successfully processed PartyCreated event: {}', [partyId]);
 }
 
 export function handlePartyTransfer(event: Transfer): void {
