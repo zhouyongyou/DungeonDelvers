@@ -1,4 +1,4 @@
-// src/api/nfts.ts (The Graph 數據獲取穩健版 v2)
+// src/api/nfts.ts (TypeScript 錯誤修正版)
 
 import { createPublicClient, http, type Address } from 'viem';
 import { bsc } from 'wagmi/chains';
@@ -21,7 +21,6 @@ import type {
 
 const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
 
-// 查詢玩家擁有的所有資產 ID
 const GET_PLAYER_ASSETS_QUERY = `
   query GetPlayerAssets($owner: ID!) {
     player(id: $owner) {
@@ -82,17 +81,9 @@ export async function fetchMetadata(uri: string): Promise<Omit<BaseNft, 'id' | '
 }
 
 // =================================================================
-// Section 3: 核心數據獲取邏輯 (★ 全面重構與優化 ★)
+// Section 3: 核心數據獲取邏輯 (已修正 TypeScript 錯誤)
 // =================================================================
 
-/**
- * @notice 一個更穩健的 NFT 解析函式
- * @param assets 從 The Graph 獲取的原始資產數據
- * @param type NFT 類型
- * @param chainId 當前鏈 ID
- * @param client viem public client
- * @returns 解析後的 NFT 物件陣列
- */
 async function parseNfts<T extends { tokenId: any }>(
     assets: T[],
     type: NftType,
@@ -135,12 +126,15 @@ async function parseNfts<T extends { tokenId: any }>(
         }
 
         const findAttr = (trait: string, defaultValue: any = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
-        const baseNft = { ...metadata, id: BigInt(asset.tokenId), contractAddress };
+        
+        // ★ 核心修正：將 asset 轉換為 any 型別，以解決 TypeScript 的泛型推斷問題
+        const anyAsset = asset as any;
+        const baseNft = { ...metadata, id: BigInt(anyAsset.tokenId), contractAddress };
 
         switch (type) {
-            case 'hero': return { ...baseNft, type, power: Number(asset.power), rarity: Number(asset.rarity) };
-            case 'relic': return { ...baseNft, type, capacity: Number(asset.capacity), rarity: Number(asset.rarity) };
-            case 'party': return { ...baseNft, type, totalPower: BigInt(asset.totalPower), totalCapacity: BigInt(asset.totalCapacity), heroIds: (asset as any).heroes.map((h: any) => BigInt(h.tokenId)), relicIds: (asset as any).relics.map((r: any) => BigInt(r.tokenId)), partyRarity: Number(asset.partyRarity) };
+            case 'hero': return { ...baseNft, type, power: Number(anyAsset.power), rarity: Number(anyAsset.rarity) };
+            case 'relic': return { ...baseNft, type, capacity: Number(anyAsset.capacity), rarity: Number(anyAsset.rarity) };
+            case 'party': return { ...baseNft, type, totalPower: BigInt(anyAsset.totalPower), totalCapacity: BigInt(anyAsset.totalCapacity), heroIds: anyAsset.heroes.map((h: any) => BigInt(h.tokenId)), relicIds: anyAsset.relics.map((r: any) => BigInt(r.tokenId)), partyRarity: Number(anyAsset.partyRarity) };
             case 'vip': return { ...baseNft, type, level: Number(findAttr('VIP Level')) };
             default: return null;
         }
@@ -172,7 +166,6 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
 
         const client = getClient(chainId);
 
-        // 平行處理所有類型的 NFT
         const [heroes, relics, parties, vipCards] = await Promise.all([
             parseNfts(playerAssets.heroes, 'hero', chainId, client),
             parseNfts(playerAssets.relics, 'relic', chainId, client),
