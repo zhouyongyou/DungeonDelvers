@@ -19,6 +19,8 @@ type Player @entity(immutable: false) {
   vault: PlayerVault
   " 玩家的所有升星嘗試紀錄 "
   upgradeAttempts: [UpgradeAttempt!] @derivedFrom(field: "player")
+  " 玩家的統計數據 "
+  stats: PlayerStats @derivedFrom(field: "player")
 }
 
 type Hero @entity(immutable: true) {
@@ -34,6 +36,8 @@ type Hero @entity(immutable: true) {
   rarity: Int!
   " 戰力 "
   power: BigInt!
+  " 創建時間戳 "
+  createdAt: BigInt!
 }
 
 type Relic @entity(immutable: true) {
@@ -49,6 +53,8 @@ type Relic @entity(immutable: true) {
   rarity: Int!
   " 容量 (決定隊伍能帶多少英雄) "
   capacity: Int!
+  " 創建時間戳 "
+  createdAt: BigInt!
 }
 
 type Party @entity(immutable: false) {
@@ -78,6 +84,8 @@ type Party @entity(immutable: false) {
   cooldownEndsAt: BigInt!
   " 未領取的獎勵 "
   unclaimedRewards: BigInt!
+  " 創建時間戳 "
+  createdAt: BigInt!
 }
 
 type PlayerProfile @entity(immutable: false) {
@@ -132,4 +140,50 @@ type UpgradeAttempt @entity(immutable: true) {
   outcome: Int!
   " 時間戳 "
   timestamp: BigInt!
+}
+
+type GlobalStats @entity(immutable: false) {
+  " 固定ID為 'global' "
+  id: String!
+  " 總英雄數量 "
+  totalHeroes: BigInt!
+  " 總聖物數量 "
+  totalRelics: BigInt!
+  " 總隊伍數量 "
+  totalParties: BigInt!
+  " 總玩家數量 "
+  totalPlayers: BigInt!
+  " 總升星嘗試次數 "
+  totalUpgradeAttempts: BigInt!
+  " 成功升星次數 "
+  successfulUpgrades: BigInt!
+  " 最後更新時間戳 "
+  lastUpdated: BigInt!
+}
+
+type PlayerStats @entity(immutable: false) {
+  " 使用玩家地址作為ID "
+  id: String!
+  " 關聯的玩家 "
+  player: Player!
+  " 總鑄造英雄數量 "
+  totalHeroesMinted: Int!
+  " 總鑄造聖物數量 "
+  totalRelicsMinted: Int!
+  " 總創建隊伍數量 "
+  totalPartiesCreated: Int!
+  " 總遠征次數 "
+  totalExpeditions: Int!
+  " 成功遠征次數 "
+  successfulExpeditions: Int!
+  " 總獲得獎勵 "
+  totalRewardsEarned: BigInt!
+  " 最高隊伍戰力 "
+  highestPartyPower: BigInt!
+  " 總升星嘗試次數 "
+  totalUpgradeAttempts: Int!
+  " 成功升星次數 "
+  successfulUpgrades: Int!
+  " 最後活動時間戳 "
+  lastActivityAt: BigInt!
 }

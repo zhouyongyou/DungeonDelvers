@@ -51,6 +51,7 @@ interface ImportMetaEnv {
   readonly VITE_MAINNET_VIPSTAKING_ADDRESS: string;
 
   readonly VITE_THE_GRAPH_STUDIO_API_URL: string;
+  readonly VITE_THE_GRAPH_API_URL: string;
 }
 
 interface ImportMeta {
