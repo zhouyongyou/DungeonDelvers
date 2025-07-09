@@ -47,9 +47,14 @@ const GET_PLAYER_PARTIES_QUERY = `
         cooldownEndsAt
         unclaimedRewards
         fatigueLevel
-        # 我們需要 name 和 image 來渲染 NftCard
-        # 這些數據應該在後續的 multicall 中獲取，但為了簡化，先假設它們存在
-        # 在真實的應用中，我們會在 fetchMetadata 中獲取這些
+        heroes {
+          id
+          tokenId
+        }
+        relics {
+          id
+          tokenId
+        }
       }
     }
   }
@@ -81,16 +86,17 @@ const usePlayerParties = () => {
             return data?.player?.parties?.map((p: any) => ({
                 id: BigInt(p.tokenId),
                 tokenId: BigInt(p.tokenId),
-                name: `隊伍 #${p.tokenId}`, // 暫時的名稱
-                image: '', // 暫時的圖片
+                name: `隊伍 #${p.tokenId}`,
+                image: '', 
                 description: '',
                 attributes: [],
                 contractAddress: getContract(bsc.id, 'party')?.address ?? '0x',
                 type: 'party',
                 totalPower: BigInt(p.totalPower),
                 totalCapacity: BigInt(p.totalCapacity),
-                heroIds: [], // 注意：這個查詢沒有獲取詳細的 heroIds，如果需要可以加入
-                relicIds: [],
+                // ★★★ 修正點：正確填充 heroIds 和 relicIds ★★★
+                heroIds: p.heroes.map((h: any) => BigInt(h.tokenId)),
+                relicIds: p.relics.map((r: any) => BigInt(r.tokenId)),
                 partyRarity: p.partyRarity,
                 // 直接從 The Graph 獲取狀態
                 provisionsRemaining: BigInt(p.provisionsRemaining),

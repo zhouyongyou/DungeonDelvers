@@ -1,16 +1,21 @@
+// =================================================================
+// 檔案: DDgraphql/dungeondelvers/src/player-vault.ts
+// =================================================================
 import { BigInt } from "@graphprotocol/graph-ts"
-import {
-  Deposited,
-  Withdrawn,
-  CommissionPaid,
-} from "../generated/PlayerVault/PlayerVault"
+import { Deposited, Withdrawn, CommissionPaid } from "../generated/PlayerVault/PlayerVault"
 import { Player, PlayerVault } from "../generated/schema"
 
-// 處理存款事件
 export function handleDeposited(event: Deposited): void {
-  let vault = PlayerVault.load(event.params.player)
+  let player = Player.load(event.params.player)
+  if(!player) {
+    player = new Player(event.params.player)
+    player.save()
+  }
+
+  let vault = PlayerVault.load(event.params.player.toHexString())
   if (!vault) {
-    vault = new PlayerVault(event.params.player)
+    vault = new PlayerVault(event.params.player.toHexString())
+    vault.player = player.id
     vault.withdrawableBalance = BigInt.fromI32(0)
     vault.totalCommissionPaid = BigInt.fromI32(0)
   }
@@ -18,22 +23,25 @@ export function handleDeposited(event: Deposited): void {
   vault.save()
 }
 
-// 處理提款事件
 export function handleWithdrawn(event: Withdrawn): void {
-  let vault = PlayerVault.load(event.params.player)
+  let vault = PlayerVault.load(event.params.player.toHexString())
   if (vault) {
-    // 提款金額 (amount) 是稅後的，所以直接減去即可
     vault.withdrawableBalance = vault.withdrawableBalance.minus(event.params.amount)
     vault.save()
   }
 }
 
-// 處理佣金支付事件
 export function handleCommissionPaid(event: CommissionPaid): void {
-  // 這個事件是支付給邀請人的，所以我們更新邀請人的金庫
-  let referrerVault = PlayerVault.load(event.params.referrer)
+  let referrer = Player.load(event.params.referrer)
+  if(!referrer) {
+    referrer = new Player(event.params.referrer)
+    referrer.save()
+  }
+
+  let referrerVault = PlayerVault.load(event.params.referrer.toHexString())
   if (!referrerVault) {
-    referrerVault = new PlayerVault(event.params.referrer)
+    referrerVault = new PlayerVault(event.params.referrer.toHexString())
+    referrerVault.player = referrer.id
     referrerVault.withdrawableBalance = BigInt.fromI32(0)
     referrerVault.totalCommissionPaid = BigInt.fromI32(0)
   }

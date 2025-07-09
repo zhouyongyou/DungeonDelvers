@@ -1,4 +1,4 @@
-// src/api/nfts.ts (The Graph 改造版)
+// src/api/nfts.ts (The Graph 數據獲取穩健版)
 
 import { createPublicClient, http, type Address } from 'viem';
 import { bsc } from 'wagmi/chains';
@@ -16,13 +16,11 @@ import type {
 } from '../types/nft';
 
 // =================================================================
-// Section 1: The Graph API 設定
+// Section 1: The Graph API 設定 (保持不變)
 // =================================================================
 
 const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
 
-// 定義一個 GraphQL 查詢語句。
-// 這個查詢會一次性獲取一個玩家地址所擁有的所有資產的核心資訊。
 const GET_PLAYER_ASSETS_QUERY = `
   query GetPlayerAssets($owner: ID!) {
     player(id: $owner) {
@@ -81,7 +79,6 @@ const getClient = (chainId: number) => {
     return createPublicClient({ chain, transport: http(rpcUrl) });
 };
 
-// 解析元數據的函式保持不變，因為我們仍然需要處理 tokenURI
 export async function fetchMetadata(uri: string): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
     try {
         if (uri.startsWith('data:application/json;base64,')) {
@@ -104,16 +101,9 @@ export async function fetchMetadata(uri: string): Promise<Omit<BaseNft, 'id' | '
 }
 
 // =================================================================
-// Section 3: 核心數據獲取邏輯 (全新 GraphQL 版本)
+// Section 3: 核心數據獲取邏輯 (★ 核心修正 ★)
 // =================================================================
 
-/**
- * @notice 使用 The Graph 獲取一個玩家擁有的所有 NFT 數據。
- * @dev 這取代了舊的、基於 getLogs 的掃描方法，速度和效率都大幅提升。
- * @param owner 玩家的錢包地址。
- * @param chainId 當前的鏈 ID。
- * @returns 一個包含所有已分類 NFT 的物件。
- */
 export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promise<AllNftCollections> {
     const emptyResult: AllNftCollections = { heroes: [], relics: [], parties: [], vipCards: [] };
     if (!isSupportedChain(chainId)) {
@@ -122,7 +112,6 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
     }
 
     try {
-        // --- 步驟 1: 從 The Graph 獲取基礎數據 ---
         const response = await fetch(THE_GRAPH_API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -132,19 +121,11 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
             }),
         });
 
-        if (!response.ok) {
-            throw new Error(`GraphQL 請求失敗: ${response.statusText}`);
-        }
-
+        if (!response.ok) throw new Error(`GraphQL 請求失敗: ${response.statusText}`);
         const { data } = await response.json();
         const playerAssets = data?.player;
+        if (!playerAssets) return emptyResult;
 
-        if (!playerAssets) {
-            // 如果 The Graph 中沒有這個玩家的數據，代表他沒有任何資產
-            return emptyResult;
-        }
-
-        // --- 步驟 2: 批量獲取動態元數據 (tokenURI) ---
         const client = getClient(chainId);
         const contractsMap = {
             heroes: getContract(chainId, 'hero'),
@@ -161,22 +142,31 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
 
         const uriResults = uriCalls.length > 0 ? await client.multicall({ contracts: uriCalls, allowFailure: true }) : [];
 
-        // --- 步驟 3: 解析元數據並組合最終結果 ---
         let uriIndex = 0;
+        
+        // ★★★ 核心修正：將 parseNfts 函式變得更穩健 ★★★
         const parseNfts = async (assets: any[], type: NftType): Promise<any[]> => {
             if (!assets || assets.length === 0) return [];
+            
             return Promise.all(assets.map(async (asset) => {
                 const uriResult = uriResults[uriIndex++];
-                if (uriResult.status !== 'success') return null;
+                let metadata: Omit<BaseNft, 'id' | 'contractAddress' | 'type'>;
 
-                const metadata = await fetchMetadata(uriResult.result as string);
+                // 如果 tokenURI 請求成功，就去獲取元數據
+                if (uriResult.status === 'success') {
+                    metadata = await fetchMetadata(uriResult.result as string);
+                } else {
+                    // 如果 tokenURI 請求失敗，則使用一個預設的元數據物件
+                    // 這樣可以確保 NFT 仍然會被顯示，而不是直接消失
+                    console.warn(`無法獲取 ${type} #${asset.tokenId} 的 tokenURI`);
+                    metadata = { name: `${type.charAt(0).toUpperCase() + type.slice(1)} #${asset.tokenId}`, description: '無法載入元數據', image: '', attributes: [] };
+                }
+
                 const findAttr = (trait: string, defaultValue: any = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
+                const contractAddress = (contractsMap[type === 'vip' ? 'vipCards' : `${type}s` as keyof typeof contractsMap]!).address;
 
-                const baseNft: BaseNft = { 
-                    ...metadata, 
-                    id: BigInt(asset.tokenId), 
-                    contractAddress: contractsMap[type === 'vip' ? 'vipCards' : `${type}s` as keyof typeof contractsMap]!.address
-                };
+                // 根據 NFT 類型，組合最終的物件
+                const baseNft = { ...metadata, id: BigInt(asset.tokenId), contractAddress };
 
                 switch (type) {
                     case 'hero': return { ...baseNft, type: 'hero', power: Number(asset.power), rarity: Number(asset.rarity) };
@@ -195,6 +185,7 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
             playerAssets.vip ? parseNfts([playerAssets.vip], 'vip') : Promise.resolve([]),
         ]);
 
+        // 現在 filter(Boolean) 只是為了過濾掉預期外的 null，而不是因為網路錯誤
         return {
             heroes: heroes.filter(Boolean) as HeroNft[],
             relics: relics.filter(Boolean) as RelicNft[],
