@@ -4,20 +4,10 @@
 import { BigInt, log, Address } from "@graphprotocol/graph-ts"
 import { ExperienceAdded, ProfileCreated } from "../generated/PlayerProfile/PlayerProfile"
 import { Player, PlayerProfile } from "../generated/schema"
+// ★ 核心修正 #1：從新的 utils 檔案中引入 calculateLevel 函式
+import { calculateLevel } from "./utils"
 
-function calculateLevel(exp: BigInt): i32 {
-  if (exp.lt(BigInt.fromI32(100))) { return 1 }
-  let x = exp.div(BigInt.fromI32(100));
-  let root = x;
-  if (x.gt(BigInt.fromI32(0))) {
-    let y = x.plus(BigInt.fromI32(1)).div(BigInt.fromI32(2));
-    while (y.lt(root)) {
-      root = y;
-      y = x.div(y).plus(y).div(BigInt.fromI32(2));
-    }
-  }
-  return root.toI32() + 1
-}
+// ★ 核心修正 #2：將 calculateLevel 函式移至 utils.ts，避免重複定義
 
 // ★★★ 新增的函式，處理 Profile 創建事件 ★★★
 export function handleProfileCreated(event: ProfileCreated): void {
