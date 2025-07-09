@@ -1,4 +1,4 @@
-// src/pages/VipPage.tsx (★ DEBUG 功能版)
+// src/pages/VipPage.tsx (SVG與數據顯示修正版)
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useWriteContract, usePublicClient, useReadContract } from 'wagmi';
@@ -10,7 +10,7 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { bsc } from 'wagmi/chains';
-import { useVipStatus } from '../hooks/useVipStatus'; // 導入我們修改後的 Hook
+import { useVipStatus } from '../hooks/useVipStatus';
 
 const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undefined }> = ({ tokenId, chainId }) => {
     if (!chainId || (chainId !== bsc.id)) {
@@ -18,7 +18,7 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
     }
     const vipStakingContract = getContract(chainId as any, 'vipStaking');
     
-    const { data: tokenURI, isLoading } = useReadContract({
+    const { data: tokenURI, isLoading, isError } = useReadContract({
         ...vipStakingContract,
         functionName: 'tokenURI',
         args: [tokenId!],
@@ -29,9 +29,13 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
         if (!tokenURI) return null;
         try {
             const uriString = typeof tokenURI === 'string' ? tokenURI : '';
+            if (!uriString.startsWith('data:application/json;base64,')) {
+                // 如果不是 data URI, 嘗試直接當作 URL 使用 (為了相容中心化伺服器)
+                return uriString;
+            }
             const decodedUri = Buffer.from(uriString.substring('data:application/json;base64,'.length), 'base64').toString();
             const metadata = JSON.parse(decodedUri);
-            return metadata.image;
+            return metadata.image; // 這應該是另一個 data URI (data:image/svg+xml;base64,...)
         } catch (e) {
             console.error("解析 VIP 卡 SVG 失敗:", e);
             return null;
@@ -39,6 +43,7 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
     }, [tokenURI]);
 
     if (isLoading) return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center"><LoadingSpinner /></div>;
+    if (isError) return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-red-400">讀取 VIP 卡失敗</div>;
     if (!svgImage) return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-400 dark:text-gray-500">無 VIP 卡</div>;
     
     return <img src={svgImage} alt="VIP Card" className="w-full h-auto rounded-xl shadow-lg" />;
@@ -57,7 +62,7 @@ const VipPage: React.FC = () => {
     
     const {
         isLoading, vipStakingContract, soulShardContract,
-        soulShardBalance, stakedAmount, stakedValueUSD, // ★★★【DEBUG 新增】★★★ 獲取 stakedValueUSD
+        soulShardBalance, stakedAmount, stakedValueUSD,
         tokenId, vipLevel, taxReduction,
         pendingUnstakeAmount, isCooldownOver, countdown, allowance, refetchAll
     } = useVipStatus();
@@ -136,7 +141,7 @@ const VipPage: React.FC = () => {
         return <section><h2 className="page-title">VIP 質押中心</h2><div className="card-bg p-10 rounded-xl text-center text-gray-400"><p>請連接到支援的網路以使用 VIP 功能。</p></div></section>;
     }
     
-    const hasStaked = stakedAmount > 0n || (tokenId !== null && tokenId > 0n);
+    const hasStaked = stakedAmount > 0n || (tokenId !== null && typeof tokenId === 'bigint' && tokenId > 0n);
 
     return (
         <section className="space-y-8 max-w-5xl mx-auto">
@@ -151,7 +156,6 @@ const VipPage: React.FC = () => {
                             <div>
                                 <div className="text-sm text-gray-400">質押總額</div>
                                 <div className="font-bold text-2xl text-white">{isLoading ? <LoadingSpinner /> : parseFloat(formatEther(stakedAmount)).toFixed(2)}</div>
-                                {/* ★★★【DEBUG 新增】★★★ 顯示 USD 價值 */}
                                 <div className="text-xs text-gray-500">
                                     ≈ ${isLoading ? '...' : parseFloat(formatEther(stakedValueUSD)).toFixed(2)} USD
                                 </div>

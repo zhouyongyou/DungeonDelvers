@@ -1,0 +1,8 @@
+{
+  "name": "Dungeon Delvers Parties",
+  "description": "A composite NFT representing a full team of heroes and relics, bundled together and ready for adventure. Parties are the main unit for undertaking expeditions.",
+  "image": "https://www.dungeondelvers.xyz/assets/images/collections/party-logo.png",
+  "external_link": "https://www.dungeondelvers.xyz",
+  "seller_fee_basis_points": 500,
+  "fee_recipient": "0x10925A7138649C7E1794CE646182eeb5BF8ba647"
+}

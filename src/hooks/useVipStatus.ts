@@ -1,6 +1,6 @@
-// src/hooks/useVipStatus.ts (★ DEBUG 功能版)
+// src/hooks/useVipStatus.ts (修正後)
 
-import { useAccount, useReadContract, useBalance } from 'wagmi';
+import { useAccount, useReadContract, useBalance, useReadContracts } from 'wagmi';
 import { useMemo } from 'react';
 import { bsc } from 'wagmi/chains';
 import { getContract } from '../config/contracts';
@@ -15,7 +15,6 @@ export const useVipStatus = () => {
 
     const isSupportedChain = chainId === bsc.id;
 
-    // 依賴鏈 ID 獲取合約實例
     const vipStakingContract = useMemo(() => isSupportedChain ? getContract(chainId, 'vipStaking') : null, [chainId, isSupportedChain]);
     const soulShardContract = useMemo(() => isSupportedChain ? getContract(chainId, 'soulShard') : null, [chainId, isSupportedChain]);
     const oracleContract = useMemo(() => isSupportedChain ? getContract(chainId, 'oracle') : null, [chainId, isSupportedChain]);
@@ -23,36 +22,39 @@ export const useVipStatus = () => {
     // 讀取鏈上數據
     const { data: soulShardBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useBalance({ address, token: soulShardContract?.address, query: { enabled: !!address && !!soulShardContract } });
     
-    const { data: stakeInfo, isLoading: isLoadingStakeInfo, refetch: refetchStakeInfo } = useReadContract({
-        ...vipStakingContract,
-        functionName: 'userStakes',
-        args: [address!],
-        query: { enabled: !!address && !!vipStakingContract }
+    // ★ 核心修正 #1: 使用 useReadContracts 一次性獲取多個數據，減少 RPC 呼叫
+    const { data: vipData, isLoading: isLoadingVipData, refetch: refetchVipData } = useReadContracts({
+        contracts: [
+            { ...vipStakingContract, functionName: 'userStakes', args: [address!] },
+            { ...vipStakingContract, functionName: 'getVipLevel', args: [address!] },
+            { ...vipStakingContract, functionName: 'getVipTaxReduction', args: [address!] },
+            { ...vipStakingContract, functionName: 'unstakeQueue', args: [address!] },
+            { ...soulShardContract, functionName: 'allowance', args: [address!, vipStakingContract?.address!] },
+        ],
+        query: { 
+            enabled: !!address && !!vipStakingContract && !!soulShardContract,
+        }
     });
 
-    const { data: vipLevel, isLoading: isLoadingVipLevel, refetch: refetchVipLevel } = useReadContract({ ...vipStakingContract, functionName: 'getVipLevel', args: [address!], query: { enabled: !!address && !!vipStakingContract } });
-    const { data: taxReduction, isLoading: isLoadingTax, refetch: refetchTaxReduction } = useReadContract({ ...vipStakingContract, functionName: 'getVipTaxReduction', args: [address!], query: { enabled: !!address && !!vipStakingContract } });
-    
-    const { data: unstakeQueue, isLoading: isLoadingQueue, refetch: refetchUnstakeQueue } = useReadContract({
-        ...vipStakingContract,
-        functionName: 'unstakeQueue',
-        args: [address!],
-        query: { enabled: !!address && !!vipStakingContract }
-    });
+    const [
+        stakeInfo,
+        vipLevel,
+        taxReduction,
+        unstakeQueue,
+        allowance
+    ] = useMemo(() => vipData?.map(d => d.result) ?? [], [vipData]);
 
-    const { data: allowance, isLoading: isLoadingAllowance, refetch: refetchAllowance } = useReadContract({ ...soulShardContract, functionName: 'allowance', args: [address!, vipStakingContract?.address!], query: { enabled: !!address && !!vipStakingContract && !!soulShardContract } });
-
-    // 計算衍生狀態
     const stakedAmount = useMemo(() => (stakeInfo as readonly [bigint, bigint])?.[0] ?? 0n, [stakeInfo]);
     const tokenId = useMemo(() => (stakeInfo as readonly [bigint, bigint])?.[1], [stakeInfo]);
 
-    // ★★★【DEBUG 新增】★★★
-    // 新增一個 useReadContract 呼叫，用於獲取質押金額對應的 USD 價值
+    // ★ 核心修正 #2: 確保即使 stakedAmount 為 0，也能安全地觸發後續查詢
     const { data: stakedValueUSD, isLoading: isLoadingStakedValueUSD, refetch: refetchStakedValueUSD } = useReadContract({
         ...oracleContract,
         functionName: 'getAmountOut',
         args: [soulShardContract?.address!, stakedAmount],
-        query: { enabled: !!oracleContract && !!soulShardContract && stakedAmount > 0n }
+        query: { 
+            enabled: !!oracleContract && !!soulShardContract && (stakedAmount > 0n)
+        }
     });
 
     const pendingUnstakeAmount = useMemo(() => (unstakeQueue as readonly [bigint, bigint])?.[0] ?? 0n, [unstakeQueue]);
@@ -60,24 +62,21 @@ export const useVipStatus = () => {
 
     const { isOver: isCooldownOver, formatted: countdown } = useCountdown(unstakeAvailableAt);
 
-    // 統一的刷新函式
     const refetchAll = () => {
-        refetchStakeInfo();
+        refetchVipData();
         refetchBalance();
-        refetchVipLevel();
-        refetchTaxReduction();
-        refetchUnstakeQueue();
-        refetchAllowance();
-        refetchStakedValueUSD(); // ★★★【DEBUG 新增】★★★
+        if (stakedAmount > 0n) {
+            refetchStakedValueUSD();
+        }
     };
 
     return {
-        isLoading: isLoadingStakeInfo || isLoadingBalance || isLoadingVipLevel || isLoadingTax || isLoadingQueue || isLoadingAllowance || isLoadingStakedValueUSD,
+        isLoading: isLoadingVipData || isLoadingBalance || (stakedAmount > 0n && isLoadingStakedValueUSD),
         vipStakingContract,
         soulShardContract,
         soulShardBalance: soulShardBalance?.value ?? 0n,
         stakedAmount,
-        stakedValueUSD: (stakedValueUSD as bigint) ?? 0n, // ★★★【DEBUG 新增】★★★
+        stakedValueUSD: (stakedValueUSD as bigint) ?? 0n,
         tokenId,
         vipLevel: vipLevel ?? 0,
         taxReduction: taxReduction ?? 0n,

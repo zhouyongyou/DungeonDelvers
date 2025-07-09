@@ -1,0 +1,8 @@
+{
+  "name": "Dungeon Delvers Heroes",
+  "description": "Heroes are the core combat power of the adventure team in Dungeon Delvers. Each hero is a unique NFT with randomly generated power on the chain, ready to venture into the darkest dungeons.",
+  "image": "https://www.dungeondelvers.xyz/assets/images/collections/hero-logo.png",
+  "external_link": "https://www.dungeondelvers.xyz",
+  "seller_fee_basis_points": 500,
+  "fee_recipient": "0x10925A7138649C7E1794CE646182eeb5BF8ba647"
+}

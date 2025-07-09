@@ -1,0 +1,8 @@
+{
+  "name": "Dungeon Delvers Relics",
+  "description": "Ancient relics that determine the size and potential of your party. The capacity of a relic dictates how many heroes can join your expedition.",
+  "image": "https://www.dungeondelvers.xyz/assets/images/collections/relic-logo.png",
+  "external_link": "https://www.dungeondelvers.xyz",
+  "seller_fee_basis_points": 500,
+  "fee_recipient": "0x10925A7138649C7E1794CE646182eeb5BF8ba647"
+}

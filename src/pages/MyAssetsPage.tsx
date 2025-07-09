@@ -1,9 +1,9 @@
-// src/pages/MyAssetsPage.tsx (The Graph 改造版)
+// src/pages/MyAssetsPage.tsx (UI優化與排序修正版)
 
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract, usePublicClient } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchAllOwnedNfts } from '../api/nfts'; // 我們繼續使用這個函式，但它內部已經被改造了
+import { fetchAllOwnedNfts } from '../api/nfts';
 import { NftCard } from '../components/ui/NftCard';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -11,7 +11,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { getContract } from '../config/contracts';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
-import type { HeroNft, RelicNft, NftType } from '../types/nft';
+import type { HeroNft, RelicNft, NftType, AnyNft } from '../types/nft';
 import { formatEther } from 'viem';
 import { bsc } from 'wagmi/chains';
 
@@ -34,7 +34,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
     const toggleSelection = (id: bigint, type: 'hero' | 'relic') => {
         const list = type === 'hero' ? selectedHeroes : selectedRelics;
         const setList = type === 'hero' ? setSelectedHeroes : setSelectedRelics;
-        const limit = 5; // 每個隊伍最多5個英雄/聖物
+        const limit = 5;
 
         if (list.includes(id)) {
             setList(list.filter(i => i !== id));
@@ -160,7 +160,6 @@ const MyAssetsPage: React.FC = () => {
 
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
-    // ★ 核心改造：繼續使用這個 useQuery，但它現在會呼叫我們用 GraphQL 改造過的 fetchAllOwnedNfts
     const { data: nfts, isLoading } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
         queryFn: () => fetchAllOwnedNfts(address!, chainId),
@@ -174,26 +173,32 @@ const MyAssetsPage: React.FC = () => {
     });
     const platformFee = typeof platformFeeRaw === 'bigint' ? platformFeeRaw : undefined;
 
-    // ★ 核心改造：簡化可用 NFT 的過濾邏輯
-    const { availableHeroes, availableRelics } = useMemo(() => {
+    const { availableHeroes, availableRelics } = useMemo((): { availableHeroes: HeroNft[]; availableRelics: RelicNft[] } => {
         if (!nfts) return { availableHeroes: [], availableRelics: [] };
         
         const heroIdsInParties = new Set(nfts.parties.flatMap(p => p.heroIds.map(id => id.toString())));
         const relicIdsInParties = new Set(nfts.parties.flatMap(p => p.relicIds.map(id => id.toString())));
 
+        // ★ 新增：依稀有度排序
+        const sortHeroes = (nfts: HeroNft[]) => [...nfts].sort((a, b) => b.rarity - a.rarity);
+        const sortRelics = (nfts: RelicNft[]) => [...nfts].sort((a, b) => b.rarity - a.rarity);
+
         return {
-            availableHeroes: nfts.heroes.filter(h => !heroIdsInParties.has(h.id.toString())),
-            availableRelics: nfts.relics.filter(r => !relicIdsInParties.has(r.id.toString())),
+            availableHeroes: sortHeroes(nfts.heroes.filter(h => !heroIdsInParties.has(h.id.toString()))),
+            availableRelics: sortRelics(nfts.relics.filter(r => !relicIdsInParties.has(r.id.toString()))),
         };
     }, [nfts]);
 
     const filteredNfts = useMemo(() => {
         if (!nfts) return [];
+        // ★ 新增：依稀有度排序
+        const sortNfts = (nfts: AnyNft[]) => [...nfts].sort((a, b) => ('rarity' in b ? (b as any).rarity : 0) - ('rarity' in a ? (a as any).rarity : 0));
+
         switch (filter) {
-            case 'hero': return nfts.heroes;
-            case 'relic': return nfts.relics;
-            case 'party': return nfts.parties;
-            case 'vip': return nfts.vipCards;
+            case 'hero': return sortNfts(nfts.heroes);
+            case 'relic': return sortNfts(nfts.relics);
+            case 'party': return [...nfts.parties].sort((a, b) => b.partyRarity - a.partyRarity);
+            case 'vip': return nfts.vipCards; // VIP卡通常只有一張，無需排序
             default: return [];
         }
     }, [filter, nfts]);
@@ -228,7 +233,6 @@ const MyAssetsPage: React.FC = () => {
                 value: platformFee,
             });
             addTransaction({ hash, description: `創建新隊伍` });
-            // 成功後，手動觸發 'ownedNfts' 查詢的刷新
             queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
 
         } catch (e: any) {
@@ -253,6 +257,7 @@ const MyAssetsPage: React.FC = () => {
         <section className="space-y-8">
             <h2 className="page-title">我的資產與隊伍</h2>
             
+            {/* ★ UI/UX 優化：將組隊面板移至最上方 */}
             <TeamBuilder 
                 heroes={availableHeroes} 
                 relics={availableRelics}

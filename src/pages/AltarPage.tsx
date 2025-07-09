@@ -1,4 +1,4 @@
-// src/pages/AltarPage.tsx (The Graph 改造版)
+// src/pages/AltarPage.tsx (數據讀取修正版)
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useReadContracts, useWriteContract, usePublicClient } from 'wagmi';
@@ -22,9 +22,9 @@ import { Modal } from '../components/ui/Modal';
 
 const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
 
-// ★ 核心改造：專為祭壇設計的、可篩選星級的 GraphQL 查詢
+// ★ 核心修正: 查詢語句現在直接查詢頂層的 heroes 和 relics，並使用正確的變數類型
 const GET_FILTERED_NFTS_QUERY = `
-  query GetFilteredNfts($owner: ID!, $rarity: Int!) {
+  query GetFilteredNfts($owner: String!, $rarity: Int!) {
     heroes(where: { owner: $owner, rarity: $rarity }) {
       id
       tokenId
@@ -40,7 +40,6 @@ const GET_FILTERED_NFTS_QUERY = `
   }
 `;
 
-// 新的 Hook，根據類型和星級獲取可用於升級的 NFT
 const useAltarMaterials = (nftType: NftType, rarity: number) => {
     const { address, chainId } = useAccount();
 
@@ -49,37 +48,42 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
         queryFn: async () => {
             if (!address || !THE_GRAPH_API_URL) return [];
             
-            const response = await fetch(THE_GRAPH_API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    query: GET_FILTERED_NFTS_QUERY,
-                    variables: { owner: address.toLowerCase(), rarity },
-                }),
-            });
-            if (!response.ok) throw new Error('GraphQL Network response was not ok');
-            const { data } = await response.json();
+            const result = await fetchFromGraph(GET_FILTERED_NFTS_QUERY, { owner: address.toLowerCase(), rarity });
+            const assets = nftType === 'hero' ? result.heroes : result.relics;
 
-            const assets = nftType === 'hero' ? data.heroes : data.relics;
             if (!assets) return [];
 
-            // 將 The Graph 的數據轉換為前端的型別
+            const contractAddress = (nftType === 'hero' ? getContract(bsc.id, 'hero') : getContract(bsc.id, 'relic'))!.address;
+
             return assets.map((asset: any) => ({
                 id: BigInt(asset.tokenId),
                 tokenId: BigInt(asset.tokenId),
                 name: `${nftType === 'hero' ? '英雄' : '聖物'} #${asset.tokenId}`,
-                image: '', // 在這個頁面我們不需要顯示圖片
+                image: '',
                 description: '',
                 attributes: [],
-                contractAddress: (nftType === 'hero' ? getContract(bsc.id, 'hero') : getContract(bsc.id, 'relic'))!.address,
+                contractAddress: contractAddress,
                 type: nftType,
                 ...asset
             }));
         },
         enabled: !!address && chainId === bsc.id && rarity > 0,
-        // ★★★ 網路優化：增加 staleTime，避免不必要的重複請求 ★★★
-        staleTime: 1000 * 30, // 30 秒
+        staleTime: 1000 * 30,
     });
+};
+
+// 獨立的 GraphQL 請求函式
+const fetchFromGraph = async (query: string, variables: Record<string, any>) => {
+    if (!THE_GRAPH_API_URL) throw new Error("The Graph API URL is not configured.");
+    const response = await fetch(THE_GRAPH_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables }),
+    });
+    if (!response.ok) throw new Error('GraphQL Network response was not ok');
+    const { data, errors } = await response.json();
+    if (errors) throw new Error(`GraphQL errors: ${JSON.stringify(errors)}`);
+    return data;
 };
 
 
@@ -161,7 +165,6 @@ const AltarPage: React.FC = () => {
 
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
-    // ★ 核心改造：使用新的 Hook 來精準獲取材料
     const { data: availableNfts, isLoading: isLoadingNfts } = useAltarMaterials(nftType, rarity);
 
     const { data: upgradeRulesData, isLoading: isLoadingRules } = useReadContracts({
@@ -227,7 +230,7 @@ const AltarPage: React.FC = () => {
                 return { ...metadata, id: tokenId, type: 'relic', contractAddress: tokenContract.address, capacity: Number(findAttr('Capacity')), rarity: Number(findAttr('Rarity')) };
             }));
 
-            const outcomeMessages: Record<number, string> = { 3: `大成功！您獲得了 ${newNfts.length} 個更高星級的 NFT！`, 2: `恭喜！您成功獲得了 1 個更高星級的 NFT！`, 1: `可惜，升星失敗了，但我們為您保留了 ${newNfts.length} 個材料。`, 0: '升星失敗，所有材料都已銷毀。再接再厲！' };
+            const outcomeMessages: Record<number, string> = { 3: `大成功！您獲得了 ${newNfts.length} 個更高星級的 NFT！`, 2: `恭喜！您成功獲得了 1 個更高星級的 NFT！`, 1: `可惜，升星失敗了，但我們為您保留了 ${newNfts.length} 個材料。`, 0: '升星失敗，所有材料已銷毀。再接再厲！' };
             const statusMap: UpgradeOutcomeStatus[] = ['total_fail', 'partial_fail', 'success', 'great_success'];
             setUpgradeResult({ status: statusMap[outcome] || 'total_fail', nfts: newNfts, message: outcomeMessages[outcome] || "發生未知錯誤" });
 
