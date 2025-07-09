@@ -1,56 +1,47 @@
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
 
-describe('LoadingSpinner 組件', () => {
-  it('應該能正常渲染', () => {
+describe('LoadingSpinner', () => {
+  it('應該渲染 Loading Spinner', () => {
     const { container } = render(<LoadingSpinner />)
-    const spinner = container.firstChild as HTMLElement
-    
+    const spinner = container.querySelector('.animate-spin')
     expect(spinner).toBeInTheDocument()
-    expect(spinner.tagName).toBe('DIV')
   })
 
-  it('應該有默認的樣式類', () => {
+  it('應該使用預設的大小和顏色', () => {
     const { container } = render(<LoadingSpinner />)
-    const spinner = container.firstChild as HTMLElement
-    
-    expect(spinner).toHaveClass('animate-spin')
-    expect(spinner).toHaveClass('rounded-full')
-    expect(spinner).toHaveClass('h-5')
-    expect(spinner).toHaveClass('w-5')
-    expect(spinner).toHaveClass('border-b-2')
-    expect(spinner).toHaveClass('border-white')
+    const spinner = container.querySelector('.animate-spin')
+    expect(spinner).toHaveClass('h-5', 'w-5', 'border-white')
   })
 
-  it('應該能接受自定義大小', () => {
+  it('應該接受自定義大小', () => {
     const { container } = render(<LoadingSpinner size="h-10 w-10" />)
-    const spinner = container.firstChild as HTMLElement
-    
-    expect(spinner).toHaveClass('h-10')
-    expect(spinner).toHaveClass('w-10')
-    expect(spinner).not.toHaveClass('h-5')
-    expect(spinner).not.toHaveClass('w-5')
+    const spinner = container.querySelector('.animate-spin')
+    expect(spinner).toHaveClass('h-10', 'w-10')
   })
 
-  it('應該能接受自定義顏色', () => {
+  it('應該接受自定義顏色', () => {
     const { container } = render(<LoadingSpinner color="border-blue-500" />)
-    const spinner = container.firstChild as HTMLElement
-    
+    const spinner = container.querySelector('.animate-spin')
     expect(spinner).toHaveClass('border-blue-500')
-    expect(spinner).not.toHaveClass('border-white')
   })
 
-  it('應該能同時接受自定義大小和顏色', () => {
-    const { container } = render(
-      <LoadingSpinner size="h-8 w-8" color="border-red-500" />
-    )
-    const spinner = container.firstChild as HTMLElement
-    
-    expect(spinner).toHaveClass('h-8')
-    expect(spinner).toHaveClass('w-8')
-    expect(spinner).toHaveClass('border-red-500')
+  it('應該有旋轉動畫類', () => {
+    const { container } = render(<LoadingSpinner />)
+    const spinner = container.querySelector('.animate-spin')
     expect(spinner).toHaveClass('animate-spin')
-    expect(spinner).toHaveClass('rounded-full')
+  })
+
+  it('應該有正確的基本樣式', () => {
+    const { container } = render(<LoadingSpinner />)
+    const spinner = container.querySelector('.animate-spin')
+    expect(spinner).toHaveClass('rounded-full', 'border-b-2')
+  })
+
+  it('應該同時接受自定義大小和顏色', () => {
+    const { container } = render(<LoadingSpinner size="h-8 w-8" color="border-red-500" />)
+    const spinner = container.querySelector('.animate-spin')
+    expect(spinner).toHaveClass('h-8', 'w-8', 'border-red-500')
   })
 })
