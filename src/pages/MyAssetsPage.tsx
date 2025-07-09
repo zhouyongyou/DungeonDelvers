@@ -117,7 +117,22 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
 
     return (
         <div className="card-bg p-4 md:p-6 rounded-2xl shadow-xl">
-            {/* 頂部狀態顯示 */}
+            <h3 className="section-title">創建新隊伍</h3>
+            <p className="text-sm text-gray-400 mb-4">選擇英雄和聖物來組建你的冒險隊伍。隊伍的英雄數量不能超過聖物的總容量。</p>
+            
+            {/* 創建隊伍按鈕 - 移到最上方 */}
+            <div className="flex justify-center mb-6">
+                <ActionButton 
+                    onClick={() => onCreateParty(selectedHeroes, selectedRelics)} 
+                    isLoading={isCreating}
+                    disabled={!canCreate || isCreating}
+                    className="w-full sm:w-64 h-12 text-lg"
+                >
+                    {!isHeroAuthorized || !isRelicAuthorized ? '請先完成授權' : '創建隊伍'}
+                </ActionButton>
+            </div>
+            
+            {/* 狀態顯示 */}
             <div className="flex flex-col sm:flex-row justify-between items-center bg-gray-900/50 p-4 rounded-lg mb-6">
                 <div className="flex gap-6 text-center">
                     <div>
@@ -137,25 +152,8 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                 </div>
             </div>
 
-            {/* 授權按鈕區域 */}
+            {/* 授權按鈕區域 - 調整順序：先聖物後英雄 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div className="flex items-center gap-3">
-                    <ActionButton 
-                        onClick={onAuthorizeHero}
-                        isLoading={isAuthorizing}
-                        disabled={isHeroAuthorized || isAuthorizing}
-                        className={`h-12 flex-1 ${isHeroAuthorized ? 'bg-green-600' : 'bg-yellow-600'}`}
-                    >
-                        {isHeroAuthorized ? '✓ 英雄已授權' : '授權英雄'}
-                    </ActionButton>
-                    <ActionButton 
-                        onClick={handleAutoSelectHeroes}
-                        disabled={heroes.length === 0 || totalCapacity === 0}
-                        className="h-12 px-4 bg-blue-600 hover:bg-blue-500"
-                    >
-                        一鍵選擇
-                    </ActionButton>
-                </div>
                 <div className="flex items-center gap-3">
                     <ActionButton 
                         onClick={onAuthorizeRelic}
@@ -173,33 +171,26 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                         一鍵選擇
                     </ActionButton>
                 </div>
+                <div className="flex items-center gap-3">
+                    <ActionButton 
+                        onClick={onAuthorizeHero}
+                        isLoading={isAuthorizing}
+                        disabled={isHeroAuthorized || isAuthorizing}
+                        className={`h-12 flex-1 ${isHeroAuthorized ? 'bg-green-600' : 'bg-yellow-600'}`}
+                    >
+                        {isHeroAuthorized ? '✓ 英雄已授權' : '授權英雄'}
+                    </ActionButton>
+                    <ActionButton 
+                        onClick={handleAutoSelectHeroes}
+                        disabled={heroes.length === 0 || totalCapacity === 0}
+                        className="h-12 px-4 bg-blue-600 hover:bg-blue-500"
+                    >
+                        一鍵選擇
+                    </ActionButton>
+                </div>
             </div>
 
-            <h3 className="section-title">創建新隊伍</h3>
-            <p className="text-sm text-gray-400 mb-4">選擇英雄和聖物來組建你的冒險隊伍。隊伍的英雄數量不能超過聖物的總容量。</p>
-            
             <div className="flex flex-col md:grid md:grid-cols-2 gap-6 mb-4">
-                <div>
-                    <h4 className="font-semibold text-lg mb-2 text-white">選擇英雄 (上限: {totalCapacity})</h4>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
-                        {heroes.length > 0 ? heroes.map(hero => (
-                            <NftCard 
-                                key={`select-${hero.id}`} 
-                                nft={hero} 
-                                onSelect={() => toggleSelection(hero.id, 'hero')} 
-                                isSelected={selectedHeroes.includes(hero.id)} 
-                            />
-                        )) : (
-                            <div className="col-span-full">
-                                <EmptyState message="沒有可用的英雄">
-                                    <a href="#/mint">
-                                        <ActionButton className="mt-2">前往鑄造</ActionButton>
-                                    </a>
-                                </EmptyState>
-                            </div>
-                        )}
-                    </div>
-                </div>
                 <div>
                     <h4 className="font-semibold text-lg mb-2 text-white">選擇聖物 (上限: 5)</h4>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
@@ -221,18 +212,30 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                         )}
                     </div>
                 </div>
+                <div>
+                    <h4 className="font-semibold text-lg mb-2 text-white">選擇英雄 (上限: {totalCapacity})</h4>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
+                        {heroes.length > 0 ? heroes.map(hero => (
+                            <NftCard 
+                                key={`select-${hero.id}`} 
+                                nft={hero} 
+                                onSelect={() => toggleSelection(hero.id, 'hero')} 
+                                isSelected={selectedHeroes.includes(hero.id)} 
+                            />
+                        )) : (
+                            <div className="col-span-full">
+                                <EmptyState message="沒有可用的英雄">
+                                    <a href="#/mint">
+                                        <ActionButton className="mt-2">前往鑄造</ActionButton>
+                                    </a>
+                                </EmptyState>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
 
-            <div className="flex justify-center">
-                <ActionButton 
-                    onClick={() => onCreateParty(selectedHeroes, selectedRelics)} 
-                    isLoading={isCreating}
-                    disabled={!canCreate || isCreating}
-                    className="w-full sm:w-48 h-12 text-lg"
-                >
-                    {!isHeroAuthorized || !isRelicAuthorized ? '請先完成授權' : '創建隊伍'}
-                </ActionButton>
-            </div>
+
         </div>
     );
 };
@@ -305,14 +308,21 @@ const MyAssetsPage: React.FC = () => {
 
     const filteredNfts = useMemo(() => {
         if (!nfts) return [];
-        const sortNfts = (nfts: AnyNft[]) => [...nfts].sort((a, b) => ('rarity' in b ? (b as any).rarity : ('partyRarity' in b ? (b as any).partyRarity : 0)) - ('rarity' in a ? (a as any).rarity : ('partyRarity' in a ? (a as any).partyRarity : 0)));
-
+        
         switch (filter) {
-            case 'hero': return sortNfts(nfts.heroes);
-            case 'relic': return sortNfts(nfts.relics);
-            case 'party': return sortNfts(nfts.parties);
-            case 'vip': return nfts.vipCards;
-            default: return [];
+            case 'hero': 
+                // 英雄按戰力排序
+                return [...nfts.heroes].sort((a, b) => b.power - a.power);
+            case 'relic': 
+                // 聖物按容量排序
+                return [...nfts.relics].sort((a, b) => b.capacity - a.capacity);
+            case 'party': 
+                // 隊伍按稀有度排序
+                return [...nfts.parties].sort((a, b) => b.partyRarity - a.partyRarity);
+            case 'vip': 
+                return nfts.vipCards;
+            default: 
+                return [];
         }
     }, [filter, nfts]);
 
