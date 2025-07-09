@@ -2,6 +2,7 @@
 
 import { useAccount, useWatchContractEvent } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { decodeEventLog, type Log, type Abi } from 'viem';
 import { getContract } from '../config/contracts';
 import { useAppToast } from './useAppToast';
@@ -93,12 +94,19 @@ export const useContractEvents = () => {
     // --- 精準的 Query Invalidation 函式 ---
     
     // 當 NFT 資產或代幣餘額發生變化時呼叫
-    const invalidateNftsAndBalance = () => {
-        showToast('偵測到資產變動，正在更新...', 'info');
-        // 讓 'ownedNfts' 和 'balance' 相關的查詢失效，觸發 wagmi 重新獲取數據
-        queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
-        queryClient.invalidateQueries({ queryKey: ['balance', address, chainId] });
-    };
+    const invalidateNftsAndBalance = useCallback(() => {
+        showToast('🔄 偵測到資產變動，正在同步最新數據...', 'info');
+        
+        Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] }),
+            queryClient.invalidateQueries({ queryKey: ['balance', address, chainId] })
+        ]).then(() => {
+            showToast('✅ 資產數據已更新！', 'success');
+        }).catch((error) => {
+            console.error('Failed to invalidate queries:', error);
+            showToast('❌ 資產同步失敗，請重試', 'error');
+        });
+    }, [address, chainId, queryClient, showToast]);
 
     // 當金庫存入或取出時呼叫
     const invalidateVaultAndTax = () => {

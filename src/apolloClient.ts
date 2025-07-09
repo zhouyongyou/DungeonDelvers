@@ -13,7 +13,59 @@ if (!THE_GRAPH_API_URL) {
 // 這裡我們明確告訴 TypeScript，client 的「類型」是什麼
 const client: ApolloClient<NormalizedCacheObject> = new ApolloClient({
   uri: THE_GRAPH_API_URL,
-  cache: new InMemoryCache(),
+  cache: new InMemoryCache({
+    // 優化緩存策略
+    typePolicies: {
+      Player: {
+        keyFields: ['id'],
+        merge: true,
+      },
+      Hero: {
+        keyFields: ['id'],
+        merge: true,
+      },
+      Relic: {
+        keyFields: ['id'],
+        merge: true,
+      },
+      Party: {
+        keyFields: ['id'],
+        merge: true,
+        fields: {
+          heroes: {
+            merge: false, // 每次都替換整個數組
+          },
+          relics: {
+            merge: false,
+          },
+        },
+      },
+      PlayerProfile: {
+        keyFields: ['id'],
+        merge: true,
+      },
+      VIP: {
+        keyFields: ['id'],
+        merge: true,
+      },
+      PlayerVault: {
+        keyFields: ['id'],
+        merge: true,
+      },
+    },
+  }),
+  defaultOptions: {
+    watchQuery: {
+      errorPolicy: 'all',
+      fetchPolicy: 'cache-and-network',
+    },
+    query: {
+      errorPolicy: 'all',
+      fetchPolicy: 'cache-first',
+    },
+  },
+  // 啟用查詢去重
+  queryDeduplication: true,
 });
 
 export default client;
