@@ -21,25 +21,25 @@ function getOrCreatePlayerVault(playerAddress: Address): PlayerVault {
 }
 
 export function handleDeposited(event: Deposited): void {
-    // 現在可以安全地使用 event.params.user
-    let vault = getOrCreatePlayerVault(event.params.user)
+    // 修正：使用 event.params.player 而不是 event.params.user
+    let vault = getOrCreatePlayerVault(event.params.player)
     vault.totalDeposited = vault.totalDeposited.plus(event.params.amount)
     vault.balance = vault.balance.plus(event.params.amount)
     vault.save()
 }
 
 export function handleWithdrawn(event: Withdrawn): void {
-    // 現在可以安全地使用 event.params.user 和 event.params.fee
-    let vault = getOrCreatePlayerVault(event.params.user)
-    let totalAmount = event.params.amount.plus(event.params.fee)
+    // 修正：使用 event.params.player 和 event.params.taxAmount
+    let vault = getOrCreatePlayerVault(event.params.player)
+    let totalAmount = event.params.amount.plus(event.params.taxAmount)
     vault.totalWithdrawn = vault.totalWithdrawn.plus(totalAmount)
     vault.balance = vault.balance.minus(totalAmount)
     vault.save()
 }
 
 export function handleCommissionPaid(event: CommissionPaid): void {
-    // 現在可以安全地使用 event.params.recipient
-    let vault = getOrCreatePlayerVault(event.params.recipient)
+    // 修正：使用 event.params.referrer 而不是 event.params.recipient
+    let vault = getOrCreatePlayerVault(event.params.referrer)
     vault.totalDeposited = vault.totalDeposited.plus(event.params.amount)
     vault.balance = vault.balance.plus(event.params.amount)
     vault.save()

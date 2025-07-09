@@ -22,10 +22,10 @@ dataSources:
         - name: Hero
           file: ./abis/Hero.json
       eventHandlers:
-        # ★ 核心修正：使用完整的事件簽名
-        - event: HeroMinted(indexed uint256 tokenId, indexed address owner, uint8 rarity, uint256 power)
+        # ★ 修正：移除参数名称，使其与ABI匹配
+        - event: HeroMinted(indexed uint256,indexed address,uint8,uint256)
           handler: handleHeroMinted
-        - event: Transfer(indexed address from, indexed address to, indexed uint256 tokenId)
+        - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleTransfer
       file: ./src/hero.ts
   - kind: ethereum
@@ -46,9 +46,9 @@ dataSources:
         - name: Relic
           file: ./abis/Relic.json
       eventHandlers:
-        - event: RelicMinted(indexed uint256 tokenId, indexed address owner, uint8 rarity, uint8 capacity)
+        - event: RelicMinted(indexed uint256,indexed address,uint8,uint8)
           handler: handleRelicMinted
-        - event: Transfer(indexed address from, indexed address to, indexed uint256 tokenId)
+        - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleTransfer
       file: ./src/relic.ts
   - kind: ethereum
@@ -72,9 +72,9 @@ dataSources:
         - name: Party
           file: ./abis/Party.json
       eventHandlers:
-        - event: PartyCreated(indexed uint256 partyId, indexed address owner, uint256[] heroIds, uint256[] relicIds, uint256 totalPower, uint256 totalCapacity, uint8 partyRarity)
+        - event: PartyCreated(indexed uint256,indexed address,uint256[],uint256[],uint256,uint256,uint8)
           handler: handlePartyCreated
-        - event: Transfer(indexed address from, indexed address to, indexed uint256 tokenId)
+        - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handlePartyTransfer
       file: ./src/party.ts
   - kind: ethereum
@@ -94,9 +94,9 @@ dataSources:
         - name: PlayerProfile
           file: ./abis/PlayerProfile.json
       eventHandlers:
-        - event: ProfileCreated(indexed address player, indexed uint256 tokenId)
+        - event: ProfileCreated(indexed address,indexed uint256)
           handler: handleProfileCreated
-        - event: ExperienceAdded(indexed address player, indexed uint256 tokenId, uint256 amount, uint256 newTotalExperience)
+        - event: ExperienceAdded(indexed address,indexed uint256,uint256,uint256)
           handler: handleExperienceAdded
       file: ./src/player-profile.ts
   - kind: ethereum
@@ -116,11 +116,11 @@ dataSources:
         - name: VIPStaking
           file: ./abis/VIPStaking.json
       eventHandlers:
-        - event: Staked(indexed address user, uint256 amount, uint256 tokenId)
+        - event: Staked(indexed address,uint256,uint256)
           handler: handleStaked
-        - event: UnstakeRequested(indexed address user, uint256 amount, uint256 availableAt)
+        - event: UnstakeRequested(indexed address,uint256,uint256)
           handler: handleUnstakeRequested
-        - event: Transfer(indexed address from, indexed address to, indexed uint256 tokenId)
+        - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleVipTransfer
       file: ./src/vip-staking.ts
   - kind: ethereum
@@ -142,11 +142,11 @@ dataSources:
         - name: DungeonMaster
           file: ./abis/DungeonMaster.json
       eventHandlers:
-        - event: ExpeditionFulfilled(indexed address player, indexed uint256 partyId, bool success, uint256 reward, uint256 expGained)
+        - event: ExpeditionFulfilled(indexed address,indexed uint256,bool,uint256,uint256)
           handler: handleExpeditionFulfilled
-        - event: PartyRested(indexed uint256 partyId, uint256 cooldownEndsAt)
+        - event: PartyRested(indexed uint256,uint256)
           handler: handlePartyRested
-        - event: ProvisionsBought(indexed uint256 partyId, uint256 amount, uint256 cost)
+        - event: ProvisionsBought(indexed uint256,uint256,uint256)
           handler: handleProvisionsBought
       file: ./src/dungeon-master.ts
   - kind: ethereum
@@ -166,11 +166,11 @@ dataSources:
         - name: PlayerVault
           file: ./abis/PlayerVault.json
       eventHandlers:
-        - event: Deposited(indexed address user, uint256 amount)
+        - event: Deposited(indexed address,uint256)
           handler: handleDeposited
-        - event: Withdrawn(indexed address user, uint256 amount, uint256 fee)
+        - event: Withdrawn(indexed address,uint256,uint256)
           handler: handleWithdrawn
-        - event: CommissionPaid(indexed address from, indexed address recipient, uint256 amount)
+        - event: CommissionPaid(indexed address,indexed address,uint256)
           handler: handleCommissionPaid
       file: ./src/player-vault.ts
   - kind: ethereum
@@ -190,6 +190,6 @@ dataSources:
         - name: AltarOfAscension
           file: ./abis/AltarOfAscension.json
       eventHandlers:
-        - event: UpgradeProcessed(indexed address player, indexed address tokenContract, uint8 targetRarity, uint8 outcome)
+        - event: UpgradeProcessed(indexed address,indexed address,uint8,uint8)
           handler: handleUpgradeProcessed
       file: ./src/altar-of-ascension.ts
