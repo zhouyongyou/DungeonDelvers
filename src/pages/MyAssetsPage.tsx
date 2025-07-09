@@ -1,4 +1,4 @@
-// src/pages/MyAssetsPage.tsx (UI優化與排序修正版)
+// src/pages/MyAssetsPage.tsx (組隊BUG修正版)
 
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract, usePublicClient } from 'wagmi';
@@ -11,7 +11,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { getContract } from '../config/contracts';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
-import type { HeroNft, RelicNft, NftType, AnyNft } from '../types/nft';
+import type { AnyNft, HeroNft, RelicNft, NftType } from '../types/nft';
 import { formatEther } from 'viem';
 import { bsc } from 'wagmi/chains';
 
@@ -25,23 +25,13 @@ interface TeamBuilderProps {
   onCreateParty: (heroIds: bigint[], relicIds: bigint[]) => void;
   isCreating: boolean;
   platformFee?: bigint;
+  isLoadingFee: boolean;
 }
 
-const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty, isCreating, platformFee = 0n }) => {
+const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty, isCreating, platformFee, isLoadingFee }) => {
     const [selectedHeroes, setSelectedHeroes] = useState<bigint[]>([]);
     const [selectedRelics, setSelectedRelics] = useState<bigint[]>([]);
-
-    const toggleSelection = (id: bigint, type: 'hero' | 'relic') => {
-        const list = type === 'hero' ? selectedHeroes : selectedRelics;
-        const setList = type === 'hero' ? setSelectedHeroes : setSelectedRelics;
-        const limit = 5;
-
-        if (list.includes(id)) {
-            setList(list.filter(i => i !== id));
-        } else if (list.length < limit) {
-            setList([...list, id]);
-        }
-    };
+    const { showToast } = useAppToast();
 
     const { totalPower, totalCapacity } = useMemo(() => {
         const power = selectedHeroes.reduce((acc, id) => {
@@ -55,6 +45,37 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
         return { totalPower: power, totalCapacity: capacity };
     }, [selectedHeroes, selectedRelics, heroes, relics]);
 
+    const toggleSelection = (id: bigint, type: 'hero' | 'relic') => {
+        if (type === 'relic') {
+            const list = selectedRelics;
+            const setList = setSelectedRelics;
+            const limit = 5;
+
+            if (list.includes(id)) {
+                setList(list.filter(i => i !== id));
+            } else if (list.length < limit) {
+                setList([...list, id]);
+            } else {
+                showToast(`最多只能選擇 ${limit} 個聖物`, 'error');
+            }
+        } else { // type === 'hero'
+            const list = selectedHeroes;
+            const setList = setSelectedHeroes;
+            // ★ 核心修正：英雄的選擇上限現在由聖物總容量決定
+            const limit = totalCapacity;
+
+            if (list.includes(id)) {
+                setList(list.filter(i => i !== id));
+            } else if (totalCapacity === 0) {
+                showToast('請先選擇聖物以決定隊伍容量', 'info');
+            } else if (list.length < limit) {
+                setList([...list, id]);
+            } else {
+                showToast(`英雄數量已達隊伍容量上限 (${limit})`, 'error');
+            }
+        }
+    };
+
     const canCreate = selectedHeroes.length > 0 && selectedRelics.length > 0 && selectedHeroes.length <= totalCapacity;
 
     return (
@@ -64,7 +85,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
             
             <div className="flex flex-col md:grid md:grid-cols-2 gap-6 mb-4">
                 <div>
-                    <h4 className="font-semibold text-lg mb-2 text-white">選擇英雄 ({selectedHeroes.length}/5)</h4>
+                    <h4 className="font-semibold text-lg mb-2 text-white">選擇英雄 (上限: {totalCapacity})</h4>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
                         {heroes.length > 0 ? heroes.map(hero => (
                             <NftCard 
@@ -85,7 +106,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
                     </div>
                 </div>
                 <div>
-                    <h4 className="font-semibold text-lg mb-2 text-white">選擇聖物 ({selectedRelics.length}/5)</h4>
+                    <h4 className="font-semibold text-lg mb-2 text-white">選擇聖物 (上限: 5)</h4>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
                         {relics.length > 0 ? relics.map(relic => (
                             <NftCard 
@@ -130,7 +151,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ heroes, relics, onCreateParty
                         創建隊伍
                     </ActionButton>
                     <p className="text-xs text-yellow-400 mt-1 text-center sm:text-right">注意：創建後資產將被綁定，此操作目前不可逆。</p>
-                    <p className="text-xs text-gray-500 mt-1">費用: {formatEther(platformFee)} BNB</p>
+                    <p className="text-xs text-gray-500 mt-1">費用: {isLoadingFee ? '讀取中...' : formatEther(platformFee ?? 0n)} BNB</p>
                 </div>
             </div>
         </div>
@@ -166,39 +187,36 @@ const MyAssetsPage: React.FC = () => {
         enabled: !!address && !!chainId,
     });
     
-    const { data: platformFeeRaw } = useReadContract({
+    const { data: platformFee, isLoading: isLoadingFee } = useReadContract({
         ...partyContract,
         functionName: 'platformFee',
         query: { enabled: !!partyContract }
     });
-    const platformFee = typeof platformFeeRaw === 'bigint' ? platformFeeRaw : undefined;
 
-    const { availableHeroes, availableRelics } = useMemo((): { availableHeroes: HeroNft[]; availableRelics: RelicNft[] } => {
-        if (!nfts) return { availableHeroes: [], availableRelics: [] };
+    const { availableHeroes, availableRelics } = useMemo(() => {
+        if (!nfts) return { availableHeroes: [] as HeroNft[], availableRelics: [] as RelicNft[] };
         
         const heroIdsInParties = new Set(nfts.parties.flatMap(p => p.heroIds.map(id => id.toString())));
         const relicIdsInParties = new Set(nfts.parties.flatMap(p => p.relicIds.map(id => id.toString())));
 
-        // ★ 新增：依稀有度排序
-        const sortHeroes = (nfts: HeroNft[]) => [...nfts].sort((a, b) => b.rarity - a.rarity);
-        const sortRelics = (nfts: RelicNft[]) => [...nfts].sort((a, b) => b.rarity - a.rarity);
+        const sortHeroNfts = (nfts: HeroNft[]) => [...nfts].sort((a, b) => b.rarity - a.rarity);
+        const sortRelicNfts = (nfts: RelicNft[]) => [...nfts].sort((a, b) => b.rarity - a.rarity);
 
         return {
-            availableHeroes: sortHeroes(nfts.heroes.filter(h => !heroIdsInParties.has(h.id.toString()))),
-            availableRelics: sortRelics(nfts.relics.filter(r => !relicIdsInParties.has(r.id.toString()))),
+            availableHeroes: sortHeroNfts(nfts.heroes.filter(h => !heroIdsInParties.has(h.id.toString()))),
+            availableRelics: sortRelicNfts(nfts.relics.filter(r => !relicIdsInParties.has(r.id.toString()))),
         };
     }, [nfts]);
 
     const filteredNfts = useMemo(() => {
         if (!nfts) return [];
-        // ★ 新增：依稀有度排序
-        const sortNfts = (nfts: AnyNft[]) => [...nfts].sort((a, b) => ('rarity' in b ? (b as any).rarity : 0) - ('rarity' in a ? (a as any).rarity : 0));
+        const sortNfts = (nfts: AnyNft[]) => [...nfts].sort((a, b) => ('rarity' in b ? (b as any).rarity : ('partyRarity' in b ? (b as any).partyRarity : 0)) - ('rarity' in a ? (a as any).rarity : ('partyRarity' in a ? (a as any).partyRarity : 0)));
 
         switch (filter) {
             case 'hero': return sortNfts(nfts.heroes);
             case 'relic': return sortNfts(nfts.relics);
-            case 'party': return [...nfts.parties].sort((a, b) => b.partyRarity - a.partyRarity);
-            case 'vip': return nfts.vipCards; // VIP卡通常只有一張，無需排序
+            case 'party': return sortNfts(nfts.parties);
+            case 'vip': return nfts.vipCards;
             default: return [];
         }
     }, [filter, nfts]);
@@ -226,11 +244,12 @@ const MyAssetsPage: React.FC = () => {
             if (heroIds.length > 0) await checkAndRequestApproval(heroContract, '英雄');
             if (relicIds.length > 0) await checkAndRequestApproval(relicContract, '聖物');
 
+            const fee = typeof platformFee === 'bigint' ? platformFee : 0n;
             const hash = await writeContractAsync({
                 ...partyContract,
                 functionName: 'createParty',
                 args: [heroIds, relicIds],
-                value: platformFee,
+                value: fee,
             });
             addTransaction({ hash, description: `創建新隊伍` });
             queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
@@ -257,13 +276,13 @@ const MyAssetsPage: React.FC = () => {
         <section className="space-y-8">
             <h2 className="page-title">我的資產與隊伍</h2>
             
-            {/* ★ UI/UX 優化：將組隊面板移至最上方 */}
             <TeamBuilder 
                 heroes={availableHeroes} 
                 relics={availableRelics}
                 onCreateParty={handleCreateParty}
                 isCreating={isTxPending}
-                platformFee={platformFee}
+                platformFee={typeof platformFee === 'bigint' ? platformFee : undefined}
+                isLoadingFee={isLoadingFee}
             />
 
             <div className="card-bg p-4 md:p-6 rounded-2xl shadow-xl">
