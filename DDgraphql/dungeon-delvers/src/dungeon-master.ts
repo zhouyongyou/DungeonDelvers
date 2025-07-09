@@ -1,14 +1,11 @@
-// DDgraphql/dungeondelvers/src/dungeon-master.ts (最終加固版)
-import { BigInt, log } from "@graphprotocol/graph-ts"
+// DDgraphql/dungeondelvers/src/dungeon-master.ts (類型錯誤修正版)
+import { BigInt, log, dataSource } from "@graphprotocol/graph-ts"
 import { ExpeditionFulfilled, PartyRested, ProvisionsBought } from "../generated/DungeonMaster/DungeonMaster"
 import { Party, PlayerProfile } from "../generated/schema"
 import { calculateLevel } from "./utils"
 import { getOrCreatePlayer } from "./common"
-// ★ 核心修正：從 @graphprotocol/graph-ts 中引入 dataSource
-import { dataSource } from "@graphprotocol/graph-ts"
 
 export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
-  // 在函式內部獲取 context
   let context = dataSource.context()
   let partyContractAddress = context.getString("partyAddress")
   
@@ -17,7 +14,10 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
 
   if (party) {
     party.fatigueLevel = party.fatigueLevel + 1
-    party.provisionsRemaining = party.provisionsRemaining.minus(BigInt.fromI32(1))
+    
+    // ★ 核心修正 #1：使用標準的 `-` 運算子，因為 provisionsRemaining 是 i32
+    party.provisionsRemaining = party.provisionsRemaining - 1
+    
     if (event.params.success) {
       party.unclaimedRewards = party.unclaimedRewards.plus(event.params.reward)
     }
@@ -59,7 +59,8 @@ export function handleProvisionsBought(event: ProvisionsBought): void {
   let partyId = partyContractAddress.toLowerCase() + "-" + event.params.partyId.toString()
   let party = Party.load(partyId)
   if (party) {
-    party.provisionsRemaining = party.provisionsRemaining.plus(event.params.amount)
+    // ★ 核心修正 #2：使用標準的 `+` 運算子，並將 event.params.amount (BigInt) 轉換為 i32
+    party.provisionsRemaining = party.provisionsRemaining + event.params.amount.toI32()
     party.save()
   }
 }

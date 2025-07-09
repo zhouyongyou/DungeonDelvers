@@ -1,4 +1,4 @@
-// DDgraphql/dungeondelvers/src/player-vault.ts (最終加固版)
+// DDgraphql/dungeondelvers/src/player-vault.ts (參數名稱修正版)
 import { Address, BigInt } from "@graphprotocol/graph-ts"
 import { Deposited, Withdrawn, CommissionPaid } from "../generated/PlayerVault/PlayerVault"
 import { PlayerVault } from "../generated/schema"
@@ -21,25 +21,26 @@ function getOrCreatePlayerVault(playerAddress: Address): PlayerVault {
 }
 
 export function handleDeposited(event: Deposited): void {
-    // 現在可以安全地使用 event.params.user
-    let vault = getOrCreatePlayerVault(event.params.user)
+    // ★ 核心修正 #1：事件參數是 `player` 而不是 `user`
+    let vault = getOrCreatePlayerVault(event.params.player)
     vault.totalDeposited = vault.totalDeposited.plus(event.params.amount)
     vault.balance = vault.balance.plus(event.params.amount)
     vault.save()
 }
 
 export function handleWithdrawn(event: Withdrawn): void {
-    // 現在可以安全地使用 event.params.user 和 event.params.fee
-    let vault = getOrCreatePlayerVault(event.params.user)
-    let totalAmount = event.params.amount.plus(event.params.fee)
+    // ★ 核心修正 #2：事件參數是 `player` 而不是 `user`
+    let vault = getOrCreatePlayerVault(event.params.player)
+    // ★ 核心修正 #3：事件參數是 `taxAmount` 而不是 `fee`
+    let totalAmount = event.params.amount.plus(event.params.taxAmount)
     vault.totalWithdrawn = vault.totalWithdrawn.plus(totalAmount)
     vault.balance = vault.balance.minus(totalAmount)
     vault.save()
 }
 
 export function handleCommissionPaid(event: CommissionPaid): void {
-    // 現在可以安全地使用 event.params.recipient
-    let vault = getOrCreatePlayerVault(event.params.recipient)
+    // ★ 核心修正 #4：事件參數是 `referrer` 而不是 `recipient`
+    let vault = getOrCreatePlayerVault(event.params.referrer)
     vault.totalDeposited = vault.totalDeposited.plus(event.params.amount)
     vault.balance = vault.balance.plus(event.params.amount)
     vault.save()
