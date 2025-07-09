@@ -1,17 +1,18 @@
-// =================================================================
-// 檔案: DDgraphql/dungeondelvers/src/dungeon-master.ts
-// =================================================================
-import { BigInt, dataSource, Address } from "@graphprotocol/graph-ts"
+// DDgraphql/dungeondelvers/src/dungeon-master.ts (最終加固版)
+import { BigInt, log } from "@graphprotocol/graph-ts"
 import { ExpeditionFulfilled, PartyRested, ProvisionsBought } from "../generated/DungeonMaster/DungeonMaster"
 import { Party, PlayerProfile } from "../generated/schema"
-// ★ 核心修正 #1：從新的 utils 檔案中引入 calculateLevel 函式
 import { calculateLevel } from "./utils"
-
-// ★★★ 您需要在此手動填入您已部署的 Party 合約地址 ★★★
-const PARTY_CONTRACT_ADDRESS = Address.fromString("0x4F4796b04e3BD3E8d5B447e32944d8B04eF53EB2");
+import { getOrCreatePlayer } from "./common"
+// ★ 核心修正：從 @graphprotocol/graph-ts 中引入 dataSource
+import { dataSource } from "@graphprotocol/graph-ts"
 
 export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
-  let partyId = PARTY_CONTRACT_ADDRESS.toHexString() + "-" + event.params.partyId.toString()
+  // 在函式內部獲取 context
+  let context = dataSource.context()
+  let partyContractAddress = context.getString("partyAddress")
+  
+  let partyId = partyContractAddress.toLowerCase() + "-" + event.params.partyId.toString()
   let party = Party.load(partyId)
 
   if (party) {
@@ -23,19 +24,27 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
     party.cooldownEndsAt = event.block.timestamp.plus(BigInt.fromI32(24 * 60 * 60))
     party.save()
 
-    let playerAddress = event.params.player;
+    let playerAddress = event.params.player
+    getOrCreatePlayer(playerAddress)
+    
     let profile = PlayerProfile.load(playerAddress.toHexString());
     if (profile) {
       profile.experience = profile.experience.plus(event.params.expGained);
-      // ★ 核心修正 #2：現在可以正常呼叫 calculateLevel
       profile.level = calculateLevel(profile.experience);
       profile.save();
+    } else {
+        log.warning("ExpeditionFulfilled for a non-existent profile: {}", [playerAddress.toHexString()])
     }
+  } else {
+      log.warning("ExpeditionFulfilled for a non-existent party: {}", [partyId])
   }
 }
 
 export function handlePartyRested(event: PartyRested): void {
-  let partyId = PARTY_CONTRACT_ADDRESS.toHexString() + "-" + event.params.partyId.toString()
+  let context = dataSource.context()
+  let partyContractAddress = context.getString("partyAddress")
+  
+  let partyId = partyContractAddress.toLowerCase() + "-" + event.params.partyId.toString()
   let party = Party.load(partyId)
   if (party) {
     party.fatigueLevel = 0
@@ -44,7 +53,10 @@ export function handlePartyRested(event: PartyRested): void {
 }
 
 export function handleProvisionsBought(event: ProvisionsBought): void {
-  let partyId = PARTY_CONTRACT_ADDRESS.toHexString() + "-" + event.params.partyId.toString()
+  let context = dataSource.context()
+  let partyContractAddress = context.getString("partyAddress")
+  
+  let partyId = partyContractAddress.toLowerCase() + "-" + event.params.partyId.toString()
   let party = Party.load(partyId)
   if (party) {
     party.provisionsRemaining = party.provisionsRemaining.plus(event.params.amount)

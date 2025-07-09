@@ -1,108 +1,135 @@
 # =================================================================
-# Player: 玩家是所有數據的中心
-# ★ 核心修正：明確標示為可變實體 (immutable: false)
+# Schema 設計藍圖 (最終修正版)
 # =================================================================
+
 type Player @entity(immutable: false) {
-  "玩家的錢包地址"
+  " 玩家的錢包地址 "
   id: Bytes!
-  "玩家擁有的所有英雄 (透過 'owner' 欄位反向關聯)"
-  heroes: [Hero!]! @derivedFrom(field: "owner")
-  "玩家擁有的所有聖物 (反向關聯)"
-  relics: [Relic!]! @derivedFrom(field: "owner")
-  "玩家擁有的所有隊伍 (反向關聯)"
-  parties: [Party!]! @derivedFrom(field: "owner")
-  "玩家的個人檔案 (SBT)"
-  profile: PlayerProfile @derivedFrom(field: "player")
-  "玩家的 VIP 卡 (SBT)"
-  vip: VIP @derivedFrom(field: "player")
-  "玩家的遊戲內金庫"
-  vault: PlayerVault @derivedFrom(field: "player")
-  "玩家的所有升星嘗試記錄"
-  upgradeAttempts: [UpgradeAttempt!]! @derivedFrom(field: "player")
+  " 玩家擁有的所有英雄 "
+  heroes: [Hero!] @derivedFrom(field: "owner")
+  " 玩家擁有的所有聖物 "
+  relics: [Relic!] @derivedFrom(field: "owner")
+  " 玩家擁有的所有隊伍 "
+  parties: [Party!] @derivedFrom(field: "owner")
+  " 玩家的 VIP 卡 (SBT)，一個玩家只會有一個 "
+  vip: VIP
+  " 玩家的個人檔案 (SBT)，一個玩家只會有一個 "
+  profile: PlayerProfile
+  " 玩家的金庫 "
+  vault: PlayerVault
+  " 玩家的所有升星嘗試紀錄 "
+  upgradeAttempts: [UpgradeAttempt!] @derivedFrom(field: "player")
 }
 
-# =================================================================
-# NFT 實體
-# ★ 核心修正：為創建後就不會改變的實體加上 (immutable: true)
-# =================================================================
 type Hero @entity(immutable: true) {
-  "唯一 ID: 合約地址-TokenID"
-  id: ID!
+  " 全域唯一 ID，格式為：`contractAddress-tokenId` "
+  id: String!
+  " NFT 的合約地址 "
+  contractAddress: Bytes!
+  " NFT 的 Token ID "
   tokenId: BigInt!
+  " 英雄的擁有者 "
   owner: Player!
+  " 稀有度 (1-5) "
   rarity: Int!
+  " 戰力 "
   power: BigInt!
-  "此英雄所在的隊伍，如果沒有則為 null"
-  party: Party
 }
 
 type Relic @entity(immutable: true) {
-  "唯一 ID: 合約地址-TokenID"
-  id: ID!
+  " 全域唯一 ID，格式為：`contractAddress-tokenId` "
+  id: String!
+  " NFT 的合約地址 "
+  contractAddress: Bytes!
+  " NFT 的 Token ID "
   tokenId: BigInt!
+  " 聖物的擁有者 "
   owner: Player!
+  " 稀有度 (1-5) "
   rarity: Int!
+  " 容量 (決定隊伍能帶多少英雄) "
   capacity: Int!
-  "此聖物所在的隊伍，如果沒有則為 null"
-  party: Party
 }
 
 type Party @entity(immutable: false) {
-  "唯一 ID: 合約地址-TokenID"
-  id: ID!
+  " 全域唯一 ID，格式為：`contractAddress-tokenId` "
+  id: String!
+  " NFT 的合約地址 "
+  contractAddress: Bytes!
+  " NFT 的 Token ID "
   tokenId: BigInt!
+  " 隊伍的擁有者 "
   owner: Player!
-  "隊伍中的英雄列表 (透過 Hero.party 欄位反向關聯)"
-  heroes: [Hero!]! @derivedFrom(field: "party")
-  "隊伍中的聖物列表 (透過 Relic.party 欄位反向關聯)"
-  relics: [Relic!]! @derivedFrom(field: "party")
+  " 隊伍中的英雄列表 "
+  heroes: [Hero!]!
+  " 隊伍中的聖物列表 "
+  relics: [Relic!]!
+  " 總戰力 "
   totalPower: BigInt!
+  " 總容量 "
   totalCapacity: BigInt!
+  " 隊伍稀有度 "
   partyRarity: Int!
-  "動態隊伍狀態 (由 DungeonMaster 事件更新)"
-  provisionsRemaining: BigInt!
-  cooldownEndsAt: BigInt!
-  unclaimedRewards: BigInt!
+  " 疲勞等級 "
   fatigueLevel: Int!
+  " 剩餘補給 "
+  provisionsRemaining: Int!
+  " 冷卻結束時間戳 "
+  cooldownEndsAt: BigInt!
+  " 未領取的獎勵 "
+  unclaimedRewards: BigInt!
 }
 
-# =================================================================
-# SBT (靈魂綁定代幣) 與其他可變實體
-# =================================================================
 type PlayerProfile @entity(immutable: false) {
-  "唯一 ID: 玩家地址 (小寫的十六進制字串)"
-  id: ID!
+  " 使用玩家地址的十六進位字串作為 ID "
+  id: String!
+  " 關聯的玩家 "
   player: Player!
+  " NFT 的 Token ID "
   tokenId: BigInt!
+  " 經驗值 "
   experience: BigInt!
+  " 等級 "
   level: Int!
 }
 
 type VIP @entity(immutable: false) {
-  "唯一 ID: 玩家地址 (小寫的十六進制字串)"
-  id: ID!
+  " 使用玩家地址的十六進位字串作為 ID "
+  id: String!
+  " 關聯的玩家 "
   player: Player!
+  " NFT 的 Token ID "
   tokenId: BigInt!
+  " 質押的代幣數量 "
   stakedAmount: BigInt!
+  " VIP 等級 "
   level: Int!
 }
 
 type PlayerVault @entity(immutable: false) {
-  "唯一 ID: 玩家地址 (小寫的十六進制字串)"
-  id: ID!
+  " 使用玩家地址的十六進位字串作為 ID "
+  id: String!
+  " 關聯的玩家 "
   player: Player!
-  withdrawableBalance: BigInt!
-  totalCommissionPaid: BigInt!
-  referrer: Bytes # 邀請人的地址
+  " 存入的總金額 "
+  totalDeposited: BigInt!
+  " 提出的總金額 "
+  totalWithdrawn: BigInt!
+  " 目前餘額 "
+  balance: BigInt!
 }
 
-# ★ 核心修正：升星記錄也是不可變的
 type UpgradeAttempt @entity(immutable: true) {
-  "唯一 ID: 交易雜湊-日誌索引"
-  id: ID!
+  " 使用 `txHash-logIndex` 作為唯一 ID "
+  id: String!
+  " 執行升星的玩家 "
   player: Player!
+  " 升星使用的代幣合約 "
   tokenContract: Bytes!
+  " 升星目標的稀有度 "
   targetRarity: Int!
-  outcome: String! # e.g., GreatSuccess, Success, PartialFailure, TotalFailure
+  " 升星結果 (0: 失敗, 1: 部分返還, 2: 成功, 3: 大成功) "
+  outcome: Int!
+  " 時間戳 "
   timestamp: BigInt!
 }

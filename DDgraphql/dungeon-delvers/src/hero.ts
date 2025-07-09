@@ -27,7 +27,6 @@ export function handleTransfer(event: Transfer): void {
         hero.owner = newOwner.id
         hero.save()
     } else {
-        // 如果 NFT 在 startBlock 之前就已存在，它的鑄造事件不會被索引，這是正常現象。
         log.warning("Transfer handled for a Hero that doesn't exist in the subgraph: {}", [heroId])
     }
 }

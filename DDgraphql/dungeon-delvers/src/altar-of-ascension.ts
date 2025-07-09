@@ -1,20 +1,16 @@
 // DDgraphql/dungeondelvers/src/altar-of-ascension.ts (穩定性加固版)
 import { UpgradeProcessed } from "../generated/AltarOfAscension/AltarOfAscension"
-import { UpgradeAttempt, Player } from "../generated/schema"
-
-function getOrCreatePlayer(id: string): Player {
-    let player = Player.load(id)
-    if (!player) {
-        player = new Player(id)
-        player.save()
-    }
-    return player
-}
+import { UpgradeAttempt } from "../generated/schema"
+import { getOrCreatePlayer } from "./common"
 
 export function handleUpgradeProcessed(event: UpgradeProcessed): void {
-    let player = getOrCreatePlayer(event.params.player.toHexString())
+    // 使用 getOrCreatePlayer 確保玩家實體存在
+    let player = getOrCreatePlayer(event.params.player)
     
-    let upgradeAttempt = new UpgradeAttempt(event.transaction.hash.toHex() + "-" + event.logIndex.toString())
+    // 使用交易雜湊 + 日誌索引作為唯一 ID，因為每次升級都是獨立事件
+    let attemptId = event.transaction.hash.toHexString().concat("-").concat(event.logIndex.toString())
+    
+    let upgradeAttempt = new UpgradeAttempt(attemptId)
     upgradeAttempt.player = player.id
     upgradeAttempt.tokenContract = event.params.tokenContract
     upgradeAttempt.targetRarity = event.params.targetRarity

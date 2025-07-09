@@ -2,13 +2,15 @@
 import { PartyCreated, Transfer } from "../generated/Party/Party"
 import { Party } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
+// ★ 核心修正：從 @graphprotocol/graph-ts 中引入 dataSource
 import { log, dataSource } from "@graphprotocol/graph-ts"
 
-// ★ 核心修正：從 subgraph.yaml 的 context 中安全地獲取地址，避免硬編碼
-let heroContractAddress = dataSource.context().getString("heroAddress")
-let relicContractAddress = dataSource.context().getString("relicAddress")
-
 export function handlePartyCreated(event: PartyCreated): void {
+    // 在函式內部獲取 context，這是更穩健的做法
+    let context = dataSource.context()
+    let heroContractAddress = context.getString("heroAddress")
+    let relicContractAddress = context.getString("relicAddress")
+    
     let player = getOrCreatePlayer(event.params.owner)
 
     let partyId = event.address.toHexString().concat("-").concat(event.params.partyId.toString())
