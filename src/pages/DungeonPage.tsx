@@ -135,12 +135,22 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
         query: { enabled: !!dungeonMasterContract }
     });
 
-    const { isOnCooldown, effectivePower } = useMemo(() => {
+    const { isOnCooldown, effectivePower, fatigueColorClass } = useMemo(() => {
         const power = BigInt(party.totalPower);
         const effPower = power * (100n - BigInt(party.fatigueLevel) * 2n) / 100n;
+        
+        // 疲勞度顏色邏輯：0-15 綠色（健康），16-30 黃色（疲勞），31-45 紅色（非常疲勞）
+        let fatigueColor = 'text-green-400';
+        if (party.fatigueLevel > 30) {
+            fatigueColor = 'text-red-400';
+        } else if (party.fatigueLevel > 15) {
+            fatigueColor = 'text-yellow-400';
+        }
+        
         return {
             isOnCooldown: BigInt(Math.floor(Date.now() / 1000)) < party.cooldownEndsAt,
             effectivePower: effPower,
+            fatigueColorClass: fatigueColor,
         };
     }, [party]);
 
@@ -148,14 +158,16 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
         if (isAnyTxPendingForThisParty) return <span className="px-3 py-1 text-sm font-medium text-purple-300 bg-purple-900/50 rounded-full flex items-center gap-2"><LoadingSpinner size="h-3 w-3" />遠征中</span>;
         if (isOnCooldown) return <span className="px-3 py-1 text-sm font-medium text-yellow-300 bg-yellow-900/50 rounded-full">冷卻中...</span>;
         if (party.provisionsRemaining === 0n) return <span className="px-3 py-1 text-sm font-medium text-orange-400 bg-orange-900/50 rounded-full">需要儲備</span>;
-        if (party.fatigueLevel > 0) return <span className="px-3 py-1 text-sm font-medium text-blue-300 bg-blue-900/50 rounded-full">需要休息</span>;
+        if (party.fatigueLevel > 30) return <span className="px-3 py-1 text-sm font-medium text-red-300 bg-red-900/50 rounded-full">急需休息</span>;
+        if (party.fatigueLevel > 15) return <span className="px-3 py-1 text-sm font-medium text-yellow-300 bg-yellow-900/50 rounded-full">建議休息</span>;
         return <span className="px-3 py-1 text-sm font-medium text-green-300 bg-green-900/50 rounded-full">準備就緒</span>;
     };
 
     const renderAction = () => {
         if (isOnCooldown || isAnyTxPendingForThisParty) return <ActionButton disabled className="w-full h-10">{isAnyTxPendingForThisParty ? '遠征中' : '冷卻中'}</ActionButton>;
         if (party.provisionsRemaining === 0n) return <ActionButton onClick={() => onBuyProvisions(party.id)} className="w-full h-10 bg-orange-600 hover:bg-orange-500">購買儲備</ActionButton>;
-        if (party.fatigueLevel > 0) return <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10 bg-blue-600 hover:bg-blue-500">休息</ActionButton>;
+        if (party.fatigueLevel > 30) return <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10 bg-red-600 hover:bg-red-500">休息</ActionButton>;
+        if (party.fatigueLevel > 15) return <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10 bg-yellow-600 hover:bg-yellow-500">建議休息</ActionButton>;
         
         const fee = typeof explorationFee === 'bigint' ? explorationFee : 0n;
         return <ActionButton onClick={() => onStartExpedition(party.id, selectedDungeonId, fee)} isLoading={isTxPending} className="w-full h-10">開始遠征</ActionButton>;
@@ -169,7 +181,7 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
             </div>
             <div className="grid grid-cols-2 gap-2 mb-4 text-center">
                 <div><p className="text-sm text-gray-400">有效戰力</p><p className="font-bold text-2xl text-indigo-400">{effectivePower.toString()}</p></div>
-                <div><p className="text-sm text-gray-400">疲勞度</p><p className="font-bold text-xl text-red-400">{party.fatigueLevel} / 45</p></div>
+                <div><p className="text-sm text-gray-400">疲勞度</p><p className={`font-bold text-xl ${fatigueColorClass}`}>{party.fatigueLevel} / 45</p></div>
             </div>
             <p className="text-center text-xs text-gray-400 mb-2">剩餘儲備: {party.provisionsRemaining.toString()}</p>
             <div className="mb-4">

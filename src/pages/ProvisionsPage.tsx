@@ -156,26 +156,58 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
         <div className="p-4 space-y-4">
             <div>
                 <label htmlFor="party-select" className="block text-sm font-medium text-gray-300 mb-1">選擇隊伍</label>
-                <select id="party-select" value={selectedPartyId?.toString() ?? ''} onChange={(e) => setSelectedPartyId(e.target.value ? BigInt(e.target.value) : null)} className="w-full p-2 border rounded-lg bg-gray-800 border-gray-600 text-white">
+                <select 
+                    id="party-select" 
+                    name="party-select"
+                    value={selectedPartyId?.toString() ?? ''} 
+                    onChange={(e) => setSelectedPartyId(e.target.value ? BigInt(e.target.value) : null)} 
+                    className="w-full p-2 border rounded-lg bg-gray-800 border-gray-600 text-white"
+                >
                     <option value="">-- 請選擇一個隊伍 --</option>
-                    {nfts.parties.map(party => ( <option key={party.id.toString()} value={party.id.toString()}>{party.name} (ID: {party.id.toString()})</option> ))}
+                    {nfts.parties.map(party => ( 
+                        <option key={party.id.toString()} value={party.id.toString()}>
+                            {party.name} (ID: {party.id.toString()})
+                        </option> 
+                    ))}
                 </select>
             </div>
             <div>
-                <label htmlFor="quantity-select" className="block text-sm font-medium text-gray-300 mb-1">購買數量</label>
-                <input type="number" id="quantity-select" value={quantity} onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))} min="1" className="w-full p-2 border rounded-lg bg-gray-800 border-gray-600 text-white" />
+                <label htmlFor="quantity-input" className="block text-sm font-medium text-gray-300 mb-1">購買數量</label>
+                <input 
+                    type="number" 
+                    id="quantity-input" 
+                    name="quantity-input"
+                    value={quantity} 
+                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))} 
+                    min="1" 
+                    className="w-full p-2 border rounded-lg bg-gray-800 border-gray-600 text-white" 
+                />
             </div>
             <div className="w-full my-4">
                 <label className="block text-sm font-medium mb-2 text-center text-gray-400">選擇支付方式</label>
                 <div className="grid grid-cols-2 gap-2 p-1 bg-gray-900/50 rounded-lg">
-                    <button onClick={() => setPaymentSource('wallet')} className={`px-4 py-2 rounded-md text-sm font-semibold transition ${paymentSource === 'wallet' ? 'bg-gray-700 text-white shadow' : 'text-gray-300'}`}>錢包支付</button>
-                    <button onClick={() => setPaymentSource('vault')} className={`px-4 py-2 rounded-md text-sm font-semibold transition ${paymentSource === 'vault' ? 'bg-gray-700 text-white shadow' : 'text-gray-300'}`}>金庫支付 (免稅)</button>
+                    <button 
+                        onClick={() => setPaymentSource('wallet')} 
+                        className={`px-4 py-2 rounded-md text-sm font-semibold transition ${paymentSource === 'wallet' ? 'bg-gray-700 text-white shadow' : 'text-gray-300'}`}
+                    >
+                        錢包支付
+                    </button>
+                    <button 
+                        onClick={() => setPaymentSource('vault')} 
+                        className={`px-4 py-2 rounded-md text-sm font-semibold transition ${paymentSource === 'vault' ? 'bg-gray-700 text-white shadow' : 'text-gray-300'}`}
+                    >
+                        金庫支付 (免稅)
+                    </button>
                 </div>
-                 <p className="text-xs text-center mt-2 text-gray-500">{paymentSource === 'wallet' ? '錢包餘額' : '金庫餘額'}: {parseFloat(formatEther(balance)).toFixed(4)} $SoulShard</p>
+                <p className="text-xs text-center mt-2 text-gray-500">
+                    {paymentSource === 'wallet' ? '錢包餘額' : '金庫餘額'}: {parseFloat(formatEther(balance)).toFixed(4)} $SoulShard
+                </p>
             </div>
             <div className="text-center p-4 bg-black/20 rounded-lg">
                 <p className="text-gray-400">總價:</p>
-                <p className="font-bold text-yellow-400 text-2xl">{isLoading ? <LoadingSpinner size="h-6 w-6" /> : `${parseFloat(formatEther(typeof totalRequiredAmount === 'bigint' ? totalRequiredAmount : 0n)).toFixed(4)} $SoulShard`}</p>
+                <p className="font-bold text-yellow-400 text-2xl">
+                    {isLoading ? <LoadingSpinner size="h-6 w-6" /> : `${parseFloat(formatEther(typeof totalRequiredAmount === 'bigint' ? totalRequiredAmount : 0n)).toFixed(4)} $SoulShard`}
+                </p>
             </div>
             {paymentSource === 'wallet' && needsApproval ? (
                  <ActionButton onClick={handleApprove} isLoading={isTxPending} className="w-full h-12">批准代幣</ActionButton>
