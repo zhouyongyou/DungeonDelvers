@@ -1,16 +1,13 @@
-// DDgraphql/dungeondelvers/src/party.ts (最終加固版)
 import { PartyCreated, Transfer } from "../generated/Party/Party"
 import { Party } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
-// ★ 核心修正：從 @graphprotocol/graph-ts 中引入 dataSource
-import { log, dataSource } from "@graphprotocol/graph-ts"
+import { log } from "@graphprotocol/graph-ts"
+
+// ★ 核心修正：直接在此處硬編碼合約地址
+let heroContractAddress = "0x347752f8166D270EDE722C3F31A10584bC2867b3"
+let relicContractAddress = "0x06994Fb1eC1Ba0238d8CA9539dAbdbEF090A5b53"
 
 export function handlePartyCreated(event: PartyCreated): void {
-    // 在函式內部獲取 context，這是更穩健的做法
-    let context = dataSource.context()
-    let heroContractAddress = context.getString("heroAddress")
-    let relicContractAddress = context.getString("relicAddress")
-    
     let player = getOrCreatePlayer(event.params.owner)
 
     let partyId = event.address.toHexString().concat("-").concat(event.params.partyId.toString())
@@ -28,6 +25,7 @@ export function handlePartyCreated(event: PartyCreated): void {
 
     let heroIds: string[] = []
     for (let i = 0; i < event.params.heroIds.length; i++) {
+        // ★ 核心修正：使用硬編碼的地址
         let heroId = heroContractAddress.toLowerCase().concat("-").concat(event.params.heroIds[i].toString())
         heroIds.push(heroId)
     }
@@ -35,6 +33,7 @@ export function handlePartyCreated(event: PartyCreated): void {
 
     let relicIds: string[] = []
     for (let i = 0; i < event.params.relicIds.length; i++) {
+        // ★ 核心修正：使用硬編碼的地址
         let relicId = relicContractAddress.toLowerCase().concat("-").concat(event.params.relicIds[i].toString())
         relicIds.push(relicId)
     }

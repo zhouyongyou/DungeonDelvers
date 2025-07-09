@@ -1,21 +1,19 @@
-// DDgraphql/dungeondelvers/src/dungeon-master.ts (類型錯誤修正版)
-import { BigInt, log, dataSource } from "@graphprotocol/graph-ts"
+// DDgraphql/dungeondelvers/src/dungeon-master.ts (Context 移除 + 類型錯誤修正版)
+import { BigInt, log } from "@graphprotocol/graph-ts"
 import { ExpeditionFulfilled, PartyRested, ProvisionsBought } from "../generated/DungeonMaster/DungeonMaster"
 import { Party, PlayerProfile } from "../generated/schema"
 import { calculateLevel } from "./utils"
 import { getOrCreatePlayer } from "./common"
 
+// ★ 核心修正：直接在此處硬編碼 Party 合約地址
+let partyContractAddress = "0x4F4796b04e3BD3E8d5B447e32944d8B04eF53EB2"
+
 export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
-  let context = dataSource.context()
-  let partyContractAddress = context.getString("partyAddress")
-  
   let partyId = partyContractAddress.toLowerCase() + "-" + event.params.partyId.toString()
   let party = Party.load(partyId)
 
   if (party) {
     party.fatigueLevel = party.fatigueLevel + 1
-    
-    // ★ 核心修正 #1：使用標準的 `-` 運算子，因為 provisionsRemaining 是 i32
     party.provisionsRemaining = party.provisionsRemaining - 1
     
     if (event.params.success) {
@@ -41,9 +39,6 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
 }
 
 export function handlePartyRested(event: PartyRested): void {
-  let context = dataSource.context()
-  let partyContractAddress = context.getString("partyAddress")
-  
   let partyId = partyContractAddress.toLowerCase() + "-" + event.params.partyId.toString()
   let party = Party.load(partyId)
   if (party) {
@@ -53,13 +48,9 @@ export function handlePartyRested(event: PartyRested): void {
 }
 
 export function handleProvisionsBought(event: ProvisionsBought): void {
-  let context = dataSource.context()
-  let partyContractAddress = context.getString("partyAddress")
-  
   let partyId = partyContractAddress.toLowerCase() + "-" + event.params.partyId.toString()
   let party = Party.load(partyId)
   if (party) {
-    // ★ 核心修正 #2：使用標準的 `+` 運算子，並將 event.params.amount (BigInt) 轉換為 i32
     party.provisionsRemaining = party.provisionsRemaining + event.params.amount.toI32()
     party.save()
   }

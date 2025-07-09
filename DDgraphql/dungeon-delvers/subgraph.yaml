@@ -57,13 +57,6 @@ dataSources:
       address: "0x4F4796b04e3BD3E8d5B447e32944d8B04eF53EB2"
       abi: Party
       startBlock: 53308155
-    context:
-      heroAddress:
-        type: Bytes
-        value: "0x347752f8166D270EDE722C3F31A10584bC2867b3"
-      relicAddress:
-        type: Bytes
-        value: "0x06994Fb1eC1Ba0238d8CA9539dAbdbEF090A5b53"
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -133,10 +126,6 @@ dataSources:
       address: "0xe208554A49aDeE49FA774a736C5279A5CB930FB8"
       abi: DungeonMaster
       startBlock: 53308155
-    context:
-      partyAddress:
-        type: Bytes
-        value: "0x4F4796b04e3BD3E8d5B447e32944d8B04eF53EB2"
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
