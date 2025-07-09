@@ -9,6 +9,7 @@ import { useContractEvents } from './hooks/useContractEvents';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import type { Page } from './types/page';
 import { TransactionWatcher } from './components/core/TransactionWatcher';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 // 動態導入所有頁面
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -90,17 +91,19 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col dark:bg-gray-900 bg-gray-100">
-      <Header activePage={activePage} setActivePage={handleSetPage} />
-      <main className="flex-grow container mx-auto px-4 py-8 md:px-6 md:py-12">
-          <Suspense fallback={<PageLoader />}>
-              {renderPage()}
-          </Suspense>
-      </main>
-      <Footer />
-      {/* 這個元件負責在背景追蹤已發送交易的狀態 */}
-      <TransactionWatcher />
-    </div>
+    <ErrorBoundary>
+      <div className="min-h-screen flex flex-col dark:bg-gray-900 bg-gray-100">
+        <Header activePage={activePage} setActivePage={handleSetPage} />
+        <main className="flex-grow container mx-auto px-4 py-8 md:px-6 md:py-12">
+            <Suspense fallback={<PageLoader />}>
+                {renderPage()}
+            </Suspense>
+        </main>
+        <Footer />
+        {/* 這個元件負責在背景追蹤已發送交易的狀態 */}
+        <TransactionWatcher />
+      </div>
+    </ErrorBoundary>
   );
 }
 
