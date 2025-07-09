@@ -209,7 +209,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
             { title: '英雄市場', address: currentContracts.hero?.address ?? '', icon: <Icons.Hero className="w-8 h-8"/> },
             { title: '聖物市場', address: currentContracts.relic?.address ?? '', icon: <Icons.Relic className="w-8 h-8"/> },
             { title: '隊伍市場', address: currentContracts.party?.address ?? '', icon: <Icons.Party className="w-8 h-8"/> },
-            { title: 'VIP 市場', address: currentContracts.vipStaking?.address ?? '', icon: <Icons.Vip className="w-8 h-8"/> },
+            // VIP市場已移除，因為VIP卡是靈魂代幣，無法轉移
         ].filter(m => m.address && typeof m.address === 'string' && !m.address.includes('YOUR_'));
     }, [chainId]);
 
@@ -278,14 +278,14 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                     <QuickActionButton title="鑄造 NFT" description="獲取新的英雄與聖物" onAction={() => setActivePage('mint')} icon={<Icons.Mint className="w-8 h-8"/>} />
                     <QuickActionButton title="升星祭壇" description="提升你的 NFT 星級" onAction={() => setActivePage('altar')} icon={<Icons.Altar className="w-8 h-8"/>}/>
-                    <QuickActionButton title="管理隊伍" description="創建、解散、查看資產" onAction={() => setActivePage('party')} icon={<Icons.Assets className="w-8 h-8"/>}/>
+                    <QuickActionButton title="資產管理" description="創建隊伍、查看資產" onAction={() => setActivePage('party')} icon={<Icons.Assets className="w-8 h-8"/>}/>
                     <QuickActionButton title="前往地下城" description="開始你的冒險" onAction={() => setActivePage('dungeon')} icon={<Icons.Dungeon className="w-8 h-8"/>}/>
                 </div>
             </div>
 
             <div>
                 <h3 className="section-title">外部市場 (OKX NFT)</h3>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                     {externalMarkets.map(market => (
                         market.address ? (
                             <ExternalLinkButton
