@@ -17,7 +17,7 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
 
   if (party) {
     party.fatigueLevel = party.fatigueLevel + 1
-    party.provisionsRemaining = party.provisionsRemaining.minus(BigInt.fromI32(1))
+    party.provisionsRemaining = party.provisionsRemaining - 1
     if (event.params.success) {
       party.unclaimedRewards = party.unclaimedRewards.plus(event.params.reward)
     }
@@ -59,7 +59,7 @@ export function handleProvisionsBought(event: ProvisionsBought): void {
   let partyId = partyContractAddress.toLowerCase() + "-" + event.params.partyId.toString()
   let party = Party.load(partyId)
   if (party) {
-    party.provisionsRemaining = party.provisionsRemaining.plus(event.params.amount)
+    party.provisionsRemaining = party.provisionsRemaining + event.params.amount.toI32()
     party.save()
   }
 }
