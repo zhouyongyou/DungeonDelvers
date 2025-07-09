@@ -4,8 +4,8 @@ import { getOrCreatePlayer } from "./common"
 import { log } from "@graphprotocol/graph-ts"
 
 // ★ 核心修正：直接在此處硬編碼合約地址
-let heroContractAddress = "0x347752f8166D270EDE722C3F31A10584bC2867b3"
-let relicContractAddress = "0x06994Fb1eC1Ba0238d8CA9539dAbdbEF090A5b53"
+let heroContractAddress = "0xfc2a24E894236a6169d2353BE430a3d5828111D2"
+let relicContractAddress = "0xd86245Ddce19E8F94Bc30f0facf7bd111069FAf9"
 
 export function handlePartyCreated(event: PartyCreated): void {
     // 參數驗證
