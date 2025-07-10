@@ -366,7 +366,7 @@ async function parseNfts<T extends { tokenId: string | number | bigint }>(
     type: NftType,
     chainId: SupportedChainId,
     client: ReturnType<typeof getClient>
-): Promise<(HeroNft | RelicNft | PartyNft | VipNft)[]> {
+): Promise<any[]> {
     if (!assets || assets.length === 0) return [];
 
     const contractKeyMap: Record<NftType, ContractName> = {
@@ -451,7 +451,6 @@ async function parseNfts<T extends { tokenId: string | number | bigint }>(
 
     return results.filter(Boolean);
 }
-
 
 export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promise<AllNftCollections> {
     const emptyResult: AllNftCollections = { heroes: [], relics: [], parties: [], vipCards: [] };

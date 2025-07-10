@@ -1,7 +1,7 @@
 // src/config/contracts.ts (支援多網路最終版)
 
 import { bsc } from 'wagmi/chains';
-import { type Address } from 'viem';
+import { type Address, type Abi } from 'viem';
 import {
   soulShardTokenABI, heroABI, relicABI, dungeonCoreABI, partyABI,
   altarOfAscensionABI, playerProfileABI, vipStakingABI, playerVaultABI,
@@ -54,10 +54,10 @@ export function getContract<
     return null;
   }
   
-  const contractConfig = contracts[chainId]?.[name];
+  const contractConfig = contracts[chainId][name] as { address: Address; abi: Abi };
   
   // 檢查合約地址是否有效，避免因為 .env 未設定而導致錯誤
-  if (!contractConfig || !contractConfig.address || contractConfig.address.includes('YOUR_')) {
+  if (!contractConfig || !contractConfig.address || (contractConfig.address as string).includes('YOUR_')) {
     console.warn(`getContract: 在鏈 ID ${chainId} 上找不到 '${String(name)}' 的設定或地址無效。`);
     return null;
   }
