@@ -191,7 +191,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
         const oneDay = 24n * 60n * 60n;
         if (amountUSD <= smallUSD && BigInt(Math.floor(Date.now() / 1000)) >= lastFreeWithdrawTimestamp + oneDay) return 0;
         
-        let initialRate = (amountUSD > largeUSD) ? largeInit : stdInit;
+        const initialRate = (amountUSD > largeUSD) ? largeInit : stdInit;
         const timeSinceLast = BigInt(Math.floor(Date.now() / 1000)) - lastWithdrawTimestamp;
         const periodsPassed = timeSinceLast / period;
         const timeDecay = periodsPassed * decRate;

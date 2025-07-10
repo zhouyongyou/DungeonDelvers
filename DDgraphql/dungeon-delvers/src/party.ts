@@ -16,18 +16,18 @@ export function handlePartyCreated(event: PartyCreated): void {
         return;
     }
 
-    let player = getOrCreatePlayer(event.params.owner)
+    const player = getOrCreatePlayer(event.params.owner)
 
-    let partyId = createEntityId(event.address.toHexString(), event.params.partyId.toString())
+    const partyId = createEntityId(event.address.toHexString(), event.params.partyId.toString())
     
     // 檢查是否已存在（防止重複處理）
-    let existingParty = Party.load(partyId);
+    const existingParty = Party.load(partyId);
     if (existingParty) {
         log.warning('Party already exists: {}', [partyId]);
         return;
     }
     
-    let party = new Party(partyId)
+    const party = new Party(partyId)
     party.owner = player.id
     party.tokenId = event.params.partyId
     party.contractAddress = event.address
@@ -41,13 +41,13 @@ export function handlePartyCreated(event: PartyCreated): void {
     party.createdAt = event.block.timestamp
 
     // 批量處理英雄關聯 - 使用配置系統
-    let heroIds: string[] = []
-    let heroContractAddress = getHeroContractAddress()
+    const heroIds: string[] = []
+    const heroContractAddress = getHeroContractAddress()
     for (let i = 0; i < event.params.heroIds.length; i++) {
-        let heroId = createEntityId(heroContractAddress, event.params.heroIds[i].toString())
+        const heroId = createEntityId(heroContractAddress, event.params.heroIds[i].toString())
         
         // 驗證英雄是否存在
-        let hero = Hero.load(heroId);
+        const hero = Hero.load(heroId);
         if (hero && hero.owner == player.id) {
             heroIds.push(heroId);
         } else {
@@ -57,13 +57,13 @@ export function handlePartyCreated(event: PartyCreated): void {
     party.heroes = heroIds
 
     // 批量處理聖物關聯 - 使用配置系統
-    let relicIds: string[] = []
-    let relicContractAddress = getRelicContractAddress()
+    const relicIds: string[] = []
+    const relicContractAddress = getRelicContractAddress()
     for (let i = 0; i < event.params.relicIds.length; i++) {
-        let relicId = createEntityId(relicContractAddress, event.params.relicIds[i].toString())
+        const relicId = createEntityId(relicContractAddress, event.params.relicIds[i].toString())
         
         // 驗證聖物是否存在
-        let relic = Relic.load(relicId);
+        const relic = Relic.load(relicId);
         if (relic && relic.owner == player.id) {
             relicIds.push(relicId);
         } else {
@@ -78,10 +78,10 @@ export function handlePartyCreated(event: PartyCreated): void {
 }
 
 export function handlePartyTransfer(event: Transfer): void {
-    let partyId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
-    let party = Party.load(partyId)
+    const partyId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
+    const party = Party.load(partyId)
     if (party) {
-        let newOwner = getOrCreatePlayer(event.params.to)
+        const newOwner = getOrCreatePlayer(event.params.to)
         party.owner = newOwner.id
         party.save()
     } else {

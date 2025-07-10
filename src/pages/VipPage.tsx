@@ -13,16 +13,19 @@ import { bsc } from 'wagmi/chains';
 import { useVipStatus } from '../hooks/useVipStatus';
 
 const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undefined }> = ({ tokenId, chainId }) => {
-    if (!chainId || (chainId !== bsc.id)) {
-        return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-500">網路不支援</div>;
-    }
     const vipStakingContract = getContract(chainId as any, 'vipStaking');
     
     const { data: tokenURI, isLoading, isError } = useReadContract({
         ...vipStakingContract,
         functionName: 'tokenURI',
         args: [tokenId!],
-        query: { enabled: !!tokenId && tokenId > 0n && !!vipStakingContract },
+        query: { 
+            enabled: !!tokenId && 
+                     tokenId > 0n && 
+                     !!vipStakingContract && 
+                     !!chainId && 
+                     chainId === bsc.id 
+        },
     });
 
     const svgImage = useMemo(() => {
@@ -41,6 +44,10 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
             return null;
         }
     }, [tokenURI]);
+
+    if (!chainId || (chainId !== bsc.id)) {
+        return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-500">網路不支援</div>;
+    }
 
     if (isLoading) return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center"><LoadingSpinner /></div>;
     if (isError) return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-red-400">讀取 VIP 卡失敗</div>;

@@ -29,7 +29,7 @@ const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected })
   // 根據不同的 NFT 種類，渲染對應的屬性
   const renderAttributes = () => {
     switch (nft.type) {
-      case 'hero':
+      case 'hero': {
         const hero = nft as HeroNft;
         return (
           <>
@@ -37,7 +37,8 @@ const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected })
             <p className="text-lg font-bold text-indigo-400">{hero.power.toString()} MP</p>
           </>
         );
-      case 'relic':
+      }
+      case 'relic': {
         const relic = nft as RelicNft;
         return (
           <>
@@ -45,7 +46,8 @@ const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected })
             <p className="text-lg font-bold text-teal-400">容量: {relic.capacity}</p>
           </>
         );
-      case 'party':
+      }
+      case 'party': {
         const party = nft as PartyNft;
         return (
           <>
@@ -58,7 +60,8 @@ const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected })
             <p className="text-lg font-bold mt-1 text-green-400">{party.totalPower.toString()} MP</p>
           </>
         );
-      case 'vip':
+      }
+      case 'vip': {
         const vip = nft as VipNft;
         return (
             <>
@@ -66,6 +69,7 @@ const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected })
                 <p className="text-lg font-bold text-yellow-300">等級 {vip.level}</p>
             </>
         );
+      }
       default:
         return null;
     }

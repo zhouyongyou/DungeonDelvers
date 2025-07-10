@@ -17,13 +17,13 @@ describe("Hero Entity", () => {
   // 在所有測試開始前，執行一次
   beforeAll(() => {
     // 1. 準備測試數據
-    let ownerAddress = Address.fromString("0x0000000000000000000000000000000000000001")
-    let tokenId = BigInt.fromI32(1)
-    let rarity = 3 // 稀有
-    let power = BigInt.fromI32(125)
+    const ownerAddress = Address.fromString("0x0000000000000000000000000000000000000001")
+    const tokenId = BigInt.fromI32(1)
+    const rarity = 3 // 稀有
+    const power = BigInt.fromI32(125)
 
     // 2. 創建一個模擬的 HeroMinted 事件
-    let newHeroMintedEvent = createHeroMintedEvent(
+    const newHeroMintedEvent = createHeroMintedEvent(
       tokenId,
       ownerAddress,
       rarity,
@@ -56,7 +56,7 @@ describe("Hero Entity", () => {
     
     // 構造 Hero 的唯一 ID (合約地址-tokenId)
     // 注意：`event.address` 在 matchstick-as 中有預設值
-    let heroId = "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1"
+    const heroId = "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1"
 
     // 斷言：Hero 實體的各個欄位值是否與我們模擬事件中的數據一致
     assert.fieldEquals("Hero", heroId, "tokenId", "1")

@@ -225,11 +225,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
     const [isProvisionModalOpen, setIsProvisionModalOpen] = useState(false);
     const [selectedPartyForProvision, setSelectedPartyForProvision] = useState<bigint | null>(null);
 
-    // 僅支援主網
-    if (chainId !== bsc.id) {
-        return <div className="flex justify-center items-center h-64"><p className="text-lg text-gray-500">請連接到支援的網路</p></div>;
-    }
-
+    // 將所有Hooks調用移到組件頂部，在任何條件語句之前
     const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
@@ -243,8 +239,13 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
             functionName: 'getDungeon',
             args: [BigInt(i + 1)],
         })),
-        query: { enabled: !!getContract(bsc.id, 'dungeonStorage') }
+        query: { enabled: !!getContract(bsc.id, 'dungeonStorage') && chainId === bsc.id }
     });
+
+    // 條件渲染移到所有Hooks之後
+    if (chainId !== bsc.id) {
+        return <div className="flex justify-center items-center h-64"><p className="text-lg text-gray-500">請連接到支援的網路</p></div>;
+    }
 
     const dungeons: Dungeon[] = useMemo(() => {
         const getDungeonName = (id: number) => ["", "新手礦洞", "哥布林洞穴", "食人魔山谷", "蜘蛛巢穴", "石化蜥蜴沼澤", "巫妖墓穴", "奇美拉之巢", "惡魔前哨站", "巨龍之巔", "混沌深淵"][id] || "未知地城";

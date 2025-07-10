@@ -7,8 +7,8 @@ import { getOrCreatePlayer } from "./common"
 import { getPartyContractAddress, createEntityId } from "./config"
 
 export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
-  let partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
-  let party = Party.load(partyId)
+  const partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
+  const party = Party.load(partyId)
 
   if (party) {
     party.fatigueLevel = party.fatigueLevel + 1
@@ -20,10 +20,10 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
     party.cooldownEndsAt = event.block.timestamp.plus(BigInt.fromI32(24 * 60 * 60))
     party.save()
 
-    let playerAddress = event.params.player
+    const playerAddress = event.params.player
     getOrCreatePlayer(playerAddress)
     
-    let profile = PlayerProfile.load(playerAddress.toHexString());
+    const profile = PlayerProfile.load(playerAddress.toHexString());
     if (profile) {
       profile.experience = profile.experience.plus(event.params.expGained);
       profile.level = calculateLevel(profile.experience);
@@ -37,8 +37,8 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
 }
 
 export function handlePartyRested(event: PartyRested): void {
-  let partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
-  let party = Party.load(partyId)
+  const partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
+  const party = Party.load(partyId)
   if (party) {
     party.fatigueLevel = 0
     party.save()
@@ -46,8 +46,8 @@ export function handlePartyRested(event: PartyRested): void {
 }
 
 export function handleProvisionsBought(event: ProvisionsBought): void {
-  let partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
-  let party = Party.load(partyId)
+  const partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
+  const party = Party.load(partyId)
   if (party) {
     party.provisionsRemaining = party.provisionsRemaining + event.params.amount.toI32()
     party.save()

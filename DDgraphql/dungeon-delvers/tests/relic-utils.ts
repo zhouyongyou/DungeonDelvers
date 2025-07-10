@@ -19,9 +19,9 @@ export function createApprovalEvent(
   approved: Address,
   tokenId: BigInt
 ): Approval {
-  let approvalEvent = changetype<Approval>(newMockEvent())
+  const approvalEvent = changetype<Approval>(newMockEvent())
 
-  approvalEvent.parameters = new Array()
+  approvalEvent.parameters = []
 
   approvalEvent.parameters.push(
     new ethereum.EventParam("owner", ethereum.Value.fromAddress(owner))
@@ -44,9 +44,9 @@ export function createApprovalForAllEvent(
   operator: Address,
   approved: boolean
 ): ApprovalForAll {
-  let approvalForAllEvent = changetype<ApprovalForAll>(newMockEvent())
+  const approvalForAllEvent = changetype<ApprovalForAll>(newMockEvent())
 
-  approvalForAllEvent.parameters = new Array()
+  approvalForAllEvent.parameters = []
 
   approvalForAllEvent.parameters.push(
     new ethereum.EventParam("owner", ethereum.Value.fromAddress(owner))
@@ -64,9 +64,9 @@ export function createApprovalForAllEvent(
 export function createAscensionAltarSetEvent(
   newAddress: Address
 ): AscensionAltarSet {
-  let ascensionAltarSetEvent = changetype<AscensionAltarSet>(newMockEvent())
+  const ascensionAltarSetEvent = changetype<AscensionAltarSet>(newMockEvent())
 
-  ascensionAltarSetEvent.parameters = new Array()
+  ascensionAltarSetEvent.parameters = []
 
   ascensionAltarSetEvent.parameters.push(
     new ethereum.EventParam(
@@ -82,9 +82,9 @@ export function createContractsSetEvent(
   core: Address,
   token: Address
 ): ContractsSet {
-  let contractsSetEvent = changetype<ContractsSet>(newMockEvent())
+  const contractsSetEvent = changetype<ContractsSet>(newMockEvent())
 
-  contractsSetEvent.parameters = new Array()
+  contractsSetEvent.parameters = []
 
   contractsSetEvent.parameters.push(
     new ethereum.EventParam("core", ethereum.Value.fromAddress(core))
@@ -99,10 +99,10 @@ export function createContractsSetEvent(
 export function createDungeonSvgLibrarySetEvent(
   newAddress: Address
 ): DungeonSvgLibrarySet {
-  let dungeonSvgLibrarySetEvent =
+  const dungeonSvgLibrarySetEvent =
     changetype<DungeonSvgLibrarySet>(newMockEvent())
 
-  dungeonSvgLibrarySetEvent.parameters = new Array()
+  dungeonSvgLibrarySetEvent.parameters = []
 
   dungeonSvgLibrarySetEvent.parameters.push(
     new ethereum.EventParam(
@@ -117,9 +117,9 @@ export function createDungeonSvgLibrarySetEvent(
 export function createDynamicSeedUpdatedEvent(
   newSeed: BigInt
 ): DynamicSeedUpdated {
-  let dynamicSeedUpdatedEvent = changetype<DynamicSeedUpdated>(newMockEvent())
+  const dynamicSeedUpdatedEvent = changetype<DynamicSeedUpdated>(newMockEvent())
 
-  dynamicSeedUpdatedEvent.parameters = new Array()
+  dynamicSeedUpdatedEvent.parameters = []
 
   dynamicSeedUpdatedEvent.parameters.push(
     new ethereum.EventParam(
@@ -135,10 +135,10 @@ export function createOwnershipTransferredEvent(
   previousOwner: Address,
   newOwner: Address
 ): OwnershipTransferred {
-  let ownershipTransferredEvent =
+  const ownershipTransferredEvent =
     changetype<OwnershipTransferred>(newMockEvent())
 
-  ownershipTransferredEvent.parameters = new Array()
+  ownershipTransferredEvent.parameters = []
 
   ownershipTransferredEvent.parameters.push(
     new ethereum.EventParam(
@@ -154,9 +154,9 @@ export function createOwnershipTransferredEvent(
 }
 
 export function createPausedEvent(account: Address): Paused {
-  let pausedEvent = changetype<Paused>(newMockEvent())
+  const pausedEvent = changetype<Paused>(newMockEvent())
 
-  pausedEvent.parameters = new Array()
+  pausedEvent.parameters = []
 
   pausedEvent.parameters.push(
     new ethereum.EventParam("account", ethereum.Value.fromAddress(account))
@@ -171,9 +171,9 @@ export function createRelicMintedEvent(
   rarity: i32,
   capacity: i32
 ): RelicMinted {
-  let relicMintedEvent = changetype<RelicMinted>(newMockEvent())
+  const relicMintedEvent = changetype<RelicMinted>(newMockEvent())
 
-  relicMintedEvent.parameters = new Array()
+  relicMintedEvent.parameters = []
 
   relicMintedEvent.parameters.push(
     new ethereum.EventParam(
@@ -205,9 +205,9 @@ export function createTransferEvent(
   to: Address,
   tokenId: BigInt
 ): Transfer {
-  let transferEvent = changetype<Transfer>(newMockEvent())
+  const transferEvent = changetype<Transfer>(newMockEvent())
 
-  transferEvent.parameters = new Array()
+  transferEvent.parameters = []
 
   transferEvent.parameters.push(
     new ethereum.EventParam("from", ethereum.Value.fromAddress(from))
@@ -226,9 +226,9 @@ export function createTransferEvent(
 }
 
 export function createUnpausedEvent(account: Address): Unpaused {
-  let unpausedEvent = changetype<Unpaused>(newMockEvent())
+  const unpausedEvent = changetype<Unpaused>(newMockEvent())
 
-  unpausedEvent.parameters = new Array()
+  unpausedEvent.parameters = []
 
   unpausedEvent.parameters.push(
     new ethereum.EventParam("account", ethereum.Value.fromAddress(account))
