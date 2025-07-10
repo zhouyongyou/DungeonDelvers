@@ -18,6 +18,8 @@ contract Relic is ERC721, Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
     using Strings for uint256; // ★ 新增
     string public baseURI; // ★ 新增
+    // ★ 新增：合約級別元數據 URI
+    string private _contractURI;
     
     // ★ 修改：直接在 Relic 合約中儲存屬性
     struct RelicData {
@@ -41,6 +43,7 @@ contract Relic is ERC721, Ownable, ReentrancyGuard, Pausable {
     event DynamicSeedUpdated(uint256 newSeed);
     event ContractsSet(address indexed core, address indexed token);
     event BaseURISet(string newBaseURI); // ★ 新增事件
+    event ContractURIUpdated(string newContractURI); // ★ 新增事件
     event AscensionAltarSet(address indexed newAddress);
     
     // --- 修飾符 ---
@@ -172,6 +175,16 @@ contract Relic is ERC721, Ownable, ReentrancyGuard, Pausable {
     function setBaseURI(string memory _newBaseURI) external onlyOwner {
         baseURI = _newBaseURI;
         emit BaseURISet(_newBaseURI);
+    }
+
+    // ★ 新增：合約級別元數據函式
+    function contractURI() public view returns (string memory) {
+        return _contractURI;
+    }
+
+    function setContractURI(string memory newContractURI) external onlyOwner {
+        _contractURI = newContractURI;
+        emit ContractURIUpdated(newContractURI);
     }
 
     function setAscensionAltarAddress(address _address) public onlyOwner {
