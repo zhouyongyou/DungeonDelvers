@@ -14,7 +14,7 @@ if (!THE_GRAPH_API_URL) {
 const client: ApolloClient<NormalizedCacheObject> = new ApolloClient({
   uri: THE_GRAPH_API_URL,
   cache: new InMemoryCache({
-    // 優化緩存策略
+    // 🔥 优化缓存策略 - 针对NFT数据
     typePolicies: {
       Player: {
         keyFields: ['id'],
@@ -23,10 +23,28 @@ const client: ApolloClient<NormalizedCacheObject> = new ApolloClient({
       Hero: {
         keyFields: ['id'],
         merge: true,
+        fields: {
+          // 英雄基础属性变化较少，延长缓存时间
+          power: { merge: false },
+          rarity: { merge: false },
+          // metadata永远不变，永久缓存
+          metadata: {
+            merge: (existing: any, incoming: any) => incoming || existing,
+          }
+        }
       },
       Relic: {
         keyFields: ['id'],
         merge: true,
+        fields: {
+          // 圣物基础属性变化较少，延长缓存时间
+          capacity: { merge: false },
+          rarity: { merge: false },
+          // metadata永远不变，永久缓存
+          metadata: {
+            merge: (existing: any, incoming: any) => incoming || existing,
+          }
+        }
       },
       Party: {
         keyFields: ['id'],
@@ -38,6 +56,10 @@ const client: ApolloClient<NormalizedCacheObject> = new ApolloClient({
           relics: {
             merge: false,
           },
+          // 队伍metadata也永久缓存
+          metadata: {
+            merge: (existing: any, incoming: any) => incoming || existing,
+          }
         },
       },
       PlayerProfile: {
@@ -47,6 +69,12 @@ const client: ApolloClient<NormalizedCacheObject> = new ApolloClient({
       VIP: {
         keyFields: ['id'],
         merge: true,
+        fields: {
+          // VIP metadata永久缓存
+          metadata: {
+            merge: (existing: any, incoming: any) => incoming || existing,
+          }
+        }
       },
       PlayerVault: {
         keyFields: ['id'],
@@ -57,10 +85,14 @@ const client: ApolloClient<NormalizedCacheObject> = new ApolloClient({
   defaultOptions: {
     watchQuery: {
       errorPolicy: 'all',
-      fetchPolicy: 'cache-and-network',
+      // 🔥 对于NFT数据，优先使用缓存
+      fetchPolicy: 'cache-first',
+      // 30分钟内不重新获取
+      nextFetchPolicy: 'cache-first',
     },
     query: {
       errorPolicy: 'all',
+      // 🔥 优先从缓存读取NFT数据
       fetchPolicy: 'cache-first',
     },
   },

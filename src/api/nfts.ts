@@ -4,6 +4,8 @@ import { createPublicClient, http, type Address } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { Buffer } from 'buffer';
 import { getContract, contracts, type ContractName } from '../config/contracts';
+import { nftMetadataCache } from '../cache/nftMetadataCache';
+import { CacheMetrics } from '../cache/cacheStrategies';
 import type { 
     AllNftCollections, 
     BaseNft, 
@@ -84,21 +86,42 @@ const getClient = (chainId: number) => {
     return createPublicClient({ chain, transport: http(rpcUrl) });
 };
 
-// 改進的元數據獲取函數 - 減少超時時間並添加重試機制
-export async function fetchMetadata(uri: string, retryCount = 0): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
+// 改進的元數據獲取函數 - 集成IndexedDB缓存
+export async function fetchMetadata(
+    uri: string, 
+    tokenId: string, 
+    contractAddress: string, 
+    retryCount = 0
+): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
     const maxRetries = 2;
     const timeout = 5000; // 減少到5秒
     
+    // 🔥 1. 先检查IndexedDB缓存
+    const cachedMetadata = await nftMetadataCache.getMetadata(tokenId, contractAddress);
+    if (cachedMetadata) {
+        CacheMetrics.recordHit(); // 记录缓存命中
+        return cachedMetadata;
+    }
+    
+    CacheMetrics.recordMiss(); // 记录缓存未命中
+    
     try {
+        let metadata: Omit<BaseNft, 'id' | 'contractAddress' | 'type'>;
+        
         if (uri.startsWith('data:application/json;base64,')) {
             const json = Buffer.from(uri.substring('data:application/json;base64,'.length), 'base64').toString();
-            return JSON.parse(json);
+            metadata = JSON.parse(json);
         } else if (uri.startsWith('ipfs://')) {
             const ipfsUrl = uri.replace('ipfs://', 'https://ipfs.io/ipfs/');
-            return await fetchWithTimeout(ipfsUrl, timeout);
+            metadata = await fetchWithTimeout(ipfsUrl, timeout);
         } else {
-            return await fetchWithTimeout(uri, timeout);
+            metadata = await fetchWithTimeout(uri, timeout);
         }
+        
+        // 🔥 2. 成功获取后立即缓存（永久缓存）
+        await nftMetadataCache.cacheMetadata(tokenId, contractAddress, metadata);
+        
+        return metadata;
     } catch (error) {
         console.warn(`解析元數據時出錯 (嘗試 ${retryCount + 1}/${maxRetries + 1}):`, error);
         
@@ -106,7 +129,7 @@ export async function fetchMetadata(uri: string, retryCount = 0): Promise<Omit<B
         if (retryCount < maxRetries) {
             console.log(`正在重試獲取元數據...`);
             await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // 遞增延遲
-            return fetchMetadata(uri, retryCount + 1);
+            return fetchMetadata(uri, tokenId, contractAddress, retryCount + 1);
         }
         
         // 提供更詳細的錯誤信息
@@ -193,7 +216,11 @@ async function parseNfts<T extends { tokenId: any }>(
         let metadata: Omit<BaseNft, 'id' | 'contractAddress' | 'type'>;
 
         if (uriResult && uriResult.status === 'success') {
-            metadata = await fetchMetadata(uriResult.result as string);
+            metadata = await fetchMetadata(
+                uriResult.result as string, 
+                asset.tokenId.toString(), 
+                contractAddress
+            );
         } else {
             console.warn(`無法獲取 ${type} #${asset.tokenId} 的 tokenURI`);
             metadata = { 
