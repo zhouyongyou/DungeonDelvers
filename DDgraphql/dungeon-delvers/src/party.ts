@@ -78,13 +78,23 @@ export function handlePartyCreated(event: PartyCreated): void {
 }
 
 export function handlePartyTransfer(event: Transfer): void {
+    // 跳過零地址轉移（通常是銷毀操作）
+    if (event.params.to.toHexString() === '0x0000000000000000000000000000000000000000') {
+        log.info('Skipping party transfer to zero address (burn): {}', [event.params.tokenId.toString()]);
+        return;
+    }
+
     const partyId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
     const party = Party.load(partyId)
+    
     if (party) {
         const newOwner = getOrCreatePlayer(event.params.to)
         party.owner = newOwner.id
         party.save()
+        log.info('Successfully transferred party {} to {}', [partyId, event.params.to.toHexString()]);
     } else {
+        // 對於 Party，不創建占位實體，因為它需要複雜的初始化
         log.warning("Transfer handled for a Party that doesn't exist in the subgraph: {}", [partyId])
+        log.info('Party transfer skipped - cannot create placeholder for complex entity: {}', [partyId]);
     }
 }

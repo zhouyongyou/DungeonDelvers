@@ -10,6 +10,7 @@
     "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 dungeon-delvers",
     "test": "graph test",
     "sync-addresses": "node scripts/sync-addresses.js",
+    "diagnose": "node scripts/diagnose-sync-issues.js",
     "prebuild": "npm run sync-addresses"
   },
   "dependencies": {
