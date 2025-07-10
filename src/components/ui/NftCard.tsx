@@ -1,10 +1,12 @@
 // src/components/ui/NftCard.tsx
 
-import React, { memo, useState, useMemo } from 'react';
+import React, { memo, useState, useMemo, useCallback } from 'react';
 import { useReadContract } from 'wagmi';
 import { Buffer } from 'buffer';
 import { getContract } from '../../config/contracts';
 import { bsc } from 'wagmi/chains';
+// 導入網路監控 Hook（注意：如果模組找不到，請確保已創建對應文件）
+// import { useNetworkMonitoring } from '../../hooks/useNetworkMonitoring';
 import type { AnyNft, NftType, HeroNft, RelicNft, PartyNft, VipNft } from '../../types/nft';
 
 interface NftCardProps {
@@ -24,18 +26,38 @@ const StarRating: React.FC<{ rating: number }> = memo(({ rating }) => (
   </div>
 ));
 
-// VIP卡專用的圖片顯示組件
+// VIP卡專用的圖片顯示組件 - 增強版本
 const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, fallbackImage }) => {
   const vipStakingContract = getContract(bsc.id, 'vipStaking');
   const [hasError, setHasError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [loadingState, setLoadingState] = useState<'loading' | 'success' | 'error' | 'retrying'>('loading');
+  const maxRetries = 2;
   
-  const { data: tokenURI, isLoading } = useReadContract({
+  const { data: tokenURI, isLoading, error, refetch } = useReadContract({
     ...vipStakingContract,
     functionName: 'tokenURI',
     args: [nft.id],
     query: { 
-      enabled: !!vipStakingContract && !hasError,
+      enabled: !!vipStakingContract && !hasError && retryCount <= maxRetries,
       staleTime: 1000 * 60 * 5, // 5分鐘緩存
+      retry: (failureCount, error) => {
+        if (failureCount < maxRetries) {
+          console.log(`VIP NFT ${nft.id} 載入失敗，正在重試 (${failureCount + 1}/${maxRetries})...`);
+          setRetryCount(failureCount + 1);
+          setLoadingState('retrying');
+          return true;
+        }
+        return false;
+      },
+      onSuccess: () => {
+        setLoadingState('success');
+        setRetryCount(0);
+      },
+      onError: (err) => {
+        console.error(`VIP NFT ${nft.id} 載入失敗:`, err);
+        setLoadingState('error');
+      }
     },
   });
 
@@ -44,32 +66,87 @@ const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, 
     try {
       const uriString = typeof tokenURI === 'string' ? tokenURI : '';
       if (!uriString.startsWith('data:application/json;base64,')) {
+        // 如果是直接的 URL，檢查是否為有效的 SVG 數據 URI
+        if (uriString.startsWith('data:image/svg+xml')) {
+          return uriString;
+        }
+        // 否則嘗試作為普通 URL 處理
         return uriString;
       }
       const decodedUri = Buffer.from(uriString.substring('data:application/json;base64,'.length), 'base64').toString();
       const metadata = JSON.parse(decodedUri);
       return metadata.image;
     } catch (e) {
-      console.error("解析 VIP 卡 SVG 失敗:", e);
+      console.error(`解析 VIP 卡 ${nft.id} SVG 失敗:`, e);
       setHasError(true);
+      setLoadingState('error');
       return null;
     }
-  }, [tokenURI]);
+  }, [tokenURI, nft.id]);
 
-  if (isLoading) {
+  // 重試函數
+  const handleRetry = useCallback(() => {
+    if (retryCount < maxRetries) {
+      setHasError(false);
+      setLoadingState('retrying');
+      setTimeout(() => {
+        refetch();
+      }, 1000);
+    }
+  }, [retryCount, maxRetries, refetch]);
+
+  // 載入狀態顯示
+  if (isLoading || loadingState === 'loading') {
     return (
-      <div className="w-full h-full bg-gray-700 rounded-lg flex items-center justify-center">
-        <div className="animate-spin w-6 h-6 border-2 border-yellow-400 border-t-transparent rounded-full"></div>
+      <div className="w-full h-full bg-gray-700 rounded-lg flex flex-col items-center justify-center p-2">
+        <div className="animate-spin w-6 h-6 border-2 border-yellow-400 border-t-transparent rounded-full mb-1"></div>
+        <span className="text-xs text-gray-400">載入中...</span>
       </div>
     );
   }
 
-  if (hasError || !svgImage) {
-    // 回退到使用原始圖片
+  // 重試狀態顯示
+  if (loadingState === 'retrying') {
+    return (
+      <div className="w-full h-full bg-gray-700 rounded-lg flex flex-col items-center justify-center p-2">
+        <div className="animate-pulse w-6 h-6 bg-yellow-400 rounded-full mb-1"></div>
+        <span className="text-xs text-yellow-400">重試中 ({retryCount}/{maxRetries})</span>
+      </div>
+    );
+  }
+
+  // 錯誤狀態顯示 - 更友好的錯誤界面
+  if (hasError || error || loadingState === 'error') {
+    return (
+      <div className="w-full h-full bg-gray-700 rounded-lg flex flex-col items-center justify-center p-2">
+        <div className="text-red-400 text-sm mb-1">⚠️</div>
+        <span className="text-xs text-red-400 text-center mb-1">載入失敗</span>
+        {retryCount < maxRetries && (
+          <button 
+            onClick={handleRetry}
+            className="text-xs text-blue-400 hover:text-blue-300 underline px-1 py-0.5 rounded transition-colors"
+            disabled={loadingState === 'retrying'}
+          >
+            重試
+          </button>
+        )}
+        {retryCount >= maxRetries && (
+          <span className="text-xs text-gray-500">使用預設圖片</span>
+        )}
+      </div>
+    );
+  }
+
+  // 沒有 SVG 圖片時的回退處理
+  if (!svgImage) {
     return (
       <img 
         src={nft.image?.replace('ipfs://', 'https://ipfs.io/ipfs/') || fallbackImage} 
-        onError={(e) => { e.currentTarget.src = fallbackImage; }} 
+        onError={(e) => { 
+          console.warn(`VIP NFT ${nft.id} 回退圖片載入失敗，使用預設圖片`);
+          e.currentTarget.src = fallbackImage; 
+        }} 
+        onLoad={() => console.log(`VIP NFT ${nft.id} 使用回退圖片載入成功`)}
         alt={nft.name || `VIP #${nft.id.toString()}`} 
         className="w-full h-full object-cover bg-gray-700 transition-transform duration-300 hover:scale-110" 
         loading="lazy"
@@ -77,10 +154,19 @@ const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, 
     );
   }
 
+  // 正常顯示 SVG
   return (
     <img 
       src={svgImage} 
-      onError={() => setHasError(true)}
+      onError={(e) => {
+        console.error(`VIP NFT ${nft.id} SVG 載入失敗，嘗試回退`);
+        setHasError(true);
+        setLoadingState('error');
+      }}
+      onLoad={() => {
+        console.log(`VIP NFT ${nft.id} SVG 載入成功`);
+        setLoadingState('success');
+      }}
       alt={nft.name || `VIP #${nft.id.toString()}`} 
       className="w-full h-full object-cover bg-gray-700 transition-transform duration-300 hover:scale-110" 
       loading="lazy"
