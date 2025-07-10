@@ -76,13 +76,7 @@ const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, 
       const decodedUri = Buffer.from(uriString.substring('data:application/json;base64,'.length), 'base64').toString();
       const metadata = JSON.parse(decodedUri);
       
-      // 嘗試從metadata中提取VIP等級
-      if (metadata.attributes && Array.isArray(metadata.attributes)) {
-        const levelAttr = metadata.attributes.find((attr: any) => attr.trait_type === 'Level');
-        if (levelAttr && typeof levelAttr.value === 'number') {
-          setVipLevel(levelAttr.value);
-        }
-      }
+      // VIP等級信息已通過metadata.attributes提供，不需要額外狀態管理
       
       return metadata.image;
     } catch (e) {
