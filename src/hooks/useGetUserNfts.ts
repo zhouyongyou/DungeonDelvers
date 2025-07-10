@@ -40,7 +40,7 @@ export const useVipStatus = () => {
         query: { enabled: !!address && !!vipStakingContract }
     });
 
-    const { data: allowance, isLoading: isLoadingAllowance, refetch: refetchAllowance } = useReadContract({ ...soulShardContract, functionName: 'allowance', args: [address!, vipStakingContract?.address!], query: { enabled: !!address && !!vipStakingContract && !!soulShardContract } });
+    const { data: allowance, isLoading: isLoadingAllowance, refetch: refetchAllowance } = useReadContract({ ...soulShardContract, functionName: 'allowance', args: [address!, vipStakingContract?.address as `0x${string}`], query: { enabled: !!address && !!vipStakingContract && !!soulShardContract } });
 
     // 計算衍生狀態
     const stakedAmount = useMemo(() => (stakeInfo as readonly [bigint, bigint])?.[0] ?? 0n, [stakeInfo]);
@@ -51,8 +51,8 @@ export const useVipStatus = () => {
     const { data: stakedValueUSD, isLoading: isLoadingStakedValueUSD, refetch: refetchStakedValueUSD } = useReadContract({
         ...oracleContract,
         functionName: 'getAmountOut',
-        args: [soulShardContract?.address!, stakedAmount],
-        query: { enabled: !!oracleContract && !!soulShardContract && stakedAmount > 0n }
+        args: [soulShardContract?.address as `0x${string}`, stakedAmount],
+        query: { enabled: !!oracleContract && !!soulShardContract && !!soulShardContract?.address && stakedAmount > 0n }
     });
 
     const pendingUnstakeAmount = useMemo(() => (unstakeQueue as readonly [bigint, bigint])?.[0] ?? 0n, [unstakeQueue]);

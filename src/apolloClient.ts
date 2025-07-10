@@ -29,7 +29,7 @@ const client: ApolloClient<NormalizedCacheObject> = new ApolloClient({
           rarity: { merge: false },
           // metadata永远不变，永久缓存
           metadata: {
-            merge: (existing: any, incoming: any) => incoming || existing,
+            merge: (existing: unknown, incoming: unknown) => incoming || existing,
           }
         }
       },
@@ -42,7 +42,7 @@ const client: ApolloClient<NormalizedCacheObject> = new ApolloClient({
           rarity: { merge: false },
           // metadata永远不变，永久缓存
           metadata: {
-            merge: (existing: any, incoming: any) => incoming || existing,
+            merge: (existing: unknown, incoming: unknown) => incoming || existing,
           }
         }
       },
@@ -58,7 +58,7 @@ const client: ApolloClient<NormalizedCacheObject> = new ApolloClient({
           },
           // 队伍metadata也永久缓存
           metadata: {
-            merge: (existing: any, incoming: any) => incoming || existing,
+            merge: (existing: unknown, incoming: unknown) => incoming || existing,
           }
         },
       },
@@ -72,7 +72,7 @@ const client: ApolloClient<NormalizedCacheObject> = new ApolloClient({
         fields: {
           // VIP metadata永久缓存
           metadata: {
-            merge: (existing: any, incoming: any) => incoming || existing,
+            merge: (existing: unknown, incoming: unknown) => incoming || existing,
           }
         }
       },

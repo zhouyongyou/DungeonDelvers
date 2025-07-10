@@ -42,12 +42,14 @@ export class CacheMetrics {
   }
 }
 
-// Cache strategies enum
-export enum CacheStrategy {
-  MEMORY_ONLY = 'memory-only',
-  INDEXED_DB = 'indexed-db',
-  HYBRID = 'hybrid'
-}
+// Cache strategies
+export const CacheStrategy = {
+  MEMORY_ONLY: 'memory-only',
+  INDEXED_DB: 'indexed-db',
+  HYBRID: 'hybrid'
+} as const;
+
+export type CacheStrategy = typeof CacheStrategy[keyof typeof CacheStrategy];
 
 // Cache configuration
 export interface CacheConfig {

@@ -140,7 +140,9 @@ class NFTMetadataCache {
     // Limit memory cache size
     if (this.memoryCache.size > (this.config.maxMemorySize || 100)) {
       const oldestKey = this.memoryCache.keys().next().value;
-      this.memoryCache.delete(oldestKey);
+      if (oldestKey) {
+        this.memoryCache.delete(oldestKey);
+      }
     }
 
     // Add to IndexedDB

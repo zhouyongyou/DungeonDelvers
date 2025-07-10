@@ -29,10 +29,10 @@ export const useVipStatus = () => {
             { ...vipStakingContract, functionName: 'getVipLevel', args: [address!] },
             { ...vipStakingContract, functionName: 'getVipTaxReduction', args: [address!] },
             { ...vipStakingContract, functionName: 'unstakeQueue', args: [address!] },
-            { ...soulShardContract, functionName: 'allowance', args: [address!, vipStakingContract?.address!] },
+            { ...soulShardContract, functionName: 'allowance', args: [address!, vipStakingContract?.address as `0x${string}`] },
         ],
         query: { 
-            enabled: !!address && !!vipStakingContract && !!soulShardContract,
+            enabled: !!address && !!vipStakingContract && !!soulShardContract && !!vipStakingContract?.address,
         }
     });
 
@@ -51,7 +51,7 @@ export const useVipStatus = () => {
     const { data: stakedValueUSD, isLoading: isLoadingStakedValueUSD, refetch: refetchStakedValueUSD } = useReadContract({
         ...oracleContract,
         functionName: 'getAmountOut',
-        args: [soulShardContract?.address!, stakedAmount],
+        args: [soulShardContract?.address as `0x${string}`, stakedAmount],
         query: { 
             enabled: !!oracleContract && !!soulShardContract && (stakedAmount > 0n)
         }
@@ -70,11 +70,12 @@ export const useVipStatus = () => {
                 refetchBalance(),
             ];
             
-            if (stakedAmount > 0n) {
-                promises.push(refetchStakedValueUSD());
-            }
-            
             await Promise.all(promises);
+            
+            // 單獨處理 stakedValueUSD 的 refetch，因為它有不同的返回類型
+            if (stakedAmount > 0n) {
+                await refetchStakedValueUSD();
+            }
         } catch (error) {
             console.error('刷新VIP狀態時發生錯誤:', error);
         }

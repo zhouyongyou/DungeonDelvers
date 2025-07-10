@@ -361,7 +361,7 @@ async function batchProcess<T, R>(
     return results;
 }
 
-async function parseNfts<T extends { tokenId: any }>(
+async function parseNfts<T extends { tokenId: string | number | bigint }>(
     assets: T[],
     type: NftType,
     chainId: SupportedChainId,
