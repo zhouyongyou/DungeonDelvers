@@ -4,6 +4,8 @@ import { createPublicClient, http, type Address } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { Buffer } from 'buffer';
 import { getContract, contracts, type ContractName } from '../config/contracts';
+import { nftMetadataCache } from '../cache/nftMetadataCache';
+import { CacheMetrics } from '../cache/cacheStrategies';
 import type { 
     AllNftCollections, 
     BaseNft, 
@@ -94,7 +96,14 @@ export async function fetchMetadata(
     const maxRetries = 2;
     const timeout = 5000; // 減少到5秒
     
-    // Cache functionality removed for now
+    // 🔥 1. 先检查IndexedDB缓存
+    const cachedMetadata = await nftMetadataCache.getMetadata(tokenId, contractAddress);
+    if (cachedMetadata) {
+        CacheMetrics.recordHit(); // 记录缓存命中
+        return cachedMetadata;
+    }
+    
+    CacheMetrics.recordMiss(); // 记录缓存未命中
     
     try {
         let metadata: Omit<BaseNft, 'id' | 'contractAddress' | 'type'>;
@@ -109,7 +118,8 @@ export async function fetchMetadata(
             metadata = await fetchWithTimeout(uri, timeout);
         }
         
-        // Cache functionality removed for now
+        // 🔥 2. 成功获取后立即缓存（永久缓存）
+        await nftMetadataCache.cacheMetadata(tokenId, contractAddress, metadata);
         
         return metadata;
     } catch (error) {

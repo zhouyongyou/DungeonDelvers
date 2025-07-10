@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchAllOwnedNfts } from '../api/nfts';
+import { getQueryConfig } from '../cache/cacheStrategies';
 import { NftCard } from '../components/ui/NftCard';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -264,8 +265,9 @@ const MyAssetsPage: React.FC = () => {
         queryKey: ['ownedNfts', address, chainId],
         queryFn: () => fetchAllOwnedNfts(address!, chainId),
         enabled: !!address && !!chainId,
-        staleTime: 1000 * 60, // 60 seconds
-        gcTime: 1000 * 60 * 5, // 5 minutes
+        
+        // 🔥 使用统一的NFT缓存策略
+        ...getQueryConfig('USER_NFTS'),
     });
     
     const { data: platformFee, isLoading: isLoadingFee } = useReadContract({
