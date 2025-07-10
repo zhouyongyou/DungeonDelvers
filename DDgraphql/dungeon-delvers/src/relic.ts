@@ -15,6 +15,7 @@ export function handleRelicMinted(event: RelicMinted): void {
     relic.contractAddress = event.address
     relic.rarity = event.params.rarity
     relic.capacity = event.params.capacity
+    relic.createdAt = event.block.timestamp
     relic.save()
 }
 
