@@ -1,7 +1,7 @@
 // cache/nftMetadataCache.ts
 // IndexedDB-based cache for NFT metadata
 
-import { CacheConfig, defaultCacheConfig } from './cacheStrategies';
+import { type CacheConfig, defaultCacheConfig } from './cacheStrategies';
 import type { BaseNft } from '../types/nft';
 
 // Type for cached metadata (without id, contractAddress, type)
