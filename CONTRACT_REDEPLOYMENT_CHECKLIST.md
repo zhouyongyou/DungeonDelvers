@@ -3,21 +3,6 @@
 ## 🎯 專案概述
 Dungeon Delvers 是一個複雜的區塊鏈遊戲項目，包含多個智能合約、前端應用程式、API 伺服器和 GraphQL 服務。重新部署合約時需要更新多個配置文件和地址引用。
 
-## 🌐 域名更新 (已更新到 https://www.dungeondelvers.xyz/)
-
-### 需要更新的文件：
-1. **`index.html`** - 更新 meta 標籤中的 URL
-2. **`README.md`** - 更新專案連結
-3. **`public/metadata/`** 目錄下的所有 JSON 文件：
-   - `hero-collection.json`
-   - `relic-collection.json`
-   - `party-collection.json`
-   - `player-profile-collection.json`
-   - `vip-staking-collection.json`
-4. **`src/components/layout/Footer.tsx`** - 更新 mainnet URL
-5. **`src/contexts/ExpeditionContext.tsx`** - 更新 Twitter 分享 URL
-6. **`dungeon-delvers-whitepaper/README.md`** - 更新 DApp 連結
-
 ## 🔧 智能合約地址更新
 
 ### 1. 前端配置 (最高優先級)
