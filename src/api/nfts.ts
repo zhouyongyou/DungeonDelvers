@@ -93,8 +93,8 @@ export async function fetchMetadata(
     contractAddress: string, 
     retryCount = 0
 ): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
-    const maxRetries = 1; // 減少重試次數以加快失敗恢復
-    const timeout = 3000; // 減少到3秒以加快載入
+    const maxRetries = 2; // 增加重試次數
+    const timeout = 8000; // 增加超時時間到8秒
     
     // 🔥 1. 先检查IndexedDB缓存
     const cachedMetadata = await nftMetadataCache.getMetadata(tokenId, contractAddress);
@@ -133,22 +133,68 @@ export async function fetchMetadata(
         
         // 如果還有重試次數，嘗試重新獲取
         if (retryCount < maxRetries) {
-            console.log(`正在重試獲取元數據...`);
-            await new Promise(resolve => setTimeout(resolve, 500 * (retryCount + 1))); // 減少延遲時間
+            console.log(`正在重試獲取元數據... (延遲 ${1000 * (retryCount + 1)}ms)`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // 增加延遲時間以避免快速重試
             return fetchMetadata(uri, tokenId, contractAddress, retryCount + 1);
         }
         
-        // 🔥 為聖物提供更快的fallback數據
+        // 🔥 為各類型NFT提供更快的fallback數據
         const isRelic = contractAddress.toLowerCase().includes('relic');
-        return { 
-            name: isRelic ? `聖物 #${tokenId}` : `NFT #${tokenId}`, 
-            description: `正在載入詳細資訊...`, 
-            image: isRelic ? '/images/relic-placeholder.svg' : '', 
-            attributes: isRelic ? [
-                { trait_type: 'Capacity', value: '載入中...' },
-                { trait_type: 'Rarity', value: '載入中...' }
-            ] : []
-        };
+        const isHero = contractAddress.toLowerCase().includes('hero');
+        const isParty = contractAddress.toLowerCase().includes('party');
+        const isVip = contractAddress.toLowerCase().includes('vip');
+        
+        let fallbackData: Omit<BaseNft, 'id' | 'contractAddress' | 'type'>;
+        
+        if (isRelic) {
+            fallbackData = {
+                name: `聖物 #${tokenId}`,
+                description: `聖物正在載入詳細資訊...`,
+                image: '/images/relic-placeholder.svg',
+                attributes: [
+                    { trait_type: 'Capacity', value: '載入中...' },
+                    { trait_type: 'Rarity', value: '載入中...' }
+                ]
+            };
+        } else if (isHero) {
+            fallbackData = {
+                name: `英雄 #${tokenId}`,
+                description: `英雄正在載入詳細資訊...`,
+                image: '/images/hero-placeholder.svg',
+                attributes: [
+                    { trait_type: 'Power', value: '載入中...' },
+                    { trait_type: 'Rarity', value: '載入中...' }
+                ]
+            };
+        } else if (isParty) {
+            fallbackData = {
+                name: `隊伍 #${tokenId}`,
+                description: `隊伍正在載入詳細資訊...`,
+                image: '/images/party-placeholder.svg',
+                attributes: [
+                    { trait_type: 'Total Power', value: '載入中...' },
+                    { trait_type: 'Total Capacity', value: '載入中...' }
+                ]
+            };
+        } else if (isVip) {
+            fallbackData = {
+                name: `VIP 卡 #${tokenId}`,
+                description: `VIP卡正在載入詳細資訊...`,
+                image: '/images/vip-placeholder.svg',
+                attributes: [
+                    { trait_type: 'VIP Level', value: '載入中...' }
+                ]
+            };
+        } else {
+            fallbackData = {
+                name: `NFT #${tokenId}`,
+                description: `正在載入詳細資訊...`,
+                image: '',
+                attributes: []
+            };
+        }
+        
+        return fallbackData;
     }
 }
 
@@ -162,22 +208,25 @@ async function fetchWithMultipleGateways(gateways: string[], timeout: number): P
     
     try {
         // 並行請求所有網關，取最快的響應
-        const requests = gateways.map(url => 
-            fetch(url, {
-                signal: controller.signal,
-                headers: {
-                    'Accept': 'application/json',
-                    'User-Agent': 'DungeonDelvers/1.0'
-                }
-            }).then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                return response.json();
-            }).catch(error => {
-                console.warn(`IPFS網關 ${url} 請求失敗:`, error);
-                throw error;
-            })
+        const requests = gateways.map((url, index) => 
+            // 為每個網關添加小延遲以避免同時過載
+            new Promise(resolve => setTimeout(resolve, index * 200)).then(() =>
+                fetch(url, {
+                    signal: controller.signal,
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'DungeonDelvers/1.0'
+                    }
+                }).then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                }).catch(error => {
+                    console.warn(`IPFS網關 ${url} 請求失敗:`, error);
+                    throw error;
+                })
+            )
         );
         
         // 使用Promise.race取得最快的響應，但需要處理錯誤
@@ -232,6 +281,28 @@ async function fetchWithTimeout(url: string, timeout: number): Promise<Omit<Base
 // Section 3: 核心數據獲取邏輯 (已修正 TypeScript 錯誤)
 // =================================================================
 
+// 批量處理工具函數 - 限制並發請求數量
+async function batchProcess<T, R>(
+    items: T[],
+    processor: (item: T) => Promise<R>,
+    batchSize: number = 5
+): Promise<R[]> {
+    const results: R[] = [];
+    
+    for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize);
+        const batchResults = await Promise.all(batch.map(processor));
+        results.push(...batchResults);
+        
+        // 在批次之間添加小延遲以避免過載
+        if (i + batchSize < items.length) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    }
+    
+    return results;
+}
+
 async function parseNfts<T extends { tokenId: any }>(
     assets: T[],
     type: NftType,
@@ -262,7 +333,8 @@ async function parseNfts<T extends { tokenId: any }>(
 
     const uriResults = await client.multicall({ contracts: uriCalls, allowFailure: true });
 
-    return Promise.all(assets.map(async (asset, index) => {
+    // 使用批量處理來限制並發元數據請求
+    const processAsset = async (asset: any, index: number) => {
         const uriResult = uriResults[index];
         let metadata: Omit<BaseNft, 'id' | 'contractAddress' | 'type'>;
 
@@ -309,7 +381,17 @@ async function parseNfts<T extends { tokenId: any }>(
             };
             default: return null;
         }
-    }));
+    };
+
+    // 使用批量處理來處理資產，限制並發數量
+    const assetsWithIndex = assets.map((asset, index) => ({ asset, index }));
+    const results = await batchProcess(
+        assetsWithIndex,
+        ({ asset, index }) => processAsset(asset, index),
+        3 // 限制並發數量為3
+    );
+
+    return results.filter(Boolean);
 }
 
 
