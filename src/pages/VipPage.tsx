@@ -97,14 +97,28 @@ const VipPage: React.FC = () => {
     });
     
     useEffect(() => {
-        async function Cb() {
+        async function handlePostApproval() {
             if (isAwaitingStakeAfterApproval && !isTxPending) {
+                // 等待一小段時間確保區塊鏈狀態更新
+                await new Promise(resolve => setTimeout(resolve, 1000));
                 await refetchAll();
                 setIsAwaitingStakeAfterApproval(false);
-                if (mode === 'stake' && amount) handleStake();
+                if (mode === 'stake' && amount) {
+                    // 再次檢查授權狀態
+                    try {
+                        const parsedAmount = parseEther(amount);
+                        if (allowance >= parsedAmount) {
+                            handleStake();
+                        } else {
+                            showToast('授權尚未完成，請稍後重試', 'info');
+                        }
+                    } catch (error) {
+                        console.error('解析質押金額失敗:', error);
+                    }
+                }
             }
         }
-        Cb();
+        handlePostApproval();
     }, [isAwaitingStakeAfterApproval, isTxPending, allowance]);
 
     const needsApproval = useMemo(() => {
@@ -169,11 +183,16 @@ const VipPage: React.FC = () => {
             </p>
             <ActionButton 
                 onClick={handleMainAction} 
-                isLoading={isTxPending} 
-                disabled={!amount || Number(amount) <= 0} 
+                isLoading={isTxPending || isAwaitingStakeAfterApproval} 
+                disabled={!amount || Number(amount) <= 0 || isAwaitingStakeAfterApproval} 
                 className="w-full h-12"
             >
-                {isTxPending ? '請在錢包確認...' : (needsApproval ? '授權' : (mode === 'stake' ? '質押' : '請求贖回'))}
+                {isTxPending 
+                    ? '請在錢包確認...' 
+                    : isAwaitingStakeAfterApproval 
+                        ? '授權完成，準備質押...'
+                        : (needsApproval ? '授權' : (mode === 'stake' ? '質押' : '請求贖回'))
+                }
             </ActionButton>
         </div>
     );
@@ -197,6 +216,19 @@ const VipPage: React.FC = () => {
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto -mt-4">
                 質押您的 $SoulShard 代幣以提升 VIP 等級，享受提現稅率減免等尊榮禮遇。
             </p>
+            
+            {/* 錢包授權說明 */}
+            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 max-w-2xl mx-auto">
+                <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
+                        <span className="text-white text-xs font-bold">!</span>
+                    </div>
+                    <div className="text-sm text-blue-200">
+                        <p className="font-medium mb-1">關於錢包授權彈窗：</p>
+                        <p>授權時出現的彈窗語言由您的錢包設定決定。如需中文界面，請在錢包（如MetaMask）設定中調整語言為中文。授權完成後頁面會自動更新，無需手動刷新。</p>
+                    </div>
+                </div>
+            </div>
             
             {isLoading && !tokenId ? (
                 <div className="flex justify-center"><LoadingSpinner /></div>
