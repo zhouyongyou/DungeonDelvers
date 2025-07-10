@@ -149,7 +149,11 @@ const DungeonManager: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) =>
             dungeonsData.forEach((d, i) => {
                 if (d.status === 'success' && Array.isArray(d.result)) {
                     const [requiredPower, rewardAmountUSD, baseSuccessRate] = d.result as [bigint, bigint, number];
-                    initialInputs[i + 1] = { requiredPower: requiredPower.toString(), rewardAmountUSD: formatEther(rewardAmountUSD), baseSuccessRate: baseSuccessRate.toString() };
+                    initialInputs[i + 1] = { 
+                        requiredPower: requiredPower.toString(), 
+                        rewardAmountUSD: formatEther(rewardAmountUSD), 
+                        baseSuccessRate: baseSuccessRate.toString() 
+                    };
                 }
             });
             setDungeonInputs(initialInputs);
@@ -186,9 +190,28 @@ const DungeonManager: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) =>
                 const dungeonId = i + 1;
                 if (d.status !== 'success' || !d.result) return <div key={dungeonId}>地城 #{dungeonId}: 讀取失敗</div>;
                 const inputs = dungeonInputs[dungeonId] || { requiredPower: '', rewardAmountUSD: '', baseSuccessRate: '' };
+                const [requiredPower, rewardAmountUSD, baseSuccessRate] = d.result as [bigint, bigint, number];
                 return (
-                    <div key={dungeonId} className="p-4 bg-black/20 rounded-lg space-y-2">
+                    <div key={dungeonId} className="p-4 bg-black/20 rounded-lg space-y-3">
                         <h4 className="font-bold text-lg text-yellow-400">地城 #{dungeonId}</h4>
+                        
+                        {/* 顯示當前數值 */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm bg-gray-800/50 p-2 rounded">
+                            <div>
+                                <span className="text-gray-400">當前戰力: </span>
+                                <span className="text-white font-mono">{requiredPower.toString()}</span>
+                            </div>
+                            <div>
+                                <span className="text-gray-400">當前獎勵: </span>
+                                <span className="text-white font-mono">{formatEther(rewardAmountUSD)} USD</span>
+                            </div>
+                            <div>
+                                <span className="text-gray-400">當前成功率: </span>
+                                <span className="text-white font-mono">{baseSuccessRate}%</span>
+                            </div>
+                        </div>
+                        
+                        {/* 設定新數值 */}
                         <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">
                             <input type="text" value={inputs.requiredPower} onChange={e => handleInputChange(dungeonId, 'requiredPower', e.target.value)} placeholder="要求戰力" className="input-field" />
                             <input type="text" value={inputs.rewardAmountUSD} onChange={e => handleInputChange(dungeonId, 'rewardAmountUSD', e.target.value)} placeholder="獎勵 (USD)" className="input-field" />

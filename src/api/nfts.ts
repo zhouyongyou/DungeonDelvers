@@ -66,17 +66,46 @@ export async function fetchMetadata(uri: string): Promise<Omit<BaseNft, 'id' | '
             return JSON.parse(json);
         } else if (uri.startsWith('ipfs://')) {
             const ipfsUrl = uri.replace('ipfs://', 'https://ipfs.io/ipfs/');
-            const response = await fetch(ipfsUrl);
-            if (!response.ok) throw new Error(`Failed to fetch from IPFS: ${response.statusText}`);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
+            const response = await fetch(ipfsUrl, {
+                signal: controller.signal,
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'DungeonDelvers/1.0'
+                }
+            });
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) throw new Error(`Failed to fetch from IPFS: ${response.status} ${response.statusText}`);
             return await response.json();
         } else {
-            const response = await fetch(uri);
-            if (!response.ok) throw new Error(`Failed to fetch from URL: ${response.statusText}`);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
+            const response = await fetch(uri, {
+                signal: controller.signal,
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'DungeonDelvers/1.0'
+                }
+            });
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) throw new Error(`Failed to fetch from URL: ${response.status} ${response.statusText}`);
             return await response.json();
         }
     } catch (error) {
         console.warn("解析元數據時出錯:", error);
-        return { name: '數據錯誤', description: '無法載入此 NFT 的詳細資訊', image: '', attributes: [] };
+        // 提供更詳細的錯誤信息
+        const errorMessage = error instanceof Error ? error.message : '未知錯誤';
+        return { 
+            name: '數據錯誤', 
+            description: `無法載入此 NFT 的詳細資訊: ${errorMessage}`, 
+            image: '', 
+            attributes: [] 
+        };
     }
 }
 
@@ -134,7 +163,15 @@ async function parseNfts<T extends { tokenId: any }>(
         switch (type) {
             case 'hero': return { ...baseNft, type, power: Number(anyAsset.power), rarity: Number(anyAsset.rarity) };
             case 'relic': return { ...baseNft, type, capacity: Number(anyAsset.capacity), rarity: Number(anyAsset.rarity) };
-            case 'party': return { ...baseNft, type, totalPower: BigInt(anyAsset.totalPower), totalCapacity: BigInt(anyAsset.totalCapacity), heroIds: anyAsset.heroes.map((h: any) => BigInt(h.tokenId)), relicIds: anyAsset.relics.map((r: any) => BigInt(r.tokenId)), partyRarity: Number(anyAsset.partyRarity) };
+            case 'party': return { 
+                ...baseNft, 
+                type, 
+                totalPower: BigInt(anyAsset.totalPower), 
+                totalCapacity: BigInt(anyAsset.totalCapacity), 
+                heroIds: anyAsset.heroes ? anyAsset.heroes.map((h: any) => BigInt(h.tokenId)) : [], 
+                relicIds: anyAsset.relics ? anyAsset.relics.map((r: any) => BigInt(r.tokenId)) : [], 
+                partyRarity: Number(anyAsset.partyRarity) 
+            };
             case 'vip': return { ...baseNft, type, level: Number(findAttr('VIP Level')) };
             default: return null;
         }

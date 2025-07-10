@@ -65,6 +65,7 @@ export const Footer: React.FC = () => {
       // ★ 核心修正：更可靠地獲取 RPC URL
       let rpcUrl = '未知端點';
       const transport = client.transport;
+      
       if (transport.key === 'http' && transport.url) {
           rpcUrl = transport.url;
       } else if (transport.key === 'fallback') {
@@ -72,6 +73,32 @@ export const Footer: React.FC = () => {
           const firstTransport = (transport as any).transports?.[0];
           if (firstTransport?.url) {
               rpcUrl = firstTransport.url;
+          } else if (firstTransport?.value?.url) {
+              rpcUrl = firstTransport.value.url;
+          }
+      } else if (transport.key === 'webSocket' && transport.url) {
+          rpcUrl = transport.url;
+      }
+      
+      // 美化 RPC URL 顯示
+      if (rpcUrl !== '未知端點') {
+          try {
+              const url = new URL(rpcUrl);
+              // 如果是常見的 RPC 服務，顯示簡化名稱
+              if (url.hostname.includes('alchemy')) {
+                  rpcUrl = `Alchemy (${url.hostname})`;
+              } else if (url.hostname.includes('infura')) {
+                  rpcUrl = `Infura (${url.hostname})`;
+              } else if (url.hostname.includes('ankr')) {
+                  rpcUrl = `Ankr (${url.hostname})`;
+              } else if (url.hostname.includes('binance')) {
+                  rpcUrl = `Binance (${url.hostname})`;
+              } else {
+                  rpcUrl = url.hostname;
+              }
+          } catch (e) {
+              // 如果無法解析 URL，保持原樣
+              console.warn('無法解析 RPC URL:', rpcUrl);
           }
       }
 
