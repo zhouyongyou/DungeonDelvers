@@ -86,6 +86,8 @@ const SettingRow: React.FC<SettingRowProps> = ({
         {inputValues.map((val, index) => (
           <input
             key={index}
+            id={`setting-${label.replace(/\s+/g, '-')}-${index}`}
+            name={`setting-${label.replace(/\s+/g, '-')}-${index}`}
             type="text"
             value={val}
             onChange={(e) => {

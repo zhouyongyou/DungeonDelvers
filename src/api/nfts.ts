@@ -59,53 +59,73 @@ const getClient = (chainId: number) => {
     return createPublicClient({ chain, transport: http(rpcUrl) });
 };
 
-export async function fetchMetadata(uri: string): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
+// 改進的元數據獲取函數 - 減少超時時間並添加重試機制
+export async function fetchMetadata(uri: string, retryCount = 0): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
+    const maxRetries = 2;
+    const timeout = 5000; // 減少到5秒
+    
     try {
         if (uri.startsWith('data:application/json;base64,')) {
             const json = Buffer.from(uri.substring('data:application/json;base64,'.length), 'base64').toString();
             return JSON.parse(json);
         } else if (uri.startsWith('ipfs://')) {
             const ipfsUrl = uri.replace('ipfs://', 'https://ipfs.io/ipfs/');
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-            
-            const response = await fetch(ipfsUrl, {
-                signal: controller.signal,
-                headers: {
-                    'Accept': 'application/json',
-                    'User-Agent': 'DungeonDelvers/1.0'
-                }
-            });
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) throw new Error(`Failed to fetch from IPFS: ${response.status} ${response.statusText}`);
-            return await response.json();
+            return await fetchWithTimeout(ipfsUrl, timeout);
         } else {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-            
-            const response = await fetch(uri, {
-                signal: controller.signal,
-                headers: {
-                    'Accept': 'application/json',
-                    'User-Agent': 'DungeonDelvers/1.0'
-                }
-            });
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) throw new Error(`Failed to fetch from URL: ${response.status} ${response.statusText}`);
-            return await response.json();
+            return await fetchWithTimeout(uri, timeout);
         }
     } catch (error) {
-        console.warn("解析元數據時出錯:", error);
+        console.warn(`解析元數據時出錯 (嘗試 ${retryCount + 1}/${maxRetries + 1}):`, error);
+        
+        // 如果還有重試次數，嘗試重新獲取
+        if (retryCount < maxRetries) {
+            console.log(`正在重試獲取元數據...`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // 遞增延遲
+            return fetchMetadata(uri, retryCount + 1);
+        }
+        
         // 提供更詳細的錯誤信息
         const errorMessage = error instanceof Error ? error.message : '未知錯誤';
         return { 
-            name: '數據錯誤', 
-            description: `無法載入此 NFT 的詳細資訊: ${errorMessage}`, 
+            name: '數據載入中...', 
+            description: `暫時無法載入詳細資訊，請稍後重試`, 
             image: '', 
             attributes: [] 
         };
+    }
+}
+
+// 新增的輔助函數 - 帶有超時的fetch
+async function fetchWithTimeout(url: string, timeout: number): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
+    const controller = new AbortController();
+    
+    const timeoutId = setTimeout(() => {
+        controller.abort();
+    }, timeout);
+    
+    try {
+        const response = await fetch(url, {
+            signal: controller.signal,
+            headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'DungeonDelvers/1.0'
+            }
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        clearTimeout(timeoutId);
+        
+        if (error instanceof Error && error.name === 'AbortError') {
+            throw new Error(`請求超時 (${timeout}ms)`);
+        }
+        throw error;
     }
 }
 
@@ -151,7 +171,12 @@ async function parseNfts<T extends { tokenId: any }>(
             metadata = await fetchMetadata(uriResult.result as string);
         } else {
             console.warn(`無法獲取 ${type} #${asset.tokenId} 的 tokenURI`);
-            metadata = { name: `${type.charAt(0).toUpperCase() + type.slice(1)} #${asset.tokenId}`, description: '無法載入元數據', image: '', attributes: [] };
+            metadata = { 
+                name: `${type.charAt(0).toUpperCase() + type.slice(1)} #${asset.tokenId}`, 
+                description: '載入中，請稍後重試', 
+                image: '', 
+                attributes: [] 
+            };
         }
 
         const findAttr = (trait: string, defaultValue: any = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
@@ -181,12 +206,21 @@ async function parseNfts<T extends { tokenId: any }>(
 
 export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promise<AllNftCollections> {
     const emptyResult: AllNftCollections = { heroes: [], relics: [], parties: [], vipCards: [] };
+    
     if (!isSupportedChain(chainId)) {
         console.error(`不支援的鏈 ID: ${chainId}`);
         return emptyResult;
     }
 
+    if (!THE_GRAPH_API_URL) {
+        console.error('The Graph API URL 未配置');
+        return emptyResult;
+    }
+
     try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
         const response = await fetch(THE_GRAPH_API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -194,19 +228,34 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
                 query: GET_PLAYER_ASSETS_QUERY,
                 variables: { owner: owner.toLowerCase() },
             }),
+            signal: controller.signal
         });
 
-        if (!response.ok) throw new Error(`GraphQL 請求失敗: ${response.statusText}`);
-        const { data } = await response.json();
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            throw new Error(`GraphQL 請求失敗: ${response.status} ${response.statusText}`);
+        }
+        
+        const { data, errors } = await response.json();
+        
+        if (errors) {
+            console.error('GraphQL 錯誤:', errors);
+            throw new Error(`GraphQL 查詢錯誤: ${errors.map((e: any) => e.message).join(', ')}`);
+        }
+        
         const playerAssets = data?.player;
-        if (!playerAssets) return emptyResult;
+        if (!playerAssets) {
+            console.log('未找到玩家資產數據，可能是新用戶');
+            return emptyResult;
+        }
 
         const client = getClient(chainId);
 
         const [heroes, relics, parties, vipCards] = await Promise.all([
-            parseNfts(playerAssets.heroes, 'hero', chainId, client),
-            parseNfts(playerAssets.relics, 'relic', chainId, client),
-            parseNfts(playerAssets.parties, 'party', chainId, client),
+            parseNfts(playerAssets.heroes || [], 'hero', chainId, client),
+            parseNfts(playerAssets.relics || [], 'relic', chainId, client),
+            parseNfts(playerAssets.parties || [], 'party', chainId, client),
             playerAssets.vip ? parseNfts([playerAssets.vip], 'vip', chainId, client) : Promise.resolve([]),
         ]);
 
@@ -218,7 +267,11 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
         };
 
     } catch (error) {
-        console.error("獲取 NFT 數據時發生嚴重錯誤: ", error);
+        if (error instanceof Error && error.name === 'AbortError') {
+            console.error("GraphQL 請求超時");
+        } else {
+            console.error("獲取 NFT 數據時發生錯誤: ", error);
+        }
         return emptyResult;
     }
 }

@@ -114,6 +114,8 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
             <h4 className="font-bold text-lg text-yellow-400">地城 #{dungeonId}</h4>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">
               <input
+                id={`dungeon-${dungeonId}-power`}
+                name={`dungeon-${dungeonId}-power`}
                 type="text"
                 value={inputs.requiredPower}
                 onChange={e => handleInputChange(dungeonId, 'requiredPower', e.target.value)}
@@ -121,6 +123,8 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
                 className="input-field"
               />
               <input
+                id={`dungeon-${dungeonId}-reward`}
+                name={`dungeon-${dungeonId}-reward`}
                 type="text"
                 value={inputs.rewardAmountUSD}
                 onChange={e => handleInputChange(dungeonId, 'rewardAmountUSD', e.target.value)}
@@ -128,6 +132,8 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
                 className="input-field"
               />
               <input
+                id={`dungeon-${dungeonId}-success-rate`}
+                name={`dungeon-${dungeonId}-success-rate`}
                 type="text"
                 value={inputs.baseSuccessRate}
                 onChange={e => handleInputChange(dungeonId, 'baseSuccessRate', e.target.value)}
