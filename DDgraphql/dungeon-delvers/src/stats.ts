@@ -1,6 +1,6 @@
 // DDgraphql/dungeon-delvers/src/stats.ts
 
-import { BigInt, ethereum, log } from "@graphprotocol/graph-ts";
+import { BigInt, Address, log } from "@graphprotocol/graph-ts";
 import { GlobalStats, PlayerStats, Player } from "../generated/schema";
 
 /**
@@ -25,11 +25,12 @@ export function getOrCreateGlobalStats(): GlobalStats {
 /**
  * 獲取或創建玩家統計數據
  */
-export function getOrCreatePlayerStats(playerId: string): PlayerStats {
+export function getOrCreatePlayerStats(playerAddress: Address): PlayerStats {
+  const playerId = playerAddress.toHexString();
   let stats = PlayerStats.load(playerId);
   if (!stats) {
     stats = new PlayerStats(playerId);
-    stats.player = playerId;
+    stats.player = playerAddress;
     stats.totalHeroesMinted = 0;
     stats.totalRelicsMinted = 0;
     stats.totalPartiesCreated = 0;
@@ -91,12 +92,13 @@ export function updateGlobalStats(
  * 更新玩家統計數據
  */
 export function updatePlayerStats(
-  playerId: string,
+  playerAddress: Address,
   field: string,
   increment: i32,
   timestamp: BigInt = BigInt.fromI32(0)
 ): void {
-  const stats = getOrCreatePlayerStats(playerId);
+  const stats = getOrCreatePlayerStats(playerAddress);
+  const playerId = playerAddress.toHexString();
   
   switch (field) {
     case "totalHeroesMinted":
@@ -137,12 +139,13 @@ export function updatePlayerStats(
  * 更新玩家統計數據中的BigInt字段
  */
 export function updatePlayerStatsBigInt(
-  playerId: string,
+  playerAddress: Address,
   field: string,
   value: BigInt,
   timestamp: BigInt = BigInt.fromI32(0)
 ): void {
-  const stats = getOrCreatePlayerStats(playerId);
+  const stats = getOrCreatePlayerStats(playerAddress);
+  const playerId = playerAddress.toHexString();
   
   switch (field) {
     case "totalRewardsEarned":
@@ -169,8 +172,9 @@ export function updatePlayerStatsBigInt(
 /**
  * 檢查是否為新玩家並更新統計數據
  */
-export function checkAndUpdatePlayerCount(playerId: string, timestamp: BigInt): void {
-  const player = Player.load(playerId);
+export function checkAndUpdatePlayerCount(playerAddress: Address, timestamp: BigInt): void {
+  const player = Player.load(playerAddress);
+  const playerId = playerAddress.toHexString();
   if (!player) {
     // 這是新玩家，更新全域統計
     updateGlobalStats("totalPlayers", 1, timestamp);
