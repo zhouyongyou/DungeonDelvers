@@ -41,7 +41,7 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
     if (dungeonsData) {
       const initialInputs: Record<number, any> = {};
       dungeonsData.forEach((d, i) => {
-        if (d.status === 'success' && Array.isArray(d.result)) {
+        if (d.status === 'success' && d.result && Array.isArray(d.result)) {
           const [requiredPower, rewardAmountUSD, baseSuccessRate] = d.result as [bigint, bigint, number];
           initialInputs[i + 1] = {
             requiredPower: requiredPower.toString(),
@@ -111,7 +111,7 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
       {dungeonsData?.map((d, i) => {
         const dungeonId = i + 1;
         
-        if (d.status !== 'success' || !d.result) {
+        if (d.status !== 'success' || !d.result || !Array.isArray(d.result)) {
           return (
             <div key={dungeonId} className="p-4 bg-red-900/20 rounded-lg">
               <span className="text-red-400">地城 #{dungeonId}: 讀取失敗</span>
