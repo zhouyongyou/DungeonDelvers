@@ -51,9 +51,9 @@ export const useNetworkMonitoring = () => {
       rtt: `${newStatus.rtt}ms`,
       saveData: newStatus.saveData
     });
-  }, []);
+}, []);
 
-  useEffect(() => {
+useEffect(() => {
     const handleOnline = () => {
       console.log('🟢 網路連接已恢復');
       updateNetworkStatus();

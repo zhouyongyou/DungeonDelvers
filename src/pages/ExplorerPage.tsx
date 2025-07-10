@@ -68,7 +68,7 @@ const GET_PARTY_BY_ID_QUERY = `
 `;
 
 // 通用的 GraphQL 請求函式
-const fetchFromGraph = async (query: string, variables: Record<string, any>) => {
+const fetchFromGraph = async (query: string, variables: Record<string, unknown>) => {
     if (!THE_GRAPH_API_URL) throw new Error("The Graph API URL is not configured.");
     const response = await fetch(THE_GRAPH_API_URL, {
         method: 'POST',
@@ -190,8 +190,8 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
                     <p><b>剩餘儲備:</b> {data.provisionsRemaining.toString()}</p>
                     <p><b>疲勞度:</b> {data.fatigueLevel.toString()}</p>
                     <p><b>未領取獎勵:</b> {formatEther(BigInt(data.unclaimedRewards))} $SoulShard</p>
-                    <p><b>英雄列表 (ID):</b> {data.heroes?.map((h: any) => h.tokenId).join(', ') || '無'}</p>
-                    <p><b>聖物列表 (ID):</b> {data.relics?.map((r: any) => r.tokenId).join(', ') || '無'}</p>
+                    <p><b>英雄列表 (ID):</b> {data.heroes?.map((h: { tokenId: string }) => h.tokenId).join(', ') || '無'}</p>
+                    <p><b>聖物列表 (ID):</b> {data.relics?.map((r: { tokenId: string }) => r.tokenId).join(', ') || '無'}</p>
                 </>}
             </>
         );

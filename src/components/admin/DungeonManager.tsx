@@ -39,7 +39,7 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
 
   useEffect(() => {
     if (dungeonsData) {
-      const initialInputs: Record<number, any> = {};
+      const initialInputs: Record<number, { requiredPower: string; rewardAmountUSD: string; baseSuccessRate: string }> = {};
       dungeonsData.forEach((d, i) => {
         if (d.status === 'success' && d.result && Array.isArray(d.result)) {
           const [requiredPower, rewardAmountUSD, baseSuccessRate] = d.result as [bigint, bigint, number];
@@ -82,8 +82,9 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
       
       showToast(`地城 #${id} 更新成功！`, 'success');
       setTimeout(() => refetch(), 2000);
-    } catch (e: any) {
-      showToast(e.shortMessage || `地城 #${id} 更新失敗`, "error");
+    } catch (e) {
+      const err = e as { shortMessage?: string };
+      showToast(err.shortMessage || `地城 #${id} 更新失敗`, "error");
     } finally {
       setPendingDungeon(null);
     }

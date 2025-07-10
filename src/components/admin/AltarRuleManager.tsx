@@ -40,7 +40,16 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
 
   useEffect(() => {
     if (rulesData) {
-      const initialInputs: Record<number, any> = {};
+      const initialInputs: Record<
+        number,
+        {
+          materialsRequired: string;
+          nativeFee: string;
+          greatSuccessChance: string;
+          successChance: string;
+          partialFailChance: string;
+        }
+      > = {};
       rulesData.forEach((d, i) => {
         if (d.status === 'success' && Array.isArray(d.result)) {
           const [materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance] = d.result as [
@@ -97,8 +106,9 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
       
       showToast(`升星規則 #${id} 更新成功！`, 'success');
       setTimeout(() => refetch(), 2000);
-    } catch (e: any) {
-      showToast(e.shortMessage || `規則 #${id} 更新失敗`, "error");
+    } catch (e) {
+      const error = e as { shortMessage?: string };
+      showToast(error.shortMessage || `規則 #${id} 更新失敗`, "error");
     } finally {
       setPendingRule(null);
     }

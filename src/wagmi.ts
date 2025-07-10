@@ -29,6 +29,6 @@ export const wagmiConfig = createConfig({
       http(infuraMainnetRpc),
       http(ankrMainnetRpc),
       http(publicBscRpc), // 將公開節點作為最後的備用選項
-    ].filter(Boolean) as any), // 使用 as any 避免類型推斷問題
+    ].filter(Boolean).map(transport => transport!)), // 使用 map 和 non-null assertion
   },
 });

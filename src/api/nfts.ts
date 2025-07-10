@@ -490,7 +490,7 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
         
         if (errors) {
             console.error('GraphQL 錯誤:', errors);
-            throw new Error(`GraphQL 查詢錯誤: ${errors.map((e: any) => e.message).join(', ')}`);
+            throw new Error(`GraphQL 查詢錯誤: ${errors.map((e: { message: string }) => e.message).join(', ')}`);
         }
         
         const playerAssets = data?.player;

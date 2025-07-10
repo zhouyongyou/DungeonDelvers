@@ -101,7 +101,11 @@ const VipPage: React.FC = () => {
                     refetchAll();
                 }
             },
-            onError: (error: any) => { if (!error.message.includes('User rejected')) showToast(error.shortMessage || "交易失敗", "error"); }
+            onError: (error: { message: string; shortMessage?: string }) => {
+                if (!error.message.includes('User rejected')) {
+                    showToast(error.shortMessage || "交易失敗", "error");
+                }
+            }
         }
     });
     
@@ -258,7 +262,7 @@ const VipPage: React.FC = () => {
                             <div>
                                 <div className="text-sm text-gray-400">VIP 等級</div>
                                 <div className="font-bold text-2xl text-yellow-400">
-                                    LV {isLoading ? '...' : (vipLevel as any).toString()}
+                                    LV {isLoading ? '...' : vipLevel.toString()}
                                 </div>
                             </div>
                             <div>
