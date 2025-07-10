@@ -186,8 +186,8 @@ const { data: vipLevel, refetch: refetchVipLevel } = useReadContract({
 GET /api/hero/:tokenId          - 英雄 NFT 元數據
 GET /api/relic/:tokenId         - 聖物 NFT 元數據  
 GET /api/party/:tokenId         - 隊伍 NFT 元數據
-GET /api/vipstaking/:tokenId    - VIP NFT 元數據
-GET /api/playerprofile/:tokenId - 玩家檔案 NFT 元數據
+GET /api/vip/:tokenId           - VIP NFT 元數據
+GET /api/profile/:tokenId       - 玩家檔案 NFT 元數據
 ```
 
 ### 2. 健康檢查端點
@@ -210,7 +210,7 @@ const vipLevel = await publicClient.readContract({
 })
 
 // 2. VIP NFT 元數據 (Metadata Server)
-const vipApiResponse = await fetch(`${metadataServerUrl}/api/vipstaking/${tokenId}`)
+const vipApiResponse = await fetch(`${metadataServerUrl}/api/vip/${tokenId}`)
 
 // 3. VIP 數據 (The Graph)
 const { player } = await graphClient.request(GET_VIP_QUERY, { 
