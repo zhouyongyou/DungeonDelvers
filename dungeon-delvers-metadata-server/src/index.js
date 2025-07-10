@@ -205,7 +205,8 @@ app.get('/api/party/:tokenId', handleRequest(async (req, res) => {
 
 // --- Profile 和 VIP 端點 (已修正路由) ---
 
-// ★ 核心修正：將路由修改為 /api/profile/
+// ★ 核心修正：將路由改為 /api/profile/
+
 app.get('/api/profile/:tokenId', handleRequest(async (req, res) => {
     const { tokenId } = req.params;
     const cacheKey = `profile-${tokenId}`;
@@ -242,7 +243,8 @@ app.get('/api/profile/:tokenId', handleRequest(async (req, res) => {
     res.json(metadata);
 }));
 
-// ★ 核心修正：將路由修改為 /api/vip/
+// ★ 核心修正：將路由改為 /api/vip/
+
 app.get('/api/vip/:tokenId', handleRequest(async (req, res) => {
     const { tokenId } = req.params;
     const cacheKey = `vip-${tokenId}`;
