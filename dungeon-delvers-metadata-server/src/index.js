@@ -205,11 +205,11 @@ app.get('/api/party/:tokenId', handleRequest(async (req, res) => {
 
 // --- Profile 和 VIP 端點 (已修正路由) ---
 
-// ★ 核心修正：將路由改為 /api/profile/
+// ★ 核心修正：將路由改為 /api/playerprofile/
 
-app.get('/api/profile/:tokenId', handleRequest(async (req, res) => {
+app.get('/api/playerprofile/:tokenId', handleRequest(async (req, res) => {
     const { tokenId } = req.params;
-    const cacheKey = `profile-${tokenId}`;
+    const cacheKey = `playerprofile-${tokenId}`;
 
     const metadata = await withCache(cacheKey, async () => {
         const owner = await publicClient.readContract({
@@ -243,11 +243,11 @@ app.get('/api/profile/:tokenId', handleRequest(async (req, res) => {
     res.json(metadata);
 }));
 
-// ★ 核心修正：將路由改為 /api/vip/
+// ★ 核心修正：將路由改為 /api/vipstaking/
 
-app.get('/api/vip/:tokenId', handleRequest(async (req, res) => {
+app.get('/api/vipstaking/:tokenId', handleRequest(async (req, res) => {
     const { tokenId } = req.params;
-    const cacheKey = `vip-${tokenId}`;
+    const cacheKey = `vipstaking-${tokenId}`;
 
     const metadata = await withCache(cacheKey, async () => {
         const owner = await publicClient.readContract({
