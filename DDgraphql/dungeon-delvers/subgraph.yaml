@@ -8,7 +8,7 @@ dataSources:
     name: Hero
     network: bsc
     source:
-      address: "0xfc2a24E894236a6169d2353BE430a3d5828111D2"
+      address: "0x347752f8166D270EDE722C3F31A10584bC2867b3"
       abi: Hero
       startBlock: 53308155
     mapping:
@@ -31,7 +31,7 @@ dataSources:
     name: Relic
     network: bsc
     source:
-      address: "0xd86245Ddce19E8F94Bc30f0facf7bd111069FAf9"
+      address: "0x06994Fb1eC1Ba0238d8CA9539dAbdbEF090A5b53"
       abi: Relic
       startBlock: 53308155
     mapping:
