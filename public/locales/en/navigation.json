@@ -1,0 +1,20 @@
+{
+  "menu": {
+    "dashboard": "Dashboard",
+    "profile": "Profile",
+    "mint": "Mint",
+    "party": "Party",
+    "dungeon": "Dungeon",
+    "altar": "Altar",
+    "codex": "Codex",
+    "vip": "VIP",
+    "referral": "Referral",
+    "explorer": "Explorer",
+    "admin": "Admin"
+  },
+  "subtitle": "Your Fantasy Adventure Begins Here",
+  "recentTransactions": "Recent Transactions",
+  "themeToggle": "Toggle Theme",
+  "languageSelector": "Select Language",
+  "mobileMenu": "Menu"
+}

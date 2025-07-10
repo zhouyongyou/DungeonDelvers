@@ -1,0 +1,47 @@
+{
+  "nft": {
+    "hero": "英雄",
+    "artifact": "聖物",
+    "party": "隊伍",
+    "rarity": {
+      "common": "普通",
+      "uncommon": "不凡",
+      "rare": "稀有",
+      "epic": "史詩",
+      "legendary": "傳奇"
+    },
+    "stats": {
+      "level": "等級",
+      "experience": "經驗值",
+      "health": "生命值",
+      "attack": "攻擊力",
+      "defense": "防禦力",
+      "speed": "速度",
+      "luck": "幸運",
+      "power": "戰力"
+    }
+  },
+  "dungeon": {
+    "expedition": "遠征",
+    "explore": "探索",
+    "rewards": "獎勵",
+    "cooldown": "冷卻時間",
+    "fatigue": "疲勞度",
+    "success": "成功",
+    "failure": "失敗"
+  },
+  "altar": {
+    "upgrade": "升級",
+    "starLevel": "星級",
+    "materials": "材料",
+    "probability": "成功率",
+    "enhancement": "強化"
+  },
+  "vip": {
+    "level": "VIP等級",
+    "benefits": "福利",
+    "taxReduction": "稅收減免",
+    "staking": "質押",
+    "rewards": "獎勵"
+  }
+}
