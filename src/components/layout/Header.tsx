@@ -12,6 +12,7 @@ import { getContract } from '../../config/contracts';
 import { RecentTransactions } from '../ui/RecentTransactions';
 import { Icons } from '../ui/icons';
 import { bsc } from 'wagmi/chains';
+import { NetworkSwitcher } from '../ui/NetworkSwitcher';
 
 // (此處省略未變更的 ThemeToggleButton, MenuIcon, XIcon 元件程式碼)
 const ThemeToggleButton: React.FC = () => {
@@ -150,6 +151,7 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
                 
                 <div className="flex items-center gap-1 md:gap-2">
                     <ThemeToggleButton />
+                    <NetworkSwitcher />
                     {isConnected && (
                       <div className="relative" ref={popoverRef}>
                         <button onClick={() => setIsTxPopoverOpen(prev => !prev)} className="p-2 rounded-full text-gray-300 hover:bg-white/20 transition-colors" aria-label="顯示最近交易">
