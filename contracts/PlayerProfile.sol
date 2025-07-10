@@ -15,6 +15,8 @@ contract PlayerProfile is ERC721, Ownable {
     // --- 狀態變數 ---
     IDungeonCore public dungeonCore;
     string public baseURI;
+    // ★ 新增：合約級別元數據 URI
+    string private _contractURI;
 
     struct ProfileData {
         uint256 experience;
@@ -29,6 +31,7 @@ contract PlayerProfile is ERC721, Ownable {
     event ProfileCreated(address indexed player, uint256 indexed tokenId);
     event ExperienceAdded(address indexed player, uint256 indexed tokenId, uint256 amount, uint256 newTotalExperience);
     event BaseURISet(string newBaseURI);
+    event ContractURIUpdated(string newContractURI);
 
     constructor(address initialOwner) ERC721("Dungeon Delvers Profile", "DDPF") Ownable(initialOwner) {
         _nextTokenId = 1;
@@ -74,6 +77,16 @@ contract PlayerProfile is ERC721, Ownable {
     function setBaseURI(string memory _newBaseURI) external onlyOwner {
         baseURI = _newBaseURI;
         emit BaseURISet(_newBaseURI);
+    }
+
+    // ★ 新增：合約級別元數據函式
+    function contractURI() public view returns (string memory) {
+        return _contractURI;
+    }
+
+    function setContractURI(string memory newContractURI) external onlyOwner {
+        _contractURI = newContractURI;
+        emit ContractURIUpdated(newContractURI);
     }
     
     function setDungeonCore(address _address) public onlyOwner {
