@@ -25,18 +25,43 @@ const GET_PLAYER_ASSETS_QUERY = `
   query GetPlayerAssets($owner: ID!) {
     player(id: $owner) {
       id
-      heroes { id tokenId power rarity }
-      relics { id tokenId capacity rarity }
+      heroes { 
+        id 
+        tokenId 
+        power 
+        rarity 
+        contractAddress
+        createdAt
+      }
+      relics { 
+        id 
+        tokenId 
+        capacity 
+        rarity 
+        contractAddress
+        createdAt
+      }
       parties {
         id
         tokenId
         totalPower
         totalCapacity
         partyRarity
+        contractAddress
         heroes { tokenId }
         relics { tokenId }
+        fatigueLevel
+        provisionsRemaining
+        cooldownEndsAt
+        unclaimedRewards
+        createdAt
       }
-      vip { id tokenId stakedAmount }
+      vip { 
+        id 
+        tokenId 
+        stakedAmount 
+        level 
+      }
     }
   }
 `;
@@ -172,7 +197,13 @@ async function parseNfts<T extends { tokenId: any }>(
                 relicIds: anyAsset.relics ? anyAsset.relics.map((r: any) => BigInt(r.tokenId)) : [], 
                 partyRarity: Number(anyAsset.partyRarity) 
             };
-            case 'vip': return { ...baseNft, type, level: Number(findAttr('VIP Level')) };
+            case 'vip': return { 
+                ...baseNft, 
+                type, 
+                level: Number(anyAsset.level || findAttr('VIP Level', 0)),
+                stakedAmount: BigInt(anyAsset.stakedAmount || 0),
+                stakedValueUSD: anyAsset.stakedValueUSD ? BigInt(anyAsset.stakedValueUSD) : undefined
+            };
             default: return null;
         }
     }));

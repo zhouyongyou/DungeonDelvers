@@ -1,15 +1,13 @@
-// DDgraphql/dungeondelvers/src/dungeon-master.ts (Context 移除 + 類型錯誤修正版)
+// DDgraphql/dungeondelvers/src/dungeon-master.ts (統一配置系統版)
 import { BigInt, log } from "@graphprotocol/graph-ts"
 import { ExpeditionFulfilled, PartyRested, ProvisionsBought } from "../generated/DungeonMaster/DungeonMaster"
 import { Party, PlayerProfile } from "../generated/schema"
 import { calculateLevel } from "./utils"
 import { getOrCreatePlayer } from "./common"
-
-// ★ 核心修正：直接在此處硬編碼 Party 合約地址
-let partyContractAddress = "0x4F4796b04e3BD3E8d5B447e32944d8B04eF53EB2"
+import { getPartyContractAddress, createEntityId } from "./config"
 
 export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
-  let partyId = partyContractAddress.toLowerCase() + "-" + event.params.partyId.toString()
+  let partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
   let party = Party.load(partyId)
 
   if (party) {
@@ -39,7 +37,7 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
 }
 
 export function handlePartyRested(event: PartyRested): void {
-  let partyId = partyContractAddress.toLowerCase() + "-" + event.params.partyId.toString()
+  let partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
   let party = Party.load(partyId)
   if (party) {
     party.fatigueLevel = 0
@@ -48,7 +46,7 @@ export function handlePartyRested(event: PartyRested): void {
 }
 
 export function handleProvisionsBought(event: ProvisionsBought): void {
-  let partyId = partyContractAddress.toLowerCase() + "-" + event.params.partyId.toString()
+  let partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
   let party = Party.load(partyId)
   if (party) {
     party.provisionsRemaining = party.provisionsRemaining + event.params.amount.toI32()
