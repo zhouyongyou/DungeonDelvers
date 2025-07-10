@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useAccount } from 'wagmi';
+import { useTranslation } from 'react-i18next';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { EmptyState } from './components/ui/EmptyState';
@@ -24,14 +25,20 @@ const VipPage = lazy(() => import('./pages/VipPage'));
 const ReferralPage = lazy(() => import('./pages/ReferralPage'));
 const CodexPage = lazy(() => import('./pages/CodexPage'));
 
-const PageLoader: React.FC = () => (
-    <div className="flex justify-center items-center h-64">
-        <div className="flex flex-col items-center gap-4">
-            <LoadingSpinner size="h-10 w-10" color="border-indigo-500" />
-            <p className="text-lg text-gray-500 dark:text-gray-400">正在載入頁面資源...</p>
+const PageLoader: React.FC = () => {
+    const { t } = useTranslation('common');
+    
+    return (
+        <div className="flex justify-center items-center h-64">
+            <div className="flex flex-col items-center gap-4">
+                <LoadingSpinner size="h-10 w-10" color="border-indigo-500" />
+                <p className="text-lg text-gray-500 dark:text-gray-400">
+                    {t('messages.loadingResources')}
+                </p>
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const getPageFromHash = (): Page => {
     const hash = window.location.hash.replace('#/', '');
@@ -48,6 +55,7 @@ const getPageFromHash = (): Page => {
 function App() {
   const [activePage, setActivePage] = useState<Page>(getPageFromHash);
   const { isConnected } = useAccount();
+  const { t } = useTranslation('common');
   
   // 這個 Hook 會在背景監聽鏈上事件，並自動更新相關數據
   useContractEvents();
@@ -71,7 +79,11 @@ function App() {
     
     // 如果頁面需要錢包但尚未連接，則顯示提示
     if (!isConnected && pageRequiresWallet.includes(activePage)) {
-        return (<div className="mt-10"><EmptyState message="要使用此功能，請先連接您的錢包。" /></div>);
+        return (
+            <div className="mt-10">
+                <EmptyState message={t('messages.connectWallet')} />
+            </div>
+        );
     }
       
     switch (activePage) {

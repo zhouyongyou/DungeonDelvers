@@ -1,0 +1,47 @@
+{
+  "nft": {
+    "hero": "ヒーロー",
+    "artifact": "アーティファクト",
+    "party": "パーティー",
+    "rarity": {
+      "common": "コモン",
+      "uncommon": "アンコモン",
+      "rare": "レア",
+      "epic": "エピック",
+      "legendary": "レジェンダリー"
+    },
+    "stats": {
+      "level": "レベル",
+      "experience": "経験値",
+      "health": "HP",
+      "attack": "攻撃力",
+      "defense": "防御力",
+      "speed": "素早さ",
+      "luck": "運",
+      "power": "戦闘力"
+    }
+  },
+  "dungeon": {
+    "expedition": "遠征",
+    "explore": "探索",
+    "rewards": "報酬",
+    "cooldown": "クールダウン",
+    "fatigue": "疲労",
+    "success": "成功",
+    "failure": "失敗"
+  },
+  "altar": {
+    "upgrade": "アップグレード",
+    "starLevel": "星レベル",
+    "materials": "素材",
+    "probability": "成功率",
+    "enhancement": "強化"
+  },
+  "vip": {
+    "level": "VIPレベル",
+    "benefits": "特典",
+    "taxReduction": "税金軽減",
+    "staking": "ステーキング",
+    "rewards": "報酬"
+  }
+}

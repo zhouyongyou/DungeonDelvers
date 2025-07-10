@@ -1,0 +1,10 @@
+{
+  "walletNotConnected": "ウォレットが接続されていません",
+  "transactionFailed": "トランザクションが失敗しました",
+  "insufficientFunds": "資金不足",
+  "networkError": "ネットワークエラー",
+  "invalidAddress": "無効なアドレス",
+  "contractError": "コントラクトエラー",
+  "userRejected": "ユーザーがトランザクションを拒否しました",
+  "unknownError": "不明なエラー"
+}

@@ -3,7 +3,9 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAccount, useConnect, useDisconnect, useReadContract } from 'wagmi';
 import { injected } from 'wagmi/connectors';
+import { useTranslation } from 'react-i18next';
 import { ActionButton } from '../ui/ActionButton';
+import { LanguageSelector } from '../ui/LanguageSelector';
 import type { Page } from '../../types/page';
 import { useTheme } from '../../contexts/ThemeContext';
 import logoUrl from '/logo-192x192.png';
@@ -82,6 +84,7 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
   const { address, isConnected, isConnecting } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
+  const { t } = useTranslation(['common', 'navigation']);
 
   const [isTxPopoverOpen, setIsTxPopoverOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -92,23 +95,22 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
 
   const navItems: { key: Page; label: string }[] = useMemo(() => {
       const items: { key: Page; label: string }[] = [
-          { key: 'dashboard', label: '儀表板' },
-          { key: 'profile', label: '個人檔案' },
-          { key: 'mint', label: '鑄造' },
-          { key: 'party', label: '隊伍' },
-          { key: 'dungeon', label: '地下城' },
-          { key: 'altar', label: '升星祭壇' },
-          // ★ 新增：圖鑑頁面連結
-          { key: 'codex', label: '圖鑑' },
-          { key: 'vip', label: 'VIP' },
-          { key: 'referral', label: '邀請' },
-          { key: 'explorer', label: '數據查詢' },
+          { key: 'dashboard', label: t('navigation:menu.dashboard') },
+          { key: 'profile', label: t('navigation:menu.profile') },
+          { key: 'mint', label: t('navigation:menu.mint') },
+          { key: 'party', label: t('navigation:menu.party') },
+          { key: 'dungeon', label: t('navigation:menu.dungeon') },
+          { key: 'altar', label: t('navigation:menu.altar') },
+          { key: 'codex', label: t('navigation:menu.codex') },
+          { key: 'vip', label: t('navigation:menu.vip') },
+          { key: 'referral', label: t('navigation:menu.referral') },
+          { key: 'explorer', label: t('navigation:menu.explorer') },
       ];
       if (isDeveloper) {
-          items.push({ key: 'admin', label: '管理後台' });
+          items.push({ key: 'admin', label: t('navigation:menu.admin') });
       }
       return items;
-  }, [isDeveloper]);
+  }, [isDeveloper, t]);
 
   const handleConnectClick = () => { if (isConnected) disconnect(); else connect({ connector: injected() }); };
 
@@ -143,23 +145,24 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
                            {isConnected && level && (
                                 <span className="font-bold text-yellow-400 bg-black/20 px-2 py-0.5 rounded">LV {level}</span>
                            )}
-                           <span>你的奇幻冒險由此開始</span>
+                           <span>{t('navigation:subtitle')}</span>
                         </div>
                     </div>
                 </div>
                 
                 <div className="flex items-center gap-1 md:gap-2">
+                    <LanguageSelector />
                     <ThemeToggleButton />
                     {isConnected && (
                       <div className="relative" ref={popoverRef}>
-                        <button onClick={() => setIsTxPopoverOpen(prev => !prev)} className="p-2 rounded-full text-gray-300 hover:bg-white/20 transition-colors" aria-label="顯示最近交易">
+                        <button onClick={() => setIsTxPopoverOpen(prev => !prev)} className="p-2 rounded-full text-gray-300 hover:bg-white/20 transition-colors" aria-label={t('navigation:recentTransactions')}>
                           <Icons.History className="h-5 w-5" />
                         </button>
                         {isTxPopoverOpen && <RecentTransactions />}
                       </div>
                     )}
                     <ActionButton onClick={handleConnectClick} isLoading={isConnecting} disabled={isConnecting} className="px-3 py-2 md:px-4 rounded-full text-sm w-32 md:w-36">
-                      {isConnected && address ? `${address.substring(0, 4)}...${address.substring(address.length - 4)}` : '連接錢包'}
+                      {isConnected && address ? `${address.substring(0, 4)}...${address.substring(address.length - 4)}` : t('common:buttons.connect')}
                     </ActionButton>
                     <div className="md:hidden">
                         <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 rounded-full text-gray-300 hover:bg-white/20 transition-colors">
@@ -181,7 +184,7 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
         {isMenuOpen && (
             <div className="md:hidden fixed inset-0 bg-[#1F1D36]/95 backdrop-blur-sm z-50 flex flex-col p-4 animate-zoom-in">
                 <div className="flex justify-between items-center mb-8">
-                    <h2 className="text-2xl font-bold text-white">選單</h2>
+                    <h2 className="text-2xl font-bold text-white">{t('navigation:mobileMenu')}</h2>
                     <button onClick={() => setIsMenuOpen(false)} className="p-2 text-gray-300">
                         <XIcon />
                     </button>
