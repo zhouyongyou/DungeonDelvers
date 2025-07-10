@@ -2,83 +2,86 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
-  fallback?: ReactNode;
 }
 
 interface State {
   hasError: boolean;
-  error: Error | null;
-  errorInfo: ErrorInfo | null;
+  error?: Error;
+  errorInfo?: ErrorInfo;
 }
 
-class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
+export class ErrorBoundary extends Component<Props, State> {
+  public state: State = {
+    hasError: false
+  };
+
+  public static getDerivedStateFromError(error: Error): State {
+    // 更新 state 使得下一次渲染能够显示降级后的 UI
+    return { hasError: true, error };
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error, errorInfo: null };
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    this.setState({
+      error,
+      errorInfo
+    });
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Error caught by boundary:', error, errorInfo);
-    this.setState({ error, errorInfo });
-    
-    // 這裡可以發送錯誤報告到監控服務
-    // 例如: errorReportingService.captureException(error, errorInfo);
-  }
-
-  render() {
+  public render() {
     if (this.state.hasError) {
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
-
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-          <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 dark:bg-red-900 rounded-full">
-              <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
+        <div className="card-bg p-6 rounded-xl shadow-lg max-w-2xl mx-auto">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-red-400 mb-4">😵 哎呀！出了點問題</h2>
+            <p className="text-gray-300 mb-6">應用程式遇到了一個錯誤，請稍後再試。</p>
             
-            <h2 className="mt-4 text-xl font-semibold text-gray-900 dark:text-white text-center">
-              糟糕！出現了錯誤
-            </h2>
-            
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 text-center">
-              應用程式遇到了意外錯誤。請嘗試重新整理頁面，或聯繫技術支援。
-            </p>
-            
-            <div className="mt-6 flex flex-col space-y-3">
-              <button
-                onClick={() => window.location.reload()}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              >
-                重新整理頁面
-              </button>
-              
-              <button
-                onClick={() => this.setState({ hasError: false, error: null, errorInfo: null })}
-                className="w-full px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-              >
-                重試
-              </button>
-            </div>
-            
+            {/* 错误详情 - 仅在开发环境显示 */}
             {process.env.NODE_ENV === 'development' && this.state.error && (
-              <details className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-md">
-                <summary className="cursor-pointer text-sm font-medium text-red-800 dark:text-red-400">
-                  錯誤詳情 (僅開發環境)
+              <details className="text-left bg-gray-900 p-4 rounded-lg mb-4">
+                <summary className="cursor-pointer text-yellow-400 mb-2">
+                  開發者除錯資訊 (點擊展開)
                 </summary>
-                <pre className="mt-2 text-xs text-red-700 dark:text-red-300 overflow-auto">
-                  {this.state.error.toString()}
-                  {this.state.errorInfo?.componentStack}
-                </pre>
+                <div className="text-xs text-gray-400 font-mono overflow-auto">
+                  <strong>錯誤訊息:</strong>
+                  <pre className="text-red-300 mb-2">{this.state.error.message}</pre>
+                  <strong>錯誤堆疊:</strong>
+                  <pre className="text-gray-300">{this.state.error.stack}</pre>
+                  {this.state.errorInfo && (
+                    <>
+                      <strong>組件堆疊:</strong>
+                      <pre className="text-blue-300">{this.state.errorInfo.componentStack}</pre>
+                    </>
+                  )}
+                </div>
               </details>
             )}
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={() => window.location.reload()}
+                className="btn-primary px-6 py-3"
+              >
+                🔄 重新載入頁面
+              </button>
+              <button
+                onClick={() => this.setState({ hasError: false, error: undefined, errorInfo: undefined })}
+                className="btn-secondary px-6 py-3"
+              >
+                🔧 重試
+              </button>
+            </div>
+            
+            {/* 帮助信息 */}
+            <div className="mt-6 text-sm text-gray-400">
+              <p>如果問題持續存在，請檢查：</p>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>網路連接是否正常</li>
+                <li>錢包是否正確連接到 BSC 主網</li>
+                <li>是否具有管理員權限</li>
+                <li>瀏覽器控制台是否有錯誤訊息</li>
+              </ul>
+            </div>
           </div>
         </div>
       );
@@ -87,5 +90,3 @@ class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
-
-export default ErrorBoundary;
