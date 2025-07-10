@@ -2,10 +2,7 @@ import { PartyCreated, Transfer } from "../generated/Party/Party"
 import { Party, Hero, Relic } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { log } from "@graphprotocol/graph-ts"
-
-// ★ 核心修正：直接在此處硬編碼合約地址
-let heroContractAddress = "0x347752f8166D270EDE722C3F31A10584bC2867b3"
-let relicContractAddress = "0x06994Fb1eC1Ba0238d8CA9539dAbdbEF090A5b53"
+import { getHeroContractAddress, getRelicContractAddress, createEntityId } from "./config"
 
 export function handlePartyCreated(event: PartyCreated): void {
     // 參數驗證
@@ -43,10 +40,11 @@ export function handlePartyCreated(event: PartyCreated): void {
     party.unclaimedRewards = event.params.totalPower 
     party.createdAt = event.block.timestamp
 
-    // 批量處理英雄關聯
+    // 批量處理英雄關聯 - 使用配置系統
     let heroIds: string[] = []
+    let heroContractAddress = getHeroContractAddress()
     for (let i = 0; i < event.params.heroIds.length; i++) {
-        let heroId = heroContractAddress.toLowerCase().concat("-").concat(event.params.heroIds[i].toString())
+        let heroId = createEntityId(heroContractAddress, event.params.heroIds[i].toString())
         
         // 驗證英雄是否存在
         let hero = Hero.load(heroId);
@@ -58,10 +56,11 @@ export function handlePartyCreated(event: PartyCreated): void {
     }
     party.heroes = heroIds
 
-    // 批量處理聖物關聯
+    // 批量處理聖物關聯 - 使用配置系統
     let relicIds: string[] = []
+    let relicContractAddress = getRelicContractAddress()
     for (let i = 0; i < event.params.relicIds.length; i++) {
-        let relicId = relicContractAddress.toLowerCase().concat("-").concat(event.params.relicIds[i].toString())
+        let relicId = createEntityId(relicContractAddress, event.params.relicIds[i].toString())
         
         // 驗證聖物是否存在
         let relic = Relic.load(relicId);

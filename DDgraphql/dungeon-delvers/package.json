@@ -8,13 +8,16 @@
     "create-local": "graph create --node http://localhost:8020/ dungeon-delvers",
     "remove-local": "graph remove --node http://localhost:8020/ dungeon-delvers",
     "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 dungeon-delvers",
-    "test": "graph test"
+    "test": "graph test",
+    "sync-addresses": "node scripts/sync-addresses.js",
+    "prebuild": "npm run sync-addresses"
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "0.97.1",
     "@graphprotocol/graph-ts": "^0.38.1"
   },
   "devDependencies": {
-    "matchstick-as": "0.6.0"
+    "matchstick-as": "0.6.0",
+    "js-yaml": "^4.1.0"
   }
 }
