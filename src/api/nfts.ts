@@ -3,9 +3,9 @@
 import { createPublicClient, http, type Address } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { Buffer } from 'buffer';
-import { getContract, contracts, type ContractName } from '../config/contracts';
-import { nftMetadataCache } from '../cache/nftMetadataCache';
-import { CacheMetrics } from '../cache/cacheStrategies';
+import { getContract, contracts, type ContractName } from '../config/contracts.js';
+import { nftMetadataCache } from '../cache/nftMetadataCache.js';
+import { CacheMetrics } from '../cache/cacheStrategies.js';
 import type { 
     AllNftCollections, 
     BaseNft, 
