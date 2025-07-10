@@ -27,6 +27,7 @@ interface IDungeonCore {
     function vipStaking() external view returns (address);
     function oracle() external view returns (address);
     function usdToken() external view returns (address);
+    function soulShardTokenAddress() external view returns (address);
     function dungeonMaster() external view returns (address);
     function altarOfAscension() external view returns (address);
     function heroContract() external view returns (address);
