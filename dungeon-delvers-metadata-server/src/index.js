@@ -255,6 +255,14 @@ app.get('/api/vipstaking/:tokenId', handleRequest(async (req, res) => {
         // ★ 優化：如果 The Graph 找不到資料，拋出特定錯誤
         if (!vip) throw new Error(`VIP data not found in The Graph for owner ${owner}`);
 
+        // ★ 修正：從智能合約讀取實際的 VIP 等級，而不是依賴 GraphQL 數據
+        const vipLevel = await publicClient.readContract({
+            address: contractAddresses.vipStaking,
+            abi: abis.vipStaking,
+            functionName: 'getVipLevel',
+            args: [owner]
+        });
+
         const stakedValueUSD = await publicClient.readContract({
             address: contractAddresses.oracle,
             abi: abis.oracle,
@@ -262,14 +270,14 @@ app.get('/api/vipstaking/:tokenId', handleRequest(async (req, res) => {
             args: [contractAddresses.soulShard, BigInt(vip.stakedAmount)]
         });
 
-        const svgString = generateVipSVG({ level: vip.level, stakedValueUSD }, BigInt(tokenId));
+        const svgString = generateVipSVG({ level: Number(vipLevel), stakedValueUSD }, BigInt(tokenId));
         const image_data = Buffer.from(svgString).toString('base64');
         return {
             name: `Dungeon Delvers VIP #${tokenId}`,
             description: "A soul-bound VIP card that provides in-game bonuses based on the staked value.",
             image: `data:image/svg+xml;base64,${image_data}`,
             attributes: [
-                { trait_type: "Level", value: vip.level },
+                { trait_type: "Level", value: Number(vipLevel) },
                 { display_type: "number", trait_type: "Staked Value (USD)", value: Number(formatEther(stakedValueUSD)) },
             ],
         };
