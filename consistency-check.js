@@ -120,11 +120,11 @@ try {
 console.log('\n📋 檢查合約地址參照:');
 
 const expectedAddresses = {
-  hero: '0x347752f8166D270EDE722C3F31A10584bC2867b3',
-  relic: '0x06994Fb1eC1Ba0238d8CA9539dAbdbEF090A5b53',
-  party: '0x4F4796b04e3BD3E8d5B447e32944d8B04eF53EB2',
-  playerProfile: '0xE51ae47bf0f9958a0b35f1830675d88C2c7F5232',
-  vipStaking: '0x8A9943Bb231eC9131d750c7bcf8A4Ae36bd4f0F8'
+      hero: '0x2Cf5429dDbd2Df730a6668b50200233c76c1116F',
+  relic: '0x548eA33d0deC74bBE9a3F0D1B5E4C660bf59E5A5',
+  party: '0x78dBA7671753191FFeeBEEed702Aab4F2816d70D',
+  playerProfile: '0x98708fFC8afaC1289639C797f5A6F095217FAFB8',
+  vipStaking: '0xf1F84F3F3632fbB9be2F3d132C3660100d2C98e2'
 };
 
 try {
