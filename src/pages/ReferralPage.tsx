@@ -207,6 +207,8 @@ const ReferralPage: React.FC = () => {
                 <p className="text-sm text-gray-400 mb-4">分享您的專屬連結，當被邀請的好友從金庫提領獎勵時，您將獲得他們提領金額 5% 的佣金作為獎勵！</p>
                 <div className="flex flex-col sm:flex-row items-center gap-2 bg-black/20 p-2 rounded-lg">
                     <input 
+                        id="referral-link"
+                        name="referral-link"
                         type="text" 
                         readOnly 
                         value={referralLink} 
@@ -256,6 +258,8 @@ const ReferralPage: React.FC = () => {
                             <p className="text-sm text-gray-400 mb-4">如果您是透過好友的連結來到這裡，請在此輸入他的錢包地址以綁定邀請關係。此操作只能進行一次。</p>
                             <div className="flex flex-col sm:flex-row items-center gap-2">
                                 <input 
+                                    id="referrer-address"
+                                    name="referrer-address"
                                     type="text" 
                                     value={referrerInput} 
                                     onChange={(e) => setReferrerInput(e.target.value)} 

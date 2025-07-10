@@ -83,6 +83,8 @@ const AddressSettingRow: React.FC<AddressSettingRowProps> = ({
       
       <div className="flex gap-2 pt-2">
         <input
+          id={`address-setting-${title.replace(/\s+/g, '-')}`}
+          name={`address-setting-${title.replace(/\s+/g, '-')}`}
           type="text"
           value={inputValue}
           onChange={(e) => onInputChange(e.target.value)}

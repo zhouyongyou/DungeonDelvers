@@ -133,6 +133,8 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
             </summary>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end pt-2">
               <input
+                id={`rule-${ruleId}-materials`}
+                name={`rule-${ruleId}-materials`}
                 type="text"
                 value={inputs.materialsRequired}
                 onChange={e => handleInputChange(ruleId, 'materialsRequired', e.target.value)}
@@ -140,6 +142,8 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
                 className="input-field"
               />
               <input
+                id={`rule-${ruleId}-fee`}
+                name={`rule-${ruleId}-fee`}
                 type="text"
                 value={inputs.nativeFee}
                 onChange={e => handleInputChange(ruleId, 'nativeFee', e.target.value)}
@@ -147,6 +151,8 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
                 className="input-field"
               />
               <input
+                id={`rule-${ruleId}-great-success`}
+                name={`rule-${ruleId}-great-success`}
                 type="text"
                 value={inputs.greatSuccessChance}
                 onChange={e => handleInputChange(ruleId, 'greatSuccessChance', e.target.value)}
@@ -154,6 +160,8 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
                 className="input-field"
               />
               <input
+                id={`rule-${ruleId}-success`}
+                name={`rule-${ruleId}-success`}
                 type="text"
                 value={inputs.successChance}
                 onChange={e => handleInputChange(ruleId, 'successChance', e.target.value)}
@@ -161,6 +169,8 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
                 className="input-field"
               />
               <input
+                id={`rule-${ruleId}-partial-fail`}
+                name={`rule-${ruleId}-partial-fail`}
                 type="text"
                 value={inputs.partialFailChance}
                 onChange={e => handleInputChange(ruleId, 'partialFailChance', e.target.value)}

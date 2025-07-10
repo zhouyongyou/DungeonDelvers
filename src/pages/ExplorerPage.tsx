@@ -101,6 +101,8 @@ const QuerySection: React.FC<QuerySectionProps> = ({ title, inputType, inputPlac
             <h3 className="text-xl font-bold text-gray-200 mb-4">{title}</h3>
             <div className="flex gap-2 mb-4">
                 <input
+                    id={`explorer-${title.replace(/\s+/g, '-')}`}
+                    name={`explorer-${title.replace(/\s+/g, '-')}`}
                     type={inputType}
                     value={inputValue}
                     onChange={e => setInputValue(e.target.value)}
