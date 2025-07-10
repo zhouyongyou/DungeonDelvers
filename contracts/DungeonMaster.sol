@@ -1,11 +1,10 @@
-// DungeonMaster_NoVRF.sol (已修正)
+// contracts/DungeonMaster.sol (錢包支付修正版)
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces.sol";
 
@@ -36,7 +35,6 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
     event RestCostDivisorSet(uint256 newDivisor);
     event DungeonSet(uint256 indexed dungeonId, uint256 requiredPower, uint256 rewardAmountUSD, uint8 baseSuccessRate);
 
-
     modifier onlyPartyOwner(uint256 _partyId) {
         require(IParty(dungeonCore.partyContract()).ownerOf(_partyId) == msg.sender, "DM: Not party owner");
         _;
@@ -54,22 +52,13 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
         require(_amount > 0, "DM: Amount must be > 0");
         require(address(dungeonCore) != address(0), "DM: DungeonCore not set");
 
-        // 計算總成本
         uint256 totalCostUSD = provisionPriceUSD * _amount;
         uint256 requiredSoulShard = dungeonCore.getSoulShardAmountForUSD(totalCostUSD);
         
-        // 獲取SoulShard代幣合約地址
-        address soulShardToken = dungeonCore.soulShardTokenAddress();
-        require(soulShardToken != address(0), "DM: SoulShard token not set");
+        // 從玩家錢包轉移代幣到本合約
+        IERC20 soulShardToken = IERC20(dungeonCore.soulShardTokenAddress());
+        soulShardToken.safeTransferFrom(msg.sender, address(this), requiredSoulShard);
         
-        // 檢查用戶餘額是否足夠
-        IERC20 soulShard = IERC20(soulShardToken);
-        require(soulShard.balanceOf(msg.sender) >= requiredSoulShard, "DM: Insufficient SoulShard balance");
-        
-        // 直接從用戶錢包轉賬SoulShard到合約
-        soulShard.safeTransferFrom(msg.sender, address(this), requiredSoulShard);
-        
-        // 更新隊伍儲備狀態
         IDungeonStorage.PartyStatus memory status = dungeonStorage.getPartyStatus(_partyId);
         status.provisionsRemaining += _amount;
         dungeonStorage.setPartyStatus(_partyId, status);
@@ -128,7 +117,6 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
         emit ExpeditionFulfilled(_requester, _partyId, success, reward, expGained);
     }
 
-    // ★ 核心修正：移除 view 關鍵字，因為此函式會透過 try/catch 呼叫一個會修改狀態的函式
     function _handleExpeditionOutcome(address _requester, uint256 _dungeonId, bool _success) internal returns (uint256 reward, uint256 expGained) {
         if (_success) {
             IDungeonStorage.Dungeon memory dungeon = dungeonStorage.getDungeon(_dungeonId);
@@ -167,23 +155,15 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
 
         uint256 costInSoulShard = dungeonCore.getSoulShardAmountForUSD(costInUSD);
         
-        // 獲取SoulShard代幣合約地址
-        address soulShardToken = dungeonCore.soulShardTokenAddress();
-        require(soulShardToken != address(0), "DM: SoulShard token not set");
-        
-        // 檢查用戶餘額是否足夠
-        IERC20 soulShard = IERC20(soulShardToken);
-        require(soulShard.balanceOf(msg.sender) >= costInSoulShard, "DM: Insufficient SoulShard balance");
-        
-        // 直接從用戶錢包轉賬SoulShard到合約
-        soulShard.safeTransferFrom(msg.sender, address(this), costInSoulShard);
+        // ★ 核心修正 #4：休息也應該從錢包扣款
+        IERC20 soulShardToken = IERC20(dungeonCore.soulShardTokenAddress());
+        soulShardToken.safeTransferFrom(msg.sender, address(this), costInSoulShard);
         
         status.fatigueLevel = 0;
         dungeonStorage.setPartyStatus(_partyId, status);
         emit PartyRested(_partyId, costInSoulShard);
     }
 
-    // --- 輔助函式 ---
     function calculateExperience(uint256 dungeonId, bool success) internal pure returns (uint256) {
         uint256 baseExp = dungeonId * 5 + 20;
         return success ? baseExp : baseExp / 4;
@@ -255,15 +235,12 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
         (bool success, ) = owner().call{value: address(this).balance}("");
         require(success, "DM: Native withdraw failed");
     }
-    
-    function withdrawSoulShardTokens(uint256 _amount) external onlyOwner {
-        require(address(dungeonCore) != address(0), "DM: DungeonCore not set");
-        address soulShardToken = dungeonCore.soulShardTokenAddress();
-        require(soulShardToken != address(0), "DM: SoulShard token not set");
-        
-        IERC20 soulShard = IERC20(soulShardToken);
-        require(soulShard.balanceOf(address(this)) >= _amount, "DM: Insufficient contract balance");
-        
-        soulShard.safeTransfer(owner(), _amount);
+
+    function withdrawSoulShard() external onlyOwner {
+        IERC20 token = IERC20(dungeonCore.soulShardTokenAddress());
+        uint256 balance = token.balanceOf(address(this));
+        if (balance > 0) {
+            token.safeTransfer(owner(), balance);
+        }
     }
 }
