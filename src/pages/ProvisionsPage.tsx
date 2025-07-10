@@ -6,7 +6,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatEther, maxUint256 } from 'viem';
 
 import { fetchAllOwnedNfts } from '../api/nfts';
-import { getQueryConfig } from '../cache/cacheStrategies';
 import { getContract } from '../config/contracts';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
@@ -26,10 +25,10 @@ type PaymentSource = 'wallet' | 'vault';
 const useProvisionsLogic = (quantity: number, paymentSource: PaymentSource) => {
     const { address, chainId } = useAccount();
 
-    const dungeonMasterContract = getContract(chainId as any, 'dungeonMaster');
-    const dungeonCoreContract = getContract(chainId as any, 'dungeonCore');
-    const soulShardContract = getContract(chainId as any, 'soulShard');
-    const playerVaultContract = getContract(chainId as any, 'playerVault');
+    const dungeonMasterContract = getContract(chainId || 56, 'dungeonMaster');
+    const dungeonCoreContract = getContract(chainId || 56, 'dungeonCore');
+    const soulShardContract = getContract(chainId || 56, 'soulShard');
+    const playerVaultContract = getContract(chainId || 56, 'playerVault');
 
     // 為了簡化，我們暫時保留 RPC 呼叫來獲取價格。
     // 在一個完整的重構中，這會被一個 GraphQL 查詢取代。
@@ -53,7 +52,7 @@ const useProvisionsLogic = (quantity: number, paymentSource: PaymentSource) => {
     const { data: allowance, refetch: refetchAllowance } = useReadContract({
         ...soulShardContract,
         functionName: 'allowance',
-        args: [address!, dungeonMasterContract?.address!],
+        args: [address!, dungeonMasterContract?.address as `0x${string}`],
         query: { enabled: !!address && !!soulShardContract && !!dungeonMasterContract && paymentSource === 'wallet' },
     });
 
@@ -92,10 +91,7 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
     const [quantity, setQuantity] = useState<number>(1);
     const [paymentSource, setPaymentSource] = useState<PaymentSource>('wallet');
 
-    if (!chainId || chainId !== bsc.id) {
-        return <div className="p-4 text-center text-gray-400">請連接到支援的網路。</div>;
-    }
-
+    // Move all hooks before early returns
     const { 
         isLoading, totalRequiredAmount, balance, needsApproval, 
         dungeonMasterContract, soulShardContract, refetchAllowance 
@@ -104,13 +100,23 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
     const { data: nfts, isLoading: isLoadingNfts } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
         queryFn: () => fetchAllOwnedNfts(address!, chainId),
-        
-        // 🔥 使用统一的NFT缓存策略  
-        ...getQueryConfig('USER_NFTS'),
         enabled: !!address,
+        
+        // 🔥 NFT缓存策略 - 内联配置以避免部署问题
+        staleTime: 1000 * 60 * 30, // 30分钟内新鲜
+        gcTime: 1000 * 60 * 60 * 2, // 2小时垃圾回收
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: 'always',
+        retry: 2,
     });
 
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
+
+    // Early returns after all hooks
+    if (!chainId || chainId !== bsc.id) {
+        return <div className="p-4 text-center text-gray-400">請連接到支援的網路。</div>;
+    }
 
     const handlePurchase = async () => {
         if (!selectedPartyId || !dungeonMasterContract) return;
@@ -131,8 +137,9 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
             // 成功後，手動觸發相關查詢的刷新
             queryClient.invalidateQueries({ queryKey: ['playerParties', address, chainId] });
             onPurchaseSuccess?.();
-        } catch (e: any) {
-            if (!e.message.includes('User rejected the request')) showToast(e.shortMessage || "購買失敗", "error");
+        } catch (error: unknown) {
+            const e = error as { message?: string; shortMessage?: string };
+            if (!e.message?.includes('User rejected the request')) showToast(e.shortMessage || "購買失敗", "error");
         }
     };
     
@@ -143,8 +150,9 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
             addTransaction({ hash, description: '批准儲備合約' });
             await refetchAllowance();
             showToast('授權成功！', 'success');
-        } catch (e: any) {
-            if (!e.message.includes('User rejected the request')) showToast(e.shortMessage || "授權失敗", "error");
+        } catch (error: unknown) {
+            const e = error as { message?: string; shortMessage?: string };
+            if (!e.message?.includes('User rejected the request')) showToast(e.shortMessage || "授權失敗", "error");
         }
     };
     
