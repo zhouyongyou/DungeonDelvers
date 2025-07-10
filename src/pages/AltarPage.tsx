@@ -55,16 +55,16 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
 
             const contractAddress = (nftType === 'hero' ? getContract(bsc.id, 'hero') : getContract(bsc.id, 'relic'))!.address;
 
-            return assets.map((asset: any) => ({
+            return assets.map((asset: { tokenId: string; [key: string]: unknown }) => ({
                 id: BigInt(asset.tokenId),
-                tokenId: BigInt(asset.tokenId),
                 name: `${nftType === 'hero' ? '英雄' : '聖物'} #${asset.tokenId}`,
                 image: '',
                 description: '',
                 attributes: [],
                 contractAddress: contractAddress,
                 type: nftType,
-                ...asset
+                ...asset,
+                tokenId: BigInt(asset.tokenId)
             }));
         },
         enabled: !!address && chainId === bsc.id && rarity > 0,
@@ -73,7 +73,7 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
 };
 
 // 獨立的 GraphQL 請求函式
-const fetchFromGraph = async (query: string, variables: Record<string, any>) => {
+const fetchFromGraph = async (query: string, variables: Record<string, unknown>) => {
     if (!THE_GRAPH_API_URL) throw new Error("The Graph API URL is not configured.");
     const response = await fetch(THE_GRAPH_API_URL, {
         method: 'POST',
@@ -119,7 +119,7 @@ const UpgradeResultModal: React.FC<{ result: UpgradeOutcome | null; onClose: () 
     );
 };
 
-const UpgradeInfoCard: React.FC<{ rule: any; isLoading: boolean; }> = ({ rule, isLoading }) => {
+const UpgradeInfoCard: React.FC<{ rule: { materialsRequired: number; nativeFee: bigint; greatSuccessChance: number; successChance: number; partialFailChance: number } | null; isLoading: boolean; }> = ({ rule, isLoading }) => {
   if (isLoading) return <div className="card-bg p-4 rounded-xl animate-pulse h-48"><LoadingSpinner /></div>;
   if (!rule || !rule.materialsRequired) return <div className="card-bg p-4 rounded-xl text-center text-gray-500">請先選擇要升級的星級</div>;
   const totalChance = rule.greatSuccessChance + rule.successChance + rule.partialFailChance;
@@ -155,10 +155,7 @@ const AltarPage: React.FC = () => {
     const [selectedNfts, setSelectedNfts] = useState<bigint[]>([]);
     const [upgradeResult, setUpgradeResult] = useState<UpgradeOutcome | null>(null);
 
-    if (!chainId || chainId !== bsc.id) {
-        return <section><h2 className="page-title">升星祭壇</h2><div className="card-bg p-10 rounded-xl text-center text-gray-400"><p>請先連接到支援的網路 (BSC) 以使用升星祭壇。</p></div></section>;
-    }
-
+    // Always call hooks unconditionally - move early returns after all hooks
     const altarContract = getContract(bsc.id, 'altarOfAscension');
     const heroContract = getContract(bsc.id, 'hero');
     const relicContract = getContract(bsc.id, 'relic');
@@ -169,7 +166,7 @@ const AltarPage: React.FC = () => {
 
     const { data: upgradeRulesData, isLoading: isLoadingRules } = useReadContracts({
         contracts: [1, 2, 3, 4].map(r => ({ ...altarContract, functionName: 'upgradeRules', args: [r] })),
-        query: { enabled: !!altarContract },
+        query: { enabled: !!altarContract && chainId === bsc.id },
     });
     
     const currentRule = useMemo(() => {
@@ -192,7 +189,10 @@ const AltarPage: React.FC = () => {
     };
     
     const resetSelections = () => setSelectedNfts([]);
-    useEffect(resetSelections, [nftType, rarity]);
+    
+    useEffect(() => {
+        resetSelections();
+    }, [nftType, rarity]);
 
     const handleUpgrade = async () => {
         if (!currentRule || !altarContract || !publicClient) return;
@@ -212,7 +212,7 @@ const AltarPage: React.FC = () => {
             const decodedUpgradeLog = decodeEventLog({ abi: altarOfAscensionABI, ...upgradeLog });
             if (decodedUpgradeLog.eventName !== 'UpgradeProcessed') throw new Error("事件名稱不符");
 
-            const outcome = Number((decodedUpgradeLog.args as any).outcome);
+            const outcome = Number(((decodedUpgradeLog.args as unknown) as Record<string, unknown>).outcome);
             const tokenContractAbi = nftType === 'hero' ? heroABI : relicABI;
             const mintEventName = nftType === 'hero' ? 'HeroMinted' : 'RelicMinted';
             
@@ -221,11 +221,11 @@ const AltarPage: React.FC = () => {
                 .map(log => { try { return decodeEventLog({ abi: tokenContractAbi, ...log }); } catch { return null; } })
                 .filter((log): log is NonNullable<typeof log> => log !== null && log.eventName === mintEventName);
 
-            const newNfts: AnyNft[] = await Promise.all(mintedLogs.map(async (log: any) => {
-                const tokenId = log.args.tokenId;
+            const newNfts: AnyNft[] = await Promise.all(mintedLogs.map(async (log) => {
+                const tokenId = ((log.args as unknown) as Record<string, unknown>).tokenId as bigint;
                 const tokenUri = await publicClient.readContract({ address: tokenContract.address, abi: tokenContract.abi as Abi, functionName: 'tokenURI', args: [tokenId] }) as string;
                 const metadata = await fetchMetadata(tokenUri);
-                const findAttr = (trait: string, defaultValue: any = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
+                const findAttr = (trait: string, defaultValue = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
                 if (nftType === 'hero') return { ...metadata, id: tokenId, type: 'hero', contractAddress: tokenContract.address, power: Number(findAttr('Power')), rarity: Number(findAttr('Rarity')) };
                 return { ...metadata, id: tokenId, type: 'relic', contractAddress: tokenContract.address, capacity: Number(findAttr('Capacity')), rarity: Number(findAttr('Rarity')) };
             }));
@@ -238,12 +238,18 @@ const AltarPage: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
             queryClient.invalidateQueries({ queryKey: ['altarMaterials'] });
 
-        } catch (e: any) {
-            if (!e.message.includes('User rejected the request')) showToast(e.shortMessage || "升星失敗", "error");
+        } catch (e) {
+            const error = e as { message: string; shortMessage?: string };
+            if (!error.message.includes('User rejected the request')) showToast(error.shortMessage || "升星失敗", "error");
         }
     };
 
     const isLoading = isLoadingNfts || isLoadingRules;
+
+    // Move early return after all hooks
+    if (!chainId || chainId !== bsc.id) {
+        return <section><h2 className="page-title">升星祭壇</h2><div className="card-bg p-10 rounded-xl text-center text-gray-400"><p>請先連接到支援的網路 (BSC) 以使用升星祭壇。</p></div></section>;
+    }
 
     return (
         <section className="space-y-8">

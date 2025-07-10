@@ -12,7 +12,7 @@ import { bsc } from 'wagmi/chains';
 
 type DecodedLogWithArgs = {
     eventName: string;
-    args: any;
+    args: Record<string, unknown>;
 };
 
 // ★★★ 網路優化：定義一個較長的輪詢間隔，減少 RPC 請求壓力 ★★★
@@ -47,27 +47,32 @@ function createContractEventHandler(
 
         logs.forEach(log => {
             try {
-                const decodedLog = decodeEventLog({ abi: contract.abi as Abi, ...log }) as DecodedLogWithArgs;
+                const decodedLog = decodeEventLog({ abi: contract.abi as Abi, ...log });
                 
                 // 只處理我們感興趣的事件
                 if (decodedLog.eventName === eventName) {
-                    const args = decodedLog.args;
+                    const args = (decodedLog.args as unknown) as Record<string, unknown>;
+                    
+                    const typedLog: DecodedLogWithArgs = {
+                        eventName: decodedLog.eventName,
+                        args: args
+                    };
 
                     // 案例1: 隊伍特定事件 (如遠征完成)，只處理屬於玩家的隊伍事件
                     if (checkPartyOwnership) {
-                        if (args.partyId && myPartyIds.includes(args.partyId)) {
-                            callback(decodedLog);
+                        if (args.partyId && myPartyIds.includes(args.partyId as bigint)) {
+                            callback(typedLog);
                         }
                         return;
                     }
 
                     // 案例2: 通用事件，檢查事件參數中是否包含玩家地址
                     const userField = args.owner || args.player || args.user;
-                    if (userField && userField.toLowerCase() === userAddress.toLowerCase()) {
-                        callback(decodedLog);
+                    if (userField && userField.toString().toLowerCase() === userAddress.toLowerCase()) {
+                        callback(typedLog);
                     }
                 }
-            } catch (e) {
+            } catch {
                 // 忽略解析錯誤，因為一個日誌可能匹配多個事件定義
             }
         });
@@ -86,11 +91,6 @@ export const useContractEvents = () => {
     const { showExpeditionResult } = useExpeditionResult();
     const queryClient = useQueryClient();
     
-    // 確保只在支援的鏈上運行
-    if (!chainId || (chainId !== bsc.id)) {
-        return; 
-    }
-
     // --- 精準的 Query Invalidation 函式 ---
     
     // 當 NFT 資產或代幣餘額發生變化時呼叫
@@ -109,64 +109,174 @@ export const useContractEvents = () => {
     }, [address, chainId, queryClient, showToast]);
 
     // 當金庫存入或取出時呼叫
-    const invalidateVaultAndTax = () => {
+    const invalidateVaultAndTax = useCallback(() => {
         showToast('金庫資料已更新！', 'success');
         // 刷新金庫資訊、稅率參數和代幣餘額
         queryClient.invalidateQueries({ queryKey: ['playerInfo', address, chainId] });
         queryClient.invalidateQueries({ queryKey: ['taxParams', address, chainId] });
         queryClient.invalidateQueries({ queryKey: ['balance', address, chainId] });
-    };
+    }, [address, chainId, queryClient, showToast]);
     
     // 當經驗值增加時呼叫
-    const invalidateProfile = () => {
+    const invalidateProfile = useCallback(() => {
         showToast('經驗值已更新！', 'info');
         // 刷新玩家檔案相關的所有數據
         queryClient.invalidateQueries({ queryKey: ['profileTokenOf', address] });
         queryClient.invalidateQueries({ queryKey: ['playerExperience'] });
         queryClient.invalidateQueries({ queryKey: ['getLevel', address] });
-    };
+    }, [address, queryClient, showToast]);
     
     // 當隊伍狀態 (儲備/冷卻/疲勞) 變化時呼叫
-    const invalidatePartyStatus = (partyId?: bigint) => {
+    const invalidatePartyStatus = useCallback((partyId?: bigint) => {
         // 精準地只刷新特定隊伍的狀態
         queryClient.invalidateQueries({ queryKey: ['getPartyStatus', partyId?.toString()] });
-    };
+    }, [queryClient]);
 
     // --- 合約實例 ---
-    const heroContract = getContract(chainId, 'hero');
-    const relicContract = getContract(chainId, 'relic');
-    const partyContract = getContract(chainId, 'party');
-    const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
-    const playerVaultContract = getContract(chainId, 'playerVault');
-    const altarOfAscensionContract = getContract(chainId, 'altarOfAscension');
-    const playerProfileContract = getContract(chainId, 'playerProfile');
+    const heroContract = getContract(bsc.id, 'hero');
+    const relicContract = getContract(bsc.id, 'relic');
+    const partyContract = getContract(bsc.id, 'party');
+    const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
+    const playerVaultContract = getContract(bsc.id, 'playerVault');
+    const altarOfAscensionContract = getContract(bsc.id, 'altarOfAscension');
+    const playerProfileContract = getContract(bsc.id, 'playerProfile');
 
     // --- 事件監聽設定 (已加入 pollingInterval) ---
     
     // NFT 鑄造/創建事件 -> 刷新 NFT 列表和餘額
-    useWatchContractEvent({ ...heroContract, chainId, eventName: 'HeroMinted', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(heroContract, 'HeroMinted', address, (log) => { showToast(`英雄 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); invalidateNftsAndBalance(); }) });
-    useWatchContractEvent({ ...relicContract, chainId, eventName: 'RelicMinted', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(relicContract, 'RelicMinted', address, (log) => { showToast(`聖物 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); invalidateNftsAndBalance(); }) });
-    useWatchContractEvent({ ...partyContract, chainId, eventName: 'PartyCreated', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(partyContract, 'PartyCreated', address, (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 創建成功！`, 'success'); invalidateNftsAndBalance(); }) });
+    useWatchContractEvent({ 
+        ...heroContract, 
+        chainId: bsc.id, 
+        eventName: 'HeroMinted', 
+        pollingInterval: POLLING_INTERVAL, 
+        enabled: chainId === bsc.id && !!address,
+        onLogs: createContractEventHandler(heroContract, 'HeroMinted', address, (log) => { 
+            showToast(`英雄 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); 
+            invalidateNftsAndBalance(); 
+        }) 
+    });
+    
+    useWatchContractEvent({ 
+        ...relicContract, 
+        chainId: bsc.id, 
+        eventName: 'RelicMinted', 
+        pollingInterval: POLLING_INTERVAL, 
+        enabled: chainId === bsc.id && !!address,
+        onLogs: createContractEventHandler(relicContract, 'RelicMinted', address, (log) => { 
+            showToast(`聖物 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); 
+            invalidateNftsAndBalance(); 
+        }) 
+    });
+    
+    useWatchContractEvent({ 
+        ...partyContract, 
+        chainId: bsc.id, 
+        eventName: 'PartyCreated', 
+        pollingInterval: POLLING_INTERVAL, 
+        enabled: chainId === bsc.id && !!address,
+        onLogs: createContractEventHandler(partyContract, 'PartyCreated', address, (log) => { 
+            showToast(`隊伍 #${log.args.partyId?.toString()} 創建成功！`, 'success'); 
+            invalidateNftsAndBalance(); 
+        }) 
+    });
     
     // 金庫事件 -> 刷新金庫相關數據
-    useWatchContractEvent({ ...playerVaultContract, chainId, eventName: 'Deposited', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(playerVaultContract, 'Deposited', address, () => { invalidateVaultAndTax(); }) });
-    useWatchContractEvent({ ...playerVaultContract, chainId, eventName: 'Withdrawn', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(playerVaultContract, 'Withdrawn', address, () => { invalidateVaultAndTax(); }) });
+    useWatchContractEvent({ 
+        ...playerVaultContract, 
+        chainId: bsc.id, 
+        eventName: 'Deposited', 
+        pollingInterval: POLLING_INTERVAL, 
+        enabled: chainId === bsc.id && !!address,
+        onLogs: createContractEventHandler(playerVaultContract, 'Deposited', address, () => { 
+            invalidateVaultAndTax(); 
+        }) 
+    });
+    
+    useWatchContractEvent({ 
+        ...playerVaultContract, 
+        chainId: bsc.id, 
+        eventName: 'Withdrawn', 
+        pollingInterval: POLLING_INTERVAL, 
+        enabled: chainId === bsc.id && !!address,
+        onLogs: createContractEventHandler(playerVaultContract, 'Withdrawn', address, () => { 
+            invalidateVaultAndTax(); 
+        }) 
+    });
 
     // 玩家檔案事件 -> 刷新個人檔案數據
-    useWatchContractEvent({ ...playerProfileContract, chainId, eventName: 'ExperienceAdded', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(playerProfileContract, 'ExperienceAdded', address, () => { invalidateProfile(); }) });
+    useWatchContractEvent({ 
+        ...playerProfileContract, 
+        chainId: bsc.id, 
+        eventName: 'ExperienceAdded', 
+        pollingInterval: POLLING_INTERVAL, 
+        enabled: chainId === bsc.id && !!address,
+        onLogs: createContractEventHandler(playerProfileContract, 'ExperienceAdded', address, () => { 
+            invalidateProfile(); 
+        }) 
+    });
 
     // 隊伍遠征相關事件 -> 刷新特定隊伍的狀態和玩家檔案
-    useWatchContractEvent({ ...dungeonMasterContract, chainId, eventName: 'ExpeditionFulfilled', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(dungeonMasterContract, 'ExpeditionFulfilled', address, (log) => { const { success, reward, expGained } = log.args; showExpeditionResult({ success, reward, expGained }); invalidatePartyStatus(log.args.partyId); invalidateProfile(); }, true, queryClient) });
-    useWatchContractEvent({ ...dungeonMasterContract, chainId, eventName: 'PartyRested', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(dungeonMasterContract, 'PartyRested', address, (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 已恢復活力！`, 'success'); invalidatePartyStatus(log.args.partyId); }, true, queryClient) });
-    useWatchContractEvent({ ...dungeonMasterContract, chainId, eventName: 'ProvisionsBought', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(dungeonMasterContract, 'ProvisionsBought', address, (log) => { showToast(`隊伍 #${log.args.partyId?.toString()} 儲備補充成功！`, 'success'); invalidatePartyStatus(log.args.partyId); }, true, queryClient) });
+    useWatchContractEvent({ 
+        ...dungeonMasterContract, 
+        chainId: bsc.id, 
+        eventName: 'ExpeditionFulfilled', 
+        pollingInterval: POLLING_INTERVAL, 
+        enabled: chainId === bsc.id && !!address,
+        onLogs: createContractEventHandler(dungeonMasterContract, 'ExpeditionFulfilled', address, (log) => { 
+            const { success, reward, expGained } = log.args; 
+            showExpeditionResult({ 
+                success: success as boolean, 
+                reward: reward as bigint, 
+                expGained: expGained as bigint 
+            }); 
+            invalidatePartyStatus(log.args.partyId as bigint); 
+            invalidateProfile(); 
+        }, true, queryClient) 
+    });
+    
+    useWatchContractEvent({ 
+        ...dungeonMasterContract, 
+        chainId: bsc.id, 
+        eventName: 'PartyRested', 
+        pollingInterval: POLLING_INTERVAL, 
+        enabled: chainId === bsc.id && !!address,
+        onLogs: createContractEventHandler(dungeonMasterContract, 'PartyRested', address, (log) => { 
+            showToast(`隊伍 #${log.args.partyId?.toString()} 已恢復活力！`, 'success'); 
+            invalidatePartyStatus(log.args.partyId as bigint); 
+        }, true, queryClient) 
+    });
+    
+    useWatchContractEvent({ 
+        ...dungeonMasterContract, 
+        chainId: bsc.id, 
+        eventName: 'ProvisionsBought', 
+        pollingInterval: POLLING_INTERVAL, 
+        enabled: chainId === bsc.id && !!address,
+        onLogs: createContractEventHandler(dungeonMasterContract, 'ProvisionsBought', address, (log) => { 
+            showToast(`隊伍 #${log.args.partyId?.toString()} 儲備補充成功！`, 'success'); 
+            invalidatePartyStatus(log.args.partyId as bigint); 
+        }, true, queryClient) 
+    });
     
     // 升星祭壇事件 -> 刷新 NFT 列表和餘額
-    useWatchContractEvent({ ...altarOfAscensionContract, chainId, eventName: 'UpgradeProcessed', pollingInterval: POLLING_INTERVAL, onLogs: createContractEventHandler(altarOfAscensionContract, 'UpgradeProcessed', address, (log) => {
-        const { outcome } = log.args;
-        const outcomeMessages: Record<number, string> = { 3: `⚜️ 大成功！獲得 2 個更高星級的 NFT！`, 2: `✨ 升星成功！獲得 1 個更高星級的 NFT！`, 1: `💔 升星失敗，但返還了部分材料。`, 0: `💀 升星完全失敗，所有材料已銷毀。` };
-        const message = outcomeMessages[outcome] || "升星處理完成。";
-        const type = outcome >= 2 ? 'success' : 'info';
-        showToast(message, type);
-        invalidateNftsAndBalance();
-    })});
+    useWatchContractEvent({ 
+        ...altarOfAscensionContract, 
+        chainId: bsc.id, 
+        eventName: 'UpgradeProcessed', 
+        pollingInterval: POLLING_INTERVAL, 
+        enabled: chainId === bsc.id && !!address,
+        onLogs: createContractEventHandler(altarOfAscensionContract, 'UpgradeProcessed', address, (log) => {
+            const { outcome } = log.args;
+            const outcomeMessages: Record<number, string> = { 
+                3: `⚜️ 大成功！獲得 2 個更高星級的 NFT！`, 
+                2: `✨ 升星成功！獲得 1 個更高星級的 NFT！`, 
+                1: `💔 升星失敗，但返還了部分材料。`, 
+                0: `💀 升星完全失敗，所有材料已銷毀。` 
+            };
+            const message = outcomeMessages[outcome as number] || "升星處理完成。";
+            const type = (outcome as number) >= 2 ? 'success' : 'info';
+            showToast(message, type);
+            invalidateNftsAndBalance();
+        })
+    });
 };

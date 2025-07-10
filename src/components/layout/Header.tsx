@@ -34,15 +34,32 @@ const ThemeToggleButton: React.FC = () => {
 
 const usePlayerLevel = () => {
     const { address, chainId } = useAccount();
-    if (!chainId || chainId !== bsc.id) return { level: null };
-    const playerProfileContract = getContract(chainId, 'playerProfile');
-    const { data: tokenId } = useReadContract({ ...playerProfileContract, functionName: 'profileTokenOf', args: [address!], query: { enabled: !!address && !!playerProfileContract } });
-    const { data: experience } = useReadContract({ ...playerProfileContract, functionName: 'playerExperience', args: [tokenId!], query: { enabled: typeof tokenId === 'bigint' && tokenId > 0n } });
+    
+    // Always call hooks unconditionally
+    const playerProfileContract = getContract(bsc.id, 'playerProfile');
+    
+    const { data: tokenId } = useReadContract({ 
+        ...playerProfileContract, 
+        functionName: 'profileTokenOf', 
+        args: [address!], 
+        query: { enabled: !!address && !!playerProfileContract && chainId === bsc.id }
+    });
+    
+    const { data: experience } = useReadContract({ 
+        ...playerProfileContract, 
+        functionName: 'playerExperience', 
+        args: [tokenId!], 
+        query: { enabled: typeof tokenId === 'bigint' && tokenId > 0n && chainId === bsc.id }
+    });
+    
     const level = useMemo(() => {
+        // Move conditional logic inside the hook
+        if (!chainId || chainId !== bsc.id) return null;
         if (typeof experience !== 'bigint') return null;
         if (experience < 100n) return 1;
         return Math.floor(Math.sqrt(Number(experience) / 100)) + 1;
-    }, [experience]);
+    }, [experience, chainId]);
+    
     return { level };
 };
 
@@ -107,7 +124,7 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
         document.removeEventListener("mousedown", handleClickOutside);
         document.body.style.overflow = 'auto';
     };
-  }, [isMenuOpen, popoverRef]);
+  }, [isMenuOpen]);
 
   const handleNavClick = (page: Page) => {
       setActivePage(page);
