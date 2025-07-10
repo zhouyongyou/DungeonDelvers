@@ -9,6 +9,7 @@ import { useAppToast } from '../hooks/useAppToast';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { bsc } from 'wagmi/chains';
 import { useTransactionStore } from '../stores/useTransactionStore';
 
@@ -337,14 +338,16 @@ const AdminPage: React.FC = () => {
   const isSupportedChain = (id: number | undefined): id is SupportedChainId => id === bsc.id;
 
   return (
-    <section className="space-y-8">
-      <h2 className="page-title">超級管理控制台</h2>
-      {isSupportedChain(chainId) ? (
-        <AdminPageContent chainId={chainId} />
-      ) : (
-        <EmptyState message="請連接到 BSC 主網以使用管理功能。" />
-      )}
-    </section>
+    <ErrorBoundary>
+      <section className="space-y-8">
+        <h2 className="page-title">超級管理控制台</h2>
+        {isSupportedChain(chainId) ? (
+          <AdminPageContent chainId={chainId} />
+        ) : (
+          <EmptyState message="請連接到 BSC 主網以使用管理功能。" />
+        )}
+      </section>
+    </ErrorBoundary>
   );
 };
 
