@@ -93,8 +93,8 @@ export async function fetchMetadata(
     contractAddress: string, 
     retryCount = 0
 ): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
-    const maxRetries = 2;
-    const timeout = 5000; // 減少到5秒
+    const maxRetries = 1; // 減少重試次數以加快失敗恢復
+    const timeout = 3000; // 減少到3秒以加快載入
     
     // 🔥 1. 先检查IndexedDB缓存
     const cachedMetadata = await nftMetadataCache.getMetadata(tokenId, contractAddress);
@@ -112,8 +112,14 @@ export async function fetchMetadata(
             const json = Buffer.from(uri.substring('data:application/json;base64,'.length), 'base64').toString();
             metadata = JSON.parse(json);
         } else if (uri.startsWith('ipfs://')) {
-            const ipfsUrl = uri.replace('ipfs://', 'https://ipfs.io/ipfs/');
-            metadata = await fetchWithTimeout(ipfsUrl, timeout);
+            // 🔥 優化IPFS載入 - 使用多個網關並行請求
+            const ipfsHash = uri.replace('ipfs://', '');
+            const gateways = [
+                `https://ipfs.io/ipfs/${ipfsHash}`,
+                `https://gateway.pinata.cloud/ipfs/${ipfsHash}`,
+                `https://cloudflare-ipfs.com/ipfs/${ipfsHash}`
+            ];
+            metadata = await fetchWithMultipleGateways(gateways, timeout);
         } else {
             metadata = await fetchWithTimeout(uri, timeout);
         }
@@ -128,18 +134,63 @@ export async function fetchMetadata(
         // 如果還有重試次數，嘗試重新獲取
         if (retryCount < maxRetries) {
             console.log(`正在重試獲取元數據...`);
-            await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // 遞增延遲
+            await new Promise(resolve => setTimeout(resolve, 500 * (retryCount + 1))); // 減少延遲時間
             return fetchMetadata(uri, tokenId, contractAddress, retryCount + 1);
         }
         
-        // 提供更詳細的錯誤信息
-        const errorMessage = error instanceof Error ? error.message : '未知錯誤';
+        // 🔥 為聖物提供更快的fallback數據
+        const isRelic = contractAddress.toLowerCase().includes('relic');
         return { 
-            name: '數據載入中...', 
-            description: `暫時無法載入詳細資訊，請稍後重試`, 
-            image: '', 
-            attributes: [] 
+            name: isRelic ? `聖物 #${tokenId}` : `NFT #${tokenId}`, 
+            description: `正在載入詳細資訊...`, 
+            image: isRelic ? '/images/relic-placeholder.svg' : '', 
+            attributes: isRelic ? [
+                { trait_type: 'Capacity', value: '載入中...' },
+                { trait_type: 'Rarity', value: '載入中...' }
+            ] : []
         };
+    }
+}
+
+// 新增：多個IPFS網關並行請求函數
+async function fetchWithMultipleGateways(gateways: string[], timeout: number): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
+    const controller = new AbortController();
+    
+    const timeoutId = setTimeout(() => {
+        controller.abort();
+    }, timeout);
+    
+    try {
+        // 並行請求所有網關，取最快的響應
+        const requests = gateways.map(url => 
+            fetch(url, {
+                signal: controller.signal,
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'DungeonDelvers/1.0'
+                }
+            }).then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            }).catch(error => {
+                console.warn(`IPFS網關 ${url} 請求失敗:`, error);
+                throw error;
+            })
+        );
+        
+        // 使用Promise.race取得最快的響應，但需要處理錯誤
+        const result = await Promise.race(requests);
+        clearTimeout(timeoutId);
+        return result;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        
+        if (error instanceof Error && error.name === 'AbortError') {
+            throw new Error(`所有IPFS網關請求超時 (${timeout}ms)`);
+        }
+        throw new Error(`IPFS網關無法訪問: ${error instanceof Error ? error.message : '未知錯誤'}`);
     }
 }
 
@@ -310,9 +361,14 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
 
         const client = getClient(chainId);
 
-        const [heroes, relics, parties, vipCards] = await Promise.all([
-            parseNfts(playerAssets.heroes || [], 'hero', chainId, client),
+        // 🔥 優化載入順序：優先載入聖物和英雄（組隊需要），然後是其他
+        const [relics, heroes] = await Promise.all([
             parseNfts(playerAssets.relics || [], 'relic', chainId, client),
+            parseNfts(playerAssets.heroes || [], 'hero', chainId, client),
+        ]);
+        
+        // 其他資產並行載入
+        const [parties, vipCards] = await Promise.all([
             parseNfts(playerAssets.parties || [], 'party', chainId, client),
             playerAssets.vip ? parseNfts([playerAssets.vip], 'vip', chainId, client) : Promise.resolve([]),
         ]);
