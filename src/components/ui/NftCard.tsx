@@ -28,6 +28,7 @@ const StarRating: React.FC<{ rating: number }> = memo(({ rating }) => (
 const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, fallbackImage }) => {
   const vipStakingContract = getContract(bsc.id, 'vipStaking');
   const [hasError, setHasError] = useState(false);
+  const [vipLevel, setVipLevel] = useState<number | null>(null);
   
   const { data: tokenURI, isLoading } = useReadContract({
     ...vipStakingContract,
@@ -48,6 +49,15 @@ const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, 
       }
       const decodedUri = Buffer.from(uriString.substring('data:application/json;base64,'.length), 'base64').toString();
       const metadata = JSON.parse(decodedUri);
+      
+      // 嘗試從metadata中提取VIP等級
+      if (metadata.attributes && Array.isArray(metadata.attributes)) {
+        const levelAttr = metadata.attributes.find((attr: any) => attr.trait_type === 'Level');
+        if (levelAttr && typeof levelAttr.value === 'number') {
+          setVipLevel(levelAttr.value);
+        }
+      }
+      
       return metadata.image;
     } catch (e) {
       console.error("解析 VIP 卡 SVG 失敗:", e);
@@ -67,24 +77,38 @@ const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, 
   if (hasError || !svgImage) {
     // 回退到使用原始圖片
     return (
-      <img 
-        src={nft.image?.replace('ipfs://', 'https://ipfs.io/ipfs/') || fallbackImage} 
-        onError={(e) => { e.currentTarget.src = fallbackImage; }} 
-        alt={nft.name || `VIP #${nft.id.toString()}`} 
-        className="w-full h-full object-cover bg-gray-700 transition-transform duration-300 hover:scale-110" 
-        loading="lazy"
-      />
+      <div className="w-full h-full bg-gray-700 rounded-lg relative">
+        <img 
+          src={nft.image?.replace('ipfs://', 'https://ipfs.io/ipfs/') || fallbackImage} 
+          onError={(e) => { e.currentTarget.src = fallbackImage; }} 
+          alt={nft.name || `VIP #${nft.id.toString()}`} 
+          className="w-full h-full object-cover rounded"
+          loading="lazy"
+        />
+        {vipLevel && (
+          <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 bg-black/70 text-yellow-400 text-xs font-bold px-2 py-1 rounded">
+            LV {vipLevel}
+          </div>
+        )}
+      </div>
     );
   }
 
   return (
-    <img 
-      src={svgImage} 
-      onError={() => setHasError(true)}
-      alt={nft.name || `VIP #${nft.id.toString()}`} 
-      className="w-full h-full object-cover bg-gray-700 transition-transform duration-300 hover:scale-110" 
-      loading="lazy"
-    />
+    <div className="w-full h-full relative">
+      <img 
+        src={svgImage} 
+        onError={() => setHasError(true)}
+        alt={nft.name || `VIP #${nft.id.toString()}`} 
+        className="w-full h-full object-cover bg-gray-700 rounded-lg" 
+        loading="lazy"
+      />
+      {vipLevel && (
+        <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 bg-black/70 text-yellow-400 text-xs font-bold px-2 py-1 rounded">
+          LV {vipLevel}
+        </div>
+      )}
+    </div>
   );
 });
 
@@ -97,7 +121,7 @@ const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected })
   // 根據不同的 NFT 種類，渲染對應的屬性
   const renderAttributes = () => {
     switch (nft.type) {
-      case 'hero': {
+      case 'hero': {  // ✅ 添加大括號
         const hero = nft as HeroNft;
         return (
           <>
@@ -106,7 +130,7 @@ const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected })
           </>
         );
       }
-      case 'relic': {
+      case 'relic': {  // ✅ 添加大括號
         const relic = nft as RelicNft;
         return (
           <>
@@ -115,7 +139,7 @@ const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected })
           </>
         );
       }
-      case 'party': {
+      case 'party': {  // ✅ 添加大括號
         const party = nft as PartyNft;
         return (
           <>
@@ -129,12 +153,17 @@ const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected })
           </>
         );
       }
-      case 'vip': {
+      case 'vip': {  // ✅ 添加大括號並改善VIP顯示
         const vip = nft as VipNft;
+        // 嘗試從VIP NFT的屬性中獲取等級信息
+        const levelAttr = vip.attributes?.find((attr: any) => attr.trait_type === 'Level');
+        const vipLevel = levelAttr?.value || '載入中...';
+        
         return (
             <>
                 <StarRating rating={5} /> 
-                <p className="text-lg font-bold text-yellow-300">VIP 等級</p>
+                <p className="text-sm font-bold text-yellow-300">VIP 會員卡</p>
+                <p className="text-xs text-gray-400">等級 {vipLevel}</p>
             </>
         );
       }
@@ -148,7 +177,7 @@ const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected })
         className={`card-bg p-3 rounded-xl text-center border-2 transition-all duration-300 ease-in-out flex flex-col overflow-hidden hover:shadow-2xl hover:-translate-y-1 active:scale-95 ${isSelected ? 'ring-4 ring-indigo-500 ring-offset-2 ring-offset-gray-800 border-indigo-500' : 'border-transparent'}`}
     >
       <div className={`flex-grow ${onSelect ? 'cursor-pointer' : ''}`} onClick={() => onSelect && onSelect(id, type)}>
-        <div className="aspect-square w-full mb-2 overflow-hidden rounded-lg">
+        <div className={`w-full mb-2 overflow-hidden rounded-lg aspect-square`}>
             {type === 'vip' ? (
               <VipImage nft={nft as VipNft} fallbackImage={fallbackImage} />
             ) : (

@@ -152,18 +152,23 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
                 </div>
                 
                 <div className="flex items-center gap-1 md:gap-2">
-                    <LanguageSelector />
-                    <ThemeToggleButton />
-                    <NetworkSwitcher />
-                    {isConnected && (
-                      <div className="relative" ref={popoverRef}>
-                        <button onClick={() => setIsTxPopoverOpen(prev => !prev)} className="p-2 rounded-full text-gray-300 hover:bg-white/20 transition-colors" aria-label={t('navigation:recentTransactions')}>
-                          <Icons.History className="h-5 w-5" />
-                        </button>
-                        {isTxPopoverOpen && <RecentTransactions />}
-                      </div>
-                    )}
-                    <ActionButton onClick={handleConnectClick} isLoading={isConnecting} disabled={isConnecting} className="px-3 py-2 md:px-4 rounded-full text-sm w-32 md:w-36">
+                    {/* 桌面端顯示所有功能 */}
+                    <div className="hidden md:flex items-center gap-2">
+                        <LanguageSelector />
+                        <ThemeToggleButton />
+                        <NetworkSwitcher />
+                        {isConnected && (
+                          <div className="relative" ref={popoverRef}>
+                            <button onClick={() => setIsTxPopoverOpen(prev => !prev)} className="p-2 rounded-full text-gray-300 hover:bg-white/20 transition-colors" aria-label={t('navigation:recentTransactions')}>
+                              <Icons.History className="h-5 w-5" />
+                            </button>
+                            {isTxPopoverOpen && <RecentTransactions />}
+                          </div>
+                        )}
+                    </div>
+                    
+                    {/* 移動端只顯示連接按鈕和菜單 */}
+                    <ActionButton onClick={handleConnectClick} isLoading={isConnecting} disabled={isConnecting} className="px-2 py-1 md:px-4 md:py-2 rounded-full text-xs md:text-sm w-24 md:w-36">
                       {isConnected && address ? `${address.substring(0, 4)}...${address.substring(address.length - 4)}` : t('common:buttons.connect')}
                     </ActionButton>
                     <div className="md:hidden">
@@ -191,6 +196,22 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
                         <XIcon />
                     </button>
                 </div>
+                
+                {/* 移動端功能選項 */}
+                <div className="flex justify-center gap-4 mb-6 bg-white/10 rounded-lg p-3">
+                    <LanguageSelector />
+                    <ThemeToggleButton />
+                    <NetworkSwitcher />
+                    {isConnected && (
+                      <div className="relative" ref={popoverRef}>
+                        <button onClick={() => setIsTxPopoverOpen(prev => !prev)} className="p-2 rounded-full text-gray-300 hover:bg-white/20 transition-colors" aria-label={t('navigation:recentTransactions')}>
+                          <Icons.History className="h-5 w-5" />
+                        </button>
+                        {isTxPopoverOpen && <RecentTransactions />}
+                      </div>
+                    )}
+                </div>
+                
                 <nav className="flex flex-col items-center gap-4">
                     {navItems.map(item => (
                         <a 
