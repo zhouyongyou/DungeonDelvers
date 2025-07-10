@@ -1,10 +1,9 @@
 // src/pages/MyAssetsPage.tsx (組隊UI優化版)
 
 import React, { useState, useMemo } from 'react';
-import { useAccount, useReadContract, useWriteContract, usePublicClient } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchAllOwnedNfts } from '../api/nfts';
-import { getQueryConfig } from '../cache/cacheStrategies';
 import { NftCard } from '../components/ui/NftCard';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -12,7 +11,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { getContract } from '../config/contracts';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
-import type { AnyNft, HeroNft, RelicNft, NftType } from '../types/nft';
+import type { HeroNft, RelicNft, NftType } from '../types/nft';
 import { formatEther } from 'viem';
 import { bsc } from 'wagmi/chains';
 
@@ -249,19 +248,15 @@ const MyAssetsPage: React.FC = () => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
-    const publicClient = usePublicClient();
     const queryClient = useQueryClient();
 
     const [filter, setFilter] = useState<NftType>('party');
     const [isAuthorizing, setIsAuthorizing] = useState(false);
 
-    if (!chainId || chainId !== bsc.id) {
-        return <div className="flex justify-center items-center h-64"><EmptyState message="請連接到支援的網路 (BSC) 以檢視您的資產。" /></div>;
-    }
-
-    const heroContract = getContract(bsc.id, 'hero');
-    const relicContract = getContract(bsc.id, 'relic');
-    const partyContract = getContract(bsc.id, 'party');
+    // Move all hooks to be called before any early returns
+    const heroContract = useMemo(() => chainId ? getContract(bsc.id, 'hero') : null, [chainId]);
+    const relicContract = useMemo(() => chainId ? getContract(bsc.id, 'relic') : null, [chainId]);
+    const partyContract = useMemo(() => chainId ? getContract(bsc.id, 'party') : null, [chainId]);
 
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
@@ -270,8 +265,13 @@ const MyAssetsPage: React.FC = () => {
         queryFn: () => fetchAllOwnedNfts(address!, chainId),
         enabled: !!address && !!chainId,
         
-        // 🔥 使用统一的NFT缓存策略
-        ...getQueryConfig('USER_NFTS'),
+        // 🔥 NFT缓存策略 - 内联配置以避免部署问题
+        staleTime: 1000 * 60 * 30, // 30分钟内新鲜
+        gcTime: 1000 * 60 * 60 * 2, // 2小时垃圾回收
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: 'always',
+        retry: 2,
     });
     
     const { data: platformFee, isLoading: isLoadingFee } = useReadContract({
@@ -298,15 +298,15 @@ const MyAssetsPage: React.FC = () => {
     const { availableHeroes, availableRelics } = useMemo(() => {
         if (!nfts) return { availableHeroes: [] as HeroNft[], availableRelics: [] as RelicNft[] };
         
-        const heroIdsInParties = new Set(nfts.parties.flatMap(p => p.heroIds.map(id => id.toString())));
-        const relicIdsInParties = new Set(nfts.parties.flatMap(p => p.relicIds.map(id => id.toString())));
+        const heroIdsInParties = new Set(nfts.parties.flatMap((p: { heroIds: bigint[] }) => p.heroIds.map((id: bigint) => id.toString())));
+        const relicIdsInParties = new Set(nfts.parties.flatMap((p: { relicIds: bigint[] }) => p.relicIds.map((id: bigint) => id.toString())));
 
         const sortHeroNfts = (nfts: HeroNft[]) => [...nfts].sort((a, b) => b.power - a.power);
         const sortRelicNfts = (nfts: RelicNft[]) => [...nfts].sort((a, b) => b.capacity - a.capacity);
 
         return {
-            availableHeroes: sortHeroNfts(nfts.heroes.filter(h => !heroIdsInParties.has(h.id.toString()))),
-            availableRelics: sortRelicNfts(nfts.relics.filter(r => !relicIdsInParties.has(r.id.toString()))),
+            availableHeroes: sortHeroNfts(nfts.heroes.filter((h: HeroNft) => !heroIdsInParties.has(h.id.toString()))),
+            availableRelics: sortRelicNfts(nfts.relics.filter((r: RelicNft) => !relicIdsInParties.has(r.id.toString()))),
         };
     }, [nfts]);
 
@@ -330,6 +330,11 @@ const MyAssetsPage: React.FC = () => {
         }
     }, [filter, nfts]);
 
+    // Early return after all hooks
+    if (!chainId || chainId !== bsc.id) {
+        return <div className="flex justify-center items-center h-64"><EmptyState message="請連接到支援的網路 (BSC) 以檢視您的資產。" /></div>;
+    }
+
     const handleAuthorizeHero = async () => {
         if (!heroContract || !partyContract) return;
         setIsAuthorizing(true);
@@ -341,8 +346,9 @@ const MyAssetsPage: React.FC = () => {
             });
             addTransaction({ hash, description: '授權隊伍合約使用英雄' });
             showToast('英雄授權成功！', 'success');
-        } catch (e: any) {
-            if (!e.message.includes('User rejected the request')) {
+        } catch (error: unknown) {
+            const e = error as { message?: string; shortMessage?: string };
+            if (!e.message?.includes('User rejected the request')) {
                 showToast(e.shortMessage || "英雄授權失敗", "error");
             }
         } finally {
@@ -361,8 +367,9 @@ const MyAssetsPage: React.FC = () => {
             });
             addTransaction({ hash, description: '授權隊伍合約使用聖物' });
             showToast('聖物授權成功！', 'success');
-        } catch (e: any) {
-            if (!e.message.includes('User rejected the request')) {
+        } catch (error: unknown) {
+            const e = error as { message?: string; shortMessage?: string };
+            if (!e.message?.includes('User rejected the request')) {
                 showToast(e.shortMessage || "聖物授權失敗", "error");
             }
         } finally {
@@ -384,8 +391,9 @@ const MyAssetsPage: React.FC = () => {
             addTransaction({ hash, description: `創建新隊伍` });
             queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
 
-        } catch (e: any) {
-            if (!e.message.includes('User rejected the request')) {
+        } catch (error: unknown) {
+            const e = error as { message?: string; shortMessage?: string };
+            if (!e.message?.includes('User rejected the request')) {
                 showToast(e.shortMessage || "創建隊伍失敗", "error");
             }
         }
@@ -413,8 +421,8 @@ const MyAssetsPage: React.FC = () => {
                 isCreating={isTxPending}
                 platformFee={typeof platformFee === 'bigint' ? platformFee : undefined}
                 isLoadingFee={isLoadingFee}
-                isHeroAuthorized={isHeroAuthorized ?? false}
-                isRelicAuthorized={isRelicAuthorized ?? false}
+                isHeroAuthorized={Boolean(isHeroAuthorized)}
+                isRelicAuthorized={Boolean(isRelicAuthorized)}
                 onAuthorizeHero={handleAuthorizeHero}
                 onAuthorizeRelic={handleAuthorizeRelic}
                 isAuthorizing={isAuthorizing}
