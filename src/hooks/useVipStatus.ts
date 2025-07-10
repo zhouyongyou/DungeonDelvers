@@ -62,11 +62,21 @@ export const useVipStatus = () => {
 
     const { isOver: isCooldownOver, formatted: countdown } = useCountdown(unstakeAvailableAt);
 
-    const refetchAll = () => {
-        refetchVipData();
-        refetchBalance();
-        if (stakedAmount > 0n) {
-            refetchStakedValueUSD();
+    const refetchAll = async () => {
+        try {
+            // 並行執行所有refetch操作
+            const promises = [
+                refetchVipData(),
+                refetchBalance(),
+            ];
+            
+            if (stakedAmount > 0n) {
+                promises.push(refetchStakedValueUSD());
+            }
+            
+            await Promise.all(promises);
+        } catch (error) {
+            console.error('刷新VIP狀態時發生錯誤:', error);
         }
     };
 

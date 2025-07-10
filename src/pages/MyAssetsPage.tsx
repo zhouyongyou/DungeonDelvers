@@ -152,6 +152,18 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                 </div>
             </div>
 
+            {/* 錢包授權說明 */}
+            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mb-4">
+                <div className="flex items-start gap-2">
+                    <div className="flex-shrink-0 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
+                        <span className="text-white text-xs font-bold">!</span>
+                    </div>
+                    <p className="text-xs text-blue-200">
+                        授權彈窗的語言由您的錢包設定決定。授權完成後狀態會自動更新，約需3-10秒。
+                    </p>
+                </div>
+            </div>
+
             {/* 授權按鈕區域 - 調整順序：先聖物後英雄 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div className="flex items-center gap-3">
@@ -161,7 +173,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                         disabled={isRelicAuthorized || isAuthorizing}
                         className={`h-12 flex-1 ${isRelicAuthorized ? 'bg-green-600' : 'bg-yellow-600'}`}
                     >
-                        {isRelicAuthorized ? '✓ 聖物已授權' : '授權聖物'}
+                        {isRelicAuthorized ? '✓ 聖物已授權' : (isAuthorizing ? '授權中...' : '授權聖物')}
                     </ActionButton>
                     <ActionButton 
                         onClick={handleAutoSelectRelics}
@@ -178,7 +190,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                         disabled={isHeroAuthorized || isAuthorizing}
                         className={`h-12 flex-1 ${isHeroAuthorized ? 'bg-green-600' : 'bg-yellow-600'}`}
                     >
-                        {isHeroAuthorized ? '✓ 英雄已授權' : '授權英雄'}
+                        {isHeroAuthorized ? '✓ 英雄已授權' : (isAuthorizing ? '授權中...' : '授權英雄')}
                     </ActionButton>
                     <ActionButton 
                         onClick={handleAutoSelectHeroes}
