@@ -132,51 +132,66 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
               升 {ruleId + 1}★ 規則
             </summary>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end pt-2">
-              <input
-                id={`rule-${ruleId}-materials`}
-                name={`rule-${ruleId}-materials`}
-                type="text"
-                value={inputs.materialsRequired}
-                onChange={e => handleInputChange(ruleId, 'materialsRequired', e.target.value)}
-                placeholder="材料數量"
-                className="input-field"
-              />
-              <input
-                id={`rule-${ruleId}-fee`}
-                name={`rule-${ruleId}-fee`}
-                type="text"
-                value={inputs.nativeFee}
-                onChange={e => handleInputChange(ruleId, 'nativeFee', e.target.value)}
-                placeholder="費用 (BNB)"
-                className="input-field"
-              />
-              <input
-                id={`rule-${ruleId}-great-success`}
-                name={`rule-${ruleId}-great-success`}
-                type="text"
-                value={inputs.greatSuccessChance}
-                onChange={e => handleInputChange(ruleId, 'greatSuccessChance', e.target.value)}
-                placeholder="大成功率 (%)"
-                className="input-field"
-              />
-              <input
-                id={`rule-${ruleId}-success`}
-                name={`rule-${ruleId}-success`}
-                type="text"
-                value={inputs.successChance}
-                onChange={e => handleInputChange(ruleId, 'successChance', e.target.value)}
-                placeholder="成功率 (%)"
-                className="input-field"
-              />
-              <input
-                id={`rule-${ruleId}-partial-fail`}
-                name={`rule-${ruleId}-partial-fail`}
-                type="text"
-                value={inputs.partialFailChance}
-                onChange={e => handleInputChange(ruleId, 'partialFailChance', e.target.value)}
-                placeholder="部分失敗率 (%)"
-                className="input-field"
-              />
+              <div>
+                <label htmlFor={`rule-${ruleId}-materials`} className="text-xs text-gray-400 block mb-1">材料數量</label>
+                <input
+                  id={`rule-${ruleId}-materials`}
+                  name={`rule-${ruleId}-materials`}
+                  type="text"
+                  value={inputs.materialsRequired}
+                  onChange={e => handleInputChange(ruleId, 'materialsRequired', e.target.value)}
+                  placeholder="材料數量"
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label htmlFor={`rule-${ruleId}-fee`} className="text-xs text-gray-400 block mb-1">費用 (BNB)</label>
+                <input
+                  id={`rule-${ruleId}-fee`}
+                  name={`rule-${ruleId}-fee`}
+                  type="text"
+                  value={inputs.nativeFee}
+                  onChange={e => handleInputChange(ruleId, 'nativeFee', e.target.value)}
+                  placeholder="費用 (BNB)"
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label htmlFor={`rule-${ruleId}-great-success`} className="text-xs text-gray-400 block mb-1">大成功率 (%)</label>
+                <input
+                  id={`rule-${ruleId}-great-success`}
+                  name={`rule-${ruleId}-great-success`}
+                  type="text"
+                  value={inputs.greatSuccessChance}
+                  onChange={e => handleInputChange(ruleId, 'greatSuccessChance', e.target.value)}
+                  placeholder="大成功率 (%)"
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label htmlFor={`rule-${ruleId}-success`} className="text-xs text-gray-400 block mb-1">成功率 (%)</label>
+                <input
+                  id={`rule-${ruleId}-success`}
+                  name={`rule-${ruleId}-success`}
+                  type="text"
+                  value={inputs.successChance}
+                  onChange={e => handleInputChange(ruleId, 'successChance', e.target.value)}
+                  placeholder="成功率 (%)"
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label htmlFor={`rule-${ruleId}-partial-fail`} className="text-xs text-gray-400 block mb-1">部分失敗率 (%)</label>
+                <input
+                  id={`rule-${ruleId}-partial-fail`}
+                  name={`rule-${ruleId}-partial-fail`}
+                  type="text"
+                  value={inputs.partialFailChance}
+                  onChange={e => handleInputChange(ruleId, 'partialFailChance', e.target.value)}
+                  placeholder="部分失敗率 (%)"
+                  className="input-field"
+                />
+              </div>
               <ActionButton
                 onClick={() => handleUpdateRule(ruleId)}
                 isLoading={pendingRule === ruleId}

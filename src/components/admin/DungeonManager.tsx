@@ -163,8 +163,10 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
             {/* 配置輸入 */}
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">
               <div>
-                <label className="text-xs text-gray-400">要求戰力</label>
+                <label htmlFor={`dungeon-${dungeonId}-power`} className="text-xs text-gray-400">要求戰力</label>
                 <input
+                  id={`dungeon-${dungeonId}-power`}
+                  name={`dungeon-${dungeonId}-power`}
                   type="text"
                   value={inputs.requiredPower}
                   onChange={e => handleInputChange(dungeonId, 'requiredPower', e.target.value)}
@@ -173,8 +175,10 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-400">獎勵 (USD)</label>
+                <label htmlFor={`dungeon-${dungeonId}-reward`} className="text-xs text-gray-400">獎勵 (USD)</label>
                 <input
+                  id={`dungeon-${dungeonId}-reward`}
+                  name={`dungeon-${dungeonId}-reward`}
                   type="text"
                   value={inputs.rewardAmountUSD}
                   onChange={e => handleInputChange(dungeonId, 'rewardAmountUSD', e.target.value)}
@@ -183,8 +187,10 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-400">基礎成功率 (%)</label>
+                <label htmlFor={`dungeon-${dungeonId}-success`} className="text-xs text-gray-400">基礎成功率 (%)</label>
                 <input
+                  id={`dungeon-${dungeonId}-success`}
+                  name={`dungeon-${dungeonId}-success`}
                   type="text"
                   value={inputs.baseSuccessRate}
                   onChange={e => handleInputChange(dungeonId, 'baseSuccessRate', e.target.value)}

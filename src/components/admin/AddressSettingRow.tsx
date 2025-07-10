@@ -82,15 +82,20 @@ const AddressSettingRow: React.FC<AddressSettingRowProps> = ({
       </div>
       
       <div className="flex gap-2 pt-2">
-        <input
-          id={`address-setting-${title.replace(/\s+/g, '-')}`}
-          name={`address-setting-${title.replace(/\s+/g, '-')}`}
-          type="text"
-          value={inputValue}
-          onChange={(e) => onInputChange(e.target.value)}
-          placeholder="貼上新的合約地址"
-          className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none h-10 bg-gray-900 border-gray-600 text-sm font-mono"
-        />
+        <div className="flex-1">
+          <label htmlFor={`address-setting-${title.replace(/\s+/g, '-')}`} className="sr-only">
+            {title} 合約地址
+          </label>
+          <input
+            id={`address-setting-${title.replace(/\s+/g, '-')}`}
+            name={`address-setting-${title.replace(/\s+/g, '-')}`}
+            type="text"
+            value={inputValue}
+            onChange={(e) => onInputChange(e.target.value)}
+            placeholder="貼上新的合約地址"
+            className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none h-10 bg-gray-900 border-gray-600 text-sm font-mono"
+          />
+        </div>
         <ActionButton
           onClick={onSet}
           isLoading={isSetting}

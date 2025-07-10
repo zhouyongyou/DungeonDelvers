@@ -206,14 +206,17 @@ const ReferralPage: React.FC = () => {
                 <h3 className="section-title">我的邀請連結</h3>
                 <p className="text-sm text-gray-400 mb-4">分享您的專屬連結，當被邀請的好友從金庫提領獎勵時，您將獲得他們提領金額 5% 的佣金作為獎勵！</p>
                 <div className="flex flex-col sm:flex-row items-center gap-2 bg-black/20 p-2 rounded-lg">
-                    <input 
-                        id="referral-link"
-                        name="referral-link"
-                        type="text" 
-                        readOnly 
-                        value={referralLink} 
-                        className="w-full bg-transparent text-gray-300 font-mono text-sm p-2" 
-                    />
+                    <div className="flex-1 w-full">
+                        <label htmlFor="referral-link" className="sr-only">我的邀請連結</label>
+                        <input 
+                            id="referral-link"
+                            name="referral-link"
+                            type="text" 
+                            readOnly 
+                            value={referralLink} 
+                            className="w-full bg-transparent text-gray-300 font-mono text-sm p-2" 
+                        />
+                    </div>
                     <ActionButton onClick={handleCopyLink} className="w-full sm:w-auto flex-shrink-0">
                         {copied ? '已複製!' : <><Icons.Copy className="w-4 h-4 mr-2" />複製連結</>}
                     </ActionButton>
@@ -257,15 +260,18 @@ const ReferralPage: React.FC = () => {
                             </div>
                             <p className="text-sm text-gray-400 mb-4">如果您是透過好友的連結來到這裡，請在此輸入他的錢包地址以綁定邀請關係。此操作只能進行一次。</p>
                             <div className="flex flex-col sm:flex-row items-center gap-2">
-                                <input 
-                                    id="referrer-address"
-                                    name="referrer-address"
-                                    type="text" 
-                                    value={referrerInput} 
-                                    onChange={(e) => setReferrerInput(e.target.value)} 
-                                    placeholder="貼上邀請人的錢包地址" 
-                                    className="w-full p-2 border rounded-lg bg-gray-800 border-gray-600 text-white font-mono" 
-                                />
+                                <div className="flex-1 w-full">
+                                    <label htmlFor="referrer-address" className="sr-only">邀請人錢包地址</label>
+                                    <input 
+                                        id="referrer-address"
+                                        name="referrer-address"
+                                        type="text" 
+                                        value={referrerInput} 
+                                        onChange={(e) => setReferrerInput(e.target.value)} 
+                                        placeholder="貼上邀請人的錢包地址" 
+                                        className="w-full p-2 border rounded-lg bg-gray-800 border-gray-600 text-white font-mono" 
+                                    />
+                                </div>
                                 <ActionButton 
                                     onClick={handleSetReferrer} 
                                     isLoading={isSettingReferrer} 

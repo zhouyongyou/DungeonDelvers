@@ -76,28 +76,32 @@ const SettingRow: React.FC<SettingRowProps> = ({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-      <label className="text-gray-300 md:col-span-1" title={`讀取來源: ${readSource}`}>
+      <div className="text-gray-300 md:col-span-1" title={`讀取來源: ${readSource}`}>
         {label}
-      </label>
+      </div>
       <div className="font-mono text-sm bg-black/20 p-2 rounded md:col-span-1 break-all">
         當前值: <span className="text-yellow-400">{displayValue}</span>
       </div>
       <div className="flex flex-col sm:flex-row gap-2 md:col-span-1">
         {inputValues.map((val, index) => (
-          <input
-            key={index}
-            id={`setting-${label.replace(/\s+/g, '-')}-${index}`}
-            name={`setting-${label.replace(/\s+/g, '-')}-${index}`}
-            type="text"
-            value={val}
-            onChange={(e) => {
-              const newValues = [...inputValues];
-              newValues[index] = e.target.value;
-              setInputValues(newValues);
-            }}
-            className="input-field w-full"
-            placeholder={placeholders[index]}
-          />
+          <div key={index} className="flex-1">
+            <label htmlFor={`setting-${label.replace(/\s+/g, '-')}-${index}`} className="sr-only">
+              {placeholders[index]}
+            </label>
+            <input
+              id={`setting-${label.replace(/\s+/g, '-')}-${index}`}
+              name={`setting-${label.replace(/\s+/g, '-')}-${index}`}
+              type="text"
+              value={val}
+              onChange={(e) => {
+                const newValues = [...inputValues];
+                newValues[index] = e.target.value;
+                setInputValues(newValues);
+              }}
+              className="input-field w-full"
+              placeholder={placeholders[index]}
+            />
+          </div>
         ))}
         <ActionButton
           onClick={handleUpdate}
