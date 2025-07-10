@@ -52,6 +52,8 @@ export interface PartyNft extends BaseNft {
 export interface VipNft extends BaseNft {
     type: 'vip';
     level: number;
+    stakedAmount: bigint;
+    stakedValueUSD?: bigint; // 可選的USD價值，由Oracle計算
 }
 
 /**

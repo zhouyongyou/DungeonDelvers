@@ -18,7 +18,7 @@ export function handlePartyCreated(event: PartyCreated): void {
 
     let player = getOrCreatePlayer(event.params.owner)
 
-    let partyId = event.address.toHexString().concat("-").concat(event.params.partyId.toString())
+    let partyId = createEntityId(event.address.toHexString(), event.params.partyId.toString())
     
     // 檢查是否已存在（防止重複處理）
     let existingParty = Party.load(partyId);
@@ -78,7 +78,7 @@ export function handlePartyCreated(event: PartyCreated): void {
 }
 
 export function handlePartyTransfer(event: Transfer): void {
-    let partyId = event.address.toHexString().concat("-").concat(event.params.tokenId.toString())
+    let partyId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
     let party = Party.load(partyId)
     if (party) {
         let newOwner = getOrCreatePlayer(event.params.to)
