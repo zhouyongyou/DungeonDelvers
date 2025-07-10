@@ -392,6 +392,7 @@ async function parseNfts<T extends { tokenId: string | number | bigint }>(
     const uriResults = await client.multicall({ contracts: uriCalls, allowFailure: true });
 
     // 使用批量處理來限制並發元數據請求
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const processAsset = async (asset: any, index: number) => {
         const uriResult = uriResults[index];
         let metadata: Omit<BaseNft, 'id' | 'contractAddress' | 'type'>;
@@ -412,9 +413,11 @@ async function parseNfts<T extends { tokenId: string | number | bigint }>(
             };
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const findAttr = (trait: string, defaultValue: any = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
         
         // ★ 核心修正：將 asset 轉換為 any 型別，以解決 TypeScript 的泛型推斷問題
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const anyAsset = asset as any;
         const baseNft = { ...metadata, id: BigInt(anyAsset.tokenId), contractAddress };
 
@@ -426,7 +429,9 @@ async function parseNfts<T extends { tokenId: string | number | bigint }>(
                 type, 
                 totalPower: BigInt(anyAsset.totalPower), 
                 totalCapacity: BigInt(anyAsset.totalCapacity), 
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 heroIds: anyAsset.heroes ? anyAsset.heroes.map((h: any) => BigInt(h.tokenId)) : [], 
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 relicIds: anyAsset.relics ? anyAsset.relics.map((r: any) => BigInt(r.tokenId)) : [], 
                 partyRarity: Number(anyAsset.partyRarity) 
             };
