@@ -83,7 +83,18 @@ const usePlayerParties = () => {
             const { data } = await response.json();
             
             // 將 The Graph 回傳的數據轉換為我們前端的 PartyNft 型別
-            return data?.player?.parties?.map((p: any) => ({
+            return data?.player?.parties?.map((p: {
+                tokenId: string;
+                totalPower: string;
+                totalCapacity: string;
+                partyRarity: string;
+                provisionsRemaining: string;
+                cooldownEndsAt: string;
+                unclaimedRewards: string;
+                fatigueLevel: string;
+                heroes: Array<{ tokenId: string }>;
+                relics: Array<{ tokenId: string }>;
+            }) => ({
                 id: BigInt(p.tokenId),
                 tokenId: BigInt(p.tokenId),
                 name: `隊伍 #${p.tokenId}`,
@@ -95,8 +106,8 @@ const usePlayerParties = () => {
                 totalPower: BigInt(p.totalPower),
                 totalCapacity: BigInt(p.totalCapacity),
                 // ★★★ 修正點：正確填充 heroIds 和 relicIds ★★★
-                heroIds: p.heroes.map((h: any) => BigInt(h.tokenId)),
-                relicIds: p.relics.map((r: any) => BigInt(r.tokenId)),
+                heroIds: p.heroes.map((h) => BigInt(h.tokenId)),
+                relicIds: p.relics.map((r) => BigInt(r.tokenId)),
                 partyRarity: p.partyRarity,
                 // 直接從 The Graph 獲取狀態
                 provisionsRemaining: BigInt(p.provisionsRemaining),
@@ -242,11 +253,6 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
         query: { enabled: !!getContract(bsc.id, 'dungeonStorage') && chainId === bsc.id }
     });
 
-    // ✅ 條件渲染移到所有Hooks之後
-    if (chainId !== bsc.id) {
-        return <div className="flex justify-center items-center h-64"><p className="text-lg text-gray-500">請連接到支援的網路</p></div>;
-    }
-
     const dungeons: Dungeon[] = useMemo(() => {
         const getDungeonName = (id: number) => ["", "新手礦洞", "哥布林洞穴", "食人魔山谷", "蜘蛛巢穴", "石化蜥蜴沼澤", "巫妖墓穴", "奇美拉之巢", "惡魔前哨站", "巨龍之巔", "混沌深淵"][id] || "未知地城";
         if (!dungeonsData) return [];
@@ -256,6 +262,11 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
             return { id: i + 1, name: getDungeonName(i + 1), requiredPower, rewardAmountUSD, baseSuccessRate, isInitialized };
         }).filter((d): d is Dungeon => d !== null && d.isInitialized);
     }, [dungeonsData]);
+
+    // ✅ 條件渲染移到所有Hooks之後
+    if (chainId !== bsc.id) {
+        return <div className="flex justify-center items-center h-64"><p className="text-lg text-gray-500">請連接到支援的網路</p></div>;
+    }
     
     const checkPendingTxForParty = (partyId: bigint) => {
         return transactions.some(tx => tx.status === 'pending' && tx.description.includes(`隊伍 #${partyId.toString()}`));
@@ -266,7 +277,12 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
         try {
             const hash = await writeContractAsync({ ...dungeonMasterContract, functionName: 'requestExpedition', args: [partyId, dungeonId], value: fee, });
             addTransaction({ hash, description: `隊伍 #${partyId.toString()} 遠征地城 #${dungeonId}` });
-        } catch (e: any) { if (!e.message.includes('User rejected the request')) { showToast(e.shortMessage || "遠征請求失敗", "error"); } }
+        } catch (e: unknown) { 
+            const error = e as { message?: string; shortMessage?: string };
+            if (!error.message?.includes('User rejected the request')) { 
+                showToast(error.shortMessage || "遠征請求失敗", "error"); 
+            } 
+        }
     };
 
     const handleRest = async (partyId: bigint) => {
@@ -274,7 +290,12 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
         try {
             const hash = await writeContractAsync({ ...dungeonMasterContract, functionName: 'restParty', args: [partyId], });
             addTransaction({ hash, description: `隊伍 #${partyId.toString()} 正在休息` });
-        } catch (e: any) { if (!e.message.includes('User rejected the request')) { showToast(e.shortMessage || "休息失敗", "error"); } }
+        } catch (e: unknown) { 
+            const error = e as { message?: string; shortMessage?: string };
+            if (!error.message?.includes('User rejected the request')) { 
+                showToast(error.shortMessage || "休息失敗", "error"); 
+            } 
+        }
     };
 
     const handleBuyProvisions = (partyId: bigint) => {
@@ -305,7 +326,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
                         {parties.map((party) => (
                             <PartyStatusCard
                                 key={party.id.toString()}
-                                party={party as any} // Cast to include the status properties
+                                party={party as PartyNft & { provisionsRemaining: bigint; cooldownEndsAt: bigint; fatigueLevel: number; }}
                                 dungeons={dungeons}
                                 onStartExpedition={handleStartExpedition}
                                 onRest={handleRest}

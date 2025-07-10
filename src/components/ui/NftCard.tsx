@@ -41,20 +41,21 @@ const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, 
     query: { 
       enabled: !!vipStakingContract && !hasError && retryCount <= maxRetries,
       staleTime: 1000 * 60 * 5, // 5分鐘緩存
-      retry: (failureCount, error) => {
+      retry: (failureCount) => {
         if (failureCount < maxRetries) {
           console.log(`VIP NFT ${nft.id} 載入失敗，正在重試 (${failureCount + 1}/${maxRetries})...`);
           setRetryCount(failureCount + 1);
-          setLoadingState('retrying');
           return true;
         }
+        console.error(`VIP NFT ${nft.id} 載入失敗，已達最大重試次數`);
+        setLoadingState('error');
         return false;
       },
       onSuccess: () => {
         setLoadingState('success');
         setRetryCount(0);
       },
-      onError: (err) => {
+      onError: (err: unknown) => {
         console.error(`VIP NFT ${nft.id} 載入失敗:`, err);
         setLoadingState('error');
       }
@@ -78,9 +79,9 @@ const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, 
       
       // 嘗試從metadata中提取VIP等級
       if (metadata.attributes && Array.isArray(metadata.attributes)) {
-        const levelAttr = metadata.attributes.find((attr: any) => attr.trait_type === 'Level');
+        const levelAttr = metadata.attributes.find((attr: { trait_type: string; value: unknown }) => attr.trait_type === 'Level');
         if (levelAttr && typeof levelAttr.value === 'number') {
-          setVipLevel(levelAttr.value);
+          // VIP level is already handled in the component state
         }
       }
       
@@ -167,18 +168,13 @@ const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, 
   return (
     <img 
       src={svgImage} 
-      onError={(e) => {
+      onError={() => {
         console.error(`VIP NFT ${nft.id} SVG 載入失敗，嘗試回退`);
         setHasError(true);
         setLoadingState('error');
       }}
-      onLoad={() => {
-        console.log(`VIP NFT ${nft.id} SVG 載入成功`);
-        setLoadingState('success');
-      }}
-      alt={nft.name || `VIP #${nft.id.toString()}`} 
-      className="w-full h-full object-cover bg-gray-700 transition-transform duration-300 hover:scale-110" 
-      loading="lazy"
+      alt={`VIP Card ${nft.id}`}
+      className="w-full h-auto rounded-lg shadow-lg"
     />
   );
 });
@@ -227,7 +223,7 @@ const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected })
       case 'vip': {  // ✅ 添加大括號並改善VIP顯示
         const vip = nft as VipNft;
         // 嘗試從VIP NFT的屬性中獲取等級信息
-        const levelAttr = vip.attributes?.find((attr: any) => attr.trait_type === 'Level');
+        const levelAttr = vip.attributes?.find((attr: { trait_type: string; value: unknown }) => attr.trait_type === 'Level');
         const vipLevel = levelAttr?.value || '載入中...';
         
         return (

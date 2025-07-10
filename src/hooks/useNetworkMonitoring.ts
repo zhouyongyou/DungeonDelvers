@@ -9,6 +9,23 @@ interface NetworkStatus {
   saveData: boolean;
 }
 
+// 定義 Network Information API 的類型
+interface NetworkInformation {
+  type: string;
+  effectiveType: string;
+  downlink: number;
+  rtt: number;
+  saveData: boolean;
+  addEventListener: (event: string, listener: () => void) => void;
+  removeEventListener: (event: string, listener: () => void) => void;
+}
+
+interface NavigatorWithConnection extends Navigator {
+  connection?: NetworkInformation;
+  mozConnection?: NetworkInformation;
+  webkitConnection?: NetworkInformation;
+}
+
 export const useNetworkMonitoring = () => {
   const [networkStatus, setNetworkStatus] = useState<NetworkStatus>({
     isOnline: navigator.onLine,
@@ -22,7 +39,8 @@ export const useNetworkMonitoring = () => {
   const [connectivityHistory, setConnectivityHistory] = useState<Array<{ timestamp: number; isOnline: boolean }>>([]);
 
   const updateNetworkStatus = useCallback(() => {
-    const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+    const navigatorWithConnection = navigator as NavigatorWithConnection;
+    const connection = navigatorWithConnection.connection || navigatorWithConnection.mozConnection || navigatorWithConnection.webkitConnection;
     
     const newStatus: NetworkStatus = {
       isOnline: navigator.onLine,
@@ -69,7 +87,8 @@ useEffect(() => {
     window.addEventListener('offline', handleOffline);
 
     // 監聽網路變化
-    const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+    const navigatorWithConnection = navigator as NavigatorWithConnection;
+    const connection = navigatorWithConnection.connection || navigatorWithConnection.mozConnection || navigatorWithConnection.webkitConnection;
     if (connection) {
       connection.addEventListener('change', updateNetworkStatus);
     }

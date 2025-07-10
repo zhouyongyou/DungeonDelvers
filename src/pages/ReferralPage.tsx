@@ -77,7 +77,7 @@ const ReferralPage: React.FC = () => {
     const currentReferrer = referralData?.referrer;
     const totalCommission = referralData?.totalCommissionPaid ? BigInt(referralData.totalCommissionPaid) : 0n;
 
-    const playerVaultContract = getContract(chainId as any, 'playerVault');
+    const playerVaultContract = getContract(chainId as 56, 'playerVault');
     const { writeContractAsync, isPending: isSettingReferrer } = useWriteContract();
 
     useEffect(() => {
@@ -103,8 +103,9 @@ const ReferralPage: React.FC = () => {
             addTransaction({ hash, description: `設定邀請人為 ${referrerInput.substring(0, 6)}...` });
             // 成功後，延遲一段時間再刷新 The Graph 的數據
             setTimeout(() => queryClient.invalidateQueries({ queryKey: ['referralData', address] }), 5000);
-        } catch (e: any) {
-            if (!e.message.includes('User rejected the request')) showToast(e.shortMessage || "設定邀請人失敗", "error");
+        } catch (e: unknown) {
+            const error = e as { message?: string; shortMessage?: string };
+            if (!error.message?.includes('User rejected the request')) showToast(error.shortMessage || "設定邀請人失敗", "error");
         }
     };
 

@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContracts, useWriteContract, useReadContract } from 'wagmi';
 import { formatEther, isAddress } from 'viem';
-import type { Address, ContractName } from '../config/contracts';
+import type { ContractName } from '../config/contracts';
 import { getContract, contracts as contractConfigs } from '../config/contracts';
 import { useAppToast } from '../hooks/useAppToast';
 import { ActionButton } from '../components/ui/ActionButton';
@@ -22,6 +22,10 @@ import DungeonManager from '../components/admin/DungeonManager';
 import AltarRuleManager from '../components/admin/AltarRuleManager';
 
 type SupportedChainId = typeof bsc.id;
+type Address = `0x${string}`;
+
+// 開發者地址常量
+const DEVELOPER_ADDRESS = '0x0000000000000000000000000000000000000000'; // 請替換為實際的開發者地址
 
 const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) => {
   const { address } = useAccount();
@@ -130,7 +134,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   }, [chainId]);
 
   const { data: params, isLoading: isLoadingParams } = useReadContracts({
-    contracts: parameterConfig.map(p => ({ ...p.contract, functionName: p.getter })) as any,
+    contracts: parameterConfig.map(p => ({ ...p.contract, functionName: p.getter })),
     query: { enabled: parameterConfig.length > 0 }
   });
 
@@ -140,7 +144,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     query: { enabled: !!getContract(chainId, 'playerVault') }
   });
 
-  const handleSet = async (key: string, targetContract: any, functionName: string) => {
+  const handleSet = async (key: string, targetContract: NonNullable<ReturnType<typeof getContract>>, functionName: string) => {
     const newAddress = inputs[key];
     if (!isAddress(newAddress)) { showToast('請輸入有效的地址', 'error'); return; }
     setPendingTx(key);
@@ -148,8 +152,9 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       const hash = await writeContractAsync({ address: targetContract.address, abi: targetContract.abi, functionName: functionName, args: [newAddress] });
       addTransaction({ hash, description: `管理員設定: ${key}` });
       showToast(`${key} 設定交易已送出`, 'success');
-    } catch (e: any) {
-      if (!e.message.includes('User rejected')) { showToast(e.shortMessage || `設定 ${key} 失敗`, 'error'); }
+    } catch (e: unknown) {
+      const error = e as { message?: string; shortMessage?: string };
+      if (!error.message?.includes('User rejected')) { showToast(error.shortMessage || `設定 ${key} 失敗`, 'error'); }
     } finally {
       setPendingTx(null);
     }

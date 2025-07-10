@@ -23,10 +23,9 @@ import { bsc } from 'wagmi/chains';
 const useProvisionsLogic = (quantity: number) => {
     const { address, chainId } = useAccount();
 
-    const dungeonMasterContract = getContract(chainId || 56, 'dungeonMaster');
-    const dungeonCoreContract = getContract(chainId || 56, 'dungeonCore');
-    const soulShardContract = getContract(chainId || 56, 'soulShard');
-    const playerVaultContract = getContract(chainId || 56, 'playerVault');
+    const dungeonMasterContract = getContract((chainId || 56) as 56, 'dungeonMaster');
+    const dungeonCoreContract = getContract((chainId || 56) as 56, 'dungeonCore');
+    const soulShardContract = getContract((chainId || 56) as 56, 'soulShard');
 
     // 獲取儲備價格
     const { data: provisionPriceUSD, isLoading: isLoadingPrice } = useReadContract({
@@ -97,8 +96,8 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
 
     const { data: nfts, isLoading: isLoadingNfts } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
-        queryFn: () => fetchAllOwnedNfts(address!, chainId),
-        enabled: !!address,
+        queryFn: () => fetchAllOwnedNfts(address!, chainId!),
+        enabled: !!address && !!chainId,
         
         // 🔥 NFT缓存策略 - 内联配置以避免部署问题
         staleTime: 1000 * 60 * 30, // 30分钟内新鲜

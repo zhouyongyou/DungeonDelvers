@@ -274,7 +274,7 @@ const MyAssetsPage: React.FC = () => {
 
     const { data: nfts, isLoading } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
-        queryFn: () => fetchAllOwnedNfts(address!, chainId),
+        queryFn: () => fetchAllOwnedNfts(address!, chainId!),
         enabled: !!address && !!chainId,
         
         // 🔥 NFT缓存策略 - 内联配置以避免部署问题

@@ -361,12 +361,42 @@ async function batchProcess<T, R>(
     return results;
 }
 
-async function parseNfts<T extends { tokenId: string | number | bigint }>(
+// 定義資產類型
+interface AssetWithTokenId {
+    tokenId: string | number | bigint;
+    [key: string]: unknown;
+}
+
+interface HeroAsset extends AssetWithTokenId {
+    power: string | number | bigint;
+    rarity: string | number | bigint;
+}
+
+interface RelicAsset extends AssetWithTokenId {
+    capacity: string | number | bigint;
+    rarity: string | number | bigint;
+}
+
+interface PartyAsset extends AssetWithTokenId {
+    totalPower: string | number | bigint;
+    totalCapacity: string | number | bigint;
+    partyRarity: string | number | bigint;
+    heroes?: Array<{ tokenId: string | number | bigint }>;
+    relics?: Array<{ tokenId: string | number | bigint }>;
+}
+
+interface VipAsset extends AssetWithTokenId {
+    level?: string | number | bigint;
+    stakedAmount?: string | number | bigint;
+    stakedValueUSD?: string | number | bigint;
+}
+
+async function parseNfts<T extends AssetWithTokenId>(
     assets: T[],
     type: NftType,
     chainId: SupportedChainId,
     client: ReturnType<typeof getClient>
-): Promise<any[]> {
+): Promise<Array<HeroNft | RelicNft | PartyNft | VipNft>> {
     if (!assets || assets.length === 0) return [];
 
     const contractKeyMap: Record<NftType, ContractName> = {
@@ -392,7 +422,7 @@ async function parseNfts<T extends { tokenId: string | number | bigint }>(
     const uriResults = await client.multicall({ contracts: uriCalls, allowFailure: true });
 
     // 使用批量處理來限制並發元數據請求
-    const processAsset = async (asset: any, index: number) => {
+    const processAsset = async (asset: T, index: number) => {
         const uriResult = uriResults[index];
         let metadata: Omit<BaseNft, 'id' | 'contractAddress' | 'type'>;
 
@@ -412,31 +442,41 @@ async function parseNfts<T extends { tokenId: string | number | bigint }>(
             };
         }
 
-        const findAttr = (trait: string, defaultValue: any = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
+        const findAttr = (trait: string, defaultValue: string | number = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
         
-        // ★ 核心修正：將 asset 轉換為 any 型別，以解決 TypeScript 的泛型推斷問題
-        const anyAsset = asset as any;
-        const baseNft = { ...metadata, id: BigInt(anyAsset.tokenId), contractAddress };
+        const baseNft = { ...metadata, id: BigInt(asset.tokenId), contractAddress };
 
         switch (type) {
-            case 'hero': return { ...baseNft, type, power: Number(anyAsset.power), rarity: Number(anyAsset.rarity) };
-            case 'relic': return { ...baseNft, type, capacity: Number(anyAsset.capacity), rarity: Number(anyAsset.rarity) };
-            case 'party': return { 
-                ...baseNft, 
-                type, 
-                totalPower: BigInt(anyAsset.totalPower), 
-                totalCapacity: BigInt(anyAsset.totalCapacity), 
-                heroIds: anyAsset.heroes ? anyAsset.heroes.map((h: any) => BigInt(h.tokenId)) : [], 
-                relicIds: anyAsset.relics ? anyAsset.relics.map((r: any) => BigInt(r.tokenId)) : [], 
-                partyRarity: Number(anyAsset.partyRarity) 
-            };
-            case 'vip': return { 
-                ...baseNft, 
-                type, 
-                level: Number(anyAsset.level || findAttr('VIP Level', 0)),
-                stakedAmount: BigInt(anyAsset.stakedAmount || 0),
-                stakedValueUSD: anyAsset.stakedValueUSD ? BigInt(anyAsset.stakedValueUSD) : undefined
-            };
+            case 'hero': {
+                const heroAsset = asset as unknown as HeroAsset;
+                return { ...baseNft, type, power: Number(heroAsset.power), rarity: Number(heroAsset.rarity) };
+            }
+            case 'relic': {
+                const relicAsset = asset as unknown as RelicAsset;
+                return { ...baseNft, type, capacity: Number(relicAsset.capacity), rarity: Number(relicAsset.rarity) };
+            }
+            case 'party': {
+                const partyAsset = asset as unknown as PartyAsset;
+                return { 
+                    ...baseNft, 
+                    type, 
+                    totalPower: BigInt(partyAsset.totalPower), 
+                    totalCapacity: BigInt(partyAsset.totalCapacity), 
+                    heroIds: partyAsset.heroes ? partyAsset.heroes.map((h) => BigInt(h.tokenId)) : [], 
+                    relicIds: partyAsset.relics ? partyAsset.relics.map((r) => BigInt(r.tokenId)) : [], 
+                    partyRarity: Number(partyAsset.partyRarity) 
+                };
+            }
+            case 'vip': {
+                const vipAsset = asset as unknown as VipAsset;
+                return { 
+                    ...baseNft, 
+                    type, 
+                    level: Number(vipAsset.level || findAttr('VIP Level', 0)),
+                    stakedAmount: BigInt(vipAsset.stakedAmount || 0),
+                    stakedValueUSD: vipAsset.stakedValueUSD ? BigInt(vipAsset.stakedValueUSD) : undefined
+                };
+            }
             default: return null;
         }
     };
@@ -449,7 +489,7 @@ async function parseNfts<T extends { tokenId: string | number | bigint }>(
         3 // 限制並發數量為3
     );
 
-    return results.filter(Boolean);
+    return results.filter(Boolean) as Array<HeroNft | RelicNft | PartyNft | VipNft>;
 }
 
 export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promise<AllNftCollections> {

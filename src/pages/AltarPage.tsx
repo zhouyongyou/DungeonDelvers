@@ -224,7 +224,7 @@ const AltarPage: React.FC = () => {
             const newNfts: AnyNft[] = await Promise.all(mintedLogs.map(async (log) => {
                 const tokenId = ((log.args as unknown) as Record<string, unknown>).tokenId as bigint;
                 const tokenUri = await publicClient.readContract({ address: tokenContract.address, abi: tokenContract.abi as Abi, functionName: 'tokenURI', args: [tokenId] }) as string;
-                const metadata = await fetchMetadata(tokenUri);
+                const metadata = await fetchMetadata(tokenUri, tokenId.toString(), tokenContract.address);
                 const findAttr = (trait: string, defaultValue = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
                 if (nftType === 'hero') return { ...metadata, id: tokenId, type: 'hero', contractAddress: tokenContract.address, power: Number(findAttr('Power')), rarity: Number(findAttr('Rarity')) };
                 return { ...metadata, id: tokenId, type: 'relic', contractAddress: tokenContract.address, capacity: Number(findAttr('Capacity')), rarity: Number(findAttr('Rarity')) };

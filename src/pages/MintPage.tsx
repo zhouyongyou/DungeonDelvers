@@ -75,7 +75,7 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
         address: soulShardContract?.address,
         abi: soulShardContract?.abi,
         functionName: 'allowance',
-        args: [address!, contractConfig?.address!],
+        args: [address!, contractConfig?.address as `0x${string}`],
         query: { enabled: !!address && !!contractConfig && paymentSource === 'wallet' },
     });
 
@@ -160,7 +160,10 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
             await publicClient?.waitForTransactionReceipt({ hash });
             showToast('授權成功！', 'success');
             refetchAllowance();
-        } catch (e: any) { if (!e.message.includes('User rejected the request')) showToast(e.shortMessage || "授權失敗", "error"); }
+        } catch (e: unknown) { 
+            const error = e as { message?: string; shortMessage?: string };
+            if (!error.message?.includes('User rejected the request')) showToast(error.shortMessage || "授權失敗", "error"); 
+        }
     };
 
     const handleMint = async () => {
@@ -179,25 +182,30 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
             
             if (mintLog) {
                 const decodedLog = decodeEventLog({ abi: contractConfig.abi, ...mintLog });
-                const tokenId = (decodedLog.args as any).tokenId;
+                const tokenId = (decodedLog.args as { tokenId?: bigint }).tokenId;
                 
-                const tokenUri = await publicClient.readContract({ 
-                    address: contractConfig.address, 
-                    abi: contractConfig.abi, 
-                    functionName: 'tokenURI', 
-                    args: [tokenId] 
-                }) as string;
+                if (tokenId) {
+                    const tokenUri = await publicClient.readContract({ 
+                        address: contractConfig.address, 
+                        abi: contractConfig.abi, 
+                        functionName: 'tokenURI', 
+                        args: [tokenId] 
+                    }) as string;
 
-                const metadata = await fetchMetadata(tokenUri);
-                const findAttr = (trait: string, defaultValue: any = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
-                
-                let nftData: AnyNft;
-                if(type === 'hero') nftData = { ...metadata, id: tokenId, type, contractAddress: contractConfig.address, power: Number(findAttr('Power')), rarity: Number(findAttr('Rarity')) };
-                else nftData = { ...metadata, id: tokenId, type, contractAddress: contractConfig.address, capacity: Number(findAttr('Capacity')), rarity: Number(findAttr('Rarity')) };
-                setMintingResult(nftData);
-                queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
+                    const metadata = await fetchMetadata(tokenUri, tokenId.toString(), contractConfig.address);
+                    const findAttr = (trait: string, defaultValue: string | number = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
+                    
+                    let nftData: AnyNft;
+                    if(type === 'hero') nftData = { ...metadata, id: tokenId, type, contractAddress: contractConfig.address, power: Number(findAttr('Power')), rarity: Number(findAttr('Rarity')) };
+                    else nftData = { ...metadata, id: tokenId, type, contractAddress: contractConfig.address, capacity: Number(findAttr('Capacity')), rarity: Number(findAttr('Rarity')) };
+                    setMintingResult(nftData);
+                    queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
+                }
             }
-        } catch (error: any) { if (!error.message.includes('User rejected')) showToast(error.shortMessage || "鑄造失敗", "error"); }
+        } catch (error: unknown) { 
+            const e = error as { message?: string; shortMessage?: string };
+            if (!e.message?.includes('User rejected')) showToast(e.shortMessage || "鑄造失敗", "error"); 
+        }
     };
     
     const isButtonDisabled = !address || isLoading || isError || balance < requiredAmount || requiredAmount === 0n;
@@ -222,7 +230,7 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
             </div>
             <div className="text-center mb-4 min-h-[72px] flex-grow flex flex-col justify-center">
                 {isLoading ? <div className="flex flex-col items-center justify-center"><LoadingSpinner color="border-gray-500" /><p className="text-sm text-gray-500 mt-2">讀取價格中...</p></div>
-                : isError ? <div className="text-red-500 text-center"><p className="font-bold">價格讀取失敗</p><p className="text-xs mt-1">{(error as any)?.shortMessage || '請檢查合約狀態或網路連線。'}</p></div>
+                : isError ? <div className="text-red-500 text-center"><p className="font-bold">價格讀取失敗</p><p className="text-xs mt-1">{(error as { shortMessage?: string })?.shortMessage || '請檢查合約狀態或網路連線。'}</p></div>
                 : (<div><p className="text-lg text-gray-500 dark:text-gray-400">總價:</p><p className="font-bold text-yellow-500 dark:text-yellow-400 text-2xl">{parseFloat(formatEther(typeof requiredAmount === 'bigint' ? requiredAmount : 0n)).toFixed(4)}</p><p className="text-xs text-gray-500">$SoulShard + {formatEther(typeof platformFee === 'bigint' ? platformFee * BigInt(quantity) : 0n)} BNB</p></div>)}
             </div>
             {actionButton}

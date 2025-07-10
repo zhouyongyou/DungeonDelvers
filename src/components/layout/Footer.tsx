@@ -70,7 +70,7 @@ export const Footer: React.FC = () => {
           rpcUrl = transport.url;
       } else if (transport.key === 'fallback') {
           // 在 fallback 模式下，嘗試從第一個 transport 獲取 URL
-          const firstTransport = (transport as any).transports?.[0];
+          const firstTransport = (transport as { transports?: Array<{ url?: string; value?: { url?: string } }> }).transports?.[0];
           if (firstTransport?.url) {
               rpcUrl = firstTransport.url;
           } else if (firstTransport?.value?.url) {
@@ -96,7 +96,7 @@ export const Footer: React.FC = () => {
               } else {
                   rpcUrl = url.hostname;
               }
-          } catch (e) {
+          } catch {
               // 如果無法解析 URL，保持原樣
               console.warn('無法解析 RPC URL:', rpcUrl);
           }

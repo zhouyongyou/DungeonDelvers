@@ -12,7 +12,7 @@ interface SettingRowProps {
   readSource: string;
   contract: NonNullable<ReturnType<typeof getContract>>;
   functionName: string;
-  currentValue?: any;
+  currentValue?: unknown;
   isLoading: boolean;
   unit?: 'USD' | 'BNB' | '‱' | '無';
   placeholders?: string[];
@@ -56,8 +56,9 @@ const SettingRow: React.FC<SettingRowProps> = ({
       });
       
       showToast(`${label} 更新成功！`, 'success');
-    } catch (e: any) {
-      showToast(e.shortMessage || "更新失敗", "error");
+    } catch (e: unknown) {
+      const error = e as { shortMessage?: string };
+      showToast(error.shortMessage || "更新失敗", "error");
     }
   };
 

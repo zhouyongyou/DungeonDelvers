@@ -4,8 +4,10 @@ type ToastType = 'success' | 'error' | 'info';
 interface Toast { id: number; text: string; type: ToastType; }
 interface ToastContextValue { showToast: (text: string, type?: ToastType) => void; }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAppToast = () => {
     const context = useContext(ToastContext);
     if (context === undefined) throw new Error('useAppToast must be used within a ToastProvider');

@@ -14,7 +14,7 @@ import { useVipStatus } from '../hooks/useVipStatus';
 
 const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undefined }> = ({ tokenId, chainId }) => {
     // ✅ 將所有Hook調用移到組件頂部
-    const vipStakingContract = getContract(chainId as any, 'vipStaking');
+    const vipStakingContract = getContract(chainId as 56, 'vipStaking');
     
     const { data: tokenURI, isLoading, isError } = useReadContract({
         ...vipStakingContract,
@@ -120,7 +120,7 @@ const VipPage: React.FC = () => {
                     // 再次檢查授權狀態
                     try {
                         const parsedAmount = parseEther(amount);
-                        if (allowance >= parsedAmount) {
+                        if (typeof allowance === 'bigint' && allowance >= parsedAmount) {
                             handleStake();
                         } else {
                             showToast('授權尚未完成，請稍後重試', 'info');

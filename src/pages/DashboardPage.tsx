@@ -77,7 +77,7 @@ const useDashboardStats = () => {
                 const { data, errors } = await response.json();
                 
                 if (errors) {
-                    throw new Error(`GraphQL errors: ${errors.map((e: any) => e.message).join(', ')}`);
+                    throw new Error(`GraphQL errors: ${errors.map((e: { message: string }) => e.message).join(', ')}`);
                 }
                 
                 return data.player;
@@ -239,12 +239,15 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     }, [chainId]);
 
     const handleWithdraw = async () => {
-        const playerVaultContract = getContract(chainId as any, 'playerVault');
+        const playerVaultContract = getContract(chainId as 56, 'playerVault');
         if (!playerVaultContract || withdrawableBalance === 0n) return;
         try {
             const hash = await writeContractAsync({ ...playerVaultContract, functionName: 'withdraw', args: [withdrawableBalance] });
             addTransaction({ hash, description: '從金庫提領 $SoulShard' });
-        } catch(e: any) { showToast(e.shortMessage || "提領失敗", "error"); }
+        } catch(e: unknown) { 
+            const error = e as { shortMessage?: string };
+            showToast(error.shortMessage || "提領失敗", "error"); 
+        }
     };
 
     if (!chainId || chainId !== bsc.id) {

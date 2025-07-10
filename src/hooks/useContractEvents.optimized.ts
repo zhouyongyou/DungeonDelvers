@@ -4,7 +4,7 @@
 
 import { useAccount, useWatchContractEvent } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { decodeEventLog, type Log, type Abi } from 'viem';
 import { getContract } from '../config/contracts';
 import { useAppToast } from './useAppToast';
@@ -152,18 +152,6 @@ export const useContractEventsOptimized = () => {
     
     // --- 精準的 Query Invalidation 函式 ---
     
-    // 🔥 優化：添加節流功能，避免短時間內重複刷新
-    const createThrottledInvalidator = (key: string, delay: number = 1000) => {
-        let timeoutId: NodeJS.Timeout;
-        
-        return () => {
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => {
-                queryClient.invalidateQueries({ queryKey: [key, address, chainId] });
-            }, delay);
-        };
-    };
-    
     // 當 NFT 資產或代幣餘額發生變化時呼叫
     const invalidateNftsAndBalance = useCallback(() => {
         showToast('🔄 偵測到資產變動，正在同步最新數據...', 'info');
@@ -180,7 +168,15 @@ export const useContractEventsOptimized = () => {
     }, [address, chainId, queryClient, showToast]);
 
     // 🔥 優化：使用節流版本的金庫刷新
-    const throttledVaultRefresh = useCallback(createThrottledInvalidator('playerInfo'), [address, chainId, queryClient]);
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const throttledVaultRefresh = useCallback(() => {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+        timeoutRef.current = setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: ['playerInfo', address, chainId] });
+        }, 1000);
+    }, [address, chainId, queryClient]);
     
     const invalidateVaultAndTax = useCallback(() => {
         showToast('金庫資料已更新！', 'success');
