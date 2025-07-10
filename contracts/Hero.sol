@@ -15,6 +15,8 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable {
     using Strings for uint256; // ★ 新增：為 uint256 啟用字串工具
     // ★ 新增：基礎 URI，指向您的元數據伺服器
     string public baseURI;
+    // ★ 新增：合約級別元數據 URI
+    string private _contractURI;
 
     IDungeonCore public dungeonCore;
     IERC20 public soulShardToken;
@@ -38,6 +40,7 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable {
     event ContractsSet(address indexed core, address indexed token);
     event AscensionAltarSet(address indexed newAddress);
     event BaseURISet(string newBaseURI); // ★ 新增事件
+    event ContractURIUpdated(string newContractURI); // ★ 新增事件
 
     // --- 修飾符 ---
     modifier onlyAltar() {
@@ -190,6 +193,16 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable {
     function setBaseURI(string memory _newBaseURI) external onlyOwner {
         baseURI = _newBaseURI;
         emit BaseURISet(_newBaseURI);
+    }
+
+    // ★ 新增：合約級別元數據函式
+    function contractURI() public view returns (string memory) {
+        return _contractURI;
+    }
+
+    function setContractURI(string memory newContractURI) external onlyOwner {
+        _contractURI = newContractURI;
+        emit ContractURIUpdated(newContractURI);
     }
 
     function setAscensionAltarAddress(address _address) public onlyOwner {

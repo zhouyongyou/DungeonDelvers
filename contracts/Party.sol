@@ -13,6 +13,8 @@ import "./interfaces.sol";
 contract Party is ERC721, Ownable, ReentrancyGuard, Pausable, ERC721Holder {
     using Strings for uint256; // ★ 新增
     string public baseURI; // ★ 新增
+    // ★ 新增：合約級別元數據 URI
+    string private _contractURI;
 
     // --- 狀態變數 ---
     IHero public heroContract;
@@ -46,6 +48,7 @@ contract Party is ERC721, Ownable, ReentrancyGuard, Pausable, ERC721Holder {
     event RelicContractSet(address indexed newAddress);
     event DungeonCoreSet(address indexed newAddress);
     event BaseURISet(string newBaseURI); // ★ 新增事件
+    event ContractURIUpdated(string newContractURI); // ★ 新增事件
     event OperatorApprovalSet(address indexed operator, bool approved);
 
     // --- 建構函式 ---
@@ -146,6 +149,16 @@ contract Party is ERC721, Ownable, ReentrancyGuard, Pausable, ERC721Holder {
     function setBaseURI(string memory _newBaseURI) external onlyOwner {
         baseURI = _newBaseURI;
         emit BaseURISet(_newBaseURI);
+    }
+
+    // ★ 新增：合約級別元數據函式
+    function contractURI() public view returns (string memory) {
+        return _contractURI;
+    }
+
+    function setContractURI(string memory newContractURI) external onlyOwner {
+        _contractURI = newContractURI;
+        emit ContractURIUpdated(newContractURI);
     }
 
     function setOperatorApproval(address operator, bool approved) external onlyOwner {
