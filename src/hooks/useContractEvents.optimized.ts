@@ -1,8 +1,10 @@
-// src/hooks/useContractEvents.ts
+// src/hooks/useContractEvents.optimized.ts
+// 🔥 這是優化版本的 useContractEvents Hook
+// 可以替換原有的 useContractEvents.ts 文件
 
 import { useAccount, useWatchContractEvent } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { decodeEventLog, type Log, type Abi } from 'viem';
 import { getContract } from '../config/contracts';
 import { useAppToast } from './useAppToast';
@@ -15,19 +17,55 @@ type DecodedLogWithArgs = {
     args: Record<string, unknown>;
 };
 
-// ★★★ 網路優化：優化輪詢間隔，減少 RPC 請求壓力 ★★★
-const POLLING_INTERVAL = 15_000; // 15 秒 (從 12 秒調整到 15 秒，減少 20% 的請求)
+// ★★★ 網路優化：自適應輪詢間隔，根據用戶活動調整 ★★★
+const POLLING_INTERVALS = {
+  active: 8_000,    // 用戶活躍時：8秒
+  idle: 20_000,     // 用戶閒置時：20秒  
+  background: 60_000, // 頁面背景時：60秒
+} as const;
+
+// 用戶活動狀態檢測 Hook
+const useUserActivity = () => {
+  const [activity, setActivity] = useState<'active' | 'idle' | 'background'>('active');
+  
+  useEffect(() => {
+    let idleTimer: NodeJS.Timeout;
+    
+    const resetTimer = () => {
+      clearTimeout(idleTimer);
+      setActivity('active');
+      idleTimer = setTimeout(() => setActivity('idle'), 30_000); // 30秒後變為閒置
+    };
+    
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setActivity('background');
+        clearTimeout(idleTimer);
+      } else {
+        resetTimer();
+      }
+    };
+    
+    // 監聽用戶活動事件
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(event => document.addEventListener(event, resetTimer, { passive: true }));
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    resetTimer();
+    
+    return () => {
+      clearTimeout(idleTimer);
+      events.forEach(event => document.removeEventListener(event, resetTimer));
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+  
+  return activity;
+};
 
 /**
  * @notice 高階工廠函式，用於創建通用的事件處理器，避免重複程式碼。
- * @dev 此函式封裝了日誌解碼、事件名稱匹配和使用者地址驗證的通用邏輯。
- * @param contract 要監聽的合約物件。
- * @param eventName 要監聽的事件名稱。
- * @param userAddress 當前用戶的地址。
- * @param callback 處理事件的回呼函式。
- * @param checkPartyOwnership 是否需要檢查隊伍所有權 (專為隊伍相關事件設計)。
- * @param queryClient 用於獲取快取數據的 queryClient 實例。
- * @returns 一個 onLogs 函式，可直接傳遞給 useWatchContractEvent。
+ * 🔥 優化版本：添加了更好的錯誤處理和性能監控
  */
 function createContractEventHandler(
     contract: ReturnType<typeof getContract>,
@@ -39,6 +77,10 @@ function createContractEventHandler(
 ) {
     return (logs: Log[]) => {
         if (!contract || !userAddress) return;
+
+        // 🔥 優化：性能監控
+        const startTime = performance.now();
+        let processedLogs = 0;
 
         // 如果需要檢查隊伍所有權，先從快取中獲取玩家擁有的隊伍 ID 列表
         const myPartyIds = checkPartyOwnership && queryClient
@@ -62,6 +104,7 @@ function createContractEventHandler(
                     if (checkPartyOwnership) {
                         if (args.partyId && myPartyIds.includes(args.partyId as bigint)) {
                             callback(typedLog);
+                            processedLogs++;
                         }
                         return;
                     }
@@ -70,28 +113,56 @@ function createContractEventHandler(
                     const userField = args.owner || args.player || args.user;
                     if (userField && userField.toString().toLowerCase() === userAddress.toLowerCase()) {
                         callback(typedLog);
+                        processedLogs++;
                     }
                 }
-            } catch {
-                // 忽略解析錯誤，因為一個日誌可能匹配多個事件定義
+            } catch (error) {
+                // 🔥 優化：更好的錯誤處理
+                console.warn(`Failed to decode log for event ${eventName}:`, error);
             }
         });
+
+        // 🔥 優化：性能監控
+        const processingTime = performance.now() - startTime;
+        if (processingTime > 100) { // 超過100ms記錄警告
+            console.warn(`Slow event processing: ${eventName} took ${processingTime.toFixed(2)}ms to process ${processedLogs} logs`);
+        }
     };
 }
 
 /**
- * @notice 全局合約事件監聽 Hook
- * @dev ★★★ RPC 優化核心 ★★★
- * 這個 Hook 是解決 RPC 爆炸問題的關鍵。它取代了所有定時輪詢。
- * 我們為每種數據類型定義了精準的刷新函式，確保只在必要時才重新獲取數據。
+ * @notice 優化版本的全局合約事件監聽 Hook
+ * 🔥 主要優化：
+ * 1. 自適應輪詢間隔 - 根據用戶活動調整請求頻率
+ * 2. 更好的錯誤處理和性能監控
+ * 3. 智能背景模式處理
  */
-export const useContractEvents = () => {
+export const useContractEventsOptimized = () => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
     const { showExpeditionResult } = useExpeditionResult();
     const queryClient = useQueryClient();
     
+    // 🔥 優化：使用自適應輪詢間隔
+    const userActivity = useUserActivity();
+    const pollingInterval = POLLING_INTERVALS[userActivity];
+    
+    // 🔥 優化：在背景模式時完全停止事件監聽
+    const isEnabled = chainId === bsc.id && !!address && userActivity !== 'background';
+    
     // --- 精準的 Query Invalidation 函式 ---
+    
+    // 🔥 優化：添加節流功能，避免短時間內重複刷新
+    const createThrottledInvalidator = (key: string, delay: number = 1000) => {
+        let timeoutId: NodeJS.Timeout;
+        
+        return () => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: [key, address, chainId] });
+            }, delay);
+        };
+    };
     
     // 當 NFT 資產或代幣餘額發生變化時呼叫
     const invalidateNftsAndBalance = useCallback(() => {
@@ -108,27 +179,25 @@ export const useContractEvents = () => {
         });
     }, [address, chainId, queryClient, showToast]);
 
-    // 當金庫存入或取出時呼叫
+    // 🔥 優化：使用節流版本的金庫刷新
+    const throttledVaultRefresh = useCallback(createThrottledInvalidator('playerInfo'), [address, chainId, queryClient]);
+    
     const invalidateVaultAndTax = useCallback(() => {
         showToast('金庫資料已更新！', 'success');
-        // 刷新金庫資訊、稅率參數和代幣餘額
-        queryClient.invalidateQueries({ queryKey: ['playerInfo', address, chainId] });
+        throttledVaultRefresh();
         queryClient.invalidateQueries({ queryKey: ['taxParams', address, chainId] });
         queryClient.invalidateQueries({ queryKey: ['balance', address, chainId] });
-    }, [address, chainId, queryClient, showToast]);
+    }, [address, chainId, queryClient, showToast, throttledVaultRefresh]);
     
-    // 當經驗值增加時呼叫
+    // 其他 invalidate 函式保持不變...
     const invalidateProfile = useCallback(() => {
         showToast('經驗值已更新！', 'info');
-        // 刷新玩家檔案相關的所有數據
         queryClient.invalidateQueries({ queryKey: ['profileTokenOf', address] });
         queryClient.invalidateQueries({ queryKey: ['playerExperience'] });
         queryClient.invalidateQueries({ queryKey: ['getLevel', address] });
     }, [address, queryClient, showToast]);
     
-    // 當隊伍狀態 (儲備/冷卻/疲勞) 變化時呼叫
     const invalidatePartyStatus = useCallback((partyId?: bigint) => {
-        // 精準地只刷新特定隊伍的狀態
         queryClient.invalidateQueries({ queryKey: ['getPartyStatus', partyId?.toString()] });
     }, [queryClient]);
 
@@ -141,15 +210,20 @@ export const useContractEvents = () => {
     const altarOfAscensionContract = getContract(bsc.id, 'altarOfAscension');
     const playerProfileContract = getContract(bsc.id, 'playerProfile');
 
-    // --- 事件監聽設定 (已加入 pollingInterval) ---
+    // 🔥 優化：顯示當前輪詢狀態（開發階段可用）
+    useEffect(() => {
+        console.log(`Event polling: ${userActivity} mode (${pollingInterval}ms interval)`);
+    }, [userActivity, pollingInterval]);
+
+    // --- 事件監聽設定 (使用自適應輪詢間隔) ---
     
     // NFT 鑄造/創建事件 -> 刷新 NFT 列表和餘額
     useWatchContractEvent({ 
         ...heroContract, 
         chainId: bsc.id, 
         eventName: 'HeroMinted', 
-        pollingInterval: POLLING_INTERVAL, 
-        enabled: chainId === bsc.id && !!address,
+        pollingInterval, // 🔥 使用自適應間隔
+        enabled: isEnabled, // 🔥 背景模式時停用
         onLogs: createContractEventHandler(heroContract, 'HeroMinted', address, (log) => { 
             showToast(`英雄 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); 
             invalidateNftsAndBalance(); 
@@ -160,8 +234,8 @@ export const useContractEvents = () => {
         ...relicContract, 
         chainId: bsc.id, 
         eventName: 'RelicMinted', 
-        pollingInterval: POLLING_INTERVAL, 
-        enabled: chainId === bsc.id && !!address,
+        pollingInterval, // 🔥 使用自適應間隔
+        enabled: isEnabled, // 🔥 背景模式時停用
         onLogs: createContractEventHandler(relicContract, 'RelicMinted', address, (log) => { 
             showToast(`聖物 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); 
             invalidateNftsAndBalance(); 
@@ -172,8 +246,8 @@ export const useContractEvents = () => {
         ...partyContract, 
         chainId: bsc.id, 
         eventName: 'PartyCreated', 
-        pollingInterval: POLLING_INTERVAL, 
-        enabled: chainId === bsc.id && !!address,
+        pollingInterval, // 🔥 使用自適應間隔
+        enabled: isEnabled, // 🔥 背景模式時停用
         onLogs: createContractEventHandler(partyContract, 'PartyCreated', address, (log) => { 
             showToast(`隊伍 #${log.args.partyId?.toString()} 創建成功！`, 'success'); 
             invalidateNftsAndBalance(); 
@@ -185,8 +259,8 @@ export const useContractEvents = () => {
         ...playerVaultContract, 
         chainId: bsc.id, 
         eventName: 'Deposited', 
-        pollingInterval: POLLING_INTERVAL, 
-        enabled: chainId === bsc.id && !!address,
+        pollingInterval, // 🔥 使用自適應間隔
+        enabled: isEnabled, // 🔥 背景模式時停用
         onLogs: createContractEventHandler(playerVaultContract, 'Deposited', address, () => { 
             invalidateVaultAndTax(); 
         }) 
@@ -196,8 +270,8 @@ export const useContractEvents = () => {
         ...playerVaultContract, 
         chainId: bsc.id, 
         eventName: 'Withdrawn', 
-        pollingInterval: POLLING_INTERVAL, 
-        enabled: chainId === bsc.id && !!address,
+        pollingInterval, // 🔥 使用自適應間隔
+        enabled: isEnabled, // 🔥 背景模式時停用
         onLogs: createContractEventHandler(playerVaultContract, 'Withdrawn', address, () => { 
             invalidateVaultAndTax(); 
         }) 
@@ -208,8 +282,8 @@ export const useContractEvents = () => {
         ...playerProfileContract, 
         chainId: bsc.id, 
         eventName: 'ExperienceAdded', 
-        pollingInterval: POLLING_INTERVAL, 
-        enabled: chainId === bsc.id && !!address,
+        pollingInterval, // 🔥 使用自適應間隔
+        enabled: isEnabled, // 🔥 背景模式時停用
         onLogs: createContractEventHandler(playerProfileContract, 'ExperienceAdded', address, () => { 
             invalidateProfile(); 
         }) 
@@ -220,8 +294,8 @@ export const useContractEvents = () => {
         ...dungeonMasterContract, 
         chainId: bsc.id, 
         eventName: 'ExpeditionFulfilled', 
-        pollingInterval: POLLING_INTERVAL, 
-        enabled: chainId === bsc.id && !!address,
+        pollingInterval, // 🔥 使用自適應間隔
+        enabled: isEnabled, // 🔥 背景模式時停用
         onLogs: createContractEventHandler(dungeonMasterContract, 'ExpeditionFulfilled', address, (log) => { 
             const { success, reward, expGained } = log.args; 
             showExpeditionResult({ 
@@ -238,8 +312,8 @@ export const useContractEvents = () => {
         ...dungeonMasterContract, 
         chainId: bsc.id, 
         eventName: 'PartyRested', 
-        pollingInterval: POLLING_INTERVAL, 
-        enabled: chainId === bsc.id && !!address,
+        pollingInterval, // 🔥 使用自適應間隔
+        enabled: isEnabled, // 🔥 背景模式時停用
         onLogs: createContractEventHandler(dungeonMasterContract, 'PartyRested', address, (log) => { 
             showToast(`隊伍 #${log.args.partyId?.toString()} 已恢復活力！`, 'success'); 
             invalidatePartyStatus(log.args.partyId as bigint); 
@@ -250,8 +324,8 @@ export const useContractEvents = () => {
         ...dungeonMasterContract, 
         chainId: bsc.id, 
         eventName: 'ProvisionsBought', 
-        pollingInterval: POLLING_INTERVAL, 
-        enabled: chainId === bsc.id && !!address,
+        pollingInterval, // 🔥 使用自適應間隔
+        enabled: isEnabled, // 🔥 背景模式時停用
         onLogs: createContractEventHandler(dungeonMasterContract, 'ProvisionsBought', address, (log) => { 
             showToast(`隊伍 #${log.args.partyId?.toString()} 儲備補充成功！`, 'success'); 
             invalidatePartyStatus(log.args.partyId as bigint); 
@@ -263,8 +337,8 @@ export const useContractEvents = () => {
         ...altarOfAscensionContract, 
         chainId: bsc.id, 
         eventName: 'UpgradeProcessed', 
-        pollingInterval: POLLING_INTERVAL, 
-        enabled: chainId === bsc.id && !!address,
+        pollingInterval, // 🔥 使用自適應間隔
+        enabled: isEnabled, // 🔥 背景模式時停用
         onLogs: createContractEventHandler(altarOfAscensionContract, 'UpgradeProcessed', address, (log) => {
             const { outcome } = log.args;
             const outcomeMessages: Record<number, string> = { 
@@ -279,4 +353,11 @@ export const useContractEvents = () => {
             invalidateNftsAndBalance();
         })
     });
+    
+    // 🔥 優化：返回當前狀態，方便調試
+    return {
+        userActivity,
+        pollingInterval,
+        isEnabled
+    };
 };
