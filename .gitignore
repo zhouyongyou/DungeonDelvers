@@ -58,6 +58,7 @@ Thumbs.db
 # Hardhat 或 Foundry 等工具產生的快取和 artifact 檔案
 artifacts/
 cache/
+!src/cache/
 coverage/
 coverage.json
 
