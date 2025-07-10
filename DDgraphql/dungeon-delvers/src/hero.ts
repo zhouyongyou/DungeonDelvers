@@ -3,6 +3,7 @@ import { HeroMinted, Transfer } from "../generated/Hero/Hero"
 import { Hero } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { log } from "@graphprotocol/graph-ts"
+import { createEntityId } from "./config"
 
 export function handleHeroMinted(event: HeroMinted): void {
     // 參數驗證
@@ -18,8 +19,8 @@ export function handleHeroMinted(event: HeroMinted): void {
 
     let player = getOrCreatePlayer(event.params.owner)
     
-    // 使用 "合約地址-TokenID" 作為全域唯一 ID
-    let heroId = event.address.toHexString().concat("-").concat(event.params.tokenId.toString())
+    // 使用配置系統創建全域唯一 ID
+    let heroId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
     
     // 檢查是否已存在（防止重複處理）
     let existingHero = Hero.load(heroId);
@@ -41,7 +42,7 @@ export function handleHeroMinted(event: HeroMinted): void {
 }
 
 export function handleTransfer(event: Transfer): void {
-    let heroId = event.address.toHexString().concat("-").concat(event.params.tokenId.toString())
+    let heroId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
     let hero = Hero.load(heroId)
     if (hero) {
         let newOwner = getOrCreatePlayer(event.params.to)

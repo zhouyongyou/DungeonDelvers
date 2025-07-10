@@ -199,20 +199,22 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
                         金庫支付 (免稅)
                     </button>
                 </div>
-                <p className="text-xs text-center mt-2 text-gray-500">
+                <div className="text-xs text-center mt-2 text-gray-500">
                     {paymentSource === 'wallet' ? '錢包餘額' : '金庫餘額'}: {parseFloat(formatEther(balance)).toFixed(4)} $SoulShard
-                </p>
+                </div>
             </div>
             <div className="text-center p-4 bg-black/20 rounded-lg">
-                <p className="text-gray-400">總價:</p>
-                <p className="font-bold text-yellow-400 text-2xl">
+                <div className="text-gray-400">總價:</div>
+                <div className="font-bold text-yellow-400 text-2xl">
                     {isLoading ? <LoadingSpinner size="h-6 w-6" /> : `${parseFloat(formatEther(typeof totalRequiredAmount === 'bigint' ? totalRequiredAmount : 0n)).toFixed(4)} $SoulShard`}
-                </p>
+                </div>
             </div>
             {paymentSource === 'wallet' && needsApproval ? (
                  <ActionButton onClick={handleApprove} isLoading={isTxPending} className="w-full h-12">批准代幣</ActionButton>
             ) : (
-                <ActionButton onClick={handlePurchase} isLoading={isTxPending} disabled={!selectedPartyId} className="w-full h-12">購買儲備</ActionButton>
+                <ActionButton onClick={handlePurchase} isLoading={isTxPending} disabled={!selectedPartyId} className="w-full h-12">
+                    {isTxPending ? '購買儲備中...' : '購買儲備'}
+                </ActionButton>
             )}
         </div>
     );
