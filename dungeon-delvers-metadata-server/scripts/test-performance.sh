@@ -25,8 +25,8 @@ endpoints=(
     "/api/hero/1"
     "/api/relic/1"
     "/api/party/1"
-    "/api/playerprofile/1"
-    "/api/vipstaking/1"
+    "/api/profile/1"
+"/api/vip/1"
 )
 
 echo "🔍 Testing endpoints..."
