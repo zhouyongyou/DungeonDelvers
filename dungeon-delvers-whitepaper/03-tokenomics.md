@@ -15,14 +15,14 @@ description: 我們的經濟核心是 U 本位定價與多維度的動態稅率�
 
 以下是我們 V3 架構中的主要智能合約地址（BSC 主網）：
 
-* **英雄合約 (Hero)**: `0x347752f8166D270EDE722C3F31A10584bC2867b3`
-* **聖物合約 (Relic)**: `0x06994Fb1eC1Ba0238d8CA9539dAbdbEF090A5b53`
-* **隊伍合約 (Party)**: `0x4F4796b04e3BD3E8d5B447e32944d8B04eF53EB2`
-* **玩家檔案合約 (PlayerProfile)**: `0xE51ae47bf0f9958a0b35f1830675d88C2c7F5232`
-* **VIP 質押合約 (VIPStaking)**: `0x8A9943Bb231eC9131d750c7bcf8A4Ae36bd4f0F8`
-* **地下城主控合約 (DungeonMaster)**: `0xe208554A49aDeE49FA774a736C5279A5CB930FB8`
-* **玩家金庫合約 (PlayerVault)**: `0x22ec24B183afd81c69d14ebB9f226D3e0BC75C03`
-* **升星祭壇合約 (AltarOfAscension)**: `0xd9bE09b96959BEA3e335850b540EC51b841Df9Cc`
+* **英雄合約 (Hero)**: `待更新`
+* **聖物合約 (Relic)**: `待更新`
+* **隊伍合約 (Party)**: `待更新`
+* **玩家檔案合約 (PlayerProfile)**: `待更新`
+* **VIP 質押合約 (VIPStaking)**: `待更新`
+* **地下城主控合約 (DungeonMaster)**: `待更新`
+* **玩家金庫合約 (PlayerVault)**: `待更新`
+* **升星祭壇合約 (AltarOfAscension)**: `待更新`
 
 #### **3.3 代幣產出與消耗**
 
