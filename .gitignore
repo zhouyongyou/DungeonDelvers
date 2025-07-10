@@ -43,6 +43,7 @@ pnpm-debug.log*
 .env.production
 .env.*
 .env.*.local
+!.env.example
 
 ### 快取與臨時檔案 (Cache & Temp)
 .vite/
