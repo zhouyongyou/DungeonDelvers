@@ -185,8 +185,12 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
   }
 
-  if (ownerAddress && ownerAddress.toLowerCase() !== address?.toLowerCase()) {
-    return <EmptyState message="權限不足，僅合約擁有者可訪問。" />;
+  // 優化權限檢查邏輯 - 允許開發者地址和合約擁有者訪問
+  const isDeveloper = address?.toLowerCase() === DEVELOPER_ADDRESS.toLowerCase();
+  const isOwner = ownerAddress && ownerAddress.toLowerCase() === address?.toLowerCase();
+  
+  if (!isDeveloper && !isOwner) {
+    return <EmptyState message={`權限不足，僅合約擁有者可訪問。當前擁有者: ${ownerAddress ? `${ownerAddress.substring(0, 6)}...${ownerAddress.substring(ownerAddress.length - 4)}` : '載入中...'}`} />;
   }
 
   return (
