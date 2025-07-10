@@ -366,7 +366,7 @@ async function parseNfts<T extends { tokenId: string | number | bigint }>(
     type: NftType,
     chainId: SupportedChainId,
     client: ReturnType<typeof getClient>
-): Promise<any[]> {
+): Promise<(HeroNft | RelicNft | PartyNft | VipNft)[]> {
     if (!assets || assets.length === 0) return [];
 
     const contractKeyMap: Record<NftType, ContractName> = {

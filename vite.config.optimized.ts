@@ -61,8 +61,7 @@ export default defineConfig({
         },
         
         // 🔥 新增：資源文件名優化
-        chunkFileNames: (chunkInfo) => {
-          const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop() : 'chunk';
+        chunkFileNames: () => {
           return `js/[name]-[hash].js`;
         },
         assetFileNames: (assetInfo) => {

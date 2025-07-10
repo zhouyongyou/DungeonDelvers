@@ -57,7 +57,7 @@ export function getContract<
   const contractConfig = contracts[chainId]?.[name];
   
   // 檢查合約地址是否有效，避免因為 .env 未設定而導致錯誤
-  if (!contractConfig || !(contractConfig as any).address || (contractConfig as any).address.includes('YOUR_')) {
+  if (!contractConfig || !contractConfig.address || contractConfig.address.includes('YOUR_')) {
     console.warn(`getContract: 在鏈 ID ${chainId} 上找不到 '${String(name)}' 的設定或地址無效。`);
     return null;
   }
