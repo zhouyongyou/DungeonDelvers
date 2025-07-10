@@ -42,11 +42,12 @@ VITE_USD_TOKEN_ADDRESS=待補充
 VITE_MAINNET_POOL_ADDRESS=待補充
 ```
 
-### 3. SVG 函式庫合約 (重要)
+### 3. SVG 函式庫合約 (✅ 已廢棄，改用前端 JavaScript 生成)
 ```bash
-VITE_MAINNET_DUNGEONSVGLIBRARY_ADDRESS=待補充
-VITE_MAINNET_VIPSVGLIBRARY_ADDRESS=待補充
-VITE_MAINNET_PROFILESVGLIBRARY_ADDRESS=待補充
+# 這些合約地址已不再使用，SVG 生成改用前端 JavaScript 實現
+# VITE_MAINNET_DUNGEONSVGLIBRARY_ADDRESS=已廢棄
+# VITE_MAINNET_VIPSVGLIBRARY_ADDRESS=已廢棄
+# VITE_MAINNET_PROFILESVGLIBRARY_ADDRESS=已廢棄
 ```
 
 ### 4. The Graph Studio API (重要)
@@ -115,7 +116,7 @@ VITE_THE_GRAPH_STUDIO_API_URL=您的_Graph_Studio_API_URL
 | NFT 合約地址 | ✅ 完成 | 4/4 |
 | RPC 節點 URL | ⚠️ 待補充 | 0/3 |
 | 代幣合約地址 | ⚠️ 待補充 | 0/3 |
-| SVG 函式庫地址 | ⚠️ 待補充 | 0/3 |
+| SVG 函式庫地址 | ✅ 已廢棄 | 3/3 |
 | The Graph API | ⚠️ 待補充 | 0/1 |
 | GraphQL 子圖 | ✅ 完成 | 1/1 |
 
@@ -127,5 +128,5 @@ VITE_THE_GRAPH_STUDIO_API_URL=您的_Graph_Studio_API_URL
 - 所有一致性檢查文件已更新
 - 系統配置已統一
 
-⚠️ **待處理**: 還需要補充 10個環境變數
+⚠️ **待處理**: 還需要補充 7個環境變數 (SVG 函式庫地址已廢棄)
 🔄 **下一步**: 請提供缺少的環境變數值，然後重新部署子圖到 The Graph
