@@ -10,6 +10,7 @@ import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import type { Page } from './types/page';
 import { TransactionWatcher } from './components/core/TransactionWatcher';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import { WrongNetworkBanner } from './components/ui/WrongNetworkBanner';
 
 // 動態導入所有頁面
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -94,6 +95,7 @@ function App() {
     <ErrorBoundary>
       <div className="min-h-screen flex flex-col dark:bg-gray-900 bg-gray-100">
         <Header activePage={activePage} setActivePage={handleSetPage} />
+        <WrongNetworkBanner />
         <main className="flex-grow container mx-auto px-4 py-8 md:px-6 md:py-12">
             <Suspense fallback={<PageLoader />}>
                 {renderPage()}
