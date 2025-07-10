@@ -5,9 +5,9 @@ import { PlayerVault } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 
 function getOrCreatePlayerVault(playerAddress: Address): PlayerVault {
-    let player = getOrCreatePlayer(playerAddress)
+    const player = getOrCreatePlayer(playerAddress)
     
-    let vaultId = playerAddress.toHexString()
+    const vaultId = playerAddress.toHexString()
     let vault = PlayerVault.load(vaultId)
 
     if (!vault) {
@@ -22,7 +22,7 @@ function getOrCreatePlayerVault(playerAddress: Address): PlayerVault {
 
 export function handleDeposited(event: Deposited): void {
     // ★ 核心修正 #1：事件參數是 `player` 而不是 `user`
-    let vault = getOrCreatePlayerVault(event.params.player)
+    const vault = getOrCreatePlayerVault(event.params.player)
     vault.totalDeposited = vault.totalDeposited.plus(event.params.amount)
     vault.balance = vault.balance.plus(event.params.amount)
     vault.save()
@@ -30,9 +30,9 @@ export function handleDeposited(event: Deposited): void {
 
 export function handleWithdrawn(event: Withdrawn): void {
     // ★ 核心修正 #2：事件參數是 `player` 而不是 `user`
-    let vault = getOrCreatePlayerVault(event.params.player)
+    const vault = getOrCreatePlayerVault(event.params.player)
     // ★ 核心修正 #3：事件參數是 `taxAmount` 而不是 `fee`
-    let totalAmount = event.params.amount.plus(event.params.taxAmount)
+    const totalAmount = event.params.amount.plus(event.params.taxAmount)
     vault.totalWithdrawn = vault.totalWithdrawn.plus(totalAmount)
     vault.balance = vault.balance.minus(totalAmount)
     vault.save()
@@ -40,7 +40,7 @@ export function handleWithdrawn(event: Withdrawn): void {
 
 export function handleCommissionPaid(event: CommissionPaid): void {
     // ★ 核心修正 #4：事件參數是 `referrer` 而不是 `recipient`
-    let vault = getOrCreatePlayerVault(event.params.referrer)
+    const vault = getOrCreatePlayerVault(event.params.referrer)
     vault.totalDeposited = vault.totalDeposited.plus(event.params.amount)
     vault.balance = vault.balance.plus(event.params.amount)
     vault.save()

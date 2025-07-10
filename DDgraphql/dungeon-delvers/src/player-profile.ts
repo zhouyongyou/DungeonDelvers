@@ -6,9 +6,9 @@ import { getOrCreatePlayer } from "./common"
 import { calculateLevel } from "./utils"
 
 export function handleProfileCreated(event: ProfileCreated): void {
-    let player = getOrCreatePlayer(event.params.player)
+    const player = getOrCreatePlayer(event.params.player)
 
-    let profileId = event.params.player.toHexString()
+    const profileId = event.params.player.toHexString()
     let profile = PlayerProfile.load(profileId)
     if (!profile) {
         profile = new PlayerProfile(profileId)
@@ -25,8 +25,8 @@ export function handleProfileCreated(event: ProfileCreated): void {
 }
 
 export function handleExperienceAdded(event: ExperienceAdded): void {
-    let profileId = event.params.player.toHexString()
-    let profile = PlayerProfile.load(profileId)
+    const profileId = event.params.player.toHexString()
+    const profile = PlayerProfile.load(profileId)
 
     if (profile) {
         profile.experience = event.params.newTotalExperience

@@ -12,7 +12,7 @@ import { BigInt } from "@graphprotocol/graph-ts"
 export function calculateLevel(exp: BigInt): i32 {
   if (exp.lt(BigInt.fromI32(100))) { return 1 }
   // 使用整數開平方根來模擬 Solidity 中的 Math.sqrt
-  let x = exp.div(BigInt.fromI32(100));
+  const x = exp.div(BigInt.fromI32(100));
   let root = x;
   if (x.gt(BigInt.fromI32(0))) {
     let y = x.plus(BigInt.fromI32(1)).div(BigInt.fromI32(2));

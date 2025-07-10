@@ -17,19 +17,19 @@ export function handleHeroMinted(event: HeroMinted): void {
         return;
     }
 
-    let player = getOrCreatePlayer(event.params.owner)
+    const player = getOrCreatePlayer(event.params.owner)
     
     // 使用配置系統創建全域唯一 ID
-    let heroId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
+    const heroId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
     
     // 檢查是否已存在（防止重複處理）
-    let existingHero = Hero.load(heroId);
+    const existingHero = Hero.load(heroId);
     if (existingHero) {
         log.warning('Hero already exists: {}', [heroId]);
         return;
     }
     
-    let hero = new Hero(heroId)
+    const hero = new Hero(heroId)
     hero.owner = player.id
     hero.tokenId = event.params.tokenId
     hero.contractAddress = event.address
@@ -42,10 +42,10 @@ export function handleHeroMinted(event: HeroMinted): void {
 }
 
 export function handleTransfer(event: Transfer): void {
-    let heroId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
-    let hero = Hero.load(heroId)
+    const heroId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
+    const hero = Hero.load(heroId)
     if (hero) {
-        let newOwner = getOrCreatePlayer(event.params.to)
+        const newOwner = getOrCreatePlayer(event.params.to)
         hero.owner = newOwner.id
         hero.save()
     } else {

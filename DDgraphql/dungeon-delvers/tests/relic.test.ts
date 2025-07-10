@@ -16,13 +16,13 @@ import { createRelicMintedEvent } from "./relic-utils"
 describe("Relic Entity", () => {
   beforeAll(() => {
     // 1. 準備測試數據
-    let ownerAddress = Address.fromString("0x0000000000000000000000000000000000000001")
-    let tokenId = BigInt.fromI32(1)
-    let rarity = 4 // 史詩
-    let capacity = 4
+    const ownerAddress = Address.fromString("0x0000000000000000000000000000000000000001")
+    const tokenId = BigInt.fromI32(1)
+    const rarity = 4 // 史詩
+    const capacity = 4
 
     // 2. 創建一個模擬的 RelicMinted 事件
-    let newRelicMintedEvent = createRelicMintedEvent(
+    const newRelicMintedEvent = createRelicMintedEvent(
       tokenId,
       ownerAddress,
       rarity,
@@ -50,7 +50,7 @@ describe("Relic Entity", () => {
     // 斷言 Relic 實體
     assert.entityCount("Relic", 1)
     
-    let relicId = "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1"
+    const relicId = "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1"
     
     assert.fieldEquals("Relic", relicId, "tokenId", "1")
     assert.fieldEquals("Relic", relicId, "owner", "0x0000000000000000000000000000000000000001")

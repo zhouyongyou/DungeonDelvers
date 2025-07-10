@@ -53,7 +53,7 @@ export function updateGlobalStats(
   increment: i32,
   timestamp: BigInt = BigInt.fromI32(0)
 ): void {
-  let stats = getOrCreateGlobalStats();
+  const stats = getOrCreateGlobalStats();
   
   switch (field) {
     case "totalHeroes":
@@ -96,7 +96,7 @@ export function updatePlayerStats(
   increment: i32,
   timestamp: BigInt = BigInt.fromI32(0)
 ): void {
-  let stats = getOrCreatePlayerStats(playerId);
+  const stats = getOrCreatePlayerStats(playerId);
   
   switch (field) {
     case "totalHeroesMinted":
@@ -142,7 +142,7 @@ export function updatePlayerStatsBigInt(
   value: BigInt,
   timestamp: BigInt = BigInt.fromI32(0)
 ): void {
-  let stats = getOrCreatePlayerStats(playerId);
+  const stats = getOrCreatePlayerStats(playerId);
   
   switch (field) {
     case "totalRewardsEarned":
@@ -170,7 +170,7 @@ export function updatePlayerStatsBigInt(
  * 檢查是否為新玩家並更新統計數據
  */
 export function checkAndUpdatePlayerCount(playerId: string, timestamp: BigInt): void {
-  let player = Player.load(playerId);
+  const player = Player.load(playerId);
   if (!player) {
     // 這是新玩家，更新全域統計
     updateGlobalStats("totalPlayers", 1, timestamp);

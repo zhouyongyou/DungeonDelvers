@@ -5,9 +5,9 @@ import { getOrCreatePlayer } from "./common"
 import { BigInt, log } from "@graphprotocol/graph-ts"
 
 export function handleStaked(event: Staked): void {
-    let player = getOrCreatePlayer(event.params.user)
+    const player = getOrCreatePlayer(event.params.user)
     
-    let vipId = event.params.user.toHexString()
+    const vipId = event.params.user.toHexString()
     let vip = VIP.load(vipId)
     if (!vip) {
         vip = new VIP(vipId)
@@ -25,12 +25,12 @@ export function handleStaked(event: Staked): void {
 }
 
 export function handleUnstakeRequested(event: UnstakeRequested): void {
-    let vipId = event.params.user.toHexString()
-    let vip = VIP.load(vipId)
+    const vipId = event.params.user.toHexString()
+    const vip = VIP.load(vipId)
     if (vip) {
         vip.stakedAmount = vip.stakedAmount.minus(event.params.amount)
         if (vip.stakedAmount.isZero()) {
-            let player = getOrCreatePlayer(event.params.user)
+            const player = getOrCreatePlayer(event.params.user)
             player.vip = null
             player.save()
         }
@@ -45,8 +45,8 @@ export function handleVipTransfer(event: Transfer): void {
         return // 只處理鑄造事件
     }
 
-    let player = getOrCreatePlayer(event.params.to)
-    let vipId = event.params.to.toHexString()
+    const player = getOrCreatePlayer(event.params.to)
+    const vipId = event.params.to.toHexString()
 
     let vip = VIP.load(vipId)
     if (!vip) {
