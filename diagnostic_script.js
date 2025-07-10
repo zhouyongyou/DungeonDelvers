@@ -187,7 +187,7 @@ async function checkMetadataServer() {
     }
     
     // 測試 VIP NFT API
-    const vipApiResponse = await fetch(`${config.metadataServerUrl}/api/vipstaking/${config.testTokenIds.vip}`, {
+    const vipApiResponse = await fetch(`${config.metadataServerUrl}/api/vip/${config.testTokenIds.vip}`, {
       timeout: 10000,
     });
     

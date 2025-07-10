@@ -92,8 +92,8 @@ curl http://localhost/health
 
 # 測試 API 端點
 curl http://localhost/api/hero/1
-curl http://localhost/api/playerprofile/1
-curl http://localhost/api/vipstaking/1
+curl http://localhost/api/profile/1
+curl http://localhost/api/vip/1
 
 # 檢查快取統計
 curl http://localhost/admin/cache/stats
@@ -112,8 +112,8 @@ curl http://localhost/admin/metrics
 | `/api/hero/:id` | 英雄元數據 | `GET /api/hero/1` |
 | `/api/relic/:id` | 遺物元數據 | `GET /api/relic/1` |
 | `/api/party/:id` | 隊伍元數據 | `GET /api/party/1` |
-| `/api/playerprofile/:id` | 玩家檔案元數據 | `GET /api/playerprofile/1` |
-| `/api/vipstaking/:id` | VIP 卡元數據 | `GET /api/vipstaking/1` |
+| `/api/profile/:id` | 玩家檔案元數據 | `GET /api/profile/1` |
+| `/api/vip/:id` | VIP 卡元數據 | `GET /api/vip/1` |
 | `/admin/cache/stats` | 快取統計 | `GET /admin/cache/stats` |
 | `/admin/cache/clear` | 清除快取 | `POST /admin/cache/clear` |
 | `/admin/metrics` | 性能指標 | `GET /admin/metrics` |
