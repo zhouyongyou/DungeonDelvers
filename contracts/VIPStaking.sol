@@ -18,6 +18,8 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
     IDungeonCore public dungeonCore;
     IERC20 public soulShardToken;
     string public baseURI; // ★ 新增
+    // ★ 新增：合約級別元數據 URI
+    string private _contractURI;
     
     uint256 private _nextTokenId;
     uint256 public unstakeCooldown;
@@ -42,6 +44,7 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
     event DungeonCoreSet(address indexed newAddress);
     event SoulShardTokenSet(address indexed newAddress);
     event BaseURISet(string newBaseURI); // ★ 新增事件
+    event ContractURIUpdated(string newContractURI); // ★ 新增事件
 
     // --- 構造函數 ---
     constructor(address initialOwner) ERC721("Dungeon Delvers VIP", "DDV") Ownable(initialOwner) {
@@ -144,6 +147,16 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
     function setBaseURI(string memory _newBaseURI) external onlyOwner {
         baseURI = _newBaseURI;
         emit BaseURISet(_newBaseURI);
+    }
+
+    // ★ 新增：合約級別元數據函式
+    function contractURI() public view returns (string memory) {
+        return _contractURI;
+    }
+
+    function setContractURI(string memory newContractURI) external onlyOwner {
+        _contractURI = newContractURI;
+        emit ContractURIUpdated(newContractURI);
     }
 
     function setUnstakeCooldown(uint256 _newCooldown) external onlyOwner {
