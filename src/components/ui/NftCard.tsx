@@ -77,16 +77,16 @@ const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, 
   if (hasError || !svgImage) {
     // 回退到使用原始圖片
     return (
-      <div className="w-full h-full bg-gray-700 rounded-lg flex flex-col items-center justify-center p-2">
+      <div className="w-full h-full bg-gray-700 rounded-lg relative">
         <img 
           src={nft.image?.replace('ipfs://', 'https://ipfs.io/ipfs/') || fallbackImage} 
           onError={(e) => { e.currentTarget.src = fallbackImage; }} 
           alt={nft.name || `VIP #${nft.id.toString()}`} 
-          className="w-full h-3/4 object-cover rounded"
+          className="w-full h-full object-cover rounded"
           loading="lazy"
         />
         {vipLevel && (
-          <div className="mt-1 text-xs text-yellow-400 font-bold">
+          <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 bg-black/70 text-yellow-400 text-xs font-bold px-2 py-1 rounded">
             LV {vipLevel}
           </div>
         )}
@@ -177,7 +177,7 @@ const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected })
         className={`card-bg p-3 rounded-xl text-center border-2 transition-all duration-300 ease-in-out flex flex-col overflow-hidden hover:shadow-2xl hover:-translate-y-1 active:scale-95 ${isSelected ? 'ring-4 ring-indigo-500 ring-offset-2 ring-offset-gray-800 border-indigo-500' : 'border-transparent'}`}
     >
       <div className={`flex-grow ${onSelect ? 'cursor-pointer' : ''}`} onClick={() => onSelect && onSelect(id, type)}>
-        <div className={`w-full mb-2 overflow-hidden rounded-lg ${type === 'vip' ? 'aspect-[3/4]' : 'aspect-square'}`}>
+        <div className={`w-full mb-2 overflow-hidden rounded-lg aspect-square`}>
             {type === 'vip' ? (
               <VipImage nft={nft as VipNft} fallbackImage={fallbackImage} />
             ) : (
