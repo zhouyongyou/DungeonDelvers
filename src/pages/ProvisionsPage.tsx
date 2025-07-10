@@ -19,10 +19,8 @@ import { bsc } from 'wagmi/chains';
 // Section: 數據獲取 Hook
 // =================================================================
 
-type PaymentSource = 'wallet' | 'vault';
-
-// ★ 核心改造：建立一個專門的 Hook 來處理購買儲備的所有邏輯
-const useProvisionsLogic = (quantity: number, paymentSource: PaymentSource) => {
+// ★ 簡化的 Hook：只處理錢包支付，因為合約已改為直接從錢包扣款
+const useProvisionsLogic = (quantity: number) => {
     const { address, chainId } = useAccount();
 
     const dungeonMasterContract = getContract(chainId || 56, 'dungeonMaster');
@@ -30,14 +28,14 @@ const useProvisionsLogic = (quantity: number, paymentSource: PaymentSource) => {
     const soulShardContract = getContract(chainId || 56, 'soulShard');
     const playerVaultContract = getContract(chainId || 56, 'playerVault');
 
-    // 為了簡化，我們暫時保留 RPC 呼叫來獲取價格。
-    // 在一個完整的重構中，這會被一個 GraphQL 查詢取代。
+    // 獲取儲備價格
     const { data: provisionPriceUSD, isLoading: isLoadingPrice } = useReadContract({
         ...dungeonMasterContract,
         functionName: 'provisionPriceUSD',
         query: { enabled: !!dungeonMasterContract },
     });
 
+    // 計算所需的 SoulShard 數量
     const { data: requiredAmount, isLoading: isLoadingConversion } = useReadContract({
         ...dungeonCoreContract,
         functionName: 'getSoulShardAmountForUSD',
@@ -45,10 +43,10 @@ const useProvisionsLogic = (quantity: number, paymentSource: PaymentSource) => {
         query: { enabled: !!dungeonCoreContract && typeof provisionPriceUSD === 'bigint' && quantity > 0 },
     });
 
+    // 獲取錢包餘額
     const { data: walletBalance } = useBalance({ address, token: soulShardContract?.address });
-    const { data: vaultInfo } = useReadContract({ ...playerVaultContract, functionName: 'playerInfo', args: [address!] });
-    const vaultBalance = useMemo(() => (Array.isArray(vaultInfo) ? vaultInfo[0] as bigint : 0n), [vaultInfo]);
 
+    // 檢查授權額度
     const { data: allowance, refetch: refetchAllowance } = useReadContract({
         ...soulShardContract,
         functionName: 'allowance',
@@ -56,15 +54,16 @@ const useProvisionsLogic = (quantity: number, paymentSource: PaymentSource) => {
         query: { enabled: !!address && !!soulShardContract && !!dungeonMasterContract && paymentSource === 'wallet' },
     });
 
+    // 判斷是否需要授權
     const needsApproval = useMemo(() => {
-        if (paymentSource !== 'wallet' || typeof allowance !== 'bigint' || typeof requiredAmount !== 'bigint') return false;
+        if (typeof allowance !== 'bigint' || typeof requiredAmount !== 'bigint') return false;
         return allowance < requiredAmount;
-    }, [paymentSource, allowance, requiredAmount]);
+    }, [allowance, requiredAmount]);
 
     return {
         isLoading: isLoadingPrice || isLoadingConversion,
         totalRequiredAmount: requiredAmount ?? 0n,
-        balance: paymentSource === 'wallet' ? (walletBalance?.value ?? 0n) : vaultBalance,
+        walletBalance: walletBalance?.value ?? 0n,
         needsApproval,
         dungeonMasterContract,
         soulShardContract,
@@ -89,13 +88,12 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
 
     const [selectedPartyId, setSelectedPartyId] = useState<bigint | null>(preselectedPartyId ?? null);
     const [quantity, setQuantity] = useState<number>(1);
-    const [paymentSource, setPaymentSource] = useState<PaymentSource>('wallet');
 
     // Move all hooks before early returns
     const { 
-        isLoading, totalRequiredAmount, balance, needsApproval, 
+        isLoading, totalRequiredAmount, walletBalance, needsApproval, 
         dungeonMasterContract, soulShardContract, refetchAllowance 
-    } = useProvisionsLogic(quantity, paymentSource);
+    } = useProvisionsLogic(quantity);
 
     const { data: nfts, isLoading: isLoadingNfts } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
@@ -120,13 +118,13 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
 
     const handlePurchase = async () => {
         if (!selectedPartyId || !dungeonMasterContract) return;
-        if (typeof balance === 'bigint' && typeof totalRequiredAmount === 'bigint' && balance < totalRequiredAmount) {
-            return showToast(`${paymentSource === 'wallet' ? '錢包' : '金庫'}餘額不足`, 'error');
+        if (typeof walletBalance === 'bigint' && typeof totalRequiredAmount === 'bigint' && walletBalance < totalRequiredAmount) {
+            return showToast('錢包餘額不足', 'error');
         }
-        if (paymentSource === 'wallet' && needsApproval) return showToast(`請先完成授權`, 'error');
+        if (needsApproval) return showToast('請先完成授權', 'error');
 
         try {
-            // ★ 核心改造：不再需要區分支付來源，因為合約內部會處理
+            // 直接從錢包扣款購買儲備
             const hash = await writeContractAsync({
                 address: dungeonMasterContract.address,
                 abi: dungeonMasterContract.abi,
@@ -195,24 +193,10 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
                     className="w-full p-2 border rounded-lg bg-gray-800 border-gray-600 text-white" 
                 />
             </div>
-            <div className="w-full my-4">
-                <label className="block text-sm font-medium mb-2 text-center text-gray-400">選擇支付方式</label>
-                <div className="grid grid-cols-2 gap-2 p-1 bg-gray-900/50 rounded-lg">
-                    <button 
-                        onClick={() => setPaymentSource('wallet')} 
-                        className={`px-4 py-2 rounded-md text-sm font-semibold transition ${paymentSource === 'wallet' ? 'bg-gray-700 text-white shadow' : 'text-gray-300'}`}
-                    >
-                        錢包支付
-                    </button>
-                    <button 
-                        onClick={() => setPaymentSource('vault')} 
-                        className={`px-4 py-2 rounded-md text-sm font-semibold transition ${paymentSource === 'vault' ? 'bg-gray-700 text-white shadow' : 'text-gray-300'}`}
-                    >
-                        金庫支付 (免稅)
-                    </button>
-                </div>
-                <div className="text-xs text-center mt-2 text-gray-500">
-                    {paymentSource === 'wallet' ? '錢包餘額' : '金庫餘額'}: {parseFloat(formatEther(balance)).toFixed(4)} $SoulShard
+            <div className="text-center p-3 bg-gray-900/50 rounded-lg">
+                <div className="text-sm text-gray-400">錢包餘額</div>
+                <div className="font-mono text-lg text-white">
+                    {parseFloat(formatEther(walletBalance)).toFixed(4)} $SoulShard
                 </div>
             </div>
             <div className="text-center p-4 bg-black/20 rounded-lg">
@@ -221,8 +205,17 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
                     {isLoading ? <LoadingSpinner size="h-6 w-6" /> : `${parseFloat(formatEther(typeof totalRequiredAmount === 'bigint' ? totalRequiredAmount : 0n)).toFixed(4)} $SoulShard`}
                 </div>
             </div>
-            {paymentSource === 'wallet' && needsApproval ? (
-                 <ActionButton onClick={handleApprove} isLoading={isTxPending} className="w-full h-12">批准代幣</ActionButton>
+            {needsApproval ? (
+                <div className="space-y-3">
+                    <div className="p-3 bg-orange-900/50 rounded-lg border border-orange-500/50">
+                        <div className="text-sm text-orange-300 text-center">
+                            ⚠️ 首次購買需要授權 DungeonMaster 合約使用您的 $SoulShard
+                        </div>
+                    </div>
+                    <ActionButton onClick={handleApprove} isLoading={isTxPending} className="w-full h-12">
+                        {isTxPending ? '授權中...' : '授權代幣'}
+                    </ActionButton>
+                </div>
             ) : (
                 <ActionButton onClick={handlePurchase} isLoading={isTxPending} disabled={!selectedPartyId} className="w-full h-12">
                     {isTxPending ? '購買儲備中...' : '購買儲備'}
