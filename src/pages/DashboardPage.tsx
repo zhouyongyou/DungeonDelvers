@@ -51,25 +51,50 @@ const GET_DASHBOARD_STATS_QUERY = `
 const useDashboardStats = () => {
     const { address, chainId } = useAccount();
 
-    const { data, isLoading, isError } = useQuery({
+    const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ['dashboardStats', address, chainId],
         queryFn: async () => {
             if (!address || !THE_GRAPH_API_URL) return null;
-            const response = await fetch(THE_GRAPH_API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    query: GET_DASHBOARD_STATS_QUERY,
-                    variables: { owner: address.toLowerCase() },
-                }),
-            });
-            if (!response.ok) throw new Error('Network response was not ok');
-            const { data } = await response.json();
-            return data.player;
+            
+            // 添加超時控制
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超時
+            
+            try {
+                const response = await fetch(THE_GRAPH_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: GET_DASHBOARD_STATS_QUERY,
+                        variables: { owner: address.toLowerCase() },
+                    }),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) throw new Error('Network response was not ok');
+                const { data, errors } = await response.json();
+                
+                if (errors) {
+                    throw new Error(`GraphQL errors: ${errors.map((e: any) => e.message).join(', ')}`);
+                }
+                
+                return data.player;
+            } catch (error) {
+                clearTimeout(timeoutId);
+                if (error instanceof Error && error.name === 'AbortError') {
+                    throw new Error('請求超時，請稍後再試');
+                }
+                throw error;
+            }
         },
         enabled: !!address && chainId === bsc.id && !!THE_GRAPH_API_URL,
         // ★★★ 網路優化：增加 staleTime，避免不必要的重複請求 ★★★
         staleTime: 1000 * 60, // 60 秒
+        // ★★★ 錯誤處理優化：添加重試配置 ★★★
+        retry: 2, // 減少重試次數
+        retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 5000), // 最大5秒延遲
     });
 
     // 從查詢結果中解析數據
@@ -84,7 +109,7 @@ const useDashboardStats = () => {
         };
     }, [data]);
 
-    return { stats, isLoading, isError };
+    return { stats, isLoading, isError, refetch };
 };
 
 
@@ -162,7 +187,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     const { addTransaction } = useTransactionStore();
     const { showToast } = useAppToast();
     
-    const { stats, isLoading: isLoadingStats, isError: isGraphError } = useDashboardStats();
+    const { stats, isLoading: isLoadingStats, isError: isGraphError, refetch: refetchStats } = useDashboardStats();
     const { taxParams, isLoadingTaxParams, dungeonCoreContract } = useTaxParams();
     
     const { writeContractAsync, isPending: isWithdrawing } = useWriteContract();
@@ -227,7 +252,21 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     }
     
     if (isGraphError) {
-         return <div className="card-bg p-10 rounded-xl text-center text-red-400"><h3 className="text-xl font-bold">儀表板載入失敗</h3><p className="mt-2">無法從 The Graph 獲取數據，請檢查 API 端點或稍後再試。</p></div>;
+        return (
+            <div className="card-bg p-10 rounded-xl text-center text-red-400">
+                <h3 className="text-xl font-bold">儀表板載入失敗</h3>
+                <p className="mt-2">無法從 The Graph 獲取數據</p>
+                <button 
+                    onClick={() => refetchStats()} 
+                    className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                    重試載入
+                </button>
+                <p className="mt-2 text-sm text-gray-500">
+                    通常需要等待 30-60 秒，請稍後再試
+                </p>
+            </div>
+        );
     }
 
     const isLoading = isLoadingStats || isLoadingTaxParams;
