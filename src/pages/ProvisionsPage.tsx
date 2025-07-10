@@ -51,7 +51,7 @@ const useProvisionsLogic = (quantity: number) => {
         ...soulShardContract,
         functionName: 'allowance',
         args: [address!, dungeonMasterContract?.address as `0x${string}`],
-        query: { enabled: !!address && !!soulShardContract && !!dungeonMasterContract && paymentSource === 'wallet' },
+        query: { enabled: !!address && !!soulShardContract && !!dungeonMasterContract },
     });
 
     // 判斷是否需要授權

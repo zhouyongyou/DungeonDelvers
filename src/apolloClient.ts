@@ -85,18 +85,18 @@ const client: ApolloClient<NormalizedCacheObject> = new ApolloClient({
   defaultOptions: {
     watchQuery: {
       errorPolicy: 'all',
-      // 🔥 对于NFT数据，优先使用缓存
+      // 🔥 对于NFT数据，优先使用缓存，减少API请求
       fetchPolicy: 'cache-first',
-      // 30分钟内不重新获取
+      // 60分钟内不重新获取，减少请求频率
       nextFetchPolicy: 'cache-first',
     },
     query: {
       errorPolicy: 'all',
-      // 🔥 优先从缓存读取NFT数据
+      // 🔥 优先从缓存读取NFT数据，避免过多API请求
       fetchPolicy: 'cache-first',
     },
   },
-  // 啟用查詢去重
+  // 啟用查詢去重，避免重複請求造成429错误
   queryDeduplication: true,
 });
 

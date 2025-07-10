@@ -13,6 +13,7 @@ import { bsc } from 'wagmi/chains';
 import { useVipStatus } from '../hooks/useVipStatus';
 
 const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undefined }> = ({ tokenId, chainId }) => {
+    // ✅ 將所有Hook調用移到組件頂部
     const vipStakingContract = getContract(chainId as any, 'vipStaking');
     
     const { data: tokenURI, isLoading, isError } = useReadContract({
@@ -45,6 +46,7 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
         }
     }, [tokenURI]);
 
+    // ✅ 條件渲染移到Hook之後
     if (!chainId || (chainId !== bsc.id)) {
         return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-500">網路不支援</div>;
     }

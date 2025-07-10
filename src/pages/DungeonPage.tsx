@@ -225,7 +225,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
     const [isProvisionModalOpen, setIsProvisionModalOpen] = useState(false);
     const [selectedPartyForProvision, setSelectedPartyForProvision] = useState<bigint | null>(null);
 
-    // 將所有Hooks調用移到組件頂部，在任何條件語句之前
+    // ✅ 將所有Hooks調用移到組件頂部，在任何條件語句之前
     const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
@@ -242,7 +242,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
         query: { enabled: !!getContract(bsc.id, 'dungeonStorage') && chainId === bsc.id }
     });
 
-    // 條件渲染移到所有Hooks之後
+    // ✅ 條件渲染移到所有Hooks之後
     if (chainId !== bsc.id) {
         return <div className="flex justify-center items-center h-64"><p className="text-lg text-gray-500">請連接到支援的網路</p></div>;
     }

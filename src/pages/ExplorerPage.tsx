@@ -96,19 +96,26 @@ interface QuerySectionProps {
 
 const QuerySection: React.FC<QuerySectionProps> = ({ title, inputType, inputPlaceholder, onQuery, isLoading = false, children }) => {
     const [inputValue, setInputValue] = useState('');
+    const inputId = `explorer-${title.replace(/\s+/g, '-').toLowerCase()}`;
+    
     return (
         <div className="card-bg p-6 rounded-xl shadow-md">
             <h3 className="text-xl font-bold text-gray-200 mb-4">{title}</h3>
             <div className="flex gap-2 mb-4">
-                <input
-                    id={`explorer-${title.replace(/\s+/g, '-')}`}
-                    name={`explorer-${title.replace(/\s+/g, '-')}`}
-                    type={inputType}
-                    value={inputValue}
-                    onChange={e => setInputValue(e.target.value)}
-                    placeholder={inputPlaceholder}
-                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none h-10 bg-gray-800 border-gray-700"
-                />
+                <div className="flex-1">
+                    <label htmlFor={inputId} className="sr-only">
+                        {inputPlaceholder}
+                    </label>
+                    <input
+                        id={inputId}
+                        name={inputId}
+                        type={inputType}
+                        value={inputValue}
+                        onChange={e => setInputValue(e.target.value)}
+                        placeholder={inputPlaceholder}
+                        className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none h-10 bg-gray-800 border-gray-700"
+                    />
+                </div>
                 <ActionButton onClick={() => onQuery(inputValue)} className="px-6 py-2 rounded-lg whitespace-nowrap w-24 h-10">查詢</ActionButton>
             </div>
             <div className="mt-4 p-4 bg-gray-800/50 rounded-md min-h-[100px] text-sm space-y-2">

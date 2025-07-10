@@ -2,7 +2,7 @@
 import { HeroMinted, Transfer } from "../generated/Hero/Hero"
 import { Hero } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
-import { log } from "@graphprotocol/graph-ts"
+import { log, BigInt } from "@graphprotocol/graph-ts"
 import { createEntityId } from "./config"
 
 export function handleHeroMinted(event: HeroMinted): void {
@@ -42,13 +42,34 @@ export function handleHeroMinted(event: HeroMinted): void {
 }
 
 export function handleTransfer(event: Transfer): void {
+    // 跳過零地址轉移（通常是銷毀操作）
+    if (event.params.to.toHexString() === '0x0000000000000000000000000000000000000000') {
+        log.info('Skipping transfer to zero address (burn): {}', [event.params.tokenId.toString()]);
+        return;
+    }
+
     const heroId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
     const hero = Hero.load(heroId)
+    
     if (hero) {
         const newOwner = getOrCreatePlayer(event.params.to)
         hero.owner = newOwner.id
         hero.save()
+        log.info('Successfully transferred hero {} to {}', [heroId, event.params.to.toHexString()]);
     } else {
-        log.warning("Transfer handled for a Hero that doesn't exist in the subgraph: {}", [heroId])
+        // 創建一個占位實體以避免後續錯誤
+        log.warning("Transfer handled for a Hero that doesn't exist in the subgraph: {}, creating placeholder", [heroId])
+        
+        const placeholderHero = new Hero(heroId)
+        const newOwner = getOrCreatePlayer(event.params.to)
+        placeholderHero.owner = newOwner.id
+        placeholderHero.tokenId = event.params.tokenId
+        placeholderHero.contractAddress = event.address
+        placeholderHero.rarity = 1  // 默認稀有度
+        placeholderHero.power = BigInt.fromI32(100)  // 默認力量
+        placeholderHero.createdAt = event.block.timestamp
+        placeholderHero.save()
+        
+        log.info('Created placeholder hero: {}', [heroId]);
     }
 }

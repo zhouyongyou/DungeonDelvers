@@ -9,6 +9,7 @@ i18n
   .use(initReactI18next)
   .init({
     fallbackLng: 'zh-TW',
+    defaultNS: 'common',
     supportedLngs: ['zh-TW', 'en', 'ja', 'ko'],
     
     detection: {

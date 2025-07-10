@@ -93,6 +93,7 @@ export async function fetchMetadata(
     contractAddress: string, 
     retryCount = 0
 ): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
+  
     const maxRetries = 2; // 增加重試次數但使用漸進延遲
     const baseTimeout = 3000; // 基礎超時時間
     const timeout = baseTimeout + (retryCount * 1000); // 漸進式增加超時時間
@@ -152,6 +153,7 @@ export async function fetchMetadata(
         
         // 如果還有重試次數，使用指數回退策略重試
         if (retryCount < maxRetries) {
+          
             const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // 指數回退，最大5秒
             console.log(`${nftType} #${tokenId} 將在 ${retryDelay}ms 後重試...`);
             await new Promise(resolve => setTimeout(resolve, retryDelay));
@@ -337,6 +339,28 @@ async function fetchWithTimeout(url: string, timeout: number): Promise<Omit<Base
 // Section 3: 核心數據獲取邏輯 (已修正 TypeScript 錯誤)
 // =================================================================
 
+// 批量處理工具函數 - 限制並發請求數量
+async function batchProcess<T, R>(
+    items: T[],
+    processor: (item: T) => Promise<R>,
+    batchSize: number = 5
+): Promise<R[]> {
+    const results: R[] = [];
+    
+    for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize);
+        const batchResults = await Promise.all(batch.map(processor));
+        results.push(...batchResults);
+        
+        // 在批次之間添加小延遲以避免過載
+        if (i + batchSize < items.length) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    }
+    
+    return results;
+}
+
 async function parseNfts<T extends { tokenId: any }>(
     assets: T[],
     type: NftType,
@@ -367,7 +391,8 @@ async function parseNfts<T extends { tokenId: any }>(
 
     const uriResults = await client.multicall({ contracts: uriCalls, allowFailure: true });
 
-    return Promise.all(assets.map(async (asset, index) => {
+    // 使用批量處理來限制並發元數據請求
+    const processAsset = async (asset: any, index: number) => {
         const uriResult = uriResults[index];
         let metadata: Omit<BaseNft, 'id' | 'contractAddress' | 'type'>;
 
@@ -414,7 +439,17 @@ async function parseNfts<T extends { tokenId: any }>(
             };
             default: return null;
         }
-    }));
+    };
+
+    // 使用批量處理來處理資產，限制並發數量
+    const assetsWithIndex = assets.map((asset, index) => ({ asset, index }));
+    const results = await batchProcess(
+        assetsWithIndex,
+        ({ asset, index }) => processAsset(asset, index),
+        3 // 限制並發數量為3
+    );
+
+    return results.filter(Boolean);
 }
 
 
