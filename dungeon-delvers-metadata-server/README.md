@@ -5,7 +5,7 @@
 ## 專案目的
 
 當 NFT 在 OpenSea、錢包或其他第三方平台顯示時，這些平台會呼叫 NFT 合約的 `tokenURI` 函式來獲取元數據。為了讓 NFT 的圖片能夠即時反映鏈上的最新狀態（例如玩家等級、VIP 等級等），我們需要一個能夠：
-1.  接收 API 請求 (例如 `/api/profile/123`)。
+1.  接收 API 請求 (例如 `/api/playerprofile/123`)。
 2.  即時讀取區塊鏈上的數據。
 3.  根據最新數據動態生成 SVG 圖像。
 4.  將包含 SVG 的元數據 JSON 回傳。
@@ -52,5 +52,5 @@
 -   `GET /api/hero/:tokenId`
 -   `GET /api/relic/:tokenId`
 -   `GET /api/party/:tokenId`
--   `GET /api/profile/:tokenId`
--   `GET /api/vip/:tokenId`
+-   `GET /api/playerprofile/:tokenId`
+-   `GET /api/vipstaking/:tokenId`
