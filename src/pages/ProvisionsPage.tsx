@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatEther, maxUint256 } from 'viem';
 
 import { fetchAllOwnedNfts } from '../api/nfts';
+import { getQueryConfig } from '../cache/cacheStrategies';
 import { getContract } from '../config/contracts';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
@@ -103,6 +104,9 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
     const { data: nfts, isLoading: isLoadingNfts } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
         queryFn: () => fetchAllOwnedNfts(address!, chainId),
+        
+        // 🔥 使用统一的NFT缓存策略  
+        ...getQueryConfig('USER_NFTS'),
         enabled: !!address,
     });
 
