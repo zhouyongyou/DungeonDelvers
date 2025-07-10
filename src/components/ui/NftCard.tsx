@@ -1,6 +1,10 @@
 // src/components/ui/NftCard.tsx
 
-import React, { memo } from 'react';
+import React, { memo, useState, useMemo } from 'react';
+import { useReadContract } from 'wagmi';
+import { Buffer } from 'buffer';
+import { getContract } from '../../config/contracts';
+import { bsc } from 'wagmi/chains';
 import type { AnyNft, NftType, HeroNft, RelicNft, PartyNft, VipNft } from '../../types/nft';
 
 interface NftCardProps {
@@ -19,6 +23,70 @@ const StarRating: React.FC<{ rating: number }> = memo(({ rating }) => (
     ))}
   </div>
 ));
+
+// VIP卡專用的圖片顯示組件
+const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, fallbackImage }) => {
+  const vipStakingContract = getContract(bsc.id, 'vipStaking');
+  const [hasError, setHasError] = useState(false);
+  
+  const { data: tokenURI, isLoading } = useReadContract({
+    ...vipStakingContract,
+    functionName: 'tokenURI',
+    args: [nft.id],
+    query: { 
+      enabled: !!vipStakingContract && !hasError,
+      staleTime: 1000 * 60 * 5, // 5分鐘緩存
+    },
+  });
+
+  const svgImage = useMemo(() => {
+    if (!tokenURI) return null;
+    try {
+      const uriString = typeof tokenURI === 'string' ? tokenURI : '';
+      if (!uriString.startsWith('data:application/json;base64,')) {
+        return uriString;
+      }
+      const decodedUri = Buffer.from(uriString.substring('data:application/json;base64,'.length), 'base64').toString();
+      const metadata = JSON.parse(decodedUri);
+      return metadata.image;
+    } catch (e) {
+      console.error("解析 VIP 卡 SVG 失敗:", e);
+      setHasError(true);
+      return null;
+    }
+  }, [tokenURI]);
+
+  if (isLoading) {
+    return (
+      <div className="w-full h-full bg-gray-700 rounded-lg flex items-center justify-center">
+        <div className="animate-spin w-6 h-6 border-2 border-yellow-400 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  if (hasError || !svgImage) {
+    // 回退到使用原始圖片
+    return (
+      <img 
+        src={nft.image?.replace('ipfs://', 'https://ipfs.io/ipfs/') || fallbackImage} 
+        onError={(e) => { e.currentTarget.src = fallbackImage; }} 
+        alt={nft.name || `VIP #${nft.id.toString()}`} 
+        className="w-full h-full object-cover bg-gray-700 transition-transform duration-300 hover:scale-110" 
+        loading="lazy"
+      />
+    );
+  }
+
+  return (
+    <img 
+      src={svgImage} 
+      onError={() => setHasError(true)}
+      alt={nft.name || `VIP #${nft.id.toString()}`} 
+      className="w-full h-full object-cover bg-gray-700 transition-transform duration-300 hover:scale-110" 
+      loading="lazy"
+    />
+  );
+});
 
 // NFT 卡片的主元件
 const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected }) => {
@@ -66,7 +134,7 @@ const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected })
         return (
             <>
                 <StarRating rating={5} /> 
-                <p className="text-lg font-bold text-yellow-300">等級 {vip.level}</p>
+                <p className="text-lg font-bold text-yellow-300">VIP 等級</p>
             </>
         );
       }
@@ -81,13 +149,17 @@ const NftCardComponent: React.FC<NftCardProps> = ({ nft, onSelect, isSelected })
     >
       <div className={`flex-grow ${onSelect ? 'cursor-pointer' : ''}`} onClick={() => onSelect && onSelect(id, type)}>
         <div className="aspect-square w-full mb-2 overflow-hidden rounded-lg">
-            <img 
-                src={imageUrl || fallbackImage} 
-                onError={(e) => { e.currentTarget.src = fallbackImage; }} 
-                alt={name || `${type} #${id.toString()}`} 
-                className="w-full h-full object-cover bg-gray-700 transition-transform duration-300 hover:scale-110" 
-                loading="lazy"
-            />
+            {type === 'vip' ? (
+              <VipImage nft={nft as VipNft} fallbackImage={fallbackImage} />
+            ) : (
+              <img 
+                  src={imageUrl || fallbackImage} 
+                  onError={(e) => { e.currentTarget.src = fallbackImage; }} 
+                  alt={name || `${type} #${id.toString()}`} 
+                  className="w-full h-full object-cover bg-gray-700 transition-transform duration-300 hover:scale-110" 
+                  loading="lazy"
+              />
+            )}
         </div>
         <p className="font-bold text-sm truncate text-gray-200">{name || `${type} #${id.toString()}`}</p>
         <div className="min-h-[48px]">
