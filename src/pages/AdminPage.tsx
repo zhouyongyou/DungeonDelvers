@@ -144,23 +144,32 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     return config.filter((c) => !!c.contract && !!c.contract.address) as ParameterConfigItem[];
   }, [chainId]);
 
+  const parameterContracts = useMemo(() => {
+    return parameterConfig.map(p => ({ ...p.contract, functionName: p.getter }));
+  }, [parameterConfig]);
+
   const { data: params, isLoading: isLoadingParams } = useReadContracts({
-    contracts: parameterConfig.map(p => ({ ...p.contract, functionName: p.getter })),
-    query: { enabled: parameterConfig.length > 0 }
+    contracts: parameterContracts,
+    query: { enabled: parameterContracts.length > 0 }
   });
 
   // 讀取 PlayerVault 的稅務參數
   const playerVaultContract = getContract(chainId, 'playerVault');
+  const vaultContracts = useMemo(() => {
+    if (!playerVaultContract) return [];
+    return [
+      { ...playerVaultContract, functionName: 'largeWithdrawThresholdUSD' as const },
+      { ...playerVaultContract, functionName: 'smallWithdrawThresholdUSD' as const },
+      { ...playerVaultContract, functionName: 'standardInitialRate' as const },
+      { ...playerVaultContract, functionName: 'largeWithdrawInitialRate' as const },
+      { ...playerVaultContract, functionName: 'decreaseRatePerPeriod' as const },
+      { ...playerVaultContract, functionName: 'periodDuration' as const },
+    ];
+  }, [playerVaultContract]);
+
   const { data: vaultParams, isLoading: isLoadingVaultParams } = useReadContracts({
-    contracts: playerVaultContract ? [
-      { ...playerVaultContract, functionName: 'largeWithdrawThresholdUSD' as any },
-      { ...playerVaultContract, functionName: 'smallWithdrawThresholdUSD' as any },
-      { ...playerVaultContract, functionName: 'standardInitialRate' as any },
-      { ...playerVaultContract, functionName: 'largeWithdrawInitialRate' as any },
-      { ...playerVaultContract, functionName: 'decreaseRatePerPeriod' as any },
-      { ...playerVaultContract, functionName: 'periodDuration' as any },
-    ] : [],
-    query: { enabled: !!playerVaultContract }
+    contracts: vaultContracts,
+    query: { enabled: !!playerVaultContract && vaultContracts.length > 0 }
   });
 
   const handleSet = async (key: string, targetContract: NonNullable<ReturnType<typeof getContract>>, functionName: string) => {

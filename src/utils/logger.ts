@@ -6,11 +6,11 @@
 export type AppError = {
   message: string;
   code?: string;
-  details?: any;
+  details?: unknown;
 };
 
 // 簡化的錯誤處理
-export const handleError = (error: any): AppError => {
+export const handleError = (error: unknown): AppError => {
   console.error('Error:', error);
   
   if (error instanceof Error) {
@@ -36,19 +36,19 @@ export const handleError = (error: any): AppError => {
 
 // 簡化的日誌函數
 export const logger = {
-  info: (message: string, data?: any) => {
+  info: (message: string, data?: unknown) => {
     console.log(`[INFO] ${message}`, data || '');
   },
   
-  warn: (message: string, data?: any) => {
+  warn: (message: string, data?: unknown) => {
     console.warn(`[WARN] ${message}`, data || '');
   },
   
-  error: (message: string, error?: any) => {
+  error: (message: string, error?: unknown) => {
     console.error(`[ERROR] ${message}`, error || '');
   },
   
-  debug: (message: string, data?: any) => {
+  debug: (message: string, data?: unknown) => {
     if (import.meta.env.DEV) {
       console.log(`[DEBUG] ${message}`, data || '');
     }
@@ -56,7 +56,7 @@ export const logger = {
 };
 
 // 簡化的 API 錯誤處理
-export const handleApiError = (error: any) => {
+export const handleApiError = (error: unknown) => {
   const appError = handleError(error);
   
   // 在開發環境顯示詳細錯誤
@@ -68,8 +68,9 @@ export const handleApiError = (error: any) => {
 };
 
 // 簡化的網路錯誤處理
-export const handleNetworkError = (error: any) => {
-  if (error.message?.includes('network')) {
+export const handleNetworkError = (error: unknown) => {
+  if (error && typeof error === 'object' && 'message' in error && 
+      typeof error.message === 'string' && error.message.includes('network')) {
     return {
       message: '網路連接失敗，請檢查您的網路連接',
       code: 'NETWORK_ERROR'
