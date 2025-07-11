@@ -6,13 +6,13 @@ import { useQuery } from '@tanstack/react-query';
 import { formatEther } from 'viem';
 import { getContract, contracts } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
-import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import type { Page } from '../types/page';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { useAppToast } from '../hooks/useAppToast';
 import { Icons } from '../components/ui/icons';
 import { bsc } from 'wagmi/chains';
 import { TownBulletin } from '../components/ui/TownBulletin';
+import { LocalErrorBoundary, LoadingState, ErrorState } from '../components/ui/ErrorBoundary';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取 Hook
@@ -191,7 +191,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     const { addTransaction } = useTransactionStore();
     const { showToast } = useAppToast();
     
-    const { stats, isLoading: isLoadingStats, isError: isGraphError, refetch: refetchStats } = useDashboardStats();
+    const { stats, isLoading: isLoadingStats, refetch: refetchStats } = useDashboardStats();
     const { taxParams, isLoadingTaxParams, dungeonCoreContract } = useTaxParams();
     
     const { writeContractAsync, isPending: isWithdrawing } = useWriteContract();
@@ -258,51 +258,45 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
         return <div className="flex justify-center items-center h-64"><p className="text-lg text-gray-500">請連接到支援的網路 (BSC) 以檢視儀表板。</p></div>;
     }
     
-    if (isGraphError) {
-        return (
-            <div className="card-bg p-10 rounded-xl text-center text-red-400">
-                <h3 className="text-xl font-bold">儀表板載入失敗</h3>
-                <p className="mt-2">無法從 The Graph 獲取數據</p>
-                <button 
-                    onClick={() => refetchStats()} 
-                    className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                    重試載入
-                </button>
-                <p className="mt-2 text-sm text-gray-500">
-                    通常需要等待 30-60 秒，請稍後再試
-                </p>
-            </div>
-        );
-    }
-
     const isLoading = isLoadingStats || isLoadingTaxParams;
-    if (isLoading && !stats) return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
 
     return (
         <section className="space-y-8">
             <h2 className="page-title">玩家總覽中心</h2>
             
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 card-bg p-6 rounded-xl flex flex-col sm:flex-row items-center gap-6">
-                    <div className="text-center flex-shrink-0">
-                        <p className="text-sm text-gray-400">等級</p>
-                        <p className="text-6xl font-bold text-yellow-400">{stats.level}</p>
+            <LocalErrorBoundary 
+                fallback={
+                    <ErrorState 
+                        message="儀表板數據載入失敗" 
+                        onRetry={refetchStats}
+                    />
+                }
+            >
+                {isLoading && !stats ? (
+                    <LoadingState message="載入儀表板數據..." />
+                ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 card-bg p-6 rounded-xl flex flex-col sm:flex-row items-center gap-6">
+                            <div className="text-center flex-shrink-0">
+                                <p className="text-sm text-gray-400">等級</p>
+                                <p className="text-6xl font-bold text-yellow-400">{stats.level}</p>
+                            </div>
+                            <div className="w-full">
+                                <h3 className="section-title text-xl mb-2">我的檔案</h3>
+                                <p className="font-mono text-xs break-all bg-black/20 p-2 rounded">{address}</p>
+                            </div>
+                        </div>
+                        <div className="card-bg p-6 rounded-xl flex flex-col justify-center">
+                            <h3 className="section-title text-xl">我的金庫</h3>
+                            <p className="text-3xl font-bold text-teal-400">{parseFloat(formatEther(withdrawableBalance)).toFixed(4)}</p>
+                            <p className="text-xs text-red-400">當前預估稅率: {currentTaxRate.toFixed(2)}%</p>
+                            <ActionButton onClick={handleWithdraw} isLoading={isWithdrawing} disabled={withdrawableBalance === 0n} className="mt-2 h-10 w-full">
+                                全部提領
+                            </ActionButton>
+                        </div>
                     </div>
-                    <div className="w-full">
-                        <h3 className="section-title text-xl mb-2">我的檔案</h3>
-                        <p className="font-mono text-xs break-all bg-black/20 p-2 rounded">{address}</p>
-                    </div>
-                </div>
-                <div className="card-bg p-6 rounded-xl flex flex-col justify-center">
-                    <h3 className="section-title text-xl">我的金庫</h3>
-                    <p className="text-3xl font-bold text-teal-400">{parseFloat(formatEther(withdrawableBalance)).toFixed(4)}</p>
-                    <p className="text-xs text-red-400">當前預估稅率: {currentTaxRate.toFixed(2)}%</p>
-                    <ActionButton onClick={handleWithdraw} isLoading={isWithdrawing} disabled={withdrawableBalance === 0n} className="mt-2 h-10 w-full">
-                        全部提領
-                    </ActionButton>
-                </div>
-            </div>
+                )}
+            </LocalErrorBoundary>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">

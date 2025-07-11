@@ -547,10 +547,36 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
         ]);
         
         // 其他資產並行載入
-        const [parties, vipCards] = await Promise.all([
-            parseNfts(playerAssets.parties || [], 'party', chainId, client),
-            playerAssets.vip ? parseNfts([playerAssets.vip], 'vip', chainId, client) : Promise.resolve([]),
-        ]);
+        // 隊伍數據可能需要更長時間同步，添加重試邏輯
+        let parties: Array<HeroNft | RelicNft | PartyNft | VipNft> = [];
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        while (retryCount < maxRetries) {
+            try {
+                parties = await parseNfts(playerAssets.parties || [], 'party', chainId, client);
+                // 檢查隊伍數據是否完整
+                const partyNfts = parties.filter((nft): nft is PartyNft => nft.type === 'party');
+                const hasValidParties = partyNfts.every(party => 
+                    party.partyRarity > 0 && 
+                    party.totalPower > 0n && 
+                    party.totalCapacity > 0n
+                );
+                if (hasValidParties || retryCount === maxRetries - 1) break;
+                
+                console.log(`隊伍數據不完整，重試 ${retryCount + 1}/${maxRetries}`);
+                await new Promise(resolve => setTimeout(resolve, 2000)); // 等待2秒
+                retryCount++;
+            } catch (error) {
+                console.warn(`解析隊伍數據失敗，重試 ${retryCount + 1}/${maxRetries}:`, error);
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+        }
+        
+        const vipCards = playerAssets.vip ? await parseNfts([playerAssets.vip], 'vip', chainId, client) : [];
 
         return {
             heros: heroes.filter(Boolean) as HeroNft[],

@@ -164,6 +164,10 @@ const NftCard: React.FC<NftCardProps> = memo(({
               alt={hero.name}
               className={baseImageClass}
               loading="lazy"
+              onError={(e) => {
+                console.error('英雄圖片載入失敗:', e);
+                e.currentTarget.src = '/images/hero-placeholder.svg';
+              }}
             />
             {/* 戰力顯示 */}
             <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
@@ -182,6 +186,10 @@ const NftCard: React.FC<NftCardProps> = memo(({
               alt={relic.name}
               className={baseImageClass}
               loading="lazy"
+              onError={(e) => {
+                console.error('聖物圖片載入失敗:', e);
+                e.currentTarget.src = '/images/relic-placeholder.svg';
+              }}
             />
             {/* 容量顯示 */}
             <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
@@ -200,6 +208,10 @@ const NftCard: React.FC<NftCardProps> = memo(({
               alt={party.name}
               className={baseImageClass}
               loading="lazy"
+              onError={(e) => {
+                console.error('隊伍圖片載入失敗:', e);
+                e.currentTarget.src = '/images/party-placeholder.svg';
+              }}
             />
             {/* 隊伍戰力顯示 */}
             <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">

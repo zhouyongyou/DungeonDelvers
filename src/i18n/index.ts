@@ -10,6 +10,7 @@ i18n
   .init({
     fallbackLng: 'zh-TW',
     defaultNS: 'common',
+    ns: ['common', 'game', 'navigation', 'errors', 'translation'],
     supportedLngs: ['zh-TW', 'en', 'ja', 'ko'],
     
     detection: {

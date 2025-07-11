@@ -288,7 +288,7 @@ const MyAssetsPage: React.FC = () => {
 
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
-    const { data: nfts, isLoading } = useQuery({
+    const { data: nfts, isLoading, refetch } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
         queryFn: () => fetchAllOwnedNfts(address!, chainId!),
         enabled: !!address && !!chainId,
@@ -299,7 +299,8 @@ const MyAssetsPage: React.FC = () => {
         refetchOnWindowFocus: false,
         refetchOnMount: false,
         refetchOnReconnect: 'always',
-        retry: 2,
+        retry: 3, // 增加重試次數
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // 指數退避
     });
     
     const { data: platformFee, isLoading: isLoadingFee } = useReadContract({
@@ -417,7 +418,14 @@ const MyAssetsPage: React.FC = () => {
                 value: fee,
             });
             addTransaction({ hash, description: `創建新隊伍` });
-            queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
+            
+            // 延遲失效緩存，等待 GraphQL 同步
+            setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
+            }, 3000); // 3秒後重新獲取數據
+            
+            // 立即顯示成功消息
+            showToast('隊伍創建成功！數據正在同步中...', 'success');
 
         } catch (error: unknown) {
             const e = error as { message?: string; shortMessage?: string };
@@ -476,7 +484,15 @@ const MyAssetsPage: React.FC = () => {
                         {filteredNfts.map(nft => <NftCard key={nft.id.toString()} nft={nft} />)}
                     </div>
                 ) : (
-                    <EmptyState message="這裡空空如也..." />
+                    <div className="text-center py-8">
+                        <EmptyState message="這裡空空如也..." />
+                        <button 
+                            onClick={() => refetch()}
+                            className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition"
+                        >
+                            重新載入數據
+                        </button>
+                    </div>
                 )}
             </div>
         </section>

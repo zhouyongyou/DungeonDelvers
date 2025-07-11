@@ -10,6 +10,7 @@ import { NftCard } from '../components/ui/NftCard';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
+import { LocalErrorBoundary, LoadingState, ErrorState } from '../components/ui/ErrorBoundary';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import type { AnyNft, HeroNft, NftAttribute, RelicNft, NftType } from '../types/nft';
@@ -60,33 +61,44 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
                     return [];
                 }
 
-                return assets.map((asset: { tokenId: string; power?: string; capacity?: string; rarity?: string }) => {
-                    const baseNft = {
-                        id: BigInt(asset.tokenId),
-                        name: `${nftType === 'hero' ? '英雄' : '聖物'} #${asset.tokenId}`,
-                        image: '',
-                        description: '',
-                        attributes: [],
-                        contractAddress: contractAddress,
-                        tokenId: BigInt(asset.tokenId),
-                    };
+                return assets
+                    .filter((asset: { tokenId: string; power?: string; capacity?: string; rarity?: string }) => {
+                        // 嚴格檢查稀有度是否匹配查詢條件
+                        const assetRarity = asset.rarity ? Number(asset.rarity) : null;
+                        if (assetRarity !== rarity) {
+                            console.warn(`NFT #${asset.tokenId} 稀有度不匹配: 期望 ${rarity}，實際 ${assetRarity}`);
+                            return false; // 過濾掉不匹配的 NFT
+                        }
+                        return true;
+                    })
+                    .map((asset: { tokenId: string; power?: string; capacity?: string; rarity?: string }) => {
+                        const assetRarity = Number(asset.rarity);
+                        const baseNft = {
+                            id: BigInt(asset.tokenId),
+                            name: `${nftType === 'hero' ? '英雄' : '聖物'} #${asset.tokenId}`,
+                            image: '',
+                            description: '',
+                            attributes: [],
+                            contractAddress: contractAddress,
+                            tokenId: BigInt(asset.tokenId),
+                        };
 
-                    if (nftType === 'hero') {
-                        return {
-                            ...baseNft,
-                            type: 'hero' as const,
-                            power: asset.power ? Number(asset.power) : 0,
-                            rarity: asset.rarity ? Number(asset.rarity) : rarity
-                        } as HeroNft;
-                    } else {
-                        return {
-                            ...baseNft,
-                            type: 'relic' as const,
-                            capacity: asset.capacity ? Number(asset.capacity) : 0,
-                            rarity: asset.rarity ? Number(asset.rarity) : rarity
-                        } as RelicNft;
-                    }
-                });
+                        if (nftType === 'hero') {
+                            return {
+                                ...baseNft,
+                                type: 'hero' as const,
+                                power: asset.power ? Number(asset.power) : 0,
+                                rarity: assetRarity
+                            } as HeroNft;
+                        } else {
+                            return {
+                                ...baseNft,
+                                type: 'relic' as const,
+                                capacity: asset.capacity ? Number(asset.capacity) : 0,
+                                rarity: assetRarity
+                            } as RelicNft;
+                        }
+                    });
             } catch (error) {
                 console.error(`獲取 ${nftType} 材料失敗:`, error);
                 return [];
@@ -228,6 +240,18 @@ const AltarPage: React.FC = () => {
         const tokenContract = nftType === 'hero' ? heroContract : relicContract;
         if (!tokenContract) return showToast('合約地址未設定', 'error');
 
+        // 調試信息：檢查選中的 NFT 稀有度
+        console.log('升星調試信息:', {
+            nftType,
+            targetRarity: rarity,
+            selectedNfts: selectedNfts.map(id => id.toString()),
+            availableNfts: availableNfts?.map(nft => ({
+                id: nft.id.toString(),
+                rarity: 'rarity' in nft ? nft.rarity : 'N/A',
+                type: nft.type
+            }))
+        });
+
         try {
             const hash = await writeContractAsync({ ...altarContract, functionName: 'upgradeNFTs', args: [tokenContract.address, selectedNfts], value: currentRule.nativeFee });
             addTransaction({ hash, description: `升星 ${rarity}★ ${nftType === 'hero' ? '英雄' : '聖物'}` });
@@ -302,32 +326,42 @@ const AltarPage: React.FC = () => {
                     <UpgradeInfoCard rule={currentRule} isLoading={isLoadingRules} />
                     <ActionButton onClick={handleUpgrade} isLoading={isTxPending} disabled={isTxPending || !currentRule || selectedNfts.length !== currentRule.materialsRequired} className="w-full h-14 text-lg">{isTxPending ? '正在獻祭...' : '開始升星'}</ActionButton>
                 </div>
-                <div className="lg:col-span-2 card-bg p-6 rounded-2xl">
-                    <h3 className="section-title">2. 選擇材料 ({selectedNfts.length} / {currentRule?.materialsRequired ?? '...'})</h3>
-                    {isLoading ? <div className="flex justify-center h-64 items-center"><LoadingSpinner /></div> : 
-                     availableNfts && availableNfts.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                            {availableNfts.map(nft => (
-                                <div 
-                                    key={nft.id.toString()} 
-                                    onClick={() => handleSelectNft(nft.id)}
-                                    className={`cursor-pointer transition-all duration-200 ${
-                                        selectedNfts.includes(nft.id) 
-                                            ? 'ring-2 ring-yellow-400 scale-105' 
-                                            : 'hover:scale-105'
-                                    }`}
-                                >
-                                    <NftCard 
-                                        nft={nft} 
-                                        selected={selectedNfts.includes(nft.id)}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <EmptyState message={`沒有可用的 ${rarity}★ ${nftType === 'hero' ? '英雄' : '聖物'}`} />
-                    )}
-                </div>
+                <LocalErrorBoundary 
+                    fallback={
+                        <ErrorState 
+                            message="材料載入失敗" 
+                            onRetry={() => queryClient.invalidateQueries({ queryKey: ['altarMaterials'] })}
+                        />
+                    }
+                >
+                    <div className="lg:col-span-2 card-bg p-6 rounded-2xl">
+                        <h3 className="section-title">2. 選擇材料 ({selectedNfts.length} / {currentRule?.materialsRequired ?? '...'})</h3>
+                        {isLoading ? (
+                            <LoadingState message="載入材料中..." />
+                        ) : availableNfts && availableNfts.length > 0 ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                {availableNfts.map(nft => (
+                                    <div 
+                                        key={nft.id.toString()} 
+                                        onClick={() => handleSelectNft(nft.id)}
+                                        className={`cursor-pointer transition-all duration-200 ${
+                                            selectedNfts.includes(nft.id) 
+                                                ? 'ring-2 ring-yellow-400 scale-105' 
+                                                : 'hover:scale-105'
+                                        }`}
+                                    >
+                                        <NftCard 
+                                            nft={nft} 
+                                            selected={selectedNfts.includes(nft.id)}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <EmptyState message={`沒有可用的 ${rarity}★ ${nftType === 'hero' ? '英雄' : '聖物'}`} />
+                        )}
+                    </div>
+                </LocalErrorBoundary>
             </div>
         </section>
     );

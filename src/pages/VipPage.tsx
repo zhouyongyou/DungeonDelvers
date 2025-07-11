@@ -68,17 +68,45 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
     }
 
     if (isLoading) return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center"><LoadingSpinner /></div>;
-    if (isError) return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-red-400">讀取 VIP 卡失敗</div>;
+    if (isError) {
+        console.error(`VIP 卡讀取失敗 - TokenId: ${tokenId}, ChainId: ${chainId}`);
+        return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-red-400">
+            <div className="text-center">
+                <div>讀取 VIP 卡失敗</div>
+                <div className="text-xs text-gray-500 mt-1">TokenId: {tokenId?.toString()}</div>
+            </div>
+        </div>;
+    }
     if (!svgImage) return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-400 dark:text-gray-500">無 VIP 卡</div>;
     
     return (
         <div className="w-full aspect-square bg-gray-900/50 rounded-xl overflow-hidden">
             {svgImage.startsWith('data:image/svg+xml;base64,') ? (
-                <img src={svgImage} alt="VIP Card" className="w-full h-full object-contain" />
+                <img 
+                    src={svgImage} 
+                    alt="VIP Card" 
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                        console.error('VIP SVG 載入失敗:', e);
+                        e.currentTarget.src = '/images/vip-placeholder.svg';
+                    }}
+                />
             ) : svgImage.startsWith('data:image/svg+xml') ? (
-                <div dangerouslySetInnerHTML={{ __html: Buffer.from(svgImage.substring('data:image/svg+xml;base64,'.length), 'base64').toString() }} />
+                <div 
+                    dangerouslySetInnerHTML={{ 
+                        __html: Buffer.from(svgImage.substring('data:image/svg+xml;base64,'.length), 'base64').toString() 
+                    }} 
+                />
             ) : (
-                <img src={svgImage} alt="VIP Card" className="w-full h-full object-contain" />
+                <img 
+                    src={svgImage} 
+                    alt="VIP Card" 
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                        console.error('VIP SVG 載入失敗:', e);
+                        e.currentTarget.src = '/images/vip-placeholder.svg';
+                    }}
+                />
             )}
         </div>
     );
