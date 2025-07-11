@@ -1,6 +1,6 @@
 {
   "name": "Player Profile",
-  "description": "A player profile NFT that tracks your adventure progress and achievements in Dungeon Delvers. Level up by participating in expeditions and earn exclusive rewards.",
+  "description": "A dynamic player profile NFT that tracks achievements, stats, and progress in the Dungeon Delvers universe.",
   "image": "https://www.dungeondelvers.xyz/assets/images/collections/profile-logo.png",
   "attributes": [
     {
@@ -9,11 +9,7 @@
     },
     {
       "trait_type": "Type",
-      "value": "Achievement Tracker"
-    },
-    {
-      "trait_type": "Benefits",
-      "value": "Level Progression & Rewards"
+      "value": "Dynamic"
     }
   ]
 } 

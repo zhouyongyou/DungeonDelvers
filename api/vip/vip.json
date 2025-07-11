@@ -1,6 +1,6 @@
 {
   "name": "VIP Membership",
-  "description": "A VIP membership NFT that grants special privileges and tax reductions in Dungeon Delvers. The level is determined by the amount of SoulShard tokens staked.",
+  "description": "An exclusive VIP membership NFT that grants special privileges and access to premium features in the Dungeon Delvers ecosystem.",
   "image": "https://www.dungeondelvers.xyz/assets/images/collections/vip-logo.png",
   "attributes": [
     {
@@ -8,12 +8,8 @@
       "value": "VIP"
     },
     {
-      "trait_type": "Type",
-      "value": "Membership"
-    },
-    {
-      "trait_type": "Benefits",
-      "value": "Tax Reduction & Special Privileges"
+      "trait_type": "Membership Level",
+      "value": "Premium"
     }
   ]
 } 
