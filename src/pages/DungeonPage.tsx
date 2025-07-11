@@ -47,7 +47,7 @@ const GET_PLAYER_PARTIES_QUERY = `
         cooldownEndsAt
         unclaimedRewards
         fatigueLevel
-        heroes {
+        heros {
           id
           tokenId
         }
@@ -92,7 +92,7 @@ const usePlayerParties = () => {
                 cooldownEndsAt: string;
                 unclaimedRewards: string;
                 fatigueLevel: string;
-                heroes: Array<{ tokenId: string }>;
+                heros: Array<{ tokenId: string }>;
                 relics: Array<{ tokenId: string }>;
             }) => ({
                 id: BigInt(p.tokenId),
@@ -106,7 +106,7 @@ const usePlayerParties = () => {
                 totalPower: BigInt(p.totalPower),
                 totalCapacity: BigInt(p.totalCapacity),
                 // ★★★ 修正點：正確填充 heroIds 和 relicIds ★★★
-                heroIds: p.heroes.map((h) => BigInt(h.tokenId)),
+                heroIds: p.heros.map((h) => BigInt(h.tokenId)),
                 relicIds: p.relics.map((r) => BigInt(r.tokenId)),
                 partyRarity: p.partyRarity,
                 // 直接從 The Graph 獲取狀態

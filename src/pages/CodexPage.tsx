@@ -21,7 +21,7 @@ const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
 const GET_OWNED_RARITIES_QUERY = `
   query GetOwnedRarities($owner: ID!) {
     player(id: $owner) {
-      heroes(first: 1000) { # 假設玩家不會擁有超過1000種不同稀有度的英雄
+      heros(first: 1000) { # 假設玩家不會擁有超過1000種不同稀有度的英雄
         rarity
       }
       relics(first: 1000) {
@@ -74,19 +74,19 @@ const SvgGenerator = {
 // 這個 Hook 用於獲取所有可能的 NFT 種類，用於展示，它只在客戶端運行一次。
 const useAllPossibleNfts = () => useQuery({
     queryKey: ['allPossibleNfts'],
-    queryFn: async (): Promise<{ heroes: HeroNft[], relics: RelicNft[] }> => {
+    queryFn: async (): Promise<{ heros: HeroNft[], relics: RelicNft[] }> => {
         const rarities = [1, 2, 3, 4, 5];
-        const heroes: HeroNft[] = [];
+        const heros: HeroNft[] = [];
         const relics: RelicNft[] = [];
         const getPowerByRarity = (r: number) => [0, 32, 75, 125, 175, 227][r] || 0;
         const rarityNames = ["", "Common", "Uncommon", "Rare", "Epic", "Legendary"];
 
         for (const r of rarities) {
             const heroPower = getPowerByRarity(r);
-            heroes.push({ id: BigInt(r), name: `${rarityNames[r]} Hero`, description: ``, image: SvgGenerator.generateHeroSVG({ rarity: r, power: heroPower }, BigInt(r)), attributes: [], type: 'hero', contractAddress: '0x0', power: heroPower, rarity: r });
+            heros.push({ id: BigInt(r), name: `${rarityNames[r]} Hero`, description: ``, image: SvgGenerator.generateHeroSVG({ rarity: r, power: heroPower }, BigInt(r)), attributes: [], type: 'hero', contractAddress: '0x0', power: heroPower, rarity: r });
             relics.push({ id: BigInt(r), name: `${rarityNames[r]} Relic`, description: ``, image: SvgGenerator.generateRelicSVG({ rarity: r, capacity: r }, BigInt(r)), attributes: [], type: 'relic', contractAddress: '0x0', capacity: r, rarity: r });
         }
-        return { heroes, relics };
+        return { heros, relics };
     },
     staleTime: Infinity, // 這些數據是靜態的，不需要重新獲取
 });
@@ -105,7 +105,7 @@ const useOwnedCodexIdentifiers = () => {
             });
             if (!response.ok) throw new Error('GraphQL Network response was not ok');
             const { data } = await response.json();
-            const ownedHeroRarities = new Set<number>(data?.player?.heroes?.map((h: { rarity: number }) => h.rarity) ?? []);
+            const ownedHeroRarities = new Set<number>(data?.player?.heros?.map((h: { rarity: number }) => h.rarity) ?? []);
             const ownedRelicRarities = new Set<number>(data?.player?.relics?.map((r: { rarity: number }) => r.rarity) ?? []);
             return { ownedHeroRarities, ownedRelicRarities };
         },
@@ -127,7 +127,7 @@ const CodexPage: React.FC = () => {
 
     const displayNfts = useMemo(() => {
         if (!allPossibleNfts) return [];
-        return filter === 'hero' ? allPossibleNfts.heroes : allPossibleNfts.relics;
+        return filter === 'hero' ? allPossibleNfts.heros : allPossibleNfts.relics;
     }, [allPossibleNfts, filter]);
 
     const getIsUnlocked = (nft: AnyNft) => {

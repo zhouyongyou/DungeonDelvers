@@ -50,7 +50,7 @@ const client: ApolloClient<NormalizedCacheObject> = new ApolloClient({
         keyFields: ['id'],
         merge: true,
         fields: {
-          heroes: {
+          heros: {
             merge: false, // 每次都替換整個數組
           },
           relics: {

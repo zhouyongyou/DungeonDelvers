@@ -27,7 +27,7 @@ const GET_PLAYER_ASSETS_QUERY = `
   query GetPlayerAssets($owner: ID!) {
     player(id: $owner) {
       id
-      heroes { 
+      heros { 
         id 
         tokenId 
         power 
@@ -50,7 +50,7 @@ const GET_PLAYER_ASSETS_QUERY = `
         totalCapacity
         partyRarity
         contractAddress
-        heroes { tokenId }
+        heros { tokenId }
         relics { tokenId }
         fatigueLevel
         provisionsRemaining
@@ -381,7 +381,7 @@ interface PartyAsset extends AssetWithTokenId {
     totalPower: string | number | bigint;
     totalCapacity: string | number | bigint;
     partyRarity: string | number | bigint;
-    heroes?: Array<{ tokenId: string | number | bigint }>;
+          heros?: Array<{ tokenId: string | number | bigint }>;
     relics?: Array<{ tokenId: string | number | bigint }>;
 }
 
@@ -462,7 +462,7 @@ async function parseNfts<T extends AssetWithTokenId>(
                     type, 
                     totalPower: BigInt(partyAsset.totalPower), 
                     totalCapacity: BigInt(partyAsset.totalCapacity), 
-                    heroIds: partyAsset.heroes ? partyAsset.heroes.map((h) => BigInt(h.tokenId)) : [], 
+                    heroIds: partyAsset.heros ? partyAsset.heros.map((h) => BigInt(h.tokenId)) : [], 
                     relicIds: partyAsset.relics ? partyAsset.relics.map((r) => BigInt(r.tokenId)) : [], 
                     partyRarity: Number(partyAsset.partyRarity) 
                 };
@@ -493,7 +493,7 @@ async function parseNfts<T extends AssetWithTokenId>(
 }
 
 export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promise<AllNftCollections> {
-    const emptyResult: AllNftCollections = { heroes: [], relics: [], parties: [], vipCards: [] };
+    const emptyResult: AllNftCollections = { heros: [], relics: [], parties: [], vipCards: [] };
     
     if (!isSupportedChain(chainId)) {
         console.error(`不支援的鏈 ID: ${chainId}`);
@@ -543,7 +543,7 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
         // 🔥 優化載入順序：優先載入聖物和英雄（組隊需要），然後是其他
         const [relics, heroes] = await Promise.all([
             parseNfts(playerAssets.relics || [], 'relic', chainId, client),
-            parseNfts(playerAssets.heroes || [], 'hero', chainId, client),
+            parseNfts(playerAssets.heros || [], 'hero', chainId, client),
         ]);
         
         // 其他資產並行載入
@@ -553,7 +553,7 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
         ]);
 
         return {
-            heroes: heroes.filter(Boolean) as HeroNft[],
+            heros: heroes.filter(Boolean) as HeroNft[],
             relics: relics.filter(Boolean) as RelicNft[],
             parties: parties.filter(Boolean) as PartyNft[],
             vipCards: vipCards.filter(Boolean) as VipNft[],

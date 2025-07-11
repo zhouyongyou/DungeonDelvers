@@ -333,7 +333,7 @@ const MyAssetsPage: React.FC = () => {
         const sortRelicNfts = (nfts: RelicNft[]) => [...nfts].sort((a, b) => b.capacity - a.capacity);
 
         return {
-            availableHeroes: sortHeroNfts(nfts.heroes.filter((h: HeroNft) => !heroIdsInParties.has(h.id.toString()))),
+            availableHeroes: sortHeroNfts(nfts.heros.filter((h: HeroNft) => !heroIdsInParties.has(h.id.toString()))),
             availableRelics: sortRelicNfts(nfts.relics.filter((r: RelicNft) => !relicIdsInParties.has(r.id.toString()))),
         };
     }, [nfts]);
@@ -344,7 +344,7 @@ const MyAssetsPage: React.FC = () => {
         switch (filter) {
             case 'hero': 
                 // 英雄按戰力排序
-                return [...nfts.heroes].sort((a, b) => b.power - a.power);
+                return [...nfts.heros].sort((a, b) => b.power - a.power);
             case 'relic': 
                 // 聖物按容量排序
                 return [...nfts.relics].sort((a, b) => b.capacity - a.capacity);

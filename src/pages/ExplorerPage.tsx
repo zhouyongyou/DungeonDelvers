@@ -55,7 +55,7 @@ const GET_PARTY_BY_ID_QUERY = `
       cooldownEndsAt
       unclaimedRewards
       fatigueLevel
-      heroes {
+      heros {
         id
         tokenId
       }
@@ -190,7 +190,7 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
                     <p><b>剩餘儲備:</b> {data.provisionsRemaining.toString()}</p>
                     <p><b>疲勞度:</b> {data.fatigueLevel.toString()}</p>
                     <p><b>未領取獎勵:</b> {formatEther(BigInt(data.unclaimedRewards))} $SoulShard</p>
-                    <p><b>英雄列表 (ID):</b> {data.heroes?.map((h: { tokenId: string }) => h.tokenId).join(', ') || '無'}</p>
+                    <p><b>英雄列表 (ID):</b> {data.heros?.map((h: { tokenId: string }) => h.tokenId).join(', ') || '無'}</p>
                     <p><b>聖物列表 (ID):</b> {data.relics?.map((r: { tokenId: string }) => r.tokenId).join(', ') || '無'}</p>
                 </>}
             </>

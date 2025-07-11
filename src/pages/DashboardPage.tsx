@@ -25,7 +25,7 @@ const GET_DASHBOARD_STATS_QUERY = `
   query GetDashboardStats($owner: ID!) {
     player(id: $owner) {
       id
-      heroes {
+      heros {
         id
       }
       relics {
@@ -105,7 +105,7 @@ const useDashboardStats = () => {
     const stats = useMemo(() => {
         return {
             level: data?.profile?.level ? Number(data.profile.level) : 1,
-            heroCount: data?.heroes?.length ?? 0,
+            heroCount: data?.heros?.length ?? 0,
             relicCount: data?.relics?.length ?? 0,
             partyCount: data?.parties?.length ?? 0,
             isVip: !!data?.vip,

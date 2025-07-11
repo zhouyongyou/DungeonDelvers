@@ -22,10 +22,10 @@ import { Modal } from '../components/ui/Modal';
 
 const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
 
-// ★ 核心修正: 查詢語句現在直接查詢頂層的 heroes 和 relics，並使用正確的變數類型
+// ★ 核心修正: 查詢語句現在直接查詢頂層的 heros 和 relics，並使用正確的變數類型
 const GET_FILTERED_NFTS_QUERY = `
   query GetFilteredNfts($owner: String!, $rarity: Int!) {
-    heroes(where: { owner: $owner, rarity: $rarity }) {
+    heros(where: { owner: $owner, rarity: $rarity }) {
       id
       tokenId
       power
@@ -50,7 +50,7 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
             
             try {
                 const result = await fetchFromGraph(GET_FILTERED_NFTS_QUERY, { owner: address.toLowerCase(), rarity });
-                const assets = nftType === 'hero' ? result.heroes : result.relics;
+                const assets = nftType === 'hero' ? result.heros : result.relics;
 
                 if (!assets || !Array.isArray(assets)) return [];
 
