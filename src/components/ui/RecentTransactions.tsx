@@ -24,7 +24,7 @@ const TransactionItem: React.FC<{ tx: Transaction; explorerUrl?: string }> = ({ 
           {icon}
         </div>
         <div className="text-sm">
-          <p className="font-medium text-gray-800 dark:text-gray-200">{tx.description}</p>
+                          <p className="font-medium text-gray-200">{tx.description}</p>
           <p className="text-xs text-gray-500">{new Date(tx.timestamp).toLocaleTimeString()}</p>
         </div>
       </div>
@@ -54,7 +54,7 @@ export const RecentTransactions: React.FC = () => {
   return (
     <div className="absolute top-full right-0 mt-2 w-72 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg shadow-2xl rounded-xl border border-black/10 dark:border-white/10 z-50 overflow-hidden">
       <div className="p-3 border-b border-black/10 dark:border-white/10 flex justify-between items-center">
-        <h4 className="font-bold text-base text-gray-800 dark:text-gray-200">最近交易</h4>
+                    <h4 className="font-bold text-base text-gray-200">最近交易</h4>
         <button
           onClick={clearCompleted}
           className="text-xs text-indigo-500 hover:text-indigo-400 disabled:text-gray-400"

@@ -114,10 +114,10 @@ const NftCard: React.FC<NftCardProps> = memo(({
             />
             {/* 隊伍資訊顯示 */}
             <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
-              ⚔️ {party.totalPower.toString()}
+              ⚔️ {Number(party.totalPower).toLocaleString()}
             </div>
             <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
-              📦 {party.totalCapacity.toString()}
+              📦 {Number(party.totalCapacity)}
             </div>
           </div>
         );

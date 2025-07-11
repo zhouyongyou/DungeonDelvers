@@ -113,7 +113,7 @@ const QuerySection: React.FC<QuerySectionProps> = ({ title, inputType, inputPlac
                         value={inputValue}
                         onChange={e => setInputValue(e.target.value)}
                         placeholder={inputPlaceholder}
-                        className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none h-10 bg-gray-800 border-gray-700"
+                        className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none h-10 bg-gray-800 border-gray-700 text-gray-200 placeholder-gray-400"
                     />
                 </div>
                 <ActionButton onClick={() => onQuery(inputValue)} className="px-6 py-2 rounded-lg whitespace-nowrap w-24 h-10">查詢</ActionButton>

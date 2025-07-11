@@ -66,12 +66,12 @@ export const Modal: React.FC<ModalProps> = ({
         className="card-bg p-6 rounded-2xl shadow-2xl w-full max-w-md m-4 animate-zoom-in"
         onClick={e => e.stopPropagation()}
       >
-        <h3 id="modal-title" className="text-2xl font-bold text-gray-800 dark:text-gray-100 font-serif mb-4">{title}</h3>
-        <div className="text-gray-700 dark:text-gray-300 mb-6">{children}</div>
+        <h3 id="modal-title" className="text-2xl font-bold text-gray-100 font-serif mb-4">{title}</h3>
+        <div className="text-gray-300 mb-6">{children}</div>
         <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition"
+            className="px-4 py-2 rounded-lg bg-gray-700 text-gray-200 hover:bg-gray-600 transition"
           >
             取消
           </button>

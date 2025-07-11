@@ -2,6 +2,7 @@
 
 import { type Address } from 'viem';
 import { bsc } from 'wagmi/chains';
+import { heroABI, relicABI, partyABI, vipStakingABI, playerProfileABI, playerVaultABI, soulShardTokenABI, dungeonMasterABI, altarOfAscensionABI, oracleABI, dungeonCoreABI } from './abis';
 
 // 簡化的合約地址配置 - 最終版本
 const CONTRACT_ADDRESSES = {
@@ -36,53 +37,53 @@ export const contracts = {
     // 核心合約
     dungeonCore: { 
       address: CONTRACT_ADDRESSES.CORE.DUNGEON_CORE as Address, 
-      abi: [] // 簡化：移除複雜的 ABI 定義
+      abi: dungeonCoreABI
     },
     oracle: { 
       address: CONTRACT_ADDRESSES.CORE.ORACLE as Address, 
-      abi: []
+      abi: oracleABI
     },
     playerVault: { 
       address: CONTRACT_ADDRESSES.CORE.PLAYER_VAULT as Address, 
-      abi: []
+      abi: playerVaultABI
     },
     
     // NFT合約
     hero: { 
       address: CONTRACT_ADDRESSES.NFTS.HERO as Address, 
-      abi: []
+      abi: heroABI
     },
     relic: { 
       address: CONTRACT_ADDRESSES.NFTS.RELIC as Address, 
-      abi: []
+      abi: relicABI
     },
     party: { 
       address: CONTRACT_ADDRESSES.NFTS.PARTY as Address, 
-      abi: []
+      abi: partyABI
     },
     
     // 遊戲合約
     dungeonMaster: { 
       address: CONTRACT_ADDRESSES.GAME.DUNGEON_MASTER as Address, 
-      abi: []
+      abi: dungeonMasterABI
     },
     altarOfAscension: { 
       address: CONTRACT_ADDRESSES.GAME.ALTAR as Address, 
-      abi: []
+      abi: altarOfAscensionABI
     },
     playerProfile: { 
       address: CONTRACT_ADDRESSES.GAME.PLAYER_PROFILE as Address, 
-      abi: []
+      abi: playerProfileABI
     },
     
     // 代幣合約
     soulShard: { 
       address: CONTRACT_ADDRESSES.TOKENS.SOUL_SHARD as Address, 
-      abi: []
+      abi: soulShardTokenABI
     },
     vipStaking: { 
       address: CONTRACT_ADDRESSES.TOKENS.VIP_STAKING as Address, 
-      abi: []
+      abi: vipStakingABI
     }
   }
 } as const;
