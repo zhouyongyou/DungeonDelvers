@@ -1,7 +1,7 @@
 // src/pages/AdminPage.tsx
 
 import React, { useState, useMemo } from 'react';
-import { useAccount, useReadContracts, useWriteContract, useReadContract } from 'wagmi';
+import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
 import { formatEther, isAddress } from 'viem';
 type ContractName = keyof typeof import('../config/contracts').contracts[typeof bsc.id];
 import { getContract, contracts as contractConfigs } from '../config/contracts';
@@ -25,7 +25,7 @@ type SupportedChainId = typeof bsc.id;
 type Address = `0x${string}`;
 
 // 開發者地址常量
-const DEVELOPER_ADDRESS = '0x0000000000000000000000000000000000000000'; // 請替換為實際的開發者地址
+const DEVELOPER_ADDRESS = import.meta.env.VITE_DEVELOPER_ADDRESS || '0x10925A7138649C7E1794CE646182eeb5BF8ba647';
 
 const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) => {
   const { address } = useAccount();
@@ -116,18 +116,30 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       dungeonMaster: getContract(chainId, 'dungeonMaster'),
       playerVault: getContract(chainId, 'playerVault'),
       vipStaking: getContract(chainId, 'vipStaking'),
+      oracle: getContract(chainId, 'oracle'),
     };
     const config = [
+      // 鑄造價格設定
       { key: 'heroMintPrice', label: "英雄鑄造價", contract: contracts.hero, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] },
       { key: 'relicMintPrice', label: "聖物鑄造價", contract: contracts.relic, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] },
       { key: 'provisionPrice', label: "儲備購買價", contract: contracts.dungeonMaster, getter: 'provisionPriceUSD', setter: 'setProvisionPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] },
+      
+      // 平台費用設定
       { key: 'heroFee', label: "英雄平台費", contract: contracts.hero, getter: 'platformFee', setter: 'setPlatformFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
       { key: 'relicFee', label: "聖物平台費", contract: contracts.relic, getter: 'platformFee', setter: 'setPlatformFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
       { key: 'partyFee', label: "隊伍平台費", contract: contracts.party, getter: 'platformFee', setter: 'setPlatformFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
       { key: 'explorationFee', label: "遠征探索費", contract: contracts.dungeonMaster, getter: 'explorationFee', setter: 'setExplorationFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
+      
+      // 遊戲機制參數
       { key: 'restDivisor', label: "休息成本係數", contract: contracts.dungeonMaster, getter: 'restCostPowerDivisor', setter: 'setRestCostPowerDivisor', unit: '無', placeholders: ['新係數 (戰力/USD)'] },
       { key: 'vipCooldown', label: "VIP 取消質押冷卻 (秒)", contract: contracts.vipStaking, getter: 'unstakeCooldown', setter: 'setUnstakeCooldown', unit: '無', placeholders: ['新冷卻時間 (秒)'] },
+      { key: 'globalRewardMultiplier', label: "全域獎勵倍率", contract: contracts.dungeonMaster, getter: 'globalRewardMultiplier', setter: 'setGlobalRewardMultiplier', unit: '‱', placeholders: ['新倍率 (1000=100%)'] },
+      
+      // 稅務與提現系統
       { key: 'commissionRate', label: "邀請佣金率", contract: contracts.playerVault, getter: 'commissionRate', setter: 'setCommissionRate', unit: '‱', placeholders: ['新佣金率 (萬分位)'] },
+      
+      // Oracle 設定
+      { key: 'twapPeriod', label: "Oracle TWAP 週期", contract: contracts.oracle, getter: 'twapPeriod', setter: 'setTwapPeriod', unit: '無', placeholders: ['新週期 (秒)'] },
     ];
     return config.filter((c) => !!c.contract && !!c.contract.address) as ParameterConfigItem[];
   }, [chainId]);
@@ -137,11 +149,17 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     query: { enabled: parameterConfig.length > 0 }
   });
 
-  // 修復：正確讀取大額提款門檻
+  // 讀取 PlayerVault 的稅務參數
   const playerVaultContract = getContract(chainId, 'playerVault');
-  const { data: largeWithdrawThreshold, isLoading: isLoadingLargeThreshold } = useReadContract({
-    ...(playerVaultContract as any),
-    functionName: 'largeWithdrawThresholdUSD' as any,
+  const { data: vaultParams, isLoading: isLoadingVaultParams } = useReadContracts({
+    contracts: playerVaultContract ? [
+      { ...playerVaultContract, functionName: 'largeWithdrawThresholdUSD' as any },
+      { ...playerVaultContract, functionName: 'smallWithdrawThresholdUSD' as any },
+      { ...playerVaultContract, functionName: 'standardInitialRate' as any },
+      { ...playerVaultContract, functionName: 'largeWithdrawInitialRate' as any },
+      { ...playerVaultContract, functionName: 'decreaseRatePerPeriod' as any },
+      { ...playerVaultContract, functionName: 'periodDuration' as any },
+    ] : [],
     query: { enabled: !!playerVaultContract }
   });
 
@@ -188,7 +206,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   };
   
   const ownerAddress = currentAddressMap.owner;
-  if (isLoadingSettings || isLoadingParams || isLoadingLargeThreshold) {
+  if (isLoadingSettings || isLoadingParams || isLoadingVaultParams) {
     return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
   }
 
@@ -313,15 +331,44 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
             />
           );
         })}
-        <ReadOnlyRow 
-          label="當前大額提款門檻" 
-          value={largeWithdrawThreshold ? `${formatEther(largeWithdrawThreshold as bigint)} USD` : '載入中...'} 
-          isLoading={isLoadingLargeThreshold} 
-        />
+        
+        {/* 稅務參數顯示 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ReadOnlyRow 
+            label="大額提款門檻" 
+            value={vaultParams?.[0]?.result ? `${formatEther(vaultParams[0].result as bigint)} USD` : '載入中...'} 
+            isLoading={isLoadingVaultParams} 
+          />
+          <ReadOnlyRow 
+            label="小額提款門檻" 
+            value={vaultParams?.[1]?.result ? `${formatEther(vaultParams[1].result as bigint)} USD` : '載入中...'} 
+            isLoading={isLoadingVaultParams} 
+          />
+          <ReadOnlyRow 
+            label="標準稅率" 
+            value={vaultParams?.[2]?.result ? `${Number(vaultParams[2].result)}‱` : '載入中...'} 
+            isLoading={isLoadingVaultParams} 
+          />
+          <ReadOnlyRow 
+            label="大額稅率" 
+            value={vaultParams?.[3]?.result ? `${Number(vaultParams[3].result)}‱` : '載入中...'} 
+            isLoading={isLoadingVaultParams} 
+          />
+          <ReadOnlyRow 
+            label="時間衰減率" 
+            value={vaultParams?.[4]?.result ? `${Number(vaultParams[4].result)}‱` : '載入中...'} 
+            isLoading={isLoadingVaultParams} 
+          />
+          <ReadOnlyRow 
+            label="衰減週期" 
+            value={vaultParams?.[5]?.result ? `${Number(vaultParams[5].result) / 86400} 天` : '載入中...'} 
+            isLoading={isLoadingVaultParams} 
+          />
+        </div>
       </AdminSection>
 
       <AdminSection title="遊戲機制參數">
-        {parameterConfig.filter(p => ['restDivisor', 'vipCooldown'].includes(p.key)).map((p) => {
+        {parameterConfig.filter(p => ['restDivisor', 'vipCooldown', 'globalRewardMultiplier'].includes(p.key)).map((p) => {
           const { key, setter, ...rest } = p;
           return (
             <SettingRow
@@ -334,6 +381,119 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
             />
           );
         })}
+      </AdminSection>
+
+      <AdminSection title="Oracle 設定">
+        {parameterConfig.filter(p => ['twapPeriod'].includes(p.key)).map((p) => {
+          const { key, setter, ...rest } = p;
+          return (
+            <SettingRow
+              key={key}
+              {...rest}
+              functionName={setter}
+              readSource={`${p.contract.address}.${p.getter}()`}
+              currentValue={params?.[parameterConfig.findIndex(pc => pc.key === p.key)]?.result}
+              isLoading={isLoadingParams}
+            />
+          );
+        })}
+      </AdminSection>
+
+      <AdminSection title="合約控制">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
+            <h4 className="text-lg font-semibold">合約暫停/恢復</h4>
+            <div className="space-y-2">
+              {['hero', 'relic', 'party', 'dungeonMaster', 'vipStaking'].map(contractName => {
+                const contract = getContract(chainId, contractName as any);
+                if (!contract) return null;
+                return (
+                  <div key={contractName} className="flex gap-2">
+                    <ActionButton 
+                      onClick={async () => {
+                        try {
+                          const hash = await writeContractAsync({ 
+                            address: contract.address, 
+                            abi: contract.abi, 
+                            functionName: 'pause' as any 
+                          });
+                          addTransaction({ hash, description: `暫停 ${contractName} 合約` });
+                          showToast(`${contractName} 合約已暫停`, 'success');
+                        } catch (e: any) {
+                          if (!e.message?.includes('User rejected')) {
+                            showToast(`暫停 ${contractName} 失敗: ${e.shortMessage}`, 'error');
+                          }
+                        }
+                      }}
+                      className="flex-1 bg-red-600 hover:bg-red-700"
+                    >
+                      暫停 {contractName}
+                    </ActionButton>
+                    <ActionButton 
+                      onClick={async () => {
+                        try {
+                          const hash = await writeContractAsync({ 
+                            address: contract.address, 
+                            abi: contract.abi, 
+                            functionName: 'unpause' as any 
+                          });
+                          addTransaction({ hash, description: `恢復 ${contractName} 合約` });
+                          showToast(`${contractName} 合約已恢復`, 'success');
+                        } catch (e: any) {
+                          if (!e.message?.includes('User rejected')) {
+                            showToast(`恢復 ${contractName} 失敗: ${e.shortMessage}`, 'error');
+                          }
+                        }
+                      }}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      恢復 {contractName}
+                    </ActionButton>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <h4 className="text-lg font-semibold">資金提取</h4>
+            <div className="space-y-2">
+              {[
+                { name: 'hero', label: '英雄合約' },
+                { name: 'relic', label: '聖物合約' },
+                { name: 'party', label: '隊伍合約' },
+                { name: 'playerVault', label: '玩家金庫' },
+                { name: 'vipStaking', label: 'VIP質押' }
+              ].map(({ name, label }) => {
+                const contract = getContract(chainId, name as any);
+                if (!contract) return null;
+                return (
+                  <ActionButton 
+                    key={name}
+                    onClick={async () => {
+                      try {
+                        const hash = await writeContractAsync({ 
+                          address: contract.address, 
+                          abi: contract.abi, 
+                          functionName: 'withdrawSoulShard' as any 
+                        });
+                        addTransaction({ hash, description: `提取 ${label} SoulShard` });
+                        showToast(`${label} SoulShard 提取成功`, 'success');
+                      } catch (e: any) {
+                        if (!e.message?.includes('User rejected')) {
+                          showToast(`提取 ${label} 失敗: ${e.shortMessage}`, 'error');
+                        }
+                      }
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                  >
+                    提取 {label} SoulShard
+                  </ActionButton>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </AdminSection>
     </>
   );

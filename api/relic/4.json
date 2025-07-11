@@ -1,7 +1,7 @@
 {
-  "name": "Floating Arcane Core",
-  "description": "An ornate, floating golden artifact composed of multiple rotating rings with glowing arcane gems, leaving trails of magical energy in the air.",
-  "image": "ipfs://bafybeiasz7kuz2hsvck7yg2uedhpcu6ifckuvqv2gyjc23wmchvr2gh4ri/images/relic/relic-4.png",
+  "name": "Crown of Wisdom",
+  "description": "An ancient crown adorned with mystical gems that enhance the wearer's magical abilities and strategic thinking.",
+  "image": "https://www.dungeondelvers.xyz/images/relic/relic-4.png",
   "attributes": [
     {
       "trait_type": "Rarity",

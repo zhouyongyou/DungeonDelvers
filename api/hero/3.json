@@ -1,7 +1,7 @@
 {
-  "name": "Arcane Spellsword",
-  "description": "A full body portrait of an Arcane Spellsword. Wearing enchanted light plate armor, one hand holds a glowing longsword, while the other casts a visible blue fire spell.",
-  "image": "ipfs://bafybeiasz7kuz2hsvck7yg2uedhpcu6ifckuvqv2gyjc23wmchvr2gh4ri/images/hero/hero-3.png",
+  "name": "Arcane Warrior",
+  "description": "A full body portrait of an Arcane Warrior. They wear enchanted leather armor with glowing magical symbols, wielding a staff topped with a glowing crystal and a spell tome bound to their belt.",
+  "image": "https://www.dungeondelvers.xyz/images/hero/hero-3.png",
   "attributes": [
     {
       "trait_type": "Rarity",
@@ -10,7 +10,7 @@
     {
       "display_type": "number",
       "trait_type": "Power",
-      "value": 125,
+      "value": 150,
       "max_value": 255
     }
   ]

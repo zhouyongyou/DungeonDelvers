@@ -14,6 +14,9 @@ export const ENV = {
   // 主網設定
   MAINNET_URL: import.meta.env.VITE_MAINNET_URL || "https://dungeondelvers.xyz",
   
+  // 開發者地址
+  DEVELOPER_ADDRESS: import.meta.env.VITE_DEVELOPER_ADDRESS || '0x10925A7138649C7E1794CE646182eeb5BF8ba647',
+
   // 開發環境標識
   IS_DEV: import.meta.env.DEV,
   IS_PROD: import.meta.env.PROD,

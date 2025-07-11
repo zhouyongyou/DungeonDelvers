@@ -1,7 +1,7 @@
 {
-  "name": "Whispering Amulet",
-  "description": "A bronze amulet with a small, uncut gem at its center. It emits a soft, steady, pulsing blue glow.",
-  "image": "ipfs://bafybeiasz7kuz2hsvck7yg2uedhpcu6ifckuvqv2gyjc23wmchvr2gh4ri/images/relic/relic-2.png",
+  "name": "Enchanted Amulet",
+  "description": "A silver amulet with a blue gemstone that pulses with magical energy, providing protection to its bearer.",
+  "image": "https://www.dungeondelvers.xyz/images/relic/relic-2.png",
   "attributes": [
     {
       "trait_type": "Rarity",

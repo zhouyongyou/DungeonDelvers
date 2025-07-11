@@ -1,7 +1,7 @@
 {
-  "name": "Celestial Arbiter",
-  "description": "A legendary Celestial Arbiter, whose body is semi-translucent and forged from cosmic energy. Wielding a spear of pure starlight, their eyes burn with nebular fire.",
-  "image": "ipfs://bafybeiasz7kuz2hsvck7yg2uedhpcu6ifckuvqv2gyjc23wmchvr2gh4ri/images/hero/hero-5.png",
+  "name": "Mythic Champion",
+  "description": "A full body portrait of a Mythic Champion. They wear legendary armor forged from starlight and shadow, wielding twin blades that pulse with cosmic energy, surrounded by swirling galaxies and celestial power.",
+  "image": "https://www.dungeondelvers.xyz/images/hero/hero-5.png",
   "attributes": [
     {
       "trait_type": "Rarity",
@@ -10,7 +10,7 @@
     {
       "display_type": "number",
       "trait_type": "Power",
-      "value": 225,
+      "value": 255,
       "max_value": 255
     }
   ]

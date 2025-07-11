@@ -1,7 +1,7 @@
 {
   "name": "Adventurer's Party",
   "description": "An elite party formed of heroes and relics, ready to venture into the darkest dungeons.",
-  "image": "ipfs://bafybeiasz7kuz2hsvck7yg2uedhpcu6ifckuvqv2gyjc23wmchvr2gh4ri/images/party/party.png",
+  "image": "https://www.dungeondelvers.xyz/images/party/party.png",
   "attributes": [
     {
       "trait_type": "Category",

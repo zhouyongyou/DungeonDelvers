@@ -1,7 +1,7 @@
 {
-  "name": "Heart of Creation Fragment",
-  "description": "A pulsating crystalline shard that defies physics. It warps the very space and light around it, radiating overwhelming cosmic energy.",
-  "image": "ipfs://bafybeiasz7kuz2hsvck7yg2uedhpcu6ifckuvqv2gyjc23wmchvr2gh4ri/images/relic/relic-5.png",
+  "name": "Eternal Flame Artifact",
+  "description": "A legendary artifact that burns with eternal fire, granting maximum power to any party brave enough to wield it.",
+  "image": "https://www.dungeondelvers.xyz/images/relic/relic-5.png",
   "attributes": [
     {
       "trait_type": "Rarity",
