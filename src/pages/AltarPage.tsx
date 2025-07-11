@@ -52,9 +52,22 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
             
             try {
                 const result = await fetchFromGraph(GET_FILTERED_NFTS_QUERY, { owner: address.toLowerCase(), rarity });
+                
+                // 添加調試信息
+                console.log('GraphQL查詢結果:', result);
+                
+                // 檢查 result 是否存在
+                if (!result) {
+                    console.warn('GraphQL查詢返回空結果 - 可能是子圖正在同步新合約');
+                    return [];
+                }
+                
                 const assets = nftType === 'hero' ? result.heros : result.relics;
 
-                if (!assets || !Array.isArray(assets)) return [];
+                if (!assets || !Array.isArray(assets)) {
+                    console.warn(`${nftType} 資產數組為空或不是數組:`, assets, '- 可能是子圖數據尚未同步');
+                    return [];
+                }
 
                 const contractAddress = (nftType === 'hero' ? getContract(bsc.id, 'hero') : getContract(bsc.id, 'relic'))?.address;
                 if (!contractAddress) {
@@ -361,7 +374,17 @@ const AltarPage: React.FC = () => {
                                 ))}
                             </div>
                         ) : (
-                            <EmptyState message={`沒有可用的 ${rarity}★ ${nftType === 'hero' ? '英雄' : '聖物'}`} />
+                            <div className="text-center py-8">
+                                <EmptyState message={`沒有可用的 ${rarity}★ ${nftType === 'hero' ? '英雄' : '聖物'}`} />
+                                <div className="mt-4 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                                    <p className="text-sm text-blue-200">
+                                        📊 <strong>數據同步中</strong>
+                                    </p>
+                                    <p className="text-xs text-blue-300 mt-1">
+                                        合約已升級至最新版本，子圖正在同步新數據。請稍後再試或檢查您的資產頁面。
+                                    </p>
+                                </div>
+                            </div>
                         )}
                     </div>
                 </LocalErrorBoundary>

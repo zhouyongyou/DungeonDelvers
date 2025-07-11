@@ -10,7 +10,7 @@ dataSources:
     source:
       address: "0xe439b1aC9100732F33C757746AD916ADE6967C79"
       abi: Hero
-      startBlock: 53534731
+      startBlock: 53664913
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -33,7 +33,7 @@ dataSources:
     source:
       address: "0x0a03BE7555f8B0f1F2299c4C8DCE1b8d82b2B8B4"
       abi: Relic
-      startBlock: 53534731
+      startBlock: 53664913
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -56,7 +56,7 @@ dataSources:
     source:
       address: "0x21326106f2D41E4d31B724B3316C780069F9274A"
       abi: Party
-      startBlock: 53534731
+      startBlock: 53664913
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -79,7 +79,7 @@ dataSources:
     source:
       address: "0xA19F45fC6372Ec8111E99399876e448Af05Fa735"
       abi: PlayerProfile
-      startBlock: 53534731
+      startBlock: 53664913
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -101,7 +101,7 @@ dataSources:
     source:
       address: "0x77D81358C33c24282Ce183f00bFDE590dCc3915F"
       abi: VIPStaking
-      startBlock: 53534731
+      startBlock: 53664913
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -125,7 +125,7 @@ dataSources:
     source:
       address: "0xD7CF07D71E0440B5cC8e2faAF3bbbc9C3588898F"
       abi: DungeonMaster
-      startBlock: 53534731
+      startBlock: 53664913
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -149,7 +149,7 @@ dataSources:
     source:
       address: "0x4fE1e22A210d26fC40f8D6fA98A21d919793C282"
       abi: PlayerVault
-      startBlock: 53534731
+      startBlock: 53664913
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -173,7 +173,7 @@ dataSources:
     source:
       address: "0x5186C497C7fB40Bf2B18191404E01Dd43b387cF2"
       abi: AltarOfAscension
-      startBlock: 53534731
+      startBlock: 53664913
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9

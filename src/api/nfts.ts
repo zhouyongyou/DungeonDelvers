@@ -177,8 +177,8 @@ export async function fetchMetadata(
     }
 }
 
-// 新增：根據 NFT 類型生成 fallback 元數據
-function generateFallbackMetadata(nftType: string, tokenId: string): Omit<BaseNft, 'id' | 'contractAddress' | 'type'> {
+// 新增：根據 NFT 類型和稀有度生成 fallback 元數據
+function generateFallbackMetadata(nftType: string, tokenId: string, rarity?: number): Omit<BaseNft, 'id' | 'contractAddress' | 'type'> {
     const baseData = {
         name: `${nftType.charAt(0).toUpperCase() + nftType.slice(1)} #${tokenId}`,
         description: '正在載入詳細資訊...',
@@ -186,25 +186,31 @@ function generateFallbackMetadata(nftType: string, tokenId: string): Omit<BaseNf
         attributes: []
     };
     
+    // 根據稀有度選擇圖片 (1-5星)
+    const getImageByRarity = (type: string, rarity: number = 1): string => {
+        const rarityIndex = Math.max(1, Math.min(5, rarity)); // 確保在1-5範圍內
+        return `/images/${type}/${type}-${rarityIndex}.png`;
+    };
+    
     switch (nftType) {
         case 'relic':
             return {
                 ...baseData,
                 name: `聖物 #${tokenId}`,
-                image: '/images/relic/relic-1.png',
+                image: getImageByRarity('relic', rarity),
                 attributes: [
                     { trait_type: 'Capacity', value: '載入中...' },
-                    { trait_type: 'Rarity', value: '載入中...' }
+                    { trait_type: 'Rarity', value: rarity || '載入中...' }
                 ]
             };
         case 'hero':
             return {
                 ...baseData,
                 name: `英雄 #${tokenId}`,
-                image: '/images/hero/hero-1.png',
+                image: getImageByRarity('hero', rarity),
                 attributes: [
                     { trait_type: 'Power', value: '載入中...' },
-                    { trait_type: 'Rarity', value: '載入中...' }
+                    { trait_type: 'Rarity', value: rarity || '載入中...' }
                 ]
             };
         case 'party':
@@ -214,14 +220,15 @@ function generateFallbackMetadata(nftType: string, tokenId: string): Omit<BaseNf
                 image: '/images/party/party.png',
                 attributes: [
                     { trait_type: 'Total Power', value: '載入中...' },
-                    { trait_type: 'Heroes Count', value: '載入中...' }
+                    { trait_type: 'Heroes Count', value: '載入中...' },
+                    { trait_type: 'Rarity', value: rarity || '載入中...' }
                 ]
             };
         case 'vip':
             return {
                 ...baseData,
                 name: `VIP 卡 #${tokenId}`,
-                image: '/assets/images/collections/vip-logo.png',
+                image: '/images/vip/vip.png',
                 attributes: [
                     { trait_type: 'Level', value: '載入中...' },
                     { trait_type: 'Staked Value', value: '載入中...' }
@@ -432,6 +439,18 @@ async function parseNfts<T extends AssetWithTokenId>(
         const uriResult = uriResults[index];
         let metadata: Omit<BaseNft, 'id' | 'contractAddress' | 'type'>;
 
+        // 先從子圖獲取稀有度信息（如果可用）
+        let assetRarity: number | undefined;
+        if ('rarity' in asset && typeof asset.rarity === 'number') {
+            assetRarity = asset.rarity;
+        } else if ('rarity' in asset && typeof asset.rarity === 'string') {
+            assetRarity = parseInt(asset.rarity);
+        } else if ('rarity' in asset && typeof asset.rarity === 'bigint') {
+            assetRarity = Number(asset.rarity);
+        } else if (type === 'party' && 'partyRarity' in asset) {
+            assetRarity = Number(asset.partyRarity);
+        }
+
         if (uriResult && uriResult.status === 'success') {
             metadata = await fetchMetadata(
                 uriResult.result as string, 
@@ -439,13 +458,9 @@ async function parseNfts<T extends AssetWithTokenId>(
                 contractAddress
             );
         } else {
-            console.warn(`無法獲取 ${type} #${asset.tokenId} 的 tokenURI`);
-            metadata = { 
-                name: `${type.charAt(0).toUpperCase() + type.slice(1)} #${asset.tokenId}`, 
-                description: '載入中，請稍後重試', 
-                image: '', 
-                attributes: [] 
-            };
+            console.warn(`無法獲取 ${type} #${asset.tokenId} 的 tokenURI，使用稀有度 ${assetRarity} 的 fallback`);
+            // 使用增強的 fallback，包含稀有度信息
+            metadata = generateFallbackMetadata(type, asset.tokenId.toString(), assetRarity);
         }
 
         const findAttr = (trait: string, defaultValue: string | number = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;

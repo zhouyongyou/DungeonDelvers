@@ -1,6 +1,9 @@
-// src/components/ui/NftCard.tsx (簡化版)
+// src/components/ui/NftCard.tsx (修復VIP等級顯示)
 
 import React, { memo } from 'react';
+import { useAccount, useReadContract } from 'wagmi';
+import { getContract } from '../../config/contracts';
+import { bsc } from 'wagmi/chains';
 import type { AnyNft, HeroNft, RelicNft, PartyNft, VipNft } from '../../types/nft';
 
 interface NftCardProps {
@@ -13,8 +16,24 @@ interface NftCardProps {
 }
 
 const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, fallbackImage }) => {
-  // 簡化VIP圖片處理，直接使用靜態圖片
-  const vipLevel = nft.attributes?.find(attr => attr.trait_type === 'Level')?.value || '?';
+  const { address, chainId } = useAccount();
+  const vipStakingContract = getContract(chainId === bsc.id ? chainId : bsc.id, 'vipStaking');
+  
+  // ✅ 使用實時合約數據獲取VIP等級，而不是元數據
+  const { data: realTimeVipLevel } = useReadContract({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...(vipStakingContract as any),
+    functionName: 'getVipLevel' as any,
+    args: [address!] as any,
+    query: { 
+      enabled: !!address && !!vipStakingContract && chainId === bsc.id
+    }
+  });
+  
+  // 優先使用實時數據，fallback到元數據
+  const displayLevel = realTimeVipLevel !== undefined 
+    ? Number(realTimeVipLevel) 
+    : (nft.attributes?.find(attr => attr.trait_type === 'Level')?.value || '?');
   
   return (
     <div className="relative w-full h-full">
@@ -24,10 +43,15 @@ const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, 
         className="w-full h-full object-cover bg-gray-700 transition-transform duration-300 hover:scale-110" 
         loading="lazy"
       />
-      {/* VIP 等級顯示 */}
+      {/* VIP 等級顯示 - 使用實時數據 */}
       <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
-        Lv.{vipLevel}
+        Lv.{displayLevel}
       </div>
+      {/* 如果是實時數據，添加一個小指示器 */}
+      {realTimeVipLevel !== undefined && (
+        <div className="absolute top-2 left-2 bg-green-500 w-2 h-2 rounded-full" 
+             title="實時等級數據" />
+      )}
     </div>
   );
 });
@@ -53,6 +77,12 @@ const NftCard: React.FC<NftCardProps> = memo(({
   };
 
   const renderImage = () => {
+    // VIP卡片使用專門的組件
+    if (nft.type === 'vip') {
+      return <VipImage nft={nft as VipNft} fallbackImage={nft.image} />;
+    }
+
+    // 其他類型NFT的通用處理
     const baseImageClass = "w-full h-full object-cover rounded-lg transition-transform duration-300 hover:scale-110";
     return (
       <div className="relative w-full h-full">
@@ -86,11 +116,6 @@ const NftCard: React.FC<NftCardProps> = memo(({
               📦 {(nft as PartyNft).totalCapacity?.toString() ?? ''}
             </div>
           </>
-        )}
-        {nft.type === 'vip' && (
-          <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
-            Lv.{nft.attributes?.find(attr => attr.trait_type === 'Level')?.value || '?'}
-          </div>
         )}
       </div>
     );
