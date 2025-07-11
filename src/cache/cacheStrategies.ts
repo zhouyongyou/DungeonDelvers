@@ -1,67 +1,61 @@
-// cache/cacheStrategies.ts
-// Cache metrics and strategies for NFT metadata caching
+/**
+ * 簡化的快取策略
+ */
 
-export interface CacheStats {
-  hits: number;
-  misses: number;
-  hitRate: number;
-  totalRequests: number;
-  lastReset: Date;
-}
+// 簡化的快取配置
+export const CACHE_CONFIG = {
+  // 基本快取時間 (5分鐘)
+  DEFAULT_STALE_TIME: 5 * 60 * 1000,
+  DEFAULT_CACHE_TIME: 10 * 60 * 1000,
+  
+  // NFT 快取時間 (30分鐘，因為 NFT 數據變化較少)
+  NFT_STALE_TIME: 30 * 60 * 1000,
+  NFT_CACHE_TIME: 60 * 60 * 1000,
+} as const;
 
+// 簡化的快取策略
+export const getQueryConfig = (type: 'DEFAULT' | 'NFT') => {
+  switch (type) {
+    case 'NFT':
+      return {
+        staleTime: CACHE_CONFIG.NFT_STALE_TIME,
+        cacheTime: CACHE_CONFIG.NFT_CACHE_TIME,
+        retry: 2,
+        retryDelay: 1000,
+      };
+    default:
+      return {
+        staleTime: CACHE_CONFIG.DEFAULT_STALE_TIME,
+        cacheTime: CACHE_CONFIG.DEFAULT_CACHE_TIME,
+        retry: 1,
+        retryDelay: 500,
+      };
+  }
+};
+
+// 簡化的快取指標
 export class CacheMetrics {
-  private static hits = 0;
-  private static misses = 0;
-  private static lastReset = new Date();
+  private hits = 0;
+  private misses = 0;
 
-  static recordHit(): void {
+  recordHit() {
     this.hits++;
   }
 
-  static recordMiss(): void {
+  recordMiss() {
     this.misses++;
   }
 
-  static getStats(): CacheStats {
-    const totalRequests = this.hits + this.misses;
-    const hitRate = totalRequests > 0 ? (this.hits / totalRequests) * 100 : 0;
+  getHitRate() {
+    const total = this.hits + this.misses;
+    return total > 0 ? (this.hits / total) * 100 : 0;
+  }
 
+  getStats() {
     return {
       hits: this.hits,
       misses: this.misses,
-      hitRate: Math.round(hitRate * 100) / 100,
-      totalRequests,
-      lastReset: this.lastReset
+      hitRate: this.getHitRate(),
     };
   }
-
-  static reset(): void {
-    this.hits = 0;
-    this.misses = 0;
-    this.lastReset = new Date();
-  }
 }
-
-// Cache strategies
-export const CacheStrategy = {
-  MEMORY_ONLY: 'memory-only',
-  INDEXED_DB: 'indexed-db',
-  HYBRID: 'hybrid'
-} as const;
-
-export type CacheStrategy = typeof CacheStrategy[keyof typeof CacheStrategy];
-
-// Cache configuration
-export interface CacheConfig {
-  strategy: CacheStrategy;
-  maxMemorySize?: number;
-  ttl?: number; // Time to live in milliseconds
-  maxIndexedDBSize?: number;
-}
-
-export const defaultCacheConfig: CacheConfig = {
-  strategy: CacheStrategy.INDEXED_DB,
-  maxMemorySize: 100, // Max 100 items in memory
-  ttl: 24 * 60 * 60 * 1000, // 24 hours
-  maxIndexedDBSize: 1000 // Max 1000 items in IndexedDB
-};

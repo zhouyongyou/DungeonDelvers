@@ -53,10 +53,10 @@ export function handleTransfer(event: Transfer): void {
     const relic = Relic.load(relicId)
     
     if (relic) {
-        const newOwner = getOrCreatePlayer(event.params.to)
-        relic.owner = newOwner.id
-        relic.save()
-        log.info('Successfully transferred relic {} to {}', [relicId, event.params.to.toHexString()]);
+        // 對於 immutable 實體，我們不能更新現有實體
+        // 只能記錄轉移事件，但不能修改實體本身
+        log.info('Transfer event for existing immutable relic {} from {} to {} (entity cannot be updated)', [relicId, event.params.from.toHexString(), event.params.to.toHexString()]);
+        return;
     } else {
         // 創建一個占位實體以避免後續錯誤
         log.warning("Transfer handled for a Relic that doesn't exist in the subgraph: {}, creating placeholder", [relicId])

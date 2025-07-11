@@ -3,11 +3,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAccount, useConnect, useDisconnect, useReadContract } from 'wagmi';
 import { injected } from 'wagmi/connectors';
-import { useTranslation } from 'react-i18next';
 import { ActionButton } from '../ui/ActionButton';
-import { LanguageSelector } from '../ui/LanguageSelector';
 import type { Page } from '../../types/page';
-import { useTheme } from '../../contexts/ThemeContext';
 import logoUrl from '/logo-192x192.png';
 import { DEVELOPER_ADDRESS } from '../../config/constants';
 import { getContract } from '../../config/contracts';
@@ -15,25 +12,6 @@ import { RecentTransactions } from '../ui/RecentTransactions';
 import { Icons } from '../ui/icons';
 import { bsc } from 'wagmi/chains';
 import { NetworkSwitcher } from '../ui/NetworkSwitcher';
-
-// (此處省略未變更的 ThemeToggleButton, MenuIcon, XIcon 元件程式碼)
-const ThemeToggleButton: React.FC = () => {
-    const { theme, setTheme, effectiveTheme } = useTheme();
-    const toggleTheme = () => {
-        const themes: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system'];
-        const currentIndex = themes.indexOf(theme);
-        const nextTheme = themes[(currentIndex + 1) % themes.length];
-        setTheme(nextTheme);
-    };
-    const SunIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>;
-    const MoonIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>;
-
-    return (
-        <button onClick={toggleTheme} className="p-2 rounded-full text-gray-300 hover:bg-white/20 transition-colors" aria-label={`Switch to ${effectiveTheme === 'light' ? 'dark' : 'light'} mode`}>
-            {effectiveTheme === 'dark' ? <SunIcon /> : <MoonIcon />}
-        </button>
-    );
-};
 
 const usePlayerLevel = () => {
     const { address, chainId } = useAccount();
@@ -85,7 +63,6 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
   const { address, isConnected, isConnecting } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
-  const { t } = useTranslation(['common', 'navigation']);
 
   const [isTxPopoverOpen, setIsTxPopoverOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -96,23 +73,22 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
 
   const navItems: { key: Page; label: string }[] = useMemo(() => {
       const items: { key: Page; label: string }[] = [
-          { key: 'dashboard', label: t('navigation:menu.dashboard') },
-          { key: 'profile', label: t('navigation:menu.profile') },
-          { key: 'mint', label: t('navigation:menu.mint') },
-          { key: 'party', label: t('navigation:menu.party') },
-          { key: 'dungeon', label: t('navigation:menu.dungeon') },
-          { key: 'altar', label: t('navigation:menu.altar') },
-          { key: 'codex', label: t('navigation:menu.codex') },
-          { key: 'vip', label: t('navigation:menu.vip') },
-          { key: 'referral', label: t('navigation:menu.referral') },
-          { key: 'explorer', label: t('navigation:menu.explorer') },
-          { key: 'svg-preview', label: 'SVG 預覽' },
+          { key: 'dashboard', label: '儀表板' },
+          { key: 'profile', label: '個人檔案' },
+          { key: 'mint', label: '鑄造' },
+          { key: 'party', label: '隊伍' },
+          { key: 'dungeon', label: '地下城' },
+          { key: 'altar', label: '升星祭壇' },
+          { key: 'codex', label: '圖鑑' },
+          { key: 'vip', label: 'VIP' },
+          { key: 'referral', label: '推薦' },
+          { key: 'explorer', label: '探索者' },
       ];
       if (isDeveloper) {
-          items.push({ key: 'admin', label: t('navigation:menu.admin') });
+          items.push({ key: 'admin', label: '管理員' });
       }
       return items;
-  }, [isDeveloper, t]);
+  }, [isDeveloper]);
 
   const handleConnectClick = () => { if (isConnected) disconnect(); else connect({ connector: injected() }); };
 
@@ -143,11 +119,11 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
                     <img src={logoUrl} alt="Dungeon Delvers Logo" className="h-10 w-10 md:h-12 md:w-12 rounded-full border-2 border-[#C0A573]"/>
                     <div>
                         <h1 className="text-xl md:text-3xl font-bold text-white text-shadow-gold">Dungeon Delvers</h1>
-                        <div className="hidden md:flex text-xs text-gray-300 dark:text-gray-400 items-center gap-2">
+                        <div className="hidden md:flex text-xs text-gray-400 items-center gap-2">
                            {isConnected && level && (
                                 <span className="font-bold text-yellow-400 bg-black/20 px-2 py-0.5 rounded">LV {level}</span>
                            )}
-                           <span>{t('navigation:subtitle')}</span>
+                           <span>地下城冒險者</span>
                         </div>
                     </div>
                 </div>
@@ -155,12 +131,10 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
                 <div className="flex items-center gap-1 md:gap-2">
                     {/* 桌面端顯示所有功能 */}
                     <div className="hidden md:flex items-center gap-2">
-                        <LanguageSelector />
-                        <ThemeToggleButton />
                         <NetworkSwitcher />
                         {isConnected && (
                           <div className="relative" ref={popoverRef}>
-                            <button onClick={() => setIsTxPopoverOpen(prev => !prev)} className="p-2 rounded-full text-gray-300 hover:bg-white/20 transition-colors" aria-label={t('navigation:recentTransactions')}>
+                            <button onClick={() => setIsTxPopoverOpen(prev => !prev)} className="p-2 rounded-full text-gray-300 hover:bg-white/20 transition-colors" aria-label="最近交易">
                               <Icons.History className="h-5 w-5" />
                             </button>
                             {isTxPopoverOpen && <RecentTransactions />}
@@ -170,7 +144,7 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
                     
                     {/* 移動端只顯示連接按鈕和菜單 */}
                     <ActionButton onClick={handleConnectClick} isLoading={isConnecting} disabled={isConnecting} className="px-2 py-1 md:px-4 md:py-2 rounded-full text-xs md:text-sm w-24 md:w-36">
-                      {isConnected && address ? `${address.substring(0, 4)}...${address.substring(address.length - 4)}` : t('common:buttons.connect')}
+                      {isConnected && address ? `${address.substring(0, 4)}...${address.substring(address.length - 4)}` : '連接錢包'}
                     </ActionButton>
                     <div className="md:hidden">
                         <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 rounded-full text-gray-300 hover:bg-white/20 transition-colors">
@@ -192,7 +166,7 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
         {isMenuOpen && (
             <div className="md:hidden fixed inset-0 bg-[#1F1D36]/95 backdrop-blur-sm z-50 flex flex-col p-4 animate-zoom-in">
                 <div className="flex justify-between items-center mb-8">
-                    <h2 className="text-2xl font-bold text-white">{t('navigation:mobileMenu')}</h2>
+                    <h2 className="text-2xl font-bold text-white">選單</h2>
                     <button onClick={() => setIsMenuOpen(false)} className="p-2 text-gray-300">
                         <XIcon />
                     </button>
@@ -200,12 +174,10 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
                 
                 {/* 移動端功能選項 */}
                 <div className="flex justify-center gap-4 mb-6 bg-white/10 rounded-lg p-3">
-                    <LanguageSelector />
-                    <ThemeToggleButton />
                     <NetworkSwitcher />
                     {isConnected && (
                       <div className="relative" ref={popoverRef}>
-                        <button onClick={() => setIsTxPopoverOpen(prev => !prev)} className="p-2 rounded-full text-gray-300 hover:bg-white/20 transition-colors" aria-label={t('navigation:recentTransactions')}>
+                        <button onClick={() => setIsTxPopoverOpen(prev => !prev)} className="p-2 rounded-full text-gray-300 hover:bg-white/20 transition-colors" aria-label="最近交易">
                           <Icons.History className="h-5 w-5" />
                         </button>
                         {isTxPopoverOpen && <RecentTransactions />}

@@ -21,8 +21,9 @@ interface ImportMetaEnv {
   // Section: 主網 RPC 節點
   // =================================================================
   readonly VITE_ALCHEMY_BSC_MAINNET_RPC_URL?: string;
-  readonly VITE_INFURA_BSC_MAINNET_RPC_URL?: string;
-  readonly VITE_ANKR_BSC_MAINNET_RPC_URL?: string;
+  // 已簡化移除 - 只保留主要 RPC 端點
+  // readonly VITE_INFURA_BSC_MAINNET_RPC_URL?: string;
+  // readonly VITE_ANKR_BSC_MAINNET_RPC_URL?: string;
 
   // =================================================================
   // Section: 主網核心代幣與流動性池合約地址

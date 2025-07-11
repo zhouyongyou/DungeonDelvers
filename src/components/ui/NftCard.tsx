@@ -1,7 +1,7 @@
-// src/components/ui/NftCard.tsx (響應式設計優化版)
+// src/components/ui/NftCard.tsx (簡化版)
 
-import React, { memo, useState, useEffect } from 'react';
-import type { AnyNft, HeroNft, RelicNft, PartyNft, VipNft, BaseNft } from '../../types/nft';
+import React, { memo } from 'react';
+import type { AnyNft, HeroNft, RelicNft, PartyNft, VipNft } from '../../types/nft';
 
 interface NftCardProps {
   nft: AnyNft;
@@ -13,115 +13,16 @@ interface NftCardProps {
 }
 
 const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, fallbackImage }) => {
-  const [svgImage, setSvgImage] = useState<string | null>(null);
-  const [loadingState, setLoadingState] = useState<'loading' | 'success' | 'error' | 'retrying'>('loading');
-  const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 3;
-
-  const fetchVipImage = async () => {
-    try {
-      setLoadingState('loading');
-      const response = await fetch(nft.image);
-      if (!response.ok) throw new Error('Failed to fetch VIP image');
-      const svgText = await response.text();
-      setSvgImage(svgText);
-      setLoadingState('success');
-    } catch (error) {
-      console.warn(`VIP NFT ${nft.id} 圖片載入失敗:`, error);
-      setLoadingState('error');
-    }
-  };
-
-  const handleRetry = () => {
-    if (retryCount < maxRetries) {
-      setRetryCount(prev => prev + 1);
-      setLoadingState('retrying');
-      setTimeout(fetchVipImage, 1000);
-    }
-  };
-
-  useEffect(() => {
-    if (nft.image && nft.image.startsWith('data:image/svg+xml')) {
-      setSvgImage(nft.image);
-      setLoadingState('success');
-    } else if (nft.image) {
-      fetchVipImage();
-    } else {
-      setLoadingState('error');
-    }
-  }, [nft.image]);
-
-  // 載入狀態顯示
-  if (loadingState === 'loading') {
-    return (
-      <div className="w-full h-full bg-gray-700 rounded-lg flex flex-col items-center justify-center p-2">
-        <div className="animate-spin w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full mb-1"></div>
-        <span className="text-xs text-gray-400">載入中...</span>
-      </div>
-    );
-  }
-
-  // 重試狀態顯示
-  if (loadingState === 'retrying') {
-    return (
-      <div className="w-full h-full bg-gray-700 rounded-lg flex flex-col items-center justify-center p-2">
-        <div className="animate-pulse w-6 h-6 bg-yellow-400 rounded-full mb-1"></div>
-        <span className="text-xs text-yellow-400">重試中 ({retryCount}/{maxRetries})</span>
-      </div>
-    );
-  }
-
-  // 錯誤狀態顯示 - 更友好的錯誤界面
-  if (loadingState === 'error') {
-    return (
-      <div className="w-full h-full bg-gray-700 rounded-lg flex flex-col items-center justify-center p-2">
-        <div className="text-red-400 text-sm mb-1">⚠️</div>
-        <span className="text-xs text-red-400 text-center mb-1">載入失敗</span>
-        {retryCount < maxRetries && (
-          <button 
-            onClick={handleRetry}
-            className="text-xs text-blue-400 hover:text-blue-300 underline px-1 py-0.5 rounded transition-colors"
-            disabled={['retrying', 'loading'].includes(loadingState)}
-          >
-            重試
-          </button>
-        )}
-        {retryCount >= maxRetries && (
-          <span className="text-xs text-gray-500">使用預設圖片</span>
-        )}
-      </div>
-    );
-  }
-
-  // 沒有 SVG 圖片時的回退處理
-  if (!svgImage) {
-    return (
+  // 簡化VIP圖片處理，直接使用靜態圖片
+  const vipLevel = nft.attributes?.find(attr => attr.trait_type === 'Level')?.value || '?';
+  
+  return (
+    <div className="relative w-full h-full">
       <img 
-        src={nft.image?.replace('ipfs://', 'https://ipfs.io/ipfs/') || fallbackImage} 
-        onError={(e) => { 
-          // eslint-disable-next-line no-console
-          console.warn(`VIP NFT ${nft.id} 回退圖片載入失敗，使用預設圖片`);
-          e.currentTarget.src = fallbackImage; 
-        }} 
-        onLoad={() => {
-          // eslint-disable-next-line no-console
-          console.log(`VIP NFT ${nft.id} 使用回退圖片載入成功`);
-        }}
+        src={fallbackImage} 
         alt={nft.name || `VIP #${nft.id.toString()}`} 
         className="w-full h-full object-cover bg-gray-700 transition-transform duration-300 hover:scale-110" 
         loading="lazy"
-      />
-    );
-  }
-
-  // 解析 VIP 等級
-  const vipLevel = nft.attributes?.find(attr => attr.trait_type === 'Level')?.value || '?';
-
-  return (
-    <div className="relative w-full h-full">
-      <div 
-        className="w-full h-full bg-gray-700 rounded-lg"
-        dangerouslySetInnerHTML={{ __html: svgImage }}
       />
       {/* VIP 等級顯示 */}
       <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
@@ -157,21 +58,22 @@ const NftCard: React.FC<NftCardProps> = memo(({
     switch (nft.type) {
       case 'hero': {
         const hero = nft as HeroNft;
+        const heroId = (Number(hero.id) % 5) + 1; // 確保在 1-5 範圍內
         return (
           <div className="relative w-full h-full">
             <img 
-              src={hero.image || '/images/hero-placeholder.svg'} 
+              src={`/images/hero/hero-${heroId}.png`} 
               alt={hero.name}
               className={baseImageClass}
               loading="lazy"
               onError={(e) => {
-                console.error('英雄圖片載入失敗:', e);
-                e.currentTarget.src = '/images/hero-placeholder.svg';
+                const target = e.target as HTMLImageElement;
+                target.src = "/images/hero-placeholder.svg";
               }}
             />
             {/* 戰力顯示 */}
             <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
-              ⚔️ {Number(hero.power).toLocaleString()}
+              ⚔️ {hero.power.toLocaleString()}
             </div>
           </div>
         );
@@ -179,16 +81,17 @@ const NftCard: React.FC<NftCardProps> = memo(({
       
       case 'relic': {
         const relic = nft as RelicNft;
+        const relicId = (Number(relic.id) % 5) + 1; // 確保在 1-5 範圍內
         return (
           <div className="relative w-full h-full">
             <img 
-              src={relic.image || '/images/relic-placeholder.svg'} 
+              src={`/images/relic/relic-${relicId}.png`} 
               alt={relic.name}
               className={baseImageClass}
               loading="lazy"
               onError={(e) => {
-                console.error('聖物圖片載入失敗:', e);
-                e.currentTarget.src = '/images/relic-placeholder.svg';
+                const target = e.target as HTMLImageElement;
+                target.src = "/images/relic-placeholder.svg";
               }}
             />
             {/* 容量顯示 */}
@@ -204,25 +107,18 @@ const NftCard: React.FC<NftCardProps> = memo(({
         return (
           <div className="relative w-full h-full">
             <img 
-              src={party.image || '/images/party-placeholder.svg'} 
+              src="/images/party/party.png" 
               alt={party.name}
               className={baseImageClass}
               loading="lazy"
-              onError={(e) => {
-                console.error('隊伍圖片載入失敗:', e);
-                e.currentTarget.src = '/images/party-placeholder.svg';
-              }}
             />
-            {/* 隊伍戰力顯示 */}
+            {/* 隊伍資訊顯示 */}
             <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
-              ⚔️ {Number(party.totalPower).toLocaleString()}
+              ⚔️ {party.totalPower.toString()}
             </div>
-                         {/* 隊伍狀態顯示 */}
-             {party.partyRarity > 0 && (
-               <div className="absolute top-2 right-2 bg-blue-500/80 text-white px-2 py-1 rounded text-xs font-bold">
-                 ⭐ {party.partyRarity}
-               </div>
-             )}
+            <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
+              📦 {party.totalCapacity.toString()}
+            </div>
           </div>
         );
       }
@@ -232,71 +128,60 @@ const NftCard: React.FC<NftCardProps> = memo(({
         return (
           <VipImage 
             nft={vip} 
-            fallbackImage="/images/vip-placeholder.svg" 
+            fallbackImage="/images/vip-placeholder.png" 
           />
         );
       }
-      
-             default:
-         return (
-           <img 
-             src={(nft as BaseNft).image || '/images/nft-placeholder.svg'} 
-             alt={(nft as BaseNft).name}
-             className={baseImageClass}
-             loading="lazy"
-           />
-         );
     }
   };
 
   const renderDetails = () => {
     if (!showDetails) return null;
 
+    // 處理不同NFT類型的稀有度
+    let rarity = 1;
+    if ('rarity' in nft && typeof nft.rarity === 'number') {
+      rarity = nft.rarity;
+    } else if (nft.type === 'party') {
+      const party = nft as PartyNft;
+      rarity = party.partyRarity || 1;
+    }
+
     return (
       <div className="p-3 space-y-2">
-                 {/* 標題和稀有度 */}
-         <div className="flex items-start justify-between">
-           <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate flex-1">
-             {nft.name}
-           </h3>
-           {('rarity' in nft && nft.rarity) && (
-             <span 
-               className="ml-2 px-2 py-1 rounded text-xs font-bold text-white flex-shrink-0"
-               style={{ backgroundColor: getRarityColor(nft.rarity) }}
-             >
-               {getRarityName(nft.rarity)}
-             </span>
-           )}
-         </div>
-
-        {/* 描述 */}
+        <div className="flex justify-between items-start">
+          <h3 className="font-semibold text-white text-sm truncate flex-1">
+            {nft.name}
+          </h3>
+          <span 
+            className="text-xs font-bold px-2 py-1 rounded ml-2"
+            style={{ 
+              backgroundColor: getRarityColor(rarity) + '20',
+              color: getRarityColor(rarity)
+            }}
+          >
+            {getRarityName(rarity)}
+          </span>
+        </div>
+        
         {nft.description && (
-          <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
+          <p className="text-gray-400 text-xs line-clamp-2">
             {nft.description}
           </p>
         )}
-
-        {/* 屬性列表 */}
+        
         {nft.attributes && nft.attributes.length > 0 && (
-          <div className="grid grid-cols-2 gap-1">
-            {nft.attributes.slice(0, 4).map((attr, index) => (
-              <div key={index} className="text-xs">
-                <span className="text-gray-500 dark:text-gray-400">{attr.trait_type}:</span>
-                <span className="ml-1 text-gray-700 dark:text-gray-300 font-medium">
-                  {attr.value}
-                </span>
-              </div>
+          <div className="flex flex-wrap gap-1">
+            {nft.attributes.slice(0, 3).map((attr, index) => (
+              <span 
+                key={index}
+                className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded"
+              >
+                {attr.trait_type}: {attr.value}
+              </span>
             ))}
           </div>
         )}
-
-                 {/* 特殊屬性顯示 */}
-         {nft.type === 'party' && (
-           <div className="text-xs text-gray-600 dark:text-gray-400">
-             <span>英雄: {(nft as PartyNft).heroIds.length}</span>
-             <span className="ml-2">聖物: {(nft as PartyNft).relicIds.length}</span>
-           </div>
-         )}
       </div>
     );
   };
@@ -304,29 +189,16 @@ const NftCard: React.FC<NftCardProps> = memo(({
   return (
     <div 
       className={`
-        card-bg rounded-xl overflow-hidden cursor-pointer transition-all duration-300
-        ${selected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
-        ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-xl hover:-translate-y-1'}
-        ${onClick ? 'hover:scale-105' : ''}
+        bg-gray-800 rounded-xl overflow-hidden border-2 transition-all duration-200 cursor-pointer
+        ${selected ? 'border-blue-500 shadow-lg shadow-blue-500/25' : 'border-gray-700 hover:border-gray-600'}
+        ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:scale-105'}
         ${className}
       `}
       onClick={disabled ? undefined : onClick}
     >
-      {/* 圖片區域 - 保持 1:1 比例 */}
-      <div className="aspect-square relative overflow-hidden">
+      <div className="aspect-square">
         {renderImage()}
-        
-        {/* 選擇指示器 */}
-        {selected && (
-          <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
-          </div>
-        )}
       </div>
-
-      {/* 詳細資訊 */}
       {renderDetails()}
     </div>
   );
@@ -335,4 +207,3 @@ const NftCard: React.FC<NftCardProps> = memo(({
 NftCard.displayName = 'NftCard';
 
 export { NftCard };
-export default NftCard;

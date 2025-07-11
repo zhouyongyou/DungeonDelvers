@@ -5,7 +5,8 @@ import { useAccount, useReadContracts, useWriteContract, usePublicClient } from 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatEther, decodeEventLog, type Abi } from 'viem';
 import { fetchMetadata } from '../api/nfts';
-import { getContract, altarOfAscensionABI, heroABI, relicABI } from '../config/contracts';
+import { getContract } from '../config/contracts';
+import { altarOfAscensionABI, heroABI, relicABI } from '../config/abis';
 import { NftCard } from '../components/ui/NftCard';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';

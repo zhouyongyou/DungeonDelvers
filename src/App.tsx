@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useAccount } from 'wagmi';
-import { useTranslation } from 'react-i18next';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { EmptyState } from './components/ui/EmptyState';
@@ -25,17 +24,15 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const VipPage = lazy(() => import('./pages/VipPage'));
 const ReferralPage = lazy(() => import('./pages/ReferralPage'));
 const CodexPage = lazy(() => import('./pages/CodexPage'));
-const SvgPreviewPage = lazy(() => import('./pages/SvgPreviewPage'));
+
 
 const PageLoader: React.FC = () => {
-    const { t } = useTranslation('common');
-    
     return (
         <div className="flex justify-center items-center h-64">
             <div className="flex flex-col items-center gap-4">
                 <LoadingSpinner size="h-10 w-10" color="border-indigo-500" />
-                <p className="text-lg text-gray-500 dark:text-gray-400">
-                    {t('messages.loadingResources')}
+                <p className="text-lg text-gray-400">
+                    載入中...
                 </p>
             </div>
         </div>
@@ -45,7 +42,7 @@ const PageLoader: React.FC = () => {
 const getPageFromHash = (): Page => {
     const hash = window.location.hash.replace('#/', '');
     const page = hash.split('?')[0];
-    const validPages: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'explorer', 'admin', 'altar', 'profile', 'vip', 'referral', 'codex', 'svg-preview'];
+    const validPages: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'explorer', 'admin', 'altar', 'profile', 'vip', 'referral', 'codex'];
     if (validPages.includes(page as Page)) {
         return page as Page;
     }
@@ -57,7 +54,6 @@ const getPageFromHash = (): Page => {
 function App() {
   const [activePage, setActivePage] = useState<Page>(getPageFromHash);
   const { isConnected } = useAccount();
-  const { t } = useTranslation('common');
   
   // 這個 Hook 會在背景監聽鏈上事件，並自動更新相關數據
   useContractEvents();
@@ -83,7 +79,7 @@ function App() {
     if (!isConnected && pageRequiresWallet.includes(activePage)) {
         return (
             <div className="mt-10">
-                <EmptyState message={t('messages.connectWallet')} />
+                <EmptyState message="請先連接錢包" />
             </div>
         );
     }
@@ -100,14 +96,13 @@ function App() {
         case 'vip': return <VipPage />;
         case 'referral': return <ReferralPage />;
         case 'codex': return <CodexPage />;
-        case 'svg-preview': return <SvgPreviewPage />;
         default: return <MintPage />; // 預設頁面也改為 MintPage
     }
   };
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen flex flex-col dark:bg-gray-900 bg-gray-100">
+      <div className="min-h-screen flex flex-col bg-gray-900">
         <Header activePage={activePage} setActivePage={handleSetPage} />
         <WrongNetworkBanner />
         <main className="flex-grow container mx-auto px-4 py-8 md:px-6 md:py-12">

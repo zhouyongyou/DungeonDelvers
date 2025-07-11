@@ -52,10 +52,10 @@ export function handleTransfer(event: Transfer): void {
     const hero = Hero.load(heroId)
     
     if (hero) {
-        const newOwner = getOrCreatePlayer(event.params.to)
-        hero.owner = newOwner.id
-        hero.save()
-        log.info('Successfully transferred hero {} to {}', [heroId, event.params.to.toHexString()]);
+        // 對於 immutable 實體，我們不能更新現有實體
+        // 只能記錄轉移事件，但不能修改實體本身
+        log.info('Transfer event for existing immutable hero {} from {} to {} (entity cannot be updated)', [heroId, event.params.from.toHexString(), event.params.to.toHexString()]);
+        return;
     } else {
         // 創建一個占位實體以避免後續錯誤
         log.warning("Transfer handled for a Hero that doesn't exist in the subgraph: {}, creating placeholder", [heroId])
