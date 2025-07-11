@@ -27,13 +27,13 @@ const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
 // ★ 核心修正: 查詢語句現在直接查詢頂層的 heros 和 relics，並使用正確的變數類型
 const GET_FILTERED_NFTS_QUERY = `
   query GetFilteredNfts($owner: String!, $rarity: Int!) {
-    heros(where: { owner: $owner, rarity: $rarity }) {
+    heros(where: { owner: $owner, rarity: $rarity }, first: 1000) {
       id
       tokenId
       power
       rarity
     }
-    relics(where: { owner: $owner, rarity: $rarity }) {
+    relics(where: { owner: $owner, rarity: $rarity }, first: 1000) {
       id
       tokenId
       capacity

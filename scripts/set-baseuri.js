@@ -103,7 +103,7 @@ async function main() {
   console.log("□ Party baseURI 已設定");
   
   console.log("\n🧪 測試建議:");
-  console.log("1. 使用 SVG 預覽頁面測試各 NFT 類型");
+  console.log("1. 使用靜態圖片測試各 NFT 類型");
   console.log("2. 檢查 NFT 市場是否能正確顯示");
   console.log("3. 驗證 metadata 回傳正確的資料");
 }

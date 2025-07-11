@@ -54,85 +54,46 @@ const NftCard: React.FC<NftCardProps> = memo(({
 
   const renderImage = () => {
     const baseImageClass = "w-full h-full object-cover rounded-lg transition-transform duration-300 hover:scale-110";
-    
-    switch (nft.type) {
-      case 'hero': {
-        const hero = nft as HeroNft;
-        const heroId = (Number(hero.id) % 5) + 1; // 確保在 1-5 範圍內
-        return (
-          <div className="relative w-full h-full">
-            <img 
-              src={`/images/hero/hero-${heroId}.png`} 
-              alt={hero.name}
-              className={baseImageClass}
-              loading="lazy"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = "/images/hero-placeholder.svg";
-              }}
-            />
-            {/* 戰力顯示 */}
-            <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
-              ⚔️ {hero.power.toLocaleString()}
-            </div>
+    return (
+      <div className="relative w-full h-full">
+        <img 
+          src={nft.image} 
+          alt={nft.name}
+          className={baseImageClass}
+          loading="lazy"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = "/images/hero/hero-1.png";
+          }}
+        />
+        {/* 額外資訊顯示（如戰力、容量等）可根據 nft.type 顯示 */}
+        {nft.type === 'hero' && (
+          <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
+            ⚔️ {(nft as HeroNft).power?.toLocaleString?.() ?? ''}
           </div>
-        );
-      }
-      
-      case 'relic': {
-        const relic = nft as RelicNft;
-        const relicId = (Number(relic.id) % 5) + 1; // 確保在 1-5 範圍內
-        return (
-          <div className="relative w-full h-full">
-            <img 
-              src={`/images/relic/relic-${relicId}.png`} 
-              alt={relic.name}
-              className={baseImageClass}
-              loading="lazy"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = "/images/relic-placeholder.svg";
-              }}
-            />
-            {/* 容量顯示 */}
-            <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
-              📦 {relic.capacity}
-            </div>
+        )}
+        {nft.type === 'relic' && (
+          <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
+            📦 {(nft as RelicNft).capacity ?? ''}
           </div>
-        );
-      }
-      
-      case 'party': {
-        const party = nft as PartyNft;
-        return (
-          <div className="relative w-full h-full">
-            <img 
-              src="/images/party/party.png" 
-              alt={party.name}
-              className={baseImageClass}
-              loading="lazy"
-            />
-            {/* 隊伍資訊顯示 */}
+        )}
+        {nft.type === 'party' && (
+          <>
             <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
-              ⚔️ {Number(party.totalPower).toLocaleString()}
+              ⚔️ {(nft as PartyNft).totalPower?.toString() ?? ''}
             </div>
             <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
-              📦 {Number(party.totalCapacity)}
+              📦 {(nft as PartyNft).totalCapacity?.toString() ?? ''}
             </div>
+          </>
+        )}
+        {nft.type === 'vip' && (
+          <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
+            Lv.{nft.attributes?.find(attr => attr.trait_type === 'Level')?.value || '?'}
           </div>
-        );
-      }
-      
-      case 'vip': {
-        const vip = nft as VipNft;
-        return (
-          <VipImage 
-            nft={vip} 
-            fallbackImage="/images/vip-placeholder.png" 
-          />
-        );
-      }
-    }
+        )}
+      </div>
+    );
   };
 
   const renderDetails = () => {

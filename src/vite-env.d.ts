@@ -33,11 +33,8 @@ interface ImportMetaEnv {
   readonly VITE_MAINNET_POOL_ADDRESS: string;
 
   // =================================================================
-  // Section: 主網 SVG 函式庫合約地址
+  // Section: 主網合約地址 (已移除 SVG 函式庫)
   // =================================================================
-  readonly VITE_MAINNET_DUNGEONSVGLIBRARY_ADDRESS: string;
-  readonly VITE_MAINNET_VIPSVGLIBRARY_ADDRESS: string;
-  readonly VITE_MAINNET_PROFILESVGLIBRARY_ADDRESS: string;
 
   // =================================================================
   // Section: 主網核心功能合約地址

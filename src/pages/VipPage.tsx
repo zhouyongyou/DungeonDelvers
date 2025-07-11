@@ -1,11 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// src/pages/VipPage.tsx (SVG與數據顯示修正版)
+// src/pages/VipPage.tsx (移除 SVG 讀取功能版)
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { useAccount, useWriteContract, usePublicClient, useReadContract } from 'wagmi';
+import { useAccount, useWriteContract, usePublicClient } from 'wagmi';
 import { formatEther, maxUint256, parseEther } from 'viem';
-import { Buffer } from 'buffer';
-import { getContract } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useAppToast } from '../hooks/useAppToast';
@@ -14,102 +12,22 @@ import { bsc } from 'wagmi/chains';
 import { useVipStatus } from '../hooks/useVipStatus';
 
 const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undefined }> = ({ tokenId, chainId }) => {
-    // ✅ 將所有Hook調用移到組件頂部
-    const vipStakingContract = getContract(chainId as 56, 'vipStaking');
-    
-    const { data: tokenURI, isLoading, isError } = useReadContract({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ...(vipStakingContract as any),
-        functionName: 'tokenURI' as any,
-        args: [tokenId!] as any,
-        query: { 
-            enabled: !!tokenId && 
-                     tokenId > 0n && 
-                     !!vipStakingContract && 
-                     !!chainId && 
-                     chainId === bsc.id 
-        },
-    });
-
-    const svgImage = useMemo(() => {
-        if (!tokenURI) return null;
-        try {
-            const uriString = typeof tokenURI === 'string' ? tokenURI : '';
-            
-            // 處理不同的 URI 格式
-            if (uriString.startsWith('data:application/json;base64,')) {
-                // 標準的 data URI 格式
-                const decodedUri = Buffer.from(uriString.substring('data:application/json;base64,'.length), 'base64').toString();
-                const metadata = JSON.parse(decodedUri);
-                return metadata.image;
-            } else if (uriString.startsWith('data:image/svg+xml;base64,')) {
-                // 直接的 SVG data URI
-                return uriString;
-            } else if (uriString.startsWith('http')) {
-                // HTTP URL
-                return uriString;
-            } else {
-                // 嘗試作為 base64 解碼
-                try {
-                    const decoded = Buffer.from(uriString, 'base64').toString();
-                    const metadata = JSON.parse(decoded);
-                    return metadata.image;
-                } catch {
-                    return null;
-                }
-            }
-        } catch (e) {
-            console.error("解析 VIP 卡 SVG 失敗:", e);
-            return null;
-        }
-    }, [tokenURI]);
-
     // ✅ 條件渲染移到Hook之後
     if (!chainId || (chainId !== bsc.id)) {
         return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-500">網路不支援</div>;
     }
 
-    if (isLoading) return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center"><LoadingSpinner /></div>;
-    if (isError) {
-        console.error(`VIP 卡讀取失敗 - TokenId: ${tokenId}, ChainId: ${chainId}`);
-        return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-red-400">
-            <div className="text-center">
-                <div>讀取 VIP 卡失敗</div>
-                <div className="text-xs text-gray-500 mt-1">TokenId: {tokenId?.toString()}</div>
-            </div>
-        </div>;
+    if (!tokenId || tokenId === 0n) {
+        return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-400 dark:text-gray-500">無 VIP 卡</div>;
     }
-    if (!svgImage) return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-400 dark:text-gray-500">無 VIP 卡</div>;
     
     return (
-        <div className="w-full aspect-square bg-gray-900/50 rounded-xl overflow-hidden">
-            {svgImage.startsWith('data:image/svg+xml;base64,') ? (
-                <img 
-                    src={svgImage} 
-                    alt="VIP Card" 
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                        console.error('VIP SVG 載入失敗:', e);
-                        e.currentTarget.src = '/images/vip-placeholder.svg';
-                    }}
-                />
-            ) : svgImage.startsWith('data:image/svg+xml') ? (
-                <div 
-                    dangerouslySetInnerHTML={{ 
-                        __html: Buffer.from(svgImage.substring('data:image/svg+xml;base64,'.length), 'base64').toString() 
-                    }} 
-                />
-            ) : (
-                <img 
-                    src={svgImage} 
-                    alt="VIP Card" 
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                        console.error('VIP SVG 載入失敗:', e);
-                        e.currentTarget.src = '/images/vip-placeholder.svg';
-                    }}
-                />
-            )}
+        <div className="w-full aspect-square bg-gray-900/50 rounded-xl overflow-hidden flex items-center justify-center">
+            <div className="text-center">
+                <div className="text-4xl mb-2">👑</div>
+                <div className="text-lg font-bold">VIP #{tokenId.toString()}</div>
+                <div className="text-sm text-gray-400">VIP 等級卡片</div>
+            </div>
         </div>
     );
 };

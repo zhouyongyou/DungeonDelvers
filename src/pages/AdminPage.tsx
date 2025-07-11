@@ -1,7 +1,7 @@
 // src/pages/AdminPage.tsx
 
 import React, { useState, useMemo } from 'react';
-import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
+import { useAccount, useReadContracts, useWriteContract, useReadContract } from 'wagmi';
 import { formatEther, isAddress } from 'viem';
 type ContractName = keyof typeof import('../config/contracts').contracts[typeof bsc.id];
 import { getContract, contracts as contractConfigs } from '../config/contracts';
@@ -127,9 +127,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       { key: 'explorationFee', label: "遠征探索費", contract: contracts.dungeonMaster, getter: 'explorationFee', setter: 'setExplorationFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
       { key: 'restDivisor', label: "休息成本係數", contract: contracts.dungeonMaster, getter: 'restCostPowerDivisor', setter: 'setRestCostPowerDivisor', unit: '無', placeholders: ['新係數 (戰力/USD)'] },
       { key: 'vipCooldown', label: "VIP 取消質押冷卻 (秒)", contract: contracts.vipStaking, getter: 'unstakeCooldown', setter: 'setUnstakeCooldown', unit: '無', placeholders: ['新冷卻時間 (秒)'] },
-      { key: 'taxParams', label: "稅務參數", contract: contracts.playerVault, getter: 'standardInitialRate', setter: 'setTaxParameters', unit: '‱', placeholders: ['標準稅率 (‱)', '大額稅率 (‱)', '衰減率 (‱)', '週期(秒)'] },
       { key: 'commissionRate', label: "邀請佣金率", contract: contracts.playerVault, getter: 'commissionRate', setter: 'setCommissionRate', unit: '‱', placeholders: ['新佣金率 (萬分位)'] },
-      { key: 'withdrawThresholds', label: "提現門檻 (USD)", contract: contracts.playerVault, getter: 'smallWithdrawThresholdUSD', setter: 'setWithdrawThresholds', unit: 'USD', placeholders: ['小額門檻 (USD)', '大額門檻 (USD)'] },
     ];
     return config.filter((c) => !!c.contract && !!c.contract.address) as ParameterConfigItem[];
   }, [chainId]);
@@ -139,8 +137,13 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     query: { enabled: parameterConfig.length > 0 }
   });
 
-  // 暫時移除有問題的 largeWithdrawThresholdUSD 讀取
-  const isLoadingLargeThreshold = false;
+  // 修復：正確讀取大額提款門檻
+  const playerVaultContract = getContract(chainId, 'playerVault');
+  const { data: largeWithdrawThreshold, isLoading: isLoadingLargeThreshold } = useReadContract({
+    ...(playerVaultContract as any),
+    functionName: 'largeWithdrawThresholdUSD' as any,
+    query: { enabled: !!playerVaultContract }
+  });
 
   const handleSet = async (key: string, targetContract: NonNullable<ReturnType<typeof getContract>>, functionName: string) => {
     const newAddress = inputs[key];
@@ -295,24 +298,10 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       </AdminSection>
 
       <AdminSection title="稅務與提現系統">
-        {parameterConfig.filter(p => ['taxParams', 'commissionRate', 'withdrawThresholds'].includes(p.key)).map((p) => {
+        {parameterConfig.filter(p => ['commissionRate'].includes(p.key)).map((p) => {
           const paramIndex = parameterConfig.findIndex(pc => pc.key === p.key);
           const currentValue = params?.[paramIndex]?.result;
           const { key, setter, ...rest } = p;
-          if (p.key === 'withdrawThresholds') {
-            return (
-              <React.Fragment key={p.key}>
-                <SettingRow
-                  {...rest}
-                  functionName={setter}
-                  readSource={`${p.contract.address}.${p.getter}()`}
-                  currentValue={currentValue}
-                  isLoading={isLoadingParams}
-                />
-                <ReadOnlyRow label="當前大額門檻" value={`${formatEther(0n)} USD`} isLoading={isLoadingLargeThreshold} />
-              </React.Fragment>
-            )
-          }
           return (
             <SettingRow
               key={key}
@@ -324,6 +313,11 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
             />
           );
         })}
+        <ReadOnlyRow 
+          label="當前大額提款門檻" 
+          value={largeWithdrawThreshold ? `${formatEther(largeWithdrawThreshold as bigint)} USD` : '載入中...'} 
+          isLoading={isLoadingLargeThreshold} 
+        />
       </AdminSection>
 
       <AdminSection title="遊戲機制參數">

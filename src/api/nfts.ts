@@ -191,7 +191,7 @@ function generateFallbackMetadata(nftType: string, tokenId: string): Omit<BaseNf
             return {
                 ...baseData,
                 name: `聖物 #${tokenId}`,
-                image: '/images/relic-placeholder.svg',
+                image: '/images/relic/relic-1.png',
                 attributes: [
                     { trait_type: 'Capacity', value: '載入中...' },
                     { trait_type: 'Rarity', value: '載入中...' }
@@ -201,7 +201,7 @@ function generateFallbackMetadata(nftType: string, tokenId: string): Omit<BaseNf
             return {
                 ...baseData,
                 name: `英雄 #${tokenId}`,
-                image: '/images/hero-placeholder.svg',
+                image: '/images/hero/hero-1.png',
                 attributes: [
                     { trait_type: 'Power', value: '載入中...' },
                     { trait_type: 'Rarity', value: '載入中...' }
@@ -211,7 +211,7 @@ function generateFallbackMetadata(nftType: string, tokenId: string): Omit<BaseNf
             return {
                 ...baseData,
                 name: `隊伍 #${tokenId}`,
-                image: '/images/party-placeholder.svg',
+                image: '/images/party/party.png',
                 attributes: [
                     { trait_type: 'Total Power', value: '載入中...' },
                     { trait_type: 'Heroes Count', value: '載入中...' }
@@ -221,7 +221,7 @@ function generateFallbackMetadata(nftType: string, tokenId: string): Omit<BaseNf
             return {
                 ...baseData,
                 name: `VIP 卡 #${tokenId}`,
-                image: '/images/vip-placeholder.svg',
+                image: '/assets/images/collections/vip-logo.png',
                 attributes: [
                     { trait_type: 'Level', value: '載入中...' },
                     { trait_type: 'Staked Value', value: '載入中...' }

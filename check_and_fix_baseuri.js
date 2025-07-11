@@ -115,7 +115,7 @@ async function main() {
   console.log('\n📋 總結:');
   console.log('1. 如果baseURI設定錯誤，需要調用 setBaseURI() 函式');
   console.log('2. 確保調用者有 owner 權限');
-  console.log('3. 設定完成後，NFT市場應該能正確顯示SVG');
+  console.log('3. 設定完成後，NFT市場應該能正確顯示靜態圖片');
 }
 
 main().catch(console.error); 

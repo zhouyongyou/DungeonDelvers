@@ -13,7 +13,7 @@ import { dataSource } from "@graphprotocol/graph-ts"
  * 2. 運行 npm run sync-addresses 自動同步
  * 
  * 📋 地址來源：subgraph.yaml dataSources[].source.address
- * 🕒 最後同步時間：2025/7/11 下午6:33:41
+ * 🕒 最後同步時間：7/11/2025, 9:05:45 PM
  */
 
 // 合約地址常量 (自動從 subgraph.yaml 同步)

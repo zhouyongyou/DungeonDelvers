@@ -1,9 +1,9 @@
-// src/pages/ProfilePage.tsx (The Graph 改造版)
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// src/pages/ProfilePage.tsx (移除 SVG 邏輯版)
 
 import React, { useMemo } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
-import { Buffer } from 'buffer';
 import { getContract } from '../config/contracts';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -73,9 +73,9 @@ const usePlayerProfile = (targetAddress: Address | undefined) => {
 
     // 步驟 2: 使用從 The Graph 獲取的 tokenId 來讀取 tokenURI
     const { data: tokenURI, isLoading: isLoadingUri } = useReadContract({
-        ...playerProfileContract,
-        functionName: 'tokenURI',
-        args: [tokenId!],
+        ...(playerProfileContract as any),
+        functionName: 'tokenURI' as any,
+        args: [tokenId!] as any,
         query: { enabled: !!tokenId && !!playerProfileContract },
     });
 
@@ -122,25 +122,39 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
 
         if (hasProfile && tokenURI) {
             try {
-                const decodedUri = Buffer.from((tokenURI as string).substring('data:application/json;base64,'.length), 'base64').toString();
-                const metadata = JSON.parse(decodedUri);
-                const svgImage = metadata.image && metadata.image.startsWith('data:image/svg+xml;base64,') 
-                    ? Buffer.from(metadata.image.substring('data:image/svg+xml;base64,'.length), 'base64').toString() 
-                    : '';
+                // 移除 SVG 解析邏輯，直接使用靜態圖片
+                const profileImage = '/assets/images/collections/profile-logo.png';
                 
                 return (
                     <div className="card-bg p-6 rounded-2xl shadow-xl flex flex-col items-center">
                         <h3 className="section-title">{isMyProfile ? '我的玩家徽章' : '玩家徽章'}</h3>
                         <p className="font-mono text-xs break-all bg-black/20 p-2 rounded text-gray-400 mb-4">{targetAddress}</p>
-                        <div 
-                            className="w-full max-w-lg my-4 border-4 border-gray-700 rounded-lg overflow-hidden"
-                            dangerouslySetInnerHTML={{ __html: svgImage }} 
-                        />
+                        <div className="w-full max-w-lg my-4 border-4 border-gray-700 rounded-lg overflow-hidden">
+                            <img 
+                                src={profileImage} 
+                                alt="玩家檔案" 
+                                className="w-full h-auto"
+                                onError={(e) => {
+                                    // 如果圖片載入失敗，顯示預設內容
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    target.parentElement!.innerHTML = `
+                                        <div class="w-full aspect-square bg-gray-800 flex items-center justify-center">
+                                            <div class="text-center">
+                                                <div class="text-6xl mb-4">👤</div>
+                                                <div class="text-xl font-bold text-white">玩家檔案</div>
+                                                <div class="text-sm text-gray-400">Profile #{tokenId?.toString() || 'N/A'}</div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }}
+                            />
+                        </div>
                         <p className="text-sm text-gray-400">這是一個動態的 SBT (靈魂綁定代幣)，它記錄了該玩家在遊戲中的光輝歷程。</p>
                     </div>
                 );
             } catch (error) {
-                 console.error("解析 Profile SVG 失敗:", error);
+                 console.error("解析 Profile 失敗:", error);
                  return <EmptyState message="無法載入此玩家的個人檔案視覺效果。" />;
             }
         }

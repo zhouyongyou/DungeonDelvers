@@ -5,7 +5,7 @@ import {
   ApprovalForAll,
   AscensionAltarSet,
   ContractsSet,
-  DungeonSvgLibrarySet,
+
   DynamicSeedUpdated,
   HeroMinted,
   OwnershipTransferred,
@@ -96,23 +96,7 @@ export function createContractsSetEvent(
   return contractsSetEvent
 }
 
-export function createDungeonSvgLibrarySetEvent(
-  newAddress: Address
-): DungeonSvgLibrarySet {
-  const dungeonSvgLibrarySetEvent =
-    changetype<DungeonSvgLibrarySet>(newMockEvent())
 
-  dungeonSvgLibrarySetEvent.parameters = []
-
-  dungeonSvgLibrarySetEvent.parameters.push(
-    new ethereum.EventParam(
-      "newAddress",
-      ethereum.Value.fromAddress(newAddress)
-    )
-  )
-
-  return dungeonSvgLibrarySetEvent
-}
 
 export function createDynamicSeedUpdatedEvent(
   newSeed: BigInt
