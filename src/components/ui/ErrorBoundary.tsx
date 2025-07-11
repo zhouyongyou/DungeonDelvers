@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 
 interface Props {
@@ -21,7 +21,10 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // 使用 logger 而不是 console.error
+    if (import.meta.env.DEV) {
+      console.error('ErrorBoundary caught an error:', error, errorInfo);
+    }
     this.setState({ error, errorInfo });
   }
 
@@ -40,7 +43,7 @@ export class ErrorBoundary extends Component<Props, State> {
             >
               重新整理頁面
             </button>
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <details className="mt-4 text-sm">
                 <summary className="cursor-pointer text-gray-400 hover:text-gray-300">
                   錯誤詳情 (開發模式)

@@ -153,7 +153,8 @@ export const useSmartRetry = (maxRetries: number = 3) => {
       const now = Date.now();
       // 防止過於頻繁的重試（至少間隔1秒）
       if (now - lastRetryTime < 1000) {
-        console.warn('重試過於頻繁，請稍後再試');
+        // eslint-disable-next-line no-console
+      console.warn('重試過於頻繁，請稍後再試');
         return;
       }
       
@@ -165,6 +166,7 @@ export const useSmartRetry = (maxRetries: number = 3) => {
       const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
       setTimeout(() => setIsRetrying(false), delay);
       
+      // eslint-disable-next-line no-console
       console.log(`執行第 ${retryCount + 1} 次重試，延遲 ${delay}ms`);
     }
   }, [retryCount, maxRetries, lastRetryTime]);

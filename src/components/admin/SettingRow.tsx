@@ -68,7 +68,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
   ) : currentValue === undefined || currentValue === null ? (
     'N/A'
   ) : unit === 'USD' || unit === 'BNB' ? (
-    `${formatEther(currentValue ?? 0n)}`
+    `${formatEther(typeof currentValue === 'bigint' ? currentValue : 0n)}`
   ) : unit === '‱' ? (
     `${(Number(currentValue ?? 0n) / 100).toFixed(2)}%`
   ) : (

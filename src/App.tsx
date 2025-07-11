@@ -10,7 +10,7 @@ import { useContractEvents } from './hooks/useContractEvents';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import type { Page } from './types/page';
 import { TransactionWatcher } from './components/core/TransactionWatcher';
-import ErrorBoundary from './components/common/ErrorBoundary';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { WrongNetworkBanner } from './components/ui/WrongNetworkBanner';
 
 // 動態導入所有頁面

@@ -15,8 +15,12 @@
         ]
       }
     ],
-    "declaration-block-trailing-semicolon": null,
     "no-descending-specificity": null,
-    "order/properties-alphabetical-order": true
+    "order/properties-alphabetical-order": null,
+    "rule-empty-line-before": null,
+    "comment-empty-line-before": null,
+    "selector-class-pattern": null,
+    "property-no-vendor-prefix": null,
+    "value-no-vendor-prefix": null
   }
 }

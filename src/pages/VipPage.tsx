@@ -1,6 +1,6 @@
 // src/pages/VipPage.tsx (SVG與數據顯示修正版)
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAccount, useWriteContract, usePublicClient, useReadContract } from 'wagmi';
 import { formatEther, maxUint256, parseEther } from 'viem';
 import { Buffer } from 'buffer';
@@ -109,6 +109,21 @@ const VipPage: React.FC = () => {
         }
     });
     
+    const needsApproval = useMemo(() => {
+        if (mode !== 'stake' || !amount) return false;
+        try { return typeof allowance === 'bigint' && allowance < parseEther(amount); } catch { return false; }
+    }, [allowance, amount, mode]);
+
+    const handleApprove = useCallback(() => writeContractAsync({ ...soulShardContract!, functionName: 'approve', args: [vipStakingContract!.address, maxUint256] }), [soulShardContract, vipStakingContract, writeContractAsync]);
+    const handleStake = useCallback(() => writeContractAsync({ ...vipStakingContract!, functionName: 'stake', args: [parseEther(amount)] }), [vipStakingContract, writeContractAsync, amount]);
+    const handleRequestUnstake = useCallback(() => writeContractAsync({ ...vipStakingContract!, functionName: 'requestUnstake', args: [parseEther(amount)] }), [vipStakingContract, writeContractAsync, amount]);
+    const handleClaim = useCallback(() => writeContractAsync({ ...vipStakingContract!, functionName: 'claimUnstaked' }), [vipStakingContract, writeContractAsync]);
+    const handleMainAction = useCallback(() => { if (mode === 'stake') { if (needsApproval) handleApprove(); else handleStake(); } else { handleRequestUnstake(); } }, [mode, needsApproval, handleApprove, handleStake, handleRequestUnstake]);
+    const handlePercentageClick = useCallback((percentage: number) => {
+        const balance = mode === 'stake' ? soulShardBalance : stakedAmount;
+        if (balance > 0n) setAmount(formatEther((balance * BigInt(percentage)) / 100n));
+    }, [mode, soulShardBalance, stakedAmount, setAmount]);
+
     useEffect(() => {
         async function handlePostApproval() {
             if (isAwaitingStakeAfterApproval && !isTxPending) {
@@ -132,22 +147,7 @@ const VipPage: React.FC = () => {
             }
         }
         handlePostApproval();
-    }, [isAwaitingStakeAfterApproval, isTxPending, allowance]);
-
-    const needsApproval = useMemo(() => {
-        if (mode !== 'stake' || !amount) return false;
-        try { return typeof allowance === 'bigint' && allowance < parseEther(amount); } catch { return false; }
-    }, [allowance, amount, mode]);
-
-    const handleApprove = () => writeContractAsync({ ...soulShardContract!, functionName: 'approve', args: [vipStakingContract!.address, maxUint256] });
-    const handleStake = () => writeContractAsync({ ...vipStakingContract!, functionName: 'stake', args: [parseEther(amount)] });
-    const handleRequestUnstake = () => writeContractAsync({ ...vipStakingContract!, functionName: 'requestUnstake', args: [parseEther(amount)] });
-    const handleClaim = () => writeContractAsync({ ...vipStakingContract!, functionName: 'claimUnstaked' });
-    const handleMainAction = () => { if (mode === 'stake') { if (needsApproval) handleApprove(); else handleStake(); } else { handleRequestUnstake(); } };
-    const handlePercentageClick = (percentage: number) => {
-        const balance = mode === 'stake' ? soulShardBalance : stakedAmount;
-        if (balance > 0n) setAmount(formatEther((balance * BigInt(percentage)) / 100n));
-    };
+    }, [isAwaitingStakeAfterApproval, isTxPending, allowance, mode, amount, handleStake, refetchAll, showToast]);
 
     const renderActionPanel = () => (
         <div className="space-y-4">
