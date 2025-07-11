@@ -54,7 +54,7 @@ export function handlePartyCreated(event: PartyCreated): void {
             log.warning('Hero not found or not owned by player: {} for party: {}', [heroId, partyId]);
         }
     }
-    party.heroes = heroIds
+    party.heros = heroIds
 
     // 批量處理聖物關聯 - 使用配置系統
     const relicIds: string[] = []

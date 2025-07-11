@@ -6,7 +6,7 @@ type Player @entity(immutable: false) {
   " 玩家的錢包地址 "
   id: Bytes!
   " 玩家擁有的所有英雄 "
-  heroes: [Hero!] @derivedFrom(field: "owner")
+  heros: [Hero!] @derivedFrom(field: "owner")
   " 玩家擁有的所有聖物 "
   relics: [Relic!] @derivedFrom(field: "owner")
   " 玩家擁有的所有隊伍 "
@@ -67,7 +67,7 @@ type Party @entity(immutable: false) {
   " 隊伍的擁有者 "
   owner: Player!
   " 隊伍中的英雄列表 "
-  heroes: [Hero!]!
+  heros: [Hero!]!
   " 隊伍中的聖物列表 "
   relics: [Relic!]!
   " 總戰力 "
