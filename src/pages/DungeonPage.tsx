@@ -245,18 +245,15 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
     const { data: parties, isLoading: isLoadingParties } = usePlayerParties();
 
     // 獲取地城資訊的邏輯保持不變，因為這是全域數據
-    // dungeonStorage 不在 contracts 配置，這裡直接用 viem 低階呼叫或 hardcode 地址
-    // 這裡假設有 dungeonStorage 合約地址
-    const dungeonStorageAddress = '0x0000000000000000000000000000000000000000' as `0x${string}`; // TODO: 替換為正確地址
-    const dungeonStorageAbi = [] as const; // TODO: 替換為正確 ABI
+    const dungeonStorageContract = getContract(bsc.id, 'dungeonStorage');
     const { data: dungeonsData, isLoading: isLoadingDungeons } = useReadContracts({
         contracts: Array.from({ length: 10 }, (_, i) => ({
-            address: dungeonStorageAddress as `0x${string}`,
-            abi: dungeonStorageAbi,
+            address: dungeonStorageContract?.address as `0x${string}`,
+            abi: dungeonStorageContract?.abi as any,
             functionName: 'getDungeon' as any,
             args: [BigInt(i + 1)] as any,
         })),
-        query: { enabled: !!dungeonStorageAddress && chainId === bsc.id }
+        query: { enabled: !!dungeonStorageContract && chainId === bsc.id }
     });
 
     const dungeons: Dungeon[] = useMemo(() => {

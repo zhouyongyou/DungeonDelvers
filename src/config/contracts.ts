@@ -2,15 +2,16 @@
 
 import { type Address } from 'viem';
 import { bsc } from 'wagmi/chains';
-import { heroABI, relicABI, partyABI, vipStakingABI, playerProfileABI, playerVaultABI, soulShardTokenABI, dungeonMasterABI, altarOfAscensionABI, oracleABI, dungeonCoreABI } from './abis';
+import { heroABI, relicABI, partyABI, vipStakingABI, playerProfileABI, playerVaultABI, soulShardTokenABI, dungeonMasterABI, altarOfAscensionABI, oracleABI, dungeonCoreABI, dungeonStorageABI } from './abis';
 
 // 簡化的合約地址配置 - 最終版本
 const CONTRACT_ADDRESSES = {
-  // 核心合約 (3個)
+  // 核心合約 (4個)
   CORE: {
     DUNGEON_CORE: "0xbCc8C53A0F52ad1685F4356768d88FA6ac218d66",
     ORACLE: "0x86C17E2f8940FFE6c64bf9B513656b4c51f1Ffc6", 
-    PLAYER_VAULT: "0x8727c5aEd22A2cf39d183D00cC038eE600F24726"
+    PLAYER_VAULT: "0x8727c5aEd22A2cf39d183D00cC038eE600F24726",
+    DUNGEON_STORAGE: import.meta.env.VITE_MAINNET_DUNGEONSTORAGE_ADDRESS || "0x3859536f603e885525C28c0F875dAAB743C3EA1A"
   },
   // NFT合約 (3個)
   NFTS: {
@@ -46,6 +47,10 @@ export const contracts = {
     playerVault: { 
       address: CONTRACT_ADDRESSES.CORE.PLAYER_VAULT as Address, 
       abi: playerVaultABI
+    },
+    dungeonStorage: { 
+      address: CONTRACT_ADDRESSES.CORE.DUNGEON_STORAGE as Address, 
+      abi: dungeonStorageABI
     },
     
     // NFT合約
