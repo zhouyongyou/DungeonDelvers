@@ -33,13 +33,29 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
         if (!tokenURI) return null;
         try {
             const uriString = typeof tokenURI === 'string' ? tokenURI : '';
-            if (!uriString.startsWith('data:application/json;base64,')) {
-                // 如果不是 data URI, 嘗試直接當作 URL 使用 (為了相容中心化伺服器)
+            
+            // 處理不同的 URI 格式
+            if (uriString.startsWith('data:application/json;base64,')) {
+                // 標準的 data URI 格式
+                const decodedUri = Buffer.from(uriString.substring('data:application/json;base64,'.length), 'base64').toString();
+                const metadata = JSON.parse(decodedUri);
+                return metadata.image;
+            } else if (uriString.startsWith('data:image/svg+xml;base64,')) {
+                // 直接的 SVG data URI
                 return uriString;
+            } else if (uriString.startsWith('http')) {
+                // HTTP URL
+                return uriString;
+            } else {
+                // 嘗試作為 base64 解碼
+                try {
+                    const decoded = Buffer.from(uriString, 'base64').toString();
+                    const metadata = JSON.parse(decoded);
+                    return metadata.image;
+                } catch {
+                    return null;
+                }
             }
-            const decodedUri = Buffer.from(uriString.substring('data:application/json;base64,'.length), 'base64').toString();
-            const metadata = JSON.parse(decodedUri);
-            return metadata.image; // 這應該是另一個 data URI (data:image/svg+xml;base64,...)
         } catch (e) {
             console.error("解析 VIP 卡 SVG 失敗:", e);
             return null;
@@ -55,7 +71,17 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
     if (isError) return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-red-400">讀取 VIP 卡失敗</div>;
     if (!svgImage) return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-400 dark:text-gray-500">無 VIP 卡</div>;
     
-    return <img src={svgImage} alt="VIP Card" className="w-full h-auto rounded-xl shadow-lg" />;
+    return (
+        <div className="w-full aspect-square bg-gray-900/50 rounded-xl overflow-hidden">
+            {svgImage.startsWith('data:image/svg+xml;base64,') ? (
+                <img src={svgImage} alt="VIP Card" className="w-full h-full object-contain" />
+            ) : svgImage.startsWith('data:image/svg+xml') ? (
+                <div dangerouslySetInnerHTML={{ __html: Buffer.from(svgImage.substring('data:image/svg+xml;base64,'.length), 'base64').toString() }} />
+            ) : (
+                <img src={svgImage} alt="VIP Card" className="w-full h-full object-contain" />
+            )}
+        </div>
+    );
 };
 
 

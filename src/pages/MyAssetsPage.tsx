@@ -53,11 +53,11 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
     const { totalPower, totalCapacity } = useMemo(() => {
         const power = selectedHeroes.reduce((acc: number, id: bigint) => {
             const hero = heroes.find(h => h.id === id);
-            return acc + (hero ? hero.power : 0);
+            return acc + (hero ? Number(hero.power) : 0);
         }, 0);
         const capacity = selectedRelics.reduce((acc: number, id: bigint) => {
             const relic = relics.find(r => r.id === id);
-            return acc + (relic ? relic.capacity : 0);
+            return acc + (relic ? Number(relic.capacity) : 0);
         }, 0);
         return { totalPower: power, totalCapacity: capacity };
     }, [selectedHeroes, selectedRelics, heroes, relics]);
@@ -207,12 +207,20 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                     <h4 className="font-semibold text-lg mb-2 text-white">選擇聖物 (上限: 5)</h4>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
                         {relics.length > 0 ? relics.map(relic => (
-                            <NftCard 
-                                key={`select-${relic.id}`} 
-                                nft={relic} 
-                                onSelect={() => toggleSelection(relic.id, 'relic')} 
-                                isSelected={selectedRelics.includes(relic.id)} 
-                            />
+                            <div 
+                                key={`select-${relic.id}`}
+                                onClick={() => toggleSelection(relic.id, 'relic')}
+                                className={`cursor-pointer transition-all duration-200 ${
+                                    selectedRelics.includes(relic.id) 
+                                        ? 'ring-2 ring-yellow-400 scale-105' 
+                                        : 'hover:scale-105'
+                                }`}
+                            >
+                                <NftCard 
+                                    nft={relic} 
+                                    selected={selectedRelics.includes(relic.id)}
+                                />
+                            </div>
                         )) : (
                              <div className="col-span-full">
                                 <EmptyState message="沒有可用的聖物">
@@ -228,12 +236,20 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                     <h4 className="font-semibold text-lg mb-2 text-white">選擇英雄 (上限: {totalCapacity})</h4>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
                         {heroes.length > 0 ? heroes.map(hero => (
-                            <NftCard 
-                                key={`select-${hero.id}`} 
-                                nft={hero} 
-                                onSelect={() => toggleSelection(hero.id, 'hero')} 
-                                isSelected={selectedHeroes.includes(hero.id)} 
-                            />
+                            <div 
+                                key={`select-${hero.id}`}
+                                onClick={() => toggleSelection(hero.id, 'hero')}
+                                className={`cursor-pointer transition-all duration-200 ${
+                                    selectedHeroes.includes(hero.id) 
+                                        ? 'ring-2 ring-yellow-400 scale-105' 
+                                        : 'hover:scale-105'
+                                }`}
+                            >
+                                <NftCard 
+                                    nft={hero} 
+                                    selected={selectedHeroes.includes(hero.id)}
+                                />
+                            </div>
                         )) : (
                             <div className="col-span-full">
                                 <EmptyState message="沒有可用的英雄">

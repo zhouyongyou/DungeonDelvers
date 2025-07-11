@@ -116,12 +116,11 @@ contract VIPStaking is ERC721, Ownable, ReentrancyGuard {
             address(soulShardToken), stakedAmount
         );
         
-        uint8 usdDecimals = dungeonCore.usdDecimals();
-        require(usdDecimals > 0, "VIP: USD decimals not set in Core");
-        uint256 usdValue = stakedValueUSD / (10**usdDecimals);
+        // ★★★【修復】★★★ 使用更精確的計算，避免精度損失
+        uint256 usdValueInCents = stakedValueUSD / 1e16; // 轉換為美分 (2位小數)
         
-        if (usdValue < 100) return 0;
-        uint256 level = Math.sqrt(usdValue / 100);
+        if (usdValueInCents < 10000) return 0; // 100 USD = 10000 美分
+        uint256 level = Math.sqrt(usdValueInCents / 10000);
         return uint8(level);
     }
     

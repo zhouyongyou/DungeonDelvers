@@ -43,32 +43,59 @@ const GET_FILTERED_NFTS_QUERY = `
 const useAltarMaterials = (nftType: NftType, rarity: number) => {
     const { address, chainId } = useAccount();
 
-    return useQuery<(HeroNft[] | RelicNft[])>({
+    return useQuery({
         queryKey: ['altarMaterials', address, chainId, nftType, rarity],
-        queryFn: async () => {
+        queryFn: async (): Promise<AnyNft[]> => {
             if (!address || !THE_GRAPH_API_URL) return [];
             
-            const result = await fetchFromGraph(GET_FILTERED_NFTS_QUERY, { owner: address.toLowerCase(), rarity });
-            const assets = nftType === 'hero' ? result.heroes : result.relics;
+            try {
+                const result = await fetchFromGraph(GET_FILTERED_NFTS_QUERY, { owner: address.toLowerCase(), rarity });
+                const assets = nftType === 'hero' ? result.heroes : result.relics;
 
-            if (!assets) return [];
+                if (!assets || !Array.isArray(assets)) return [];
 
-            const contractAddress = (nftType === 'hero' ? getContract(bsc.id, 'hero') : getContract(bsc.id, 'relic'))!.address;
+                const contractAddress = (nftType === 'hero' ? getContract(bsc.id, 'hero') : getContract(bsc.id, 'relic'))?.address;
+                if (!contractAddress) {
+                    console.error(`找不到 ${nftType} 合約地址`);
+                    return [];
+                }
 
-            return assets.map((asset: { tokenId: string; [key: string]: unknown }) => ({
-                id: BigInt(asset.tokenId),
-                name: `${nftType === 'hero' ? '英雄' : '聖物'} #${asset.tokenId}`,
-                image: '',
-                description: '',
-                attributes: [],
-                contractAddress: contractAddress,
-                type: nftType,
-                ...asset,
-                tokenId: BigInt(asset.tokenId)
-            }));
+                return assets.map((asset: { tokenId: string; power?: string; capacity?: string; rarity?: string }) => {
+                    const baseNft = {
+                        id: BigInt(asset.tokenId),
+                        name: `${nftType === 'hero' ? '英雄' : '聖物'} #${asset.tokenId}`,
+                        image: '',
+                        description: '',
+                        attributes: [],
+                        contractAddress: contractAddress,
+                        tokenId: BigInt(asset.tokenId),
+                    };
+
+                    if (nftType === 'hero') {
+                        return {
+                            ...baseNft,
+                            type: 'hero' as const,
+                            power: asset.power ? Number(asset.power) : 0,
+                            rarity: asset.rarity ? Number(asset.rarity) : rarity
+                        } as HeroNft;
+                    } else {
+                        return {
+                            ...baseNft,
+                            type: 'relic' as const,
+                            capacity: asset.capacity ? Number(asset.capacity) : 0,
+                            rarity: asset.rarity ? Number(asset.rarity) : rarity
+                        } as RelicNft;
+                    }
+                });
+            } catch (error) {
+                console.error(`獲取 ${nftType} 材料失敗:`, error);
+                return [];
+            }
         },
-        enabled: !!address && chainId === bsc.id && rarity > 0,
+        enabled: !!address && chainId === bsc.id && rarity > 0 && !!THE_GRAPH_API_URL,
         staleTime: 1000 * 30,
+        retry: 2,
+        retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 5000),
     });
 };
 
@@ -281,7 +308,20 @@ const AltarPage: React.FC = () => {
                      availableNfts && availableNfts.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                             {availableNfts.map(nft => (
-                                <NftCard key={nft.id.toString()} nft={nft as HeroNft | RelicNft} onSelect={() => handleSelectNft(nft.id)} isSelected={selectedNfts.includes(nft.id)} />
+                                <div 
+                                    key={nft.id.toString()} 
+                                    onClick={() => handleSelectNft(nft.id)}
+                                    className={`cursor-pointer transition-all duration-200 ${
+                                        selectedNfts.includes(nft.id) 
+                                            ? 'ring-2 ring-yellow-400 scale-105' 
+                                            : 'hover:scale-105'
+                                    }`}
+                                >
+                                    <NftCard 
+                                        nft={nft} 
+                                        selected={selectedNfts.includes(nft.id)}
+                                    />
+                                </div>
                             ))}
                         </div>
                     ) : (

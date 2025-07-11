@@ -58,7 +58,7 @@ const useDashboardStats = () => {
             
             // 添加超時控制
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超時
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 增加到15秒超時
             
             try {
                 const response = await fetch(THE_GRAPH_API_URL, {
@@ -91,10 +91,14 @@ const useDashboardStats = () => {
         },
         enabled: !!address && chainId === bsc.id && !!THE_GRAPH_API_URL,
         // ★★★ 網路優化：增加 staleTime，避免不必要的重複請求 ★★★
-        staleTime: 1000 * 60, // 60 秒
+        staleTime: 1000 * 60 * 5, // 5分鐘
         // ★★★ 錯誤處理優化：添加重試配置 ★★★
-        retry: 2, // 減少重試次數
-        retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 5000), // 最大5秒延遲
+        retry: 3, // 增加重試次數
+        retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 10000), // 最大10秒延遲
+        // 添加重試條件
+        retryOnMount: true,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: true,
     });
 
     // 從查詢結果中解析數據

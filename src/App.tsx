@@ -25,6 +25,7 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const VipPage = lazy(() => import('./pages/VipPage'));
 const ReferralPage = lazy(() => import('./pages/ReferralPage'));
 const CodexPage = lazy(() => import('./pages/CodexPage'));
+const SvgPreviewPage = lazy(() => import('./pages/SvgPreviewPage'));
 
 const PageLoader: React.FC = () => {
     const { t } = useTranslation('common');
@@ -44,7 +45,7 @@ const PageLoader: React.FC = () => {
 const getPageFromHash = (): Page => {
     const hash = window.location.hash.replace('#/', '');
     const page = hash.split('?')[0];
-    const validPages: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'explorer', 'admin', 'altar', 'profile', 'vip', 'referral', 'codex'];
+    const validPages: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'explorer', 'admin', 'altar', 'profile', 'vip', 'referral', 'codex', 'svg-preview'];
     if (validPages.includes(page as Page)) {
         return page as Page;
     }
@@ -99,6 +100,7 @@ function App() {
         case 'vip': return <VipPage />;
         case 'referral': return <ReferralPage />;
         case 'codex': return <CodexPage />;
+        case 'svg-preview': return <SvgPreviewPage />;
         default: return <MintPage />; // 預設頁面也改為 MintPage
     }
   };

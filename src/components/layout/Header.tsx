@@ -106,6 +106,7 @@ export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) =>
           { key: 'vip', label: t('navigation:menu.vip') },
           { key: 'referral', label: t('navigation:menu.referral') },
           { key: 'explorer', label: t('navigation:menu.explorer') },
+          { key: 'svg-preview', label: 'SVG 預覽' },
       ];
       if (isDeveloper) {
           items.push({ key: 'admin', label: t('navigation:menu.admin') });
