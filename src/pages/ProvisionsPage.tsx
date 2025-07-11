@@ -22,23 +22,26 @@ import { bsc } from 'wagmi/chains';
 // ★ 簡化的 Hook：只處理錢包支付，因為合約已改為直接從錢包扣款
 const useProvisionsLogic = (quantity: number) => {
     const { address, chainId } = useAccount();
+    const isChainSupported = chainId === bsc.id;
 
-    const dungeonMasterContract = getContract((chainId || 56) as 56, 'dungeonMaster');
-    const dungeonCoreContract = getContract((chainId || 56) as 56, 'dungeonCore');
-    const soulShardContract = getContract((chainId || 56) as 56, 'soulShard');
+    const dungeonMasterContract = getContract(isChainSupported ? chainId : bsc.id, 'dungeonMaster');
+    const dungeonCoreContract = getContract(isChainSupported ? chainId : bsc.id, 'dungeonCore');
+    const soulShardContract = getContract(isChainSupported ? chainId : bsc.id, 'soulShard');
 
     // 獲取儲備價格
     const { data: provisionPriceUSD, isLoading: isLoadingPrice } = useReadContract({
-        ...dungeonMasterContract,
-        functionName: 'provisionPriceUSD',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(dungeonMasterContract as any),
+        functionName: 'provisionPriceUSD' as any,
         query: { enabled: !!dungeonMasterContract },
     });
 
     // 計算所需的 SoulShard 數量
     const { data: requiredAmount, isLoading: isLoadingConversion } = useReadContract({
-        ...dungeonCoreContract,
-        functionName: 'getSoulShardAmountForUSD',
-        args: [typeof provisionPriceUSD === 'bigint' ? provisionPriceUSD * BigInt(quantity) : 0n],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(dungeonCoreContract as any),
+        functionName: 'getSoulShardAmountForUSD' as any,
+        args: [typeof provisionPriceUSD === 'bigint' ? provisionPriceUSD * BigInt(quantity) : 0n] as any,
         query: { enabled: !!dungeonCoreContract && typeof provisionPriceUSD === 'bigint' && quantity > 0 },
     });
 
@@ -47,9 +50,10 @@ const useProvisionsLogic = (quantity: number) => {
 
     // 檢查授權額度
     const { data: allowance, refetch: refetchAllowance } = useReadContract({
-        ...soulShardContract,
-        functionName: 'allowance',
-        args: [address!, dungeonMasterContract?.address as `0x${string}`],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(soulShardContract as any),
+        functionName: 'allowance' as any,
+        args: [address!, dungeonMasterContract?.address] as any,
         query: { enabled: !!address && !!soulShardContract && !!dungeonMasterContract },
     });
 

@@ -47,7 +47,7 @@ const useTargetAddress = () => {
 // ★ 核心改造：新的 Hook，用於獲取玩家檔案數據
 const usePlayerProfile = (targetAddress: Address | undefined) => {
     const { chainId } = useAccount();
-    const playerProfileContract = getContract(chainId as 56, 'playerProfile');
+    const playerProfileContract = getContract(chainId === bsc.id ? chainId : bsc.id, 'playerProfile');
 
     // 步驟 1: 從 The Graph 快速獲取 tokenId 和 experience
     const { data: graphData, isLoading: isLoadingGraph, isError } = useQuery({

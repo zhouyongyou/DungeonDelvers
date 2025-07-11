@@ -244,7 +244,8 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     }, [chainId]);
 
     const handleWithdraw = async () => {
-        const playerVaultContract = getContract(chainId as 56, 'playerVault');
+        if (!chainId || chainId !== bsc.id) return;
+        const playerVaultContract = getContract(chainId, 'playerVault');
         if (!playerVaultContract || withdrawableBalance === 0n) return;
         try {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any

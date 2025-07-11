@@ -77,7 +77,7 @@ const ReferralPage: React.FC = () => {
     const currentReferrer = referralData?.referrer;
     const totalCommission = referralData?.totalCommissionPaid ? BigInt(referralData.totalCommissionPaid) : 0n;
 
-    const playerVaultContract = getContract(chainId as 56, 'playerVault');
+    const playerVaultContract = getContract(chainId === bsc.id ? chainId : bsc.id, 'playerVault');
     const { writeContractAsync, isPending: isSettingReferrer } = useWriteContract();
 
     useEffect(() => {
