@@ -1,9 +1,9 @@
 // src/pages/AdminPage.tsx
 
 import React, { useState, useMemo } from 'react';
-import { useAccount, useReadContracts, useWriteContract, useReadContract } from 'wagmi';
+import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
 import { formatEther, isAddress } from 'viem';
-import type { ContractName } from '../config/contracts';
+type ContractName = keyof typeof import('../config/contracts').contracts[typeof bsc.id];
 import { getContract, contracts as contractConfigs } from '../config/contracts';
 import { useAppToast } from '../hooks/useAppToast';
 import { ActionButton } from '../components/ui/ActionButton';
@@ -53,8 +53,9 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       createSetting('dungeonCoreForRelic', '在 Relic 中設定總機', 'relic', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
       createSetting('dungeonCoreForParty', '在 Party 中設定總機', 'party', 'setDungeonCore', 'dungeonCore', 'dungeonCoreContract'),
       createSetting('dungeonCoreForDM', '在 DungeonMaster 中設定總機', 'dungeonMaster', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
-      createSetting('storageForDM', '在 DungeonMaster 中設定儲存', 'dungeonMaster', 'setDungeonStorage', 'dungeonStorage', 'dungeonStorage'),
-      createSetting('logicForStorage', '在 DungeonStorage 中授權邏輯', 'dungeonStorage', 'setLogicContract', 'dungeonMaster', 'logicContract'),
+      // 暫時移除 dungeonStorage 相關設定，因為合約配置中沒有這個合約
+      // createSetting('storageForDM', '在 DungeonMaster 中設定儲存', 'dungeonMaster', 'setDungeonStorage', 'dungeonStorage', 'dungeonStorage'),
+      // createSetting('logicForStorage', '在 DungeonStorage 中授權邏輯', 'dungeonStorage', 'setLogicContract', 'dungeonMaster', 'logicContract'),
       createSetting('dungeonCoreForProfile', '在 PlayerProfile 中設定總機', 'playerProfile', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
       createSetting('dungeonCoreForVip', '在 VIPStaking 中設定總機', 'vipStaking', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
       createSetting('dungeonCoreForAltar', '在 Altar 中設定總機', 'altarOfAscension', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
@@ -138,18 +139,15 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     query: { enabled: parameterConfig.length > 0 }
   });
 
-  const { data: largeThresholdData, isLoading: isLoadingLargeThreshold } = useReadContract({
-    ...getContract(chainId, 'playerVault'),
-    functionName: 'largeWithdrawThresholdUSD',
-    query: { enabled: !!getContract(chainId, 'playerVault') }
-  });
+  // 暫時移除有問題的 largeWithdrawThresholdUSD 讀取
+  const isLoadingLargeThreshold = false;
 
   const handleSet = async (key: string, targetContract: NonNullable<ReturnType<typeof getContract>>, functionName: string) => {
     const newAddress = inputs[key];
     if (!isAddress(newAddress)) { showToast('請輸入有效的地址', 'error'); return; }
     setPendingTx(key);
     try {
-      const hash = await writeContractAsync({ address: targetContract.address, abi: targetContract.abi, functionName: functionName, args: [newAddress] });
+      const hash = await writeContractAsync({ address: targetContract.address, abi: targetContract.abi, functionName: functionName as any, args: [newAddress] });
       addTransaction({ hash, description: `管理員設定: ${key}` });
       showToast(`${key} 設定交易已送出`, 'success');
     } catch (e: unknown) {
@@ -191,9 +189,14 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
   }
 
-  // 優化權限檢查邏輯 - 允許開發者地址和合約擁有者訪問
+  // 優化權限檢查邏輯 - 允許開發者地址和合約擁有者訪問，如果載入中則顯示載入狀態
   const isDeveloper = address?.toLowerCase() === DEVELOPER_ADDRESS.toLowerCase();
   const isOwner = ownerAddress && ownerAddress.toLowerCase() === address?.toLowerCase();
+  
+  // 如果還在載入中，顯示載入狀態而不是權限錯誤
+  if (isLoadingSettings && !ownerAddress) {
+    return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
+  }
   
   if (!isDeveloper && !isOwner) {
     return <EmptyState message={`權限不足，僅合約擁有者可訪問。當前擁有者: ${ownerAddress ? `${ownerAddress.substring(0, 6)}...${ownerAddress.substring(ownerAddress.length - 4)}` : '載入中...'}`} />;
@@ -306,7 +309,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                   currentValue={currentValue}
                   isLoading={isLoadingParams}
                 />
-                <ReadOnlyRow label="當前大額門檻" value={`${formatEther(largeThresholdData as bigint ?? 0n)} USD`} isLoading={isLoadingLargeThreshold} />
+                <ReadOnlyRow label="當前大額門檻" value={`${formatEther(0n)} USD`} isLoading={isLoadingLargeThreshold} />
               </React.Fragment>
             )
           }

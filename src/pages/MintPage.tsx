@@ -219,7 +219,7 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
             <MintResultModal nft={mintingResult} onClose={() => setMintingResult(null)} />
             <div className="w-full h-48 bg-gray-800/50 rounded-lg mb-4 flex items-center justify-center relative overflow-hidden"><p className="text-6xl opacity-80">{type === 'hero' ? '⚔️' : '💎'}</p></div>
             <h3 className="section-title">招募{title}</h3>
-            <div className="flex items-center justify-center gap-2 my-4">{options.map(q => <button key={q} onClick={() => setQuantity(q)} className={`w-12 h-12 rounded-full font-bold text-lg transition-all flex items-center justify-center border-2 ${quantity === q ? 'bg-indigo-500 text-white border-transparent scale-110' : 'bg-white/10 hover:bg-white/20 border-gray-600'}`}>{q}</button>)}</div>
+            <div className="flex items-center justify-center gap-2 my-4">{options.map(q => <button key={q} onClick={() => setQuantity(q)} className={`w-12 h-12 rounded-full font-bold text-lg transition-all flex items-center justify-center border-2 ${quantity === q ? 'bg-indigo-500 text-white border-transparent scale-110' : 'bg-gray-700 hover:bg-gray-600 border-gray-600'}`}>{q}</button>)}</div>
             <div className="w-full my-4">
                 <label className="block text-sm font-medium mb-2 text-center text-gray-400">選擇支付方式</label>
                 <div className="grid grid-cols-2 gap-2 p-1 bg-gray-900/50 rounded-lg">

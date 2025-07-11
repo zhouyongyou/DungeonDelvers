@@ -5,7 +5,6 @@ import { bsc } from 'wagmi/chains';
 import { Buffer } from 'buffer';
 import { getContract, contracts } from '../config/contracts.js';
 import { nftMetadataCache } from '../cache/nftMetadataCache.js';
-import { CacheMetrics } from '../cache/cacheStrategies.js';
 import type { 
     AllNftCollections, 
     BaseNft, 
@@ -109,12 +108,19 @@ export async function fetchMetadata(
     // 🔥 1. 先检查IndexedDB缓存
     const cachedMetadata = await nftMetadataCache.getMetadata(tokenId, contractAddress);
     if (cachedMetadata) {
-        CacheMetrics.recordHit(); // 记录缓存命中
+        // CacheMetrics.recordHit(); // 已移除
         console.log(`${nftType} #${tokenId} 使用緩存數據`);
-        return cachedMetadata;
+        // name 屬性補空字串 fallback
+        return {
+            ...cachedMetadata,
+            name: cachedMetadata.name ?? '',
+            description: cachedMetadata.description ?? '',
+            image: cachedMetadata.image ?? '',
+            attributes: cachedMetadata.attributes ?? []
+        };
     }
     
-    CacheMetrics.recordMiss(); // 记录缓存未命中
+    // CacheMetrics.recordMiss(); // 已移除
     
     try {
         let metadata: Omit<BaseNft, 'id' | 'contractAddress' | 'type'>;

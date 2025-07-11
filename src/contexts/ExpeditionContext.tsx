@@ -61,7 +61,7 @@ export const ExpeditionProvider: React.FC<{ children: ReactNode }> = ({ children
                             className="mx-auto mb-4 rounded-full border-4 border-yellow-600/50 w-36 h-36 object-cover" 
                         />
                         <h3 className={`text-3xl font-bold font-serif mb-2 ${result.success ? 'text-yellow-500' : 'text-gray-600 dark:text-gray-400'}`}>{result.success ? "遠征成功！" : "遠征失敗"}</h3>
-                        <p className="text-lg mb-4 text-gray-700 dark:text-gray-300">{result.success ? "你的隊伍滿載而歸！" : "你的隊伍遭遇了強敵，但勇氣可嘉！"}</p>
+                        <p className="text-lg mb-4 text-gray-300">{result.success ? "你的隊伍滿載而歸！" : "你的隊伍遭遇了強敵，但勇氣可嘉！"}</p>
                         
                         {result.success && (
                             <div className="space-y-2 text-xl bg-black/10 dark:bg-black/20 p-4 rounded-lg">
@@ -76,8 +76,8 @@ export const ExpeditionProvider: React.FC<{ children: ReactNode }> = ({ children
                         
                         {/* ★ 新增：分享按鈕區塊 */}
                         {result.success && (
-                            <div className="mt-6 pt-4 border-t border-gray-300 dark:border-gray-700">
-                                <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">分享你的勝利！</p>
+                                    <div className="mt-6 pt-4 border-t border-gray-700">
+          <p className="text-sm font-bold text-gray-300 mb-2">分享你的勝利！</p>
                                 <div className="flex justify-center gap-4">
                                     <a 
                                         href={shareContent.twitterUrl}

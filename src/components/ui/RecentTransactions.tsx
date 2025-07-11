@@ -18,7 +18,7 @@ const TransactionItem: React.FC<{ tx: Transaction; explorerUrl?: string }> = ({ 
   const { icon, color } = statusInfo[tx.status];
 
   return (
-    <li className="flex items-center justify-between gap-2 py-2 px-3 hover:bg-black/10 dark:hover:bg-white/10 rounded-md">
+            <li className="flex items-center justify-between gap-2 py-2 px-3 hover:bg-white/10 rounded-md">
       <div className="flex items-center gap-2">
         <div className={`flex-shrink-0 w-5 h-5 flex items-center justify-center ${color}`}>
           {icon}
@@ -52,8 +52,8 @@ export const RecentTransactions: React.FC = () => {
   const explorerUrl = chain?.blockExplorers?.default.url;
 
   return (
-    <div className="absolute top-full right-0 mt-2 w-72 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg shadow-2xl rounded-xl border border-black/10 dark:border-white/10 z-50 overflow-hidden">
-      <div className="p-3 border-b border-black/10 dark:border-white/10 flex justify-between items-center">
+          <div className="absolute top-full right-0 mt-2 w-72 bg-gray-800/80 backdrop-blur-lg shadow-2xl rounded-xl border border-white/10 z-50 overflow-hidden">
+              <div className="p-3 border-b border-white/10 flex justify-between items-center">
                     <h4 className="font-bold text-base text-gray-200">最近交易</h4>
         <button
           onClick={clearCompleted}

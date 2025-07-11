@@ -48,6 +48,18 @@ export const nftMetadataCache = {
     return item.data;
   },
   
+  // 獲取 NFT Metadata（兼容舊接口）
+  getMetadata(tokenId: string, contractAddress: string): NFTMetadata | null {
+    const key = `${contractAddress}-${tokenId}`;
+    return this.get(key);
+  },
+  
+  // 快取 NFT Metadata（兼容舊接口）
+  cacheMetadata(tokenId: string, contractAddress: string, metadata: NFTMetadata): void {
+    const key = `${contractAddress}-${tokenId}`;
+    this.set(key, metadata);
+  },
+  
   // 設置快取數據
   set(key: string, data: NFTMetadata): void {
     // 如果快取已滿，刪除最舊的項目

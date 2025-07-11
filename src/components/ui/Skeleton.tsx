@@ -17,7 +17,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   height,
   animation = 'pulse',
 }) => {
-  const baseClasses = 'bg-gray-200 dark:bg-gray-700';
+  const baseClasses = 'bg-gray-700';
   
   const variantClasses: Record<string, string> = {
     text: 'h-4 rounded',
@@ -46,7 +46,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 
 // 預設的骨架屏組件
 export const SkeletonCard: React.FC<{ className?: string }> = ({ className = '' }) => (
-  <div className={`p-4 border rounded-lg bg-white dark:bg-gray-800 ${className}`}>
+      <div className={`p-4 border border-gray-700 rounded-lg bg-gray-800 ${className}`}>
     <div className="flex items-center space-x-4">
       <Skeleton variant="circular" width={40} height={40} />
       <div className="space-y-2 flex-1">
@@ -66,7 +66,7 @@ export const SkeletonCard: React.FC<{ className?: string }> = ({ className = '' 
 export const NFTGridSkeleton: React.FC<{ count?: number }> = ({ count = 6 }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
     {Array.from({ length: count }).map((_, i) => (
-      <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-4 border">
+      <div key={i} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
         <Skeleton variant="rectangular" height={200} className="mb-4" />
         <div className="space-y-2">
           <Skeleton width="80%" />
@@ -85,7 +85,7 @@ export const NFTGridSkeleton: React.FC<{ count?: number }> = ({ count = 6 }) => 
 export const ListSkeleton: React.FC<{ count?: number }> = ({ count = 5 }) => (
   <div className="space-y-4">
     {Array.from({ length: count }).map((_, i) => (
-      <div key={i} className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg border">
+      <div key={i} className="flex items-center space-x-4 p-4 bg-gray-800 rounded-lg border border-gray-700">
         <Skeleton variant="circular" width={48} height={48} />
         <div className="flex-1 space-y-2">
           <Skeleton width="70%" />
@@ -99,7 +99,7 @@ export const ListSkeleton: React.FC<{ count?: number }> = ({ count = 5 }) => (
 
 // 統計卡片骨架屏
 export const StatCardSkeleton: React.FC = () => (
-  <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border">
+  <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
     <div className="flex items-center justify-between">
       <div className="space-y-2">
         <Skeleton width="60%" />
@@ -124,9 +124,9 @@ export const TableSkeleton: React.FC<{ rows?: number; cols?: number }> = ({
   rows = 5, 
   cols = 4 
 }) => (
-  <div className="bg-white dark:bg-gray-800 rounded-lg border overflow-hidden">
+  <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
     {/* 表頭 */}
-    <div className="p-4 border-b bg-gray-50 dark:bg-gray-700">
+    <div className="p-4 border-b border-gray-700 bg-gray-700">
       <div className="flex space-x-4">
         {Array.from({ length: cols }).map((_, i) => (
           <Skeleton key={i} width="20%" height={20} />
@@ -135,7 +135,7 @@ export const TableSkeleton: React.FC<{ rows?: number; cols?: number }> = ({
     </div>
     
     {/* 表格內容 */}
-    <div className="divide-y divide-gray-200 dark:divide-gray-700">
+    <div className="divide-y divide-gray-700">
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="p-4">
           <div className="flex space-x-4">
@@ -158,19 +158,19 @@ export const DashboardSkeleton: React.FC = () => (
     {/* 主要內容區域 */}
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border">
+        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
           <Skeleton width="30%" height={24} className="mb-4" />
           <NFTGridSkeleton count={6} />
         </div>
       </div>
       
       <div className="space-y-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border">
+        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
           <Skeleton width="40%" height={24} className="mb-4" />
           <ListSkeleton count={3} />
         </div>
         
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border">
+        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
           <Skeleton width="35%" height={24} className="mb-4" />
           <div className="space-y-4">
             <Skeleton width="100%" height={20} />

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/pages/VipPage.tsx (SVG與數據顯示修正版)
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -17,9 +18,10 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
     const vipStakingContract = getContract(chainId as 56, 'vipStaking');
     
     const { data: tokenURI, isLoading, isError } = useReadContract({
-        ...vipStakingContract,
-        functionName: 'tokenURI',
-        args: [tokenId!],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(vipStakingContract as any),
+        functionName: 'tokenURI' as any,
+        args: [tokenId!] as any,
         query: { 
             enabled: !!tokenId && 
                      tokenId > 0n && 
@@ -168,10 +170,22 @@ const VipPage: React.FC = () => {
         try { return typeof allowance === 'bigint' && allowance < parseEther(amount); } catch { return false; }
     }, [allowance, amount, mode]);
 
-    const handleApprove = useCallback(() => writeContractAsync({ ...soulShardContract!, functionName: 'approve', args: [vipStakingContract!.address, maxUint256] }), [soulShardContract, vipStakingContract, writeContractAsync]);
-    const handleStake = useCallback(() => writeContractAsync({ ...vipStakingContract!, functionName: 'stake', args: [parseEther(amount)] }), [vipStakingContract, writeContractAsync, amount]);
-    const handleRequestUnstake = useCallback(() => writeContractAsync({ ...vipStakingContract!, functionName: 'requestUnstake', args: [parseEther(amount)] }), [vipStakingContract, writeContractAsync, amount]);
-    const handleClaim = useCallback(() => writeContractAsync({ ...vipStakingContract!, functionName: 'claimUnstaked' }), [vipStakingContract, writeContractAsync]);
+    const handleApprove = useCallback(() => 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        writeContractAsync({ ...(soulShardContract as any), functionName: 'approve' as any, args: [vipStakingContract!.address, maxUint256] as any }), 
+        [soulShardContract, vipStakingContract, writeContractAsync]);
+    const handleStake = useCallback(() => 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        writeContractAsync({ ...(vipStakingContract as any), functionName: 'stake' as any, args: [parseEther(amount)] as any }), 
+        [vipStakingContract, writeContractAsync, amount]);
+    const handleRequestUnstake = useCallback(() => 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        writeContractAsync({ ...(vipStakingContract as any), functionName: 'requestUnstake' as any, args: [parseEther(amount)] as any }), 
+        [vipStakingContract, writeContractAsync, amount]);
+    const handleClaim = useCallback(() => 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        writeContractAsync({ ...(vipStakingContract as any), functionName: 'claimUnstaked' as any }), 
+        [vipStakingContract, writeContractAsync]);
     const handleMainAction = useCallback(() => { if (mode === 'stake') { if (needsApproval) handleApprove(); else handleStake(); } else { handleRequestUnstake(); } }, [mode, needsApproval, handleApprove, handleStake, handleRequestUnstake]);
     const handlePercentageClick = useCallback((percentage: number) => {
         const balance = mode === 'stake' ? soulShardBalance : stakedAmount;

@@ -154,10 +154,10 @@ const useTaxParams = () => {
     const { address, chainId } = useAccount();
     const isChainSupported = chainId === bsc.id;
 
-    const dungeonCoreContract = getContract(isChainSupported ? chainId : undefined, 'dungeonCore');
-    const playerVaultContract = getContract(isChainSupported ? chainId : undefined, 'playerVault');
-    const vipStakingContract = getContract(isChainSupported ? chainId : undefined, 'vipStaking');
-    const playerProfileContract = getContract(isChainSupported ? chainId : undefined, 'playerProfile');
+    const dungeonCoreContract = getContract(isChainSupported ? chainId! : bsc.id, 'dungeonCore');
+    const playerVaultContract = getContract(isChainSupported ? chainId! : bsc.id, 'playerVault');
+    const vipStakingContract = getContract(isChainSupported ? chainId! : bsc.id, 'vipStaking');
+    const playerProfileContract = getContract(isChainSupported ? chainId! : bsc.id, 'playerProfile');
     
     // 這個 Hook 現在只負責獲取合約層級的設定，不再獲取玩家個人數據
     const contractsToRead = useMemo(() => {
@@ -198,7 +198,8 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
 
     const withdrawableBalance = stats.withdrawableBalance;
 
-    const { data: withdrawableBalanceInUSD } = useReadContract({ ...dungeonCoreContract, functionName: 'getSoulShardAmountForUSD', args: [withdrawableBalance], query: { enabled: !!dungeonCoreContract && withdrawableBalance > 0n } });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: withdrawableBalanceInUSD } = useReadContract({ ...(dungeonCoreContract as any), functionName: 'getSoulShardAmountForUSD' as any, args: [withdrawableBalance] as any, query: { enabled: !!dungeonCoreContract && withdrawableBalance > 0n } });
     
     const currentTaxRate = useMemo(() => {
         if (!taxParams || !stats) return 0;
@@ -246,7 +247,8 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
         const playerVaultContract = getContract(chainId as 56, 'playerVault');
         if (!playerVaultContract || withdrawableBalance === 0n) return;
         try {
-            const hash = await writeContractAsync({ ...playerVaultContract, functionName: 'withdraw', args: [withdrawableBalance] });
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const hash = await writeContractAsync({ ...(playerVaultContract as any), functionName: 'withdraw' as any, args: [withdrawableBalance] as any });
             addTransaction({ hash, description: '從金庫提領 $SoulShard' });
         } catch(e: unknown) { 
             const error = e as { shortMessage?: string };

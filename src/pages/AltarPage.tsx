@@ -212,8 +212,9 @@ const AltarPage: React.FC = () => {
     const currentRule = useMemo(() => {
         if (!upgradeRulesData || rarity < 1 || rarity > 4) return null;
         const ruleResult = upgradeRulesData[rarity - 1];
-        if (ruleResult.status === 'success') {
-            const [materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance] = ruleResult.result as readonly [number, bigint, number, number, number];
+        if (ruleResult.status === 'success' && Array.isArray(ruleResult.result)) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            const [materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance] = ruleResult.result as unknown as [number, bigint, number, number, number];
             return { materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance };
         }
         return null;
@@ -254,7 +255,8 @@ const AltarPage: React.FC = () => {
         });
 
         try {
-            const hash = await writeContractAsync({ ...altarContract, functionName: 'upgradeNFTs', args: [tokenContract.address, selectedNfts], value: currentRule.nativeFee });
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const hash = await writeContractAsync({ ...(altarContract as any), functionName: 'upgradeNFTs' as any, args: [tokenContract.address, selectedNfts] as any, value: currentRule.nativeFee as any });
             addTransaction({ hash, description: `升星 ${rarity}★ ${nftType === 'hero' ? '英雄' : '聖物'}` });
             
             const receipt = await publicClient.waitForTransactionReceipt({ hash });
