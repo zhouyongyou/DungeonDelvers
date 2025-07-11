@@ -1,24 +1,20 @@
 {
   "name": "dungeon-delvers",
-  "license": "UNLICENSED",
+  "version": "1.2.4",
+  "description": "Dungeon Delvers Subgraph",
   "scripts": {
     "codegen": "graph codegen",
     "build": "graph build",
-    "deploy": "graph deploy --node https://api.studio.thegraph.com/deploy/ dungeon-delvers",
+    "deploy": "graph deploy --studio dungeon-delvers",
     "create-local": "graph create --node http://localhost:8020/ dungeon-delvers",
     "remove-local": "graph remove --node http://localhost:8020/ dungeon-delvers",
     "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 dungeon-delvers",
-    "test": "graph test",
-    "sync-addresses": "node scripts/sync-addresses.js",
-    "diagnose": "node scripts/diagnose-sync-issues.js",
-    "prebuild": "npm run sync-addresses"
-  },
-  "dependencies": {
-    "@graphprotocol/graph-cli": "0.97.1",
-    "@graphprotocol/graph-ts": "^0.38.1"
+    "test": "jest"
   },
   "devDependencies": {
-    "matchstick-as": "0.6.0",
-    "js-yaml": "^4.1.0"
+    "@graphprotocol/graph-cli": "0.90.0",
+    "@graphprotocol/graph-ts": "0.35.0",
+    "jest": "^29.7.0",
+    "typescript": "^5.3.3"
   }
 }

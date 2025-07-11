@@ -11,7 +11,7 @@ npm install
 if [ ! -f .env ]; then
     echo "❌ .env 文件不存在，創建示例文件..."
     cat > .env << EOF
-VITE_THE_GRAPH_STUDIO_API_URL=https://api.studio.thegraph.com/query/your-subgraph-url
+VITE_THE_GRAPH_STUDIO_API_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/1.2.4
 PORT=3001
 EOF
     echo "⚠️  請編輯 .env 文件並設置正確的 GraphQL URL"

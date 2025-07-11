@@ -132,7 +132,7 @@ async function diagnoseMetadata() {
     const subgraphResponse = await new Promise((resolve, reject) => {
       const req = https.request({
         hostname: 'api.studio.thegraph.com',
-        path: '/query/115633/dungeon-delvers/version/1.2.3',
+        path: '/query/115633/dungeon-delvers/1.2.4',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
