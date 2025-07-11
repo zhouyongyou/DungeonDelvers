@@ -3,7 +3,7 @@
 import { createPublicClient, http, type Address } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { Buffer } from 'buffer';
-import { getContract, contracts, type ContractName } from '../config/contracts.js';
+import { getContract, contracts } from '../config/contracts.js';
 import { nftMetadataCache } from '../cache/nftMetadataCache.js';
 import { CacheMetrics } from '../cache/cacheStrategies.js';
 import type { 
@@ -82,7 +82,7 @@ const getClient = (chainId: number) => {
     const chain = chainId === bsc.id ? bsc : null;
     if (!chain) throw new Error("Unsupported chain for client creation");
     
-    const rpcUrl = import.meta.env.VITE_ALCHEMY_BSC_MAINNET_RPC_URL || 'https://bsc-dataseed1.binance.org/';
+    const rpcUrl = 'https://bsc-dataseed1.binance.org/';
     return createPublicClient({ chain, transport: http(rpcUrl) });
 };
 
@@ -399,7 +399,7 @@ async function parseNfts<T extends AssetWithTokenId>(
 ): Promise<Array<HeroNft | RelicNft | PartyNft | VipNft>> {
     if (!assets || assets.length === 0) return [];
 
-    const contractKeyMap: Record<NftType, ContractName> = {
+    const contractKeyMap: Record<NftType, keyof typeof contracts[typeof bsc.id]> = {
         hero: 'hero',
         relic: 'relic',
         party: 'party',
