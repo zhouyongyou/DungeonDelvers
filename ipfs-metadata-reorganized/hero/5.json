@@ -1,0 +1,25 @@
+{
+  "name": "Dungeon Delvers Hero",
+  "description": "A mythical warrior of unparalleled strength. This Legendary hero is the ultimate force in dungeon exploration.",
+  "image": "ipfs://bafybeigpli7ddzkuwpvlaks7jvimvkzlm4z6qo76la7wp522jmhrhpubgm/images/hero/hero-5.png",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": 5,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Rarity Name",
+      "value": "Legendary"
+    },
+    {
+      "trait_type": "Type",
+      "value": "Hero"
+    },
+    {
+      "trait_type": "Base Power",
+      "value": 227,
+      "display_type": "number"
+    }
+  ]
+}

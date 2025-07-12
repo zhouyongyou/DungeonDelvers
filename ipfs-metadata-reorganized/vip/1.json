@@ -1,0 +1,15 @@
+{
+  "name": "Dungeon Delvers VIP",
+  "description": "A prestigious VIP membership that provides exclusive benefits and reduced transaction fees in the Dungeon Delvers ecosystem.",
+  "image": "ipfs://bafybeigpli7ddzkuwpvlaks7jvimvkzlm4z6qo76la7wp522jmhrhpubgm/images/vip/vip.png",
+  "attributes": [
+    {
+      "trait_type": "Type",
+      "value": "VIP Membership"
+    },
+    {
+      "trait_type": "Benefits",
+      "value": "Reduced fees, exclusive access"
+    }
+  ]
+}

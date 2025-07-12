@@ -1,0 +1,25 @@
+{
+  "name": "Dungeon Delvers Relic",
+  "description": "A powerful magical artifact with substantial storage capacity. This Rare relic is highly sought after by experienced adventurers.",
+  "image": "ipfs://bafybeigpli7ddzkuwpvlaks7jvimvkzlm4z6qo76la7wp522jmhrhpubgm/images/relic/relic-3.png",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": 3,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Rarity Name",
+      "value": "Rare"
+    },
+    {
+      "trait_type": "Type",
+      "value": "Relic"
+    },
+    {
+      "trait_type": "Base Capacity",
+      "value": 3,
+      "display_type": "number"
+    }
+  ]
+}

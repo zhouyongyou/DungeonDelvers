@@ -135,12 +135,36 @@ export async function fetchMetadata(
             console.log(`${nftType} #${tokenId} 從 IPFS 載入元數據`);
             // 🔥 優化IPFS載入 - 使用多個網關並行請求
             const ipfsHash = uri.replace('ipfs://', '');
+            
+            // 檢查是否包含子路徑（如 /1, /2 等）
+            const hasSubPath = ipfsHash.includes('/');
+            const baseHash = hasSubPath ? ipfsHash.split('/')[0] : ipfsHash;
+            const subPath = hasSubPath ? ipfsHash.substring(ipfsHash.indexOf('/')) : '';
+            
+            console.log(`IPFS Hash: ${ipfsHash}, Base: ${baseHash}, SubPath: ${subPath}`);
+            
             const gateways = [
                 `https://ipfs.io/ipfs/${ipfsHash}`,
                 `https://gateway.pinata.cloud/ipfs/${ipfsHash}`,
                 `https://cloudflare-ipfs.com/ipfs/${ipfsHash}`,
-                `https://dweb.link/ipfs/${ipfsHash}` // 新增額外的網關
+                `https://ipfs.infura.io/ipfs/${ipfsHash}`,
+                `https://gateway.ipfs.io/ipfs/${ipfsHash}`,
+                `https://ipfs.fleek.co/ipfs/${ipfsHash}`,
+                `https://cf-ipfs.com/ipfs/${ipfsHash}`,
+                `https://4everland.io/ipfs/${ipfsHash}`,
+                `https://w3s.link/ipfs/${ipfsHash}`,
+                `https://nftstorage.link/ipfs/${ipfsHash}`
             ];
+            
+            // 如果有子路徑，也嘗試載入根目錄
+            if (hasSubPath) {
+                gateways.push(
+                    `https://ipfs.io/ipfs/${baseHash}${subPath}`,
+                    `https://gateway.pinata.cloud/ipfs/${baseHash}${subPath}`,
+                    `https://cloudflare-ipfs.com/ipfs/${baseHash}${subPath}`
+                );
+            }
+            
             metadata = await fetchWithMultipleGateways(gateways, timeout);
         } else {
             console.log(`${nftType} #${tokenId} 從 HTTP 載入元數據: ${uri}`);
@@ -297,6 +321,20 @@ async function fetchWithMultipleGateways(gateways: string[], timeout: number): P
         
         const totalTime = Date.now() - startTime;
         console.error(`所有 IPFS 網關都失敗 (${totalTime}ms): ${errors}`);
+        
+        // 提供更詳細的錯誤信息
+        const errorDetails = {
+            message: `所有IPFS網關都失敗: ${errors}`,
+            totalTime,
+            attemptedGateways: gateways.length,
+            failedGateways: results.filter(r => r.status === 'rejected').length,
+            errors: results.filter(r => r.status === 'rejected').map((r, index) => ({
+                gateway: gateways[index],
+                error: r.reason?.message || '未知錯誤'
+            }))
+        };
+        
+        console.error('IPFS 載入詳細錯誤:', errorDetails);
         throw new Error(`所有IPFS網關都失敗: ${errors}`);
         
     } catch (error) {

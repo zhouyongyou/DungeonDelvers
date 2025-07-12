@@ -1,0 +1,25 @@
+{
+  "name": "Dungeon Delvers Relic",
+  "description": "A basic magical artifact that provides minimal storage capacity for heroes. This Common relic is perfect for beginners.",
+  "image": "ipfs://bafybeigpli7ddzkuwpvlaks7jvimvkzlm4z6qo76la7wp522jmhrhpubgm/images/relic/relic-1.png",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": 1,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Rarity Name",
+      "value": "Common"
+    },
+    {
+      "trait_type": "Type",
+      "value": "Relic"
+    },
+    {
+      "trait_type": "Base Capacity",
+      "value": 1,
+      "display_type": "number"
+    }
+  ]
+}

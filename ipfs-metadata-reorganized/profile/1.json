@@ -1,0 +1,15 @@
+{
+  "name": "Dungeon Delvers Profile",
+  "description": "A unique player profile that tracks your progress and achievements in the Dungeon Delvers universe.",
+  "image": "ipfs://bafybeigpli7ddzkuwpvlaks7jvimvkzlm4z6qo76la7wp522jmhrhpubgm/images/profile/profile.png",
+  "attributes": [
+    {
+      "trait_type": "Type",
+      "value": "Player Profile"
+    },
+    {
+      "trait_type": "Purpose",
+      "value": "Progress tracking"
+    }
+  ]
+}
