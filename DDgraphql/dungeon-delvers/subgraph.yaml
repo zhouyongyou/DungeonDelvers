@@ -8,7 +8,7 @@ dataSources:
     name: Hero
     network: bsc
     source:
-      address: "0xE22C45AcC80BFAEDa4F2Ec17352301a37Fbc0741"
+      address: "0x2a046140668cBb8F598ff3852B08852A8EB23b6a"
       abi: Hero
       startBlock: 53746925
     mapping:
@@ -36,7 +36,7 @@ dataSources:
     name: Relic
     network: bsc
     source:
-      address: "0x5b03165dBD05c82480b69b94F59d0FE942ED9A36"
+      address: "0x95F005e2e0d38381576DA36c5CA4619a87da550E"
       abi: Relic
       startBlock: 53746925
     mapping:
@@ -64,7 +64,7 @@ dataSources:
     name: Party
     network: bsc
     source:
-      address: "0xaE13E9FE44aB58D6d43014A32Cbd565bAEf01C01"
+      address: "0x11FB68409222B53b04626d382d7e691e640A1DcD"
       abi: Party
       startBlock: 53746925
     mapping:
@@ -92,7 +92,7 @@ dataSources:
     name: PlayerProfile
     network: bsc
     source:
-      address: "0x21753CDc15804be66B4792F75C23Fc828A26203a"
+      address: "0x43a9BE911f1074788A00cE8e6E00732c7364c1F4"
       abi: PlayerProfile
       startBlock: 53746925
     mapping:
@@ -114,7 +114,7 @@ dataSources:
     name: VIPStaking
     network: bsc
     source:
-      address: "0x30a5374bcc612698B4eF1Df1348a21F18cbb3c9D"
+      address: "0xefdfF583944A2c6318d1597AD1E41159fCd8F6dB"
       abi: VIPStaking
       startBlock: 53746925
     mapping:
@@ -138,7 +138,7 @@ dataSources:
     name: DungeonMaster
     network: bsc
     source:
-      address: "0x00C5467a1eC8DF143bCFAfD7b6acCbe63c8d4A35"
+      address: "0xd14A5eFFc45D0131af3eb876992fC6eD9683f5B0"
       abi: DungeonMaster
       startBlock: 53746925
     mapping:
@@ -162,7 +162,7 @@ dataSources:
     name: PlayerVault
     network: bsc
     source:
-      address: "0x2b010B3D6fE8fD7B1639A5176ddC26BDE29b8D2c"
+      address: "0x6187DBCcb58088E414437A6b8d58a42cD2BD1ec4"
       abi: PlayerVault
       startBlock: 53746925
     mapping:
@@ -186,7 +186,7 @@ dataSources:
     name: AltarOfAscension
     network: bsc
     source:
-      address: "0x602D86ea9178064128073F8fedF10Aa35b348A10"
+      address: "0x83a7fB85E0892A67041FcFc4c1F0F1111e5aB3DA"
       abi: AltarOfAscension
       startBlock: 53746925
     mapping:
