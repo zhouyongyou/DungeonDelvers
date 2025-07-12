@@ -17,6 +17,9 @@ export const ENV = {
   // 開發者地址
   DEVELOPER_ADDRESS: import.meta.env.VITE_DEVELOPER_ADDRESS || '0x10925A7138649C7E1794CE646182eeb5BF8ba647',
 
+  // WalletConnect 設定
+  WALLET_CONNECT_PROJECT_ID: import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID,
+
   // 開發環境標識
   IS_DEV: import.meta.env.DEV,
   IS_PROD: import.meta.env.PROD,
@@ -26,6 +29,9 @@ export const ENV = {
 export function validateEnvironment(): void {
   if (!ENV.THE_GRAPH_API_URL) {
     console.warn('VITE_THE_GRAPH_STUDIO_API_URL is not set, using fallback URL');
+  }
+  if (!ENV.WALLET_CONNECT_PROJECT_ID) {
+    console.warn('VITE_WALLET_CONNECT_PROJECT_ID is not set');
   }
 }
 

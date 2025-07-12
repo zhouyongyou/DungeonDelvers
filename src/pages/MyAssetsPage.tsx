@@ -1,493 +1,137 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// src/pages/MyAssetsPage.tsx (組隊UI優化版)
-
-import React, { useState, useMemo } from 'react';
-import { useAccount, useReadContract, useWriteContract } from 'wagmi';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchAllOwnedNfts } from '../api/nfts';
-import { NftCard } from '../components/ui/NftCard';
-import { ActionButton } from '../components/ui/ActionButton';
-import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { EmptyState } from '../components/ui/EmptyState';
-import { getContract } from '../config/contracts';
-import { useAppToast } from '../hooks/useAppToast';
-import { useTransactionStore } from '../stores/useTransactionStore';
-import type { HeroNft, RelicNft, NftType } from '../types/nft';
-import { formatEther } from 'viem';
+import React from 'react';
+import { useAccount, useChainId, useReadContract } from 'wagmi';
 import { bsc } from 'wagmi/chains';
-
-// =================================================================
-// Section: 子元件 (TeamBuilder) - 優化版
-// =================================================================
-
-interface TeamBuilderProps {
-  heroes: HeroNft[];
-  relics: RelicNft[];
-  onCreateParty: (heroIds: bigint[], relicIds: bigint[]) => void;
-  isCreating: boolean;
-  platformFee?: bigint;
-  isLoadingFee: boolean;
-  isHeroAuthorized: boolean;
-  isRelicAuthorized: boolean;
-  onAuthorizeHero: () => void;
-  onAuthorizeRelic: () => void;
-  isAuthorizing: boolean;
-}
-
-const TeamBuilder: React.FC<TeamBuilderProps> = ({ 
-  heroes, 
-  relics, 
-  onCreateParty, 
-  isCreating, 
-  platformFee, 
-  isLoadingFee,
-  isHeroAuthorized,
-  isRelicAuthorized,
-  onAuthorizeHero,
-  onAuthorizeRelic,
-  isAuthorizing
-}: TeamBuilderProps) => {
-    const [selectedHeroes, setSelectedHeroes] = useState<bigint[]>([]);
-    const [selectedRelics, setSelectedRelics] = useState<bigint[]>([]);
-    const { showToast } = useAppToast();
-
-    const { totalPower, totalCapacity } = useMemo(() => {
-        const power = selectedHeroes.reduce((acc: number, id: bigint) => {
-            const hero = heroes.find(h => h.id === id);
-            return acc + (hero ? Number(hero.power) : 0);
-        }, 0);
-        const capacity = selectedRelics.reduce((acc: number, id: bigint) => {
-            const relic = relics.find(r => r.id === id);
-            return acc + (relic ? Number(relic.capacity) : 0);
-        }, 0);
-        return { totalPower: power, totalCapacity: capacity };
-    }, [selectedHeroes, selectedRelics, heroes, relics]);
-
-    const toggleSelection = (id: bigint, type: 'hero' | 'relic') => {
-        if (type === 'relic') {
-            const list = selectedRelics;
-            const setList = setSelectedRelics;
-            const limit = 5;
-
-            if (list.includes(id)) {
-                setList(list.filter(i => i !== id));
-            } else if (list.length < limit) {
-                setList([...list, id]);
-            } else {
-                showToast(`最多只能選擇 ${limit} 個聖物`, 'error');
-            }
-        } else { // type === 'hero'
-            const list = selectedHeroes;
-            const setList = setSelectedHeroes;
-            const limit = totalCapacity;
-
-            if (list.includes(id)) {
-                setList(list.filter(i => i !== id));
-            } else if (totalCapacity === 0) {
-                showToast('請先選擇聖物以決定隊伍容量', 'info');
-            } else if (list.length < limit) {
-                setList([...list, id]);
-            } else {
-                showToast(`英雄數量已達隊伍容量上限 (${limit})`, 'error');
-            }
-        }
-    };
-
-    // 一鍵選擇最強英雄
-    const handleAutoSelectHeroes = () => {
-        if (totalCapacity === 0) {
-            showToast('請先選擇聖物以決定隊伍容量', 'info');
-            return;
-        }
-        
-        const sortedHeroes = [...heroes].sort((a, b) => b.power - a.power);
-        const selected = sortedHeroes.slice(0, totalCapacity).map(h => h.id);
-        setSelectedHeroes(selected);
-        showToast(`已自動選擇 ${selected.length} 個最強英雄`, 'success');
-    };
-
-    // 一鍵選擇最大容量聖物
-    const handleAutoSelectRelics = () => {
-        const sortedRelics = [...relics].sort((a, b) => b.capacity - a.capacity);
-        const selected = sortedRelics.slice(0, 5).map(r => r.id);
-        setSelectedRelics(selected);
-        showToast(`已自動選擇 ${selected.length} 個最大容量聖物`, 'success');
-    };
-
-    const canCreate = selectedHeroes.length > 0 && selectedRelics.length > 0 && selectedHeroes.length <= totalCapacity && isHeroAuthorized && isRelicAuthorized;
-
-    return (
-        <div className="card-bg p-4 md:p-6 rounded-2xl shadow-xl">
-            <h3 className="section-title">創建新隊伍</h3>
-            <p className="text-sm text-gray-400 mb-4">選擇英雄和聖物來組建你的冒險隊伍。隊伍的英雄數量不能超過聖物的總容量。</p>
-            
-            {/* 創建隊伍按鈕 - 移到最上方 */}
-            <div className="flex justify-center mb-6">
-                <ActionButton 
-                    onClick={() => onCreateParty(selectedHeroes, selectedRelics)} 
-                    isLoading={isCreating}
-                    disabled={!canCreate || isCreating}
-                    className="w-full sm:w-64 h-12 text-lg"
-                >
-                    {!isHeroAuthorized || !isRelicAuthorized ? '請先完成授權' : '創建隊伍'}
-                </ActionButton>
-            </div>
-            
-            {/* 狀態顯示 */}
-            <div className="flex flex-col sm:flex-row justify-between items-center bg-gray-900/50 p-4 rounded-lg mb-6">
-                <div className="flex gap-6 text-center">
-                    <div>
-                        <p className="text-sm text-gray-400">總戰力</p>
-                        <p className="text-2xl font-bold text-indigo-400">{totalPower}</p>
-                    </div>
-                    <div>
-                        <p className="text-sm text-gray-400">英雄/容量</p>
-                        <p className={`text-2xl font-bold ${selectedHeroes.length > totalCapacity ? 'text-red-500' : 'text-teal-400'}`}>
-                            {selectedHeroes.length}/{totalCapacity}
-                        </p>
-                    </div>
-                </div>
-                <div className="flex flex-col items-center sm:items-end mt-4 sm:mt-0">
-                    <p className="text-xs text-yellow-400 mb-1 text-center sm:text-right">注意：創建後資產將被綁定，此操作目前不可逆。</p>
-                    <p className="text-xs text-gray-500 mb-2">費用: {isLoadingFee ? '讀取中...' : formatEther(platformFee ?? 0n)} BNB</p>
-                </div>
-            </div>
-
-            {/* 錢包授權說明 */}
-            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mb-4">
-                <div className="flex items-start gap-2">
-                    <div className="flex-shrink-0 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
-                        <span className="text-white text-xs font-bold">!</span>
-                    </div>
-                    <p className="text-xs text-blue-200">
-                        授權彈窗的語言由您的錢包設定決定。授權完成後狀態會自動更新，約需3-10秒。
-                    </p>
-                </div>
-            </div>
-
-            {/* 授權按鈕區域 - 調整順序：先聖物後英雄 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div className="flex items-center gap-3">
-                    <ActionButton 
-                        onClick={onAuthorizeRelic}
-                        isLoading={isAuthorizing}
-                        disabled={isRelicAuthorized || isAuthorizing}
-                        className={`h-12 flex-1 ${isRelicAuthorized ? 'bg-green-600' : 'bg-yellow-600'}`}
-                    >
-                        {isRelicAuthorized ? '✓ 聖物已授權' : (isAuthorizing ? '授權中...' : '授權聖物')}
-                    </ActionButton>
-                    <ActionButton 
-                        onClick={handleAutoSelectRelics}
-                        disabled={relics.length === 0}
-                        className="h-12 px-4 bg-blue-600 hover:bg-blue-500"
-                    >
-                        一鍵選擇
-                    </ActionButton>
-                </div>
-                <div className="flex items-center gap-3">
-                    <ActionButton 
-                        onClick={onAuthorizeHero}
-                        isLoading={isAuthorizing}
-                        disabled={isHeroAuthorized || isAuthorizing}
-                        className={`h-12 flex-1 ${isHeroAuthorized ? 'bg-green-600' : 'bg-yellow-600'}`}
-                    >
-                        {isHeroAuthorized ? '✓ 英雄已授權' : (isAuthorizing ? '授權中...' : '授權英雄')}
-                    </ActionButton>
-                    <ActionButton 
-                        onClick={handleAutoSelectHeroes}
-                        disabled={heroes.length === 0 || totalCapacity === 0}
-                        className="h-12 px-4 bg-blue-600 hover:bg-blue-500"
-                    >
-                        一鍵選擇
-                    </ActionButton>
-                </div>
-            </div>
-
-            <div className="flex flex-col md:grid md:grid-cols-2 gap-6 mb-4">
-                <div>
-                    <h4 className="font-semibold text-lg mb-2 text-white">選擇聖物 (上限: 5)</h4>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
-                        {relics.length > 0 ? relics.map(relic => (
-                            <div 
-                                key={`select-${relic.id}`}
-                                onClick={() => toggleSelection(relic.id, 'relic')}
-                                className={`cursor-pointer transition-all duration-200 ${
-                                    selectedRelics.includes(relic.id) 
-                                        ? 'ring-2 ring-yellow-400 scale-105' 
-                                        : 'hover:scale-105'
-                                }`}
-                            >
-                                <NftCard 
-                                    nft={relic} 
-                                    selected={selectedRelics.includes(relic.id)}
-                                />
-                            </div>
-                        )) : (
-                             <div className="col-span-full">
-                                <EmptyState message="沒有可用的聖物">
-                                     <a href="#/mint">
-                                        <ActionButton className="mt-2">前往鑄造</ActionButton>
-                                    </a>
-                                </EmptyState>
-                            </div>
-                        )}
-                    </div>
-                </div>
-                <div>
-                    <h4 className="font-semibold text-lg mb-2 text-white">選擇英雄 (上限: {totalCapacity})</h4>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
-                        {heroes.length > 0 ? heroes.map(hero => (
-                            <div 
-                                key={`select-${hero.id}`}
-                                onClick={() => toggleSelection(hero.id, 'hero')}
-                                className={`cursor-pointer transition-all duration-200 ${
-                                    selectedHeroes.includes(hero.id) 
-                                        ? 'ring-2 ring-yellow-400 scale-105' 
-                                        : 'hover:scale-105'
-                                }`}
-                            >
-                                <NftCard 
-                                    nft={hero} 
-                                    selected={selectedHeroes.includes(hero.id)}
-                                />
-                            </div>
-                        )) : (
-                            <div className="col-span-full">
-                                <EmptyState message="沒有可用的英雄">
-                                    <a href="#/mint">
-                                        <ActionButton className="mt-2">前往鑄造</ActionButton>
-                                    </a>
-                                </EmptyState>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-
-        </div>
-    );
-};
-
-// =================================================================
-// Section: 主頁面元件
-// =================================================================
+import { Card } from '../components/ui/Card';
+import { ConnectWallet } from '../components/ui/ConnectWallet';
+import { getContractConfig } from '../config/contracts';
 
 const MyAssetsPage: React.FC = () => {
-    const { address, chainId } = useAccount();
-    const { showToast } = useAppToast();
-    const { addTransaction } = useTransactionStore();
-    const queryClient = useQueryClient();
+  const { address, isConnected } = useAccount();
+  const chainId = useChainId();
 
-    const [filter, setFilter] = useState<NftType>('party');
-    const [isAuthorizing, setIsAuthorizing] = useState(false);
+  // 讀取各種 NFT 的餘額
+  const { data: heroBalance } = useReadContract({
+    ...getContractConfig(chainId, 'hero'),
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
 
-    // Move all hooks to be called before any early returns
-    const heroContract = useMemo(() => chainId ? getContract(bsc.id, 'hero') : null, [chainId]);
-    const relicContract = useMemo(() => chainId ? getContract(bsc.id, 'relic') : null, [chainId]);
-    const partyContract = useMemo(() => chainId ? getContract(bsc.id, 'party') : null, [chainId]);
+  const { data: relicBalance } = useReadContract({
+    ...getContractConfig(chainId, 'relic'),
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
 
-    const { writeContractAsync, isPending: isTxPending } = useWriteContract();
+  const { data: partyBalance } = useReadContract({
+    ...getContractConfig(chainId, 'party'),
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
 
-    const { data: nfts, isLoading, refetch } = useQuery({
-        queryKey: ['ownedNfts', address, chainId],
-        queryFn: () => fetchAllOwnedNfts(address!, chainId!),
-        enabled: !!address && !!chainId,
-        
-        // 🔥 NFT缓存策略 - 内联配置以避免部署问题
-        staleTime: 1000 * 60 * 30, // 30分钟内新鲜
-        gcTime: 1000 * 60 * 60 * 2, // 2小时垃圾回收
-        refetchOnWindowFocus: false,
-        refetchOnMount: false,
-        refetchOnReconnect: 'always',
-        retry: 3, // 增加重試次數
-        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // 指數退避
-    });
-    
-    const { data: platformFee, isLoading: isLoadingFee } = useReadContract({
-        ...(partyContract as any),
-        functionName: 'platformFee' as any,
-        query: { enabled: !!partyContract }
-    });
-
-    // 檢查授權狀態
-    const { data: isHeroAuthorized } = useReadContract({
-        ...(heroContract as any),
-        functionName: 'isApprovedForAll' as any,
-        args: [address!, partyContract!.address] as any,
-        query: { enabled: !!address && !!heroContract && !!partyContract }
-    });
-
-    const { data: isRelicAuthorized } = useReadContract({
-        ...(relicContract as any),
-        functionName: 'isApprovedForAll' as any,
-        args: [address!, partyContract!.address] as any,
-        query: { enabled: !!address && !!relicContract && !!partyContract }
-    });
-
-    const { availableHeroes, availableRelics } = useMemo(() => {
-        if (!nfts) return { availableHeroes: [] as HeroNft[], availableRelics: [] as RelicNft[] };
-        
-        const heroIdsInParties = new Set(nfts.parties.flatMap((p: { heroIds: bigint[] }) => p.heroIds.map((id: bigint) => id.toString())));
-        const relicIdsInParties = new Set(nfts.parties.flatMap((p: { relicIds: bigint[] }) => p.relicIds.map((id: bigint) => id.toString())));
-
-        const sortHeroNfts = (nfts: HeroNft[]) => [...nfts].sort((a, b) => b.power - a.power);
-        const sortRelicNfts = (nfts: RelicNft[]) => [...nfts].sort((a, b) => b.capacity - a.capacity);
-
-        return {
-            availableHeroes: sortHeroNfts(nfts.heros.filter((h: HeroNft) => !heroIdsInParties.has(h.id.toString()))),
-            availableRelics: sortRelicNfts(nfts.relics.filter((r: RelicNft) => !relicIdsInParties.has(r.id.toString()))),
-        };
-    }, [nfts]);
-
-    const filteredNfts = useMemo(() => {
-        if (!nfts) return [];
-        
-        switch (filter) {
-            case 'hero': 
-                // 英雄按戰力排序
-                return [...nfts.heros].sort((a, b) => b.power - a.power);
-            case 'relic': 
-                // 聖物按容量排序
-                return [...nfts.relics].sort((a, b) => b.capacity - a.capacity);
-            case 'party': 
-                // 隊伍按稀有度排序
-                return [...nfts.parties].sort((a, b) => b.partyRarity - a.partyRarity);
-            case 'vip': 
-                return nfts.vipCards;
-            default: 
-                return [];
-        }
-    }, [filter, nfts]);
-
-    // Early return after all hooks
-    if (!chainId || chainId !== bsc.id) {
-        return <div className="flex justify-center items-center h-64"><EmptyState message="請連接到支援的網路 (BSC) 以檢視您的資產。" /></div>;
-    }
-
-    const handleAuthorizeHero = async () => {
-        if (!heroContract || !partyContract) return;
-        setIsAuthorizing(true);
-        try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const hash = await writeContractAsync({ ...(heroContract as any), functionName: 'setApprovalForAll' as any, args: [partyContract.address, true as any] as any });
-            addTransaction({ hash, description: '授權隊伍合約使用英雄' });
-            showToast('英雄授權成功！', 'success');
-        } catch (error: unknown) {
-            const e = error as { message?: string; shortMessage?: string };
-            if (!e.message?.includes('User rejected the request')) {
-                showToast(e.shortMessage || "英雄授權失敗", "error");
-            }
-        } finally {
-            setIsAuthorizing(false);
-        }
-    };
-
-    const handleAuthorizeRelic = async () => {
-        if (!relicContract || !partyContract) return;
-        setIsAuthorizing(true);
-        try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const hash = await writeContractAsync({ ...(relicContract as any), functionName: 'setApprovalForAll' as any, args: [partyContract.address, true as any] as any });
-            addTransaction({ hash, description: '授權隊伍合約使用聖物' });
-            showToast('聖物授權成功！', 'success');
-        } catch (error: unknown) {
-            const e = error as { message?: string; shortMessage?: string };
-            if (!e.message?.includes('User rejected the request')) {
-                showToast(e.shortMessage || "聖物授權失敗", "error");
-            }
-        } finally {
-            setIsAuthorizing(false);
-        }
-    };
-
-    const handleCreateParty = async (heroIds: bigint[], relicIds: bigint[]) => {
-        if (!partyContract || !address) return;
-        
-        try {
-            const fee = typeof platformFee === 'bigint' ? platformFee : 0n;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const hash = await writeContractAsync({ ...(partyContract as any), functionName: 'createParty' as any, args: [heroIds as any, relicIds as any] as any, value: fee as any });
-            addTransaction({ hash, description: `創建新隊伍` });
-            
-            // 延遲失效緩存，等待 GraphQL 同步
-            setTimeout(() => {
-                queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
-            }, 3000); // 3秒後重新獲取數據
-            
-            // 立即顯示成功消息
-            showToast('隊伍創建成功！數據正在同步中...', 'success');
-
-        } catch (error: unknown) {
-            const e = error as { message?: string; shortMessage?: string };
-            if (!e.message?.includes('User rejected the request')) {
-                showToast(e.shortMessage || "創建隊伍失敗", "error");
-            }
-        }
-    };
-    
-    const filterOptions: { key: NftType; label: string }[] = [
-        { key: 'party', label: '我的隊伍' },
-        { key: 'hero', label: '我的英雄' },
-        { key: 'relic', label: '我的聖物' },
-        { key: 'vip', label: '我的VIP卡' },
-    ];
-
-    if (isLoading) {
-        return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
-    }
-
+  if (!isConnected) {
     return (
-        <section className="space-y-8">
-            <h2 className="page-title">我的資產與隊伍</h2>
-            
-            <TeamBuilder 
-                heroes={availableHeroes} 
-                relics={availableRelics}
-                onCreateParty={handleCreateParty}
-                isCreating={isTxPending}
-                platformFee={typeof platformFee === 'bigint' ? platformFee : undefined}
-                isLoadingFee={isLoadingFee}
-                isHeroAuthorized={Boolean(isHeroAuthorized)}
-                isRelicAuthorized={Boolean(isRelicAuthorized)}
-                onAuthorizeHero={handleAuthorizeHero}
-                onAuthorizeRelic={handleAuthorizeRelic}
-                isAuthorizing={isAuthorizing}
-            />
-
-            <div className="card-bg p-4 md:p-6 rounded-2xl shadow-xl">
-                <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
-                    <h3 className="section-title">我的收藏</h3>
-                    <div className="flex items-center gap-1 sm:gap-2 bg-gray-900/50 p-1 rounded-lg mt-2 sm:mt-0">
-                        {filterOptions.map(({ key, label }) => (
-                            <button 
-                                key={key}
-                                onClick={() => setFilter(key)}
-                                className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition ${filter === key ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'}`}
-                            >
-                                {label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-                {filteredNfts.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                        {filteredNfts.map(nft => <NftCard key={nft.id.toString()} nft={nft} />)}
-                    </div>
-                ) : (
-                    <div className="text-center py-8">
-                        <EmptyState message="這裡空空如也..." />
-                        <button 
-                            onClick={() => refetch()}
-                            className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition"
-                        >
-                            重新載入數據
-                        </button>
-                    </div>
-                )}
-            </div>
-        </section>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <ConnectWallet />
+      </div>
     );
+  }
+
+  if (chainId !== bsc.id) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <Card className="text-center">
+          <h2 className="text-2xl font-bold text-white mb-4">錯誤的網路</h2>
+          <p className="text-gray-300">請切換到 BSC 網路</p>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-900 p-4">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-4xl font-bold text-white text-center mb-8">我的資產</h1>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="text-center">
+            <div className="text-4xl mb-4">⚔️</div>
+            <h3 className="text-xl font-bold text-white mb-2">英雄</h3>
+            <p className="text-3xl font-bold text-yellow-400">
+              {heroBalance ? heroBalance.toString() : '0'}
+            </p>
+            <p className="text-gray-400 mt-2">擁有的英雄數量</p>
+          </Card>
+
+          <Card className="text-center">
+            <div className="text-4xl mb-4">🏺</div>
+            <h3 className="text-xl font-bold text-white mb-2">遺物</h3>
+            <p className="text-3xl font-bold text-yellow-400">
+              {relicBalance ? relicBalance.toString() : '0'}
+            </p>
+            <p className="text-gray-400 mt-2">擁有的遺物數量</p>
+          </Card>
+
+          <Card className="text-center">
+            <div className="text-4xl mb-4">👥</div>
+            <h3 className="text-xl font-bold text-white mb-2">隊伍</h3>
+            <p className="text-3xl font-bold text-yellow-400">
+              {partyBalance ? partyBalance.toString() : '0'}
+            </p>
+            <p className="text-gray-400 mt-2">擁有的隊伍數量</p>
+          </Card>
+        </div>
+
+        <Card>
+          <h2 className="text-2xl font-bold text-white mb-4">資產詳情</h2>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center p-4 bg-gray-700/50 rounded-lg">
+              <span className="text-gray-300">錢包地址</span>
+              <span className="text-white font-mono">
+                {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '未連接'}
+              </span>
+            </div>
+            
+            <div className="flex justify-between items-center p-4 bg-gray-700/50 rounded-lg">
+              <span className="text-gray-300">網路</span>
+              <span className="text-white">BSC 主網</span>
+            </div>
+            
+            <div className="flex justify-between items-center p-4 bg-gray-700/50 rounded-lg">
+              <span className="text-gray-300">總 NFT 數量</span>
+              <span className="text-white font-bold">
+                {((heroBalance || 0n) + (relicBalance || 0n) + (partyBalance || 0n)).toString()}
+              </span>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="mt-6">
+          <h2 className="text-2xl font-bold text-white mb-4">功能狀態</h2>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-green-400">✅</span>
+              <span className="text-gray-300">NFT 餘額查詢</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-yellow-400">🔄</span>
+              <span className="text-gray-300">NFT 詳細資訊（重構中）</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-yellow-400">🔄</span>
+              <span className="text-gray-300">NFT 圖片顯示（重構中）</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-yellow-400">🔄</span>
+              <span className="text-gray-300">NFT 交易功能（重構中）</span>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
 };
 
 export default MyAssetsPage;

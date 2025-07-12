@@ -1,16 +1,16 @@
 {
-  "menu": {
+  "nav": {
     "dashboard": "儀表板",
-    "profile": "個人檔案",
     "mint": "鑄造",
-    "party": "隊伍",
-    "dungeon": "地下城",
-    "altar": "升星祭壇",
-    "codex": "圖鑑",
+    "dungeon": "地城",
+    "altar": "祭壇",
+    "my_assets": "我的資產",
+    "provisions": "儲備",
+    "profile": "個人檔案",
     "vip": "VIP",
-    "referral": "邀請",
-    "explorer": "數據查詢",
-    "admin": "管理後台"
+    "referral": "推薦",
+    "codex": "圖鑑",
+    "admin": "管理"
   },
   "subtitle": "你的奇幻冒險由此開始",
   "recentTransactions": "最近交易",

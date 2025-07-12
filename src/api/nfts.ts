@@ -433,6 +433,7 @@ interface PartyAsset extends AssetWithTokenId {
     partyRarity: string | number | bigint;
           heros?: Array<{ tokenId: string | number | bigint }>;
     relics?: Array<{ tokenId: string | number | bigint }>;
+    provisionsRemaining: string | number | bigint;
 }
 
 interface VipAsset extends AssetWithTokenId {
@@ -531,7 +532,8 @@ async function parseNfts<T extends AssetWithTokenId>(
                     totalCapacity: BigInt(partyAsset.totalCapacity), 
                     heroIds: partyAsset.heros ? partyAsset.heros.map((h) => BigInt(h.tokenId)) : [], 
                     relicIds: partyAsset.relics ? partyAsset.relics.map((r) => BigInt(r.tokenId)) : [], 
-                    partyRarity: Number(partyAsset.partyRarity) 
+                    partyRarity: Number(partyAsset.partyRarity),
+                    provisionsRemaining: BigInt(partyAsset.provisionsRemaining)
                 };
             }
             case 'vip': {

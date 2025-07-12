@@ -1,3 +1,3 @@
 // src/types/page.ts
 
-export type Page = 'dashboard' | 'mint' | 'party' | 'dungeon' | 'explorer' | 'admin' | 'altar' | 'profile' | 'vip' | 'referral' | 'codex';
+export type Page = 'dashboard' | 'mint' | 'dungeon' | 'altar' | 'my-assets' | 'provisions' | 'profile' | 'vip' | 'referral' | 'admin' | 'codex';

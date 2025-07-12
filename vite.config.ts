@@ -1,154 +1,71 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { visualizer } from 'rollup-plugin-visualizer'
+import { resolve } from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/', 
+  base: '/',
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, './src'),
+      '@assets': resolve(__dirname, './src/assets'),
+      '@components': resolve(__dirname, './src/components'),
+      '@features': resolve(__dirname, './src/features'),
+      '@hooks': resolve(__dirname, './src/hooks'),
+      '@utils': resolve(__dirname, './src/utils'),
+      '@config': resolve(__dirname, './src/config'),
+      '@types': resolve(__dirname, './src/types'),
+    },
+  },
+  define: {
+    global: 'globalThis',
+  },
   plugins: [
     react(),
-    // 🔥 新增：包大小分析工具
+    // 包大小分析工具
     visualizer({
       filename: 'dist/stats.html',
       open: true,
       gzipSize: true,
-      brotliSize: true
-    })
+      brotliSize: true,
+      template: 'treemap', // 使用樹形圖更直觀
+    }),
   ],
-  // 新增 esbuild 設定，以確保支援 BigInt 字面量 (e.g., 100n)
-  // 將編譯目標設定為 es2020 或更高版本
-  esbuild: {
-    target: 'es2020'
+  optimizeDeps: {
+    force: true,
   },
   build: {
     target: 'es2020',
-    // 🔥 優化：代碼分割優化
+    outDir: 'dist',
+    assetsDir: 'assets',
+    // 代碼分割配置
     rollupOptions: {
       output: {
         manualChunks: {
-          // React 相關 - 核心框架
-          'react-vendor': ['react', 'react-dom'],
-          
-          // Web3 相關 - 區塊鏈交互
-          'web3-vendor': ['wagmi', 'viem', '@tanstack/react-query'],
-          
-          // Apollo 相關 - GraphQL
-          'apollo-vendor': ['@apollo/client', 'graphql'],
-          
-          // UI 相關 - 狀態管理和工具
-          'ui-vendor': ['zustand'],
-          
-          // 🔥 新增：按頁面功能分割
-          'pages-core': [
-            './src/pages/DashboardPage',
-            './src/pages/MintPage',
-            './src/pages/ExplorerPage'
-          ],
-          'pages-game': [
-            './src/pages/DungeonPage',
-            './src/pages/AltarPage', 
-            './src/pages/MyAssetsPage'
-          ],
-          'pages-profile': [
-            './src/pages/ProfilePage',
-            './src/pages/VipPage',
-            './src/pages/ReferralPage'
-          ],
-          'pages-misc': [
-            './src/pages/AdminPage',
-            './src/pages/CodexPage'
-          ]
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'web3-vendor': ['wagmi', 'viem', '@rainbow-me/rainbowkit'],
+          'ui-vendor': ['@headlessui/react', '@heroicons/react'],
         },
-        
-        // 🔥 新增：資源文件名優化
-        chunkFileNames: () => {
-          return `js/[name]-[hash].js`;
-        },
-        assetFileNames: (assetInfo) => {
-          if (!assetInfo.name) {
-            return `assets/[name]-[hash][extname]`;
-          }
-          if (/\.(png|jpe?g|svg|gif|tiff|bmp|ico)$/i.test(assetInfo.name)) {
-            return `images/[name]-[hash][extname]`;
-          }
-          if (/\.(woff2?|eot|ttf|otf)$/i.test(assetInfo.name)) {
-            return `fonts/[name]-[hash][extname]`;
-          }
-          return `assets/[name]-[hash][extname]`;
-        }
-      }
+      },
     },
-    
-    // 🔥 優化：生產環境壓縮優化
-    minify: 'terser',
+    // 最小化配置
+    minify: 'terser' as const,
     terserOptions: {
       compress: {
         drop_console: true,
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug'],
-        // 🔥 新增：移除未使用代碼
-        unused: true,
-        // 移除死代碼
-        dead_code: true
       },
-      mangle: {
-        safari10: true
-      }
     },
-    
-    // 🔥 優化：資源處理
-    assetsInlineLimit: 4096, // 4KB 以下的資源內聯
-    sourcemap: false, // 生產環境關閉 sourcemap 以減少包大小
-    
-    // 🔥 新增：分塊大小優化
-    chunkSizeWarningLimit: 1000, // 1MB 警告閾值
-    
-    // 🔥 新增：CSS 代碼分割
-    cssCodeSplit: true
   },
-  
-  // 🔥 優化：開發環境優化
   server: {
-    fs: {
-      // 放寬文件系統存取限制，有助於解決某些環境下的模組解析問題
-      strict: false,
-    },
-    // 🔥 新增：HMR 優化
-    hmr: {
-      overlay: false // 減少開發環境錯誤覆蓋的干擾
-    }
+    port: 5174,
+    strictPort: true,
+    host: true,
   },
-  
-  // 🔥 新增：依賴預構建優化
-  optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      '@apollo/client',
-      'wagmi',
-      'viem',
-      '@tanstack/react-query',
-      'zustand'
-    ],
-    exclude: [
-      // 大型庫按需載入，不預構建
-      '@tanstack/react-virtual'
-    ]
+  preview: {
+    port: 5173,
+    strictPort: true,
+    host: true,
   },
-  
-  // 🔥 新增：解析優化
-  resolve: {
-    alias: {
-      // 可以在這裡添加路徑別名以提高導入效率
-      '@': '/src'
-    }
-  },
-  
-  // 🔥 新增：CSS 優化
-  css: {
-    devSourcemap: true, // 開發環境保留 CSS sourcemap
-    preprocessorOptions: {
-      // 如果使用 SCSS/SASS，可以在這裡添加全局變量
-    }
-  }
 })

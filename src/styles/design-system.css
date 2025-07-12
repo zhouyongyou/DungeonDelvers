@@ -1,447 +1,138 @@
-/* =============================================================================
-   Dungeon Delvers Design System - 增強版
-   ============================================================================= */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* 🎨 Color System - 語義化顏色系統 */
-:root {
-  /* 主色調 */
-  --primary-50: #f0f4ff;
-  --primary-100: #e0e7ff;
-  --primary-200: #c7d2fe;
-  --primary-300: #a5b4fc;
-  --primary-400: #818cf8;
-  --primary-500: #6366f1;
-  --primary-600: #4f46e5;
-  --primary-700: #4338ca;
-  --primary-800: #3730a3;
-  --primary-900: #312e81;
-
-  /* 魔幻金色系 */
-  --gold-50: #fffbeb;
-  --gold-100: #fef3c7;
-  --gold-200: #fde68a;
-  --gold-300: #fcd34d;
-  --gold-400: #fbbf24;
-  --gold-500: #f59e0b;
-  --gold-600: #d97706;
-  --gold-700: #b45309;
-  --gold-800: #92400e;
-  --gold-900: #78350f;
-
-  /* 稀有度色彩 */
-  --rarity-common: #9ca3af;
-  --rarity-uncommon: #10b981;
-  --rarity-rare: #3b82f6;
-  --rarity-epic: #8b5cf6;
-  --rarity-legendary: #f59e0b;
-  --rarity-mythic: #ec4899;
-
-  /* 語義化顏色 */
-  --success: #10b981;
-  --warning: #f59e0b;
-  --error: #ef4444;
-  --info: #3b82f6;
-
-  /* 背景層次 */
-  --bg-primary: #0f0f23;
-  --bg-secondary: #1a1a2e;
-  --bg-tertiary: #16213e;
-  --bg-card: rgba(255, 255, 255, 0.05);
-  --bg-card-hover: rgba(255, 255, 255, 0.08);
-
-  /* 文字色彩 */
-  --text-primary: #f9fafb;
-  --text-secondary: #d1d5db;
-  --text-muted: #9ca3af;
-  --text-inverse: #111827;
-
-  /* 邊框和分隔線 */
-  --border-primary: rgba(255, 255, 255, 0.1);
-  --border-secondary: rgba(255, 255, 255, 0.05);
-  --border-accent: var(--gold-500);
-
-  /* 陰影系統 */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  --shadow-glow: 0 0 20px rgba(251, 191, 36, 0.3);
-  --shadow-rarity: 0 0 30px currentColor;
-
-  /* 動畫時間 */
-  --duration-fast: 0.15s;
-  --duration-normal: 0.3s;
-  --duration-slow: 0.5s;
-  --duration-slower: 0.75s;
-
-  /* 動畫緩動 */
-  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-out: cubic-bezier(0, 0, 0.2, 1);
-  --ease-in: cubic-bezier(0.4, 0, 1, 1);
-  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
-
-  /* 邊框半徑 */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-full: 9999px;
-
-  /* 間距系統 */
-  --spacing-xs: 0.25rem;
-  --spacing-sm: 0.5rem;
-  --spacing-md: 1rem;
-  --spacing-lg: 1.5rem;
-  --spacing-xl: 2rem;
-  --spacing-2xl: 3rem;
-}
-
-/* 🌙 Dark Mode Adjustments */
-.dark {
-  --bg-primary: #030712;
-  --bg-secondary: #111827;
-  --bg-tertiary: #1f2937;
-  --bg-card: rgba(255, 255, 255, 0.03);
-  --bg-card-hover: rgba(255, 255, 255, 0.06);
-}
-
-/* 🎬 Animation Keyframes */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes fadeInUp {
-  from { 
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to { 
-    opacity: 1;
-    transform: translateY(0);
+@layer base {
+  :root {
+    /* 主色調 */
+    --color-primary: 124 58 237;   /* 紫色 */
+    --color-secondary: 139 92 246; /* 淺紫色 */
+    --color-accent: 245 158 11;    /* 金色 */
+    
+    /* 背景色 */
+    --color-bg-primary: 17 24 39;    /* 深灰色 */
+    --color-bg-secondary: 31 41 55;  /* 中灰色 */
+    --color-bg-accent: 55 65 81;     /* 淺灰色 */
+    
+    /* 文字色 */
+    --color-text-primary: 255 255 255;   /* 白色 */
+    --color-text-secondary: 209 213 219; /* 淺灰色 */
+    --color-text-accent: 245 158 11;     /* 金色 */
+    
+    /* 狀態色 */
+    --color-success: 34 197 94;  /* 綠色 */
+    --color-warning: 234 179 8;  /* 黃色 */
+    --color-error: 239 68 68;    /* 紅色 */
+    --color-info: 59 130 246;    /* 藍色 */
   }
 }
 
-@keyframes slideInFromRight {
-  from { 
-    opacity: 0;
-    transform: translateX(100%);
-  }
-  to { 
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slideInFromLeft {
-  from { 
-    opacity: 0;
-    transform: translateX(-100%);
-  }
-  to { 
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes scaleIn {
-  from { 
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to { 
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes bounce {
-  0%, 20%, 53%, 80%, 100% { transform: translateY(0); }
-  40%, 43% { transform: translateY(-8px); }
-  70% { transform: translateY(-4px); }
-  90% { transform: translateY(-2px); }
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-@keyframes glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.3); }
-  50% { box-shadow: 0 0 30px rgba(251, 191, 36, 0.6); }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-6px); }
-}
-
-@keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* 🎨 Utility Classes */
-.animate-fade-in {
-  animation: fadeIn var(--duration-normal) var(--ease-out) forwards;
-}
-
-.animate-fade-in-up {
-  animation: fadeInUp var(--duration-normal) var(--ease-out) forwards;
-}
-
-.animate-slide-in-right {
-  animation: slideInFromRight var(--duration-normal) var(--ease-out) forwards;
-}
-
-.animate-slide-in-left {
-  animation: slideInFromLeft var(--duration-normal) var(--ease-out) forwards;
-}
-
-.animate-scale-in {
-  animation: scaleIn var(--duration-normal) var(--ease-bounce) forwards;
-}
-
-.animate-bounce {
-  animation: bounce 1s infinite;
-}
-
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.animate-shimmer {
-  animation: shimmer 2s linear infinite;
-}
-
-.animate-glow {
-  animation: glow 2s ease-in-out infinite alternate;
-}
-
-.animate-float {
-  animation: float 3s ease-in-out infinite;
-}
-
-.animate-rotate {
-  animation: rotate 2s linear infinite;
-}
-
-/* 🎪 Interactive Effects */
-.interactive {
-  transition: all var(--duration-normal) var(--ease-in-out);
-  cursor: pointer;
-}
-
-.interactive:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
-.interactive:active {
-  transform: translateY(0);
-  transition-duration: var(--duration-fast);
-}
-
-/* 🌟 Glass Morphism */
-.glass {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-
-.glass-dark {
-  background: rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-/* 🎯 Focus States */
-.focus-ring {
-  outline: 2px solid transparent;
-  outline-offset: 2px;
-}
-
-.focus-ring:focus {
-  outline: 2px solid var(--primary-500);
-  outline-offset: 2px;
-}
-
-/* 🎨 Gradient Utilities */
-.gradient-primary {
-  background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
-}
-
-.gradient-gold {
-  background: linear-gradient(135deg, var(--gold-400), var(--gold-600));
-}
-
-.gradient-rarity-common {
-  background: linear-gradient(135deg, #9ca3af, #6b7280);
-}
-
-.gradient-rarity-uncommon {
-  background: linear-gradient(135deg, #10b981, #059669);
-}
-
-.gradient-rarity-rare {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-}
-
-.gradient-rarity-epic {
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-}
-
-.gradient-rarity-legendary {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-}
-
-/* 🎪 Card Enhancements */
-.card-enhanced {
-  background: var(--bg-card);
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-lg);
-  transition: all var(--duration-normal) var(--ease-in-out);
-  position: relative;
-  overflow: hidden;
-}
-
-.card-enhanced::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  transition: left var(--duration-slow) var(--ease-out);
-}
-
-.card-enhanced:hover::before {
-  left: 100%;
-}
-
-.card-enhanced:hover {
-  background: var(--bg-card-hover);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-xl);
-}
-
-/* 🎯 Rarity Specific Styles */
-.rarity-common {
-  border-color: var(--rarity-common);
-  box-shadow: 0 0 10px rgba(156, 163, 175, 0.2);
-}
-
-.rarity-uncommon {
-  border-color: var(--rarity-uncommon);
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
-}
-
-.rarity-rare {
-  border-color: var(--rarity-rare);
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
-}
-
-.rarity-epic {
-  border-color: var(--rarity-epic);
-  box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
-}
-
-.rarity-legendary {
-  border-color: var(--rarity-legendary);
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
-  animation: glow 2s ease-in-out infinite alternate;
-}
-
-/* 📱 Mobile Optimizations */
-@media (max-width: 768px) {
-  .interactive:hover {
-    transform: none;
+@layer components {
+  /* 玻璃擬態效果 */
+  .glass {
+    @apply bg-white/10 backdrop-blur-lg border border-white/20 shadow-xl;
   }
   
-  .card-enhanced:hover {
-    transform: none;
+  /* 漸變背景 */
+  .gradient-bg {
+    @apply bg-gradient-to-br from-purple-900/50 via-gray-900 to-gray-900;
   }
   
-  .animate-fade-in-up {
-    animation-duration: var(--duration-fast);
+  /* 按鈕基礎樣式 */
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 
+           disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2;
   }
-}
-
-/* 🎨 Typography Enhancements */
-.text-glow {
-  text-shadow: 0 0 10px currentColor;
-}
-
-.text-outline {
-  -webkit-text-stroke: 1px currentColor;
-}
-
-/* 🎪 Loading States */
-.loading-shimmer {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-.loading-shimmer-dark {
-  background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-/* 🎯 Accessibility */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  
+  .btn-primary {
+    @apply btn bg-primary hover:bg-primary/90 text-white 
+           focus:ring-primary/50;
   }
-}
-
-/* 🎨 Scroll Enhancements */
-.scroll-smooth {
-  scroll-behavior: smooth;
-}
-
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-
-/* 🎪 Button Enhancements */
-.btn-enhanced {
-  position: relative;
-  overflow: hidden;
-  transition: all var(--duration-normal) var(--ease-in-out);
-}
-
-.btn-enhanced::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left var(--duration-normal) var(--ease-out);
-}
-
-.btn-enhanced:hover::before {
-  left: 100%;
-}
-
-.btn-enhanced:active {
-  transform: scale(0.98);
+  
+  .btn-secondary {
+    @apply btn bg-secondary hover:bg-secondary/90 text-white 
+           focus:ring-secondary/50;
+  }
+  
+  .btn-accent {
+    @apply btn bg-accent hover:bg-accent/90 text-white 
+           focus:ring-accent/50;
+  }
+  
+  /* 卡片樣式 */
+  .card {
+    @apply glass rounded-xl p-6;
+  }
+  
+  /* 輸入框樣式 */
+  .input {
+    @apply bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 
+           focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent
+           placeholder:text-gray-500;
+  }
+  
+  /* 標籤樣式 */
+  .badge {
+    @apply px-2.5 py-0.5 rounded-full text-sm font-medium;
+  }
+  
+  .badge-primary {
+    @apply badge bg-primary/20 text-primary-300;
+  }
+  
+  .badge-secondary {
+    @apply badge bg-secondary/20 text-secondary-300;
+  }
+  
+  .badge-accent {
+    @apply badge bg-accent/20 text-accent-300;
+  }
+  
+  /* 動畫效果 */
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-105;
+  }
+  
+  .hover-lift {
+    @apply transition-all duration-200 hover:-translate-y-1 hover:shadow-lg;
+  }
+  
+  /* 遊戲特定樣式 */
+  .dungeon-card {
+    @apply card hover-lift cursor-pointer;
+  }
+  
+  .hero-card {
+    @apply card hover-scale;
+  }
+  
+  .relic-card {
+    @apply card hover-scale;
+  }
+  
+  .party-card {
+    @apply card;
+  }
+  
+  /* Loading 動畫 */
+  .loading {
+    @apply animate-pulse;
+  }
+  
+  /* 頁面過渡動畫 */
+  .page-enter {
+    @apply opacity-0 translate-y-4;
+  }
+  
+  .page-enter-active {
+    @apply opacity-100 translate-y-0 transition-all duration-300;
+  }
+  
+  .page-exit {
+    @apply opacity-100;
+  }
+  
+  .page-exit-active {
+    @apply opacity-0 transition-all duration-300;
+  }
 }

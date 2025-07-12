@@ -1,121 +1,133 @@
-// src/App.tsx
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useAccount, useChainId } from 'wagmi';
+import { bsc } from 'wagmi/chains';
 
-import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { useAccount } from 'wagmi';
-import { Header } from './components/layout/Header';
-import { Footer } from './components/layout/Footer';
-import { EmptyState } from './components/ui/EmptyState';
-import { useContractEvents } from './hooks/useContractEvents';
-import { LoadingSpinner } from './components/ui/LoadingSpinner';
-import type { Page } from './types/page';
-import { TransactionWatcher } from './components/core/TransactionWatcher';
-import { ErrorBoundary } from './components/ui/ErrorBoundary';
-import { WrongNetworkBanner } from './components/ui/WrongNetworkBanner';
+import { Navigation } from './components/layout/Navigation';
+import { ConnectWallet } from './components/ui/ConnectWallet';
+import { Card } from './components/ui/Card';
 
-// 動態導入所有頁面
-const DashboardPage = lazy(() => import('./pages/DashboardPage'));
-const MintPage = lazy(() => import('./pages/MintPage'));
-const ExplorerPage = lazy(() => import('./pages/ExplorerPage'));
-const MyAssetsPage = lazy(() => import('./pages/MyAssetsPage'));
-const DungeonPage = lazy(() => import('./pages/DungeonPage'));
-const AltarPage = lazy(() => import('./pages/AltarPage'));
-const AdminPage = lazy(() => import('./pages/AdminPage'));
-const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const VipPage = lazy(() => import('./pages/VipPage'));
-const ReferralPage = lazy(() => import('./pages/ReferralPage'));
-const CodexPage = lazy(() => import('./pages/CodexPage'));
+// 頁面組件
+import MintPage from './pages/MintPage';
+import MyAssetsPage from './pages/MyAssetsPage';
+import DungeonPage from './pages/DungeonPage';
+import ProvisionsPage from './pages/ProvisionsPage';
 
-
-const PageLoader: React.FC = () => {
-    return (
-        <div className="flex justify-center items-center h-64">
-            <div className="flex flex-col items-center gap-4">
-                <LoadingSpinner size="h-10 w-10" color="border-indigo-500" />
-                <p className="text-lg text-gray-400">
-                    載入中...
-                </p>
-            </div>
-        </div>
-    );
-};
-
-const getPageFromHash = (): Page => {
-    const hash = window.location.hash.replace('#/', '');
-    const page = hash.split('?')[0];
-    const validPages: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'explorer', 'admin', 'altar', 'profile', 'vip', 'referral', 'codex'];
-    if (validPages.includes(page as Page)) {
-        return page as Page;
-    }
-    // ★ 核心優化：將預設首頁從 'dashboard' 改為 'mint'
-    // 這將極大地改善首次載入的體驗和 RPC 負載。
-    return 'mint'; 
-};
-
-function App() {
-  const [activePage, setActivePage] = useState<Page>(getPageFromHash);
-  const { isConnected } = useAccount();
-  
-  // 這個 Hook 會在背景監聽鏈上事件，並自動更新相關數據
-  useContractEvents();
-
-  useEffect(() => {
-    const handleHashChange = () => setActivePage(getPageFromHash());
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-
-  const handleSetPage = (page: Page) => {
-    const newUrl = new URL(window.location.href);
-    newUrl.hash = `/${page}`;
-    // 使用 history.pushState 來改變 URL 而不重新整理頁面
-    window.history.pushState({}, '', newUrl);
-    setActivePage(page);
-  };
-
-  const renderPage = () => {
-    const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'admin', 'altar', 'profile', 'vip', 'referral', 'codex'];
-    
-    // 如果頁面需要錢包但尚未連接，則顯示提示
-    if (!isConnected && pageRequiresWallet.includes(activePage)) {
-        return (
-            <div className="mt-10">
-                <EmptyState message="請先連接錢包" />
-            </div>
-        );
-    }
-      
-    switch (activePage) {
-        case 'dungeon': return <DungeonPage setActivePage={handleSetPage} />;
-        case 'party': return <MyAssetsPage />;
-        case 'dashboard': return <DashboardPage setActivePage={handleSetPage} />;
-        case 'mint': return <MintPage />;
-        case 'explorer': return <ExplorerPage />;
-        case 'admin': return <AdminPage />;
-        case 'altar': return <AltarPage />;
-        case 'profile': return <ProfilePage setActivePage={handleSetPage} />;
-        case 'vip': return <VipPage />;
-        case 'referral': return <ReferralPage />;
-        case 'codex': return <CodexPage />;
-        default: return <MintPage />; // 預設頁面也改為 MintPage
-    }
-  };
+// 首頁組件
+const HomePage: React.FC = () => {
+  const { address, isConnected } = useAccount();
+  const chainId = useChainId();
 
   return (
-    <ErrorBoundary>
-      <div className="min-h-screen flex flex-col bg-gray-900">
-        <Header activePage={activePage} setActivePage={handleSetPage} />
-        <WrongNetworkBanner />
-        <main className="flex-grow container mx-auto px-4 py-8 md:px-6 md:py-12">
-            <Suspense fallback={<PageLoader />}>
-                {renderPage()}
-            </Suspense>
-        </main>
-        <Footer />
-        {/* 這個元件負責在背景追蹤已發送交易的狀態 */}
-        <TransactionWatcher />
+    <div className="max-w-6xl mx-auto p-4">
+      <div className="text-center mb-8">
+        <h1 className="text-5xl font-bold text-white mb-4">Dungeon Delvers</h1>
+        <p className="text-xl text-gray-300">歡迎來到地城探險者的世界</p>
       </div>
-    </ErrorBoundary>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <Card className="text-center">
+          <h2 className="text-2xl font-semibold mb-4">連接狀態</h2>
+          <div className="space-y-2">
+            <p>錢包連接: {isConnected ? '✅ 已連接' : '❌ 未連接'}</p>
+            {address && <p className="text-sm font-mono">地址: {address.slice(0, 6)}...{address.slice(-4)}</p>}
+            <p>網路 ID: {chainId}</p>
+            <p>是否為 BSC: {chainId === bsc.id ? '✅ 是' : '❌ 否'}</p>
+          </div>
+        </Card>
+
+        <Card className="text-center">
+          <h2 className="text-2xl font-semibold mb-4">功能狀態</h2>
+          <div className="space-y-2">
+            <p>🎮 基本 Web3 連接: ✅ 正常</p>
+            <p>⚔️ NFT 鑄造: ✅ 已重構</p>
+            <p>💎 資產查詢: ✅ 已重構</p>
+            <p>🏰 地城探險: 🔄 重構中</p>
+            <p>🎒 儲備購買: 🔄 重構中</p>
+            <p>⚙️ 管理功能: 🔄 重構中</p>
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="text-center">
+          <div className="text-4xl mb-4">⚔️</div>
+          <h3 className="text-xl font-bold mb-2">鑄造 NFT</h3>
+          <p className="text-gray-300 mb-4">鑄造英雄、遺物和隊伍 NFT</p>
+          <a href="/mint" className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+            開始鑄造
+          </a>
+        </Card>
+
+        <Card className="text-center">
+          <div className="text-4xl mb-4">💎</div>
+          <h3 className="text-xl font-bold mb-2">我的資產</h3>
+          <p className="text-gray-300 mb-4">查看擁有的 NFT 和資產</p>
+          <a href="/assets" className="inline-block px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+            查看資產
+          </a>
+        </Card>
+
+        <Card className="text-center">
+          <div className="text-4xl mb-4">🏰</div>
+          <h3 className="text-xl font-bold mb-2">地城探險</h3>
+          <p className="text-gray-300 mb-4">派遣隊伍進行冒險</p>
+          <a href="/dungeon" className="inline-block px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+            開始探險
+          </a>
+        </Card>
+      </div>
+    </div>
   );
-}
+};
+
+// 管理頁面（簡化版）
+const AdminPage: React.FC = () => (
+  <div className="max-w-4xl mx-auto p-4">
+    <Card className="text-center">
+      <div className="text-6xl mb-6">⚙️</div>
+      <h1 className="text-3xl font-bold text-white mb-4">管理後台</h1>
+      <p className="text-gray-300">管理功能正在重構中，敬請期待！</p>
+    </Card>
+  </div>
+);
+
+const App: React.FC = () => {
+  const { isConnected } = useAccount();
+  const chainId = useChainId();
+
+  return (
+    <Router>
+      <div className="min-h-screen bg-gray-900 text-white">
+        <Navigation />
+        
+        <main className="py-8">
+          {!isConnected ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <ConnectWallet />
+            </div>
+          ) : chainId !== bsc.id ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <Card className="text-center">
+                <h2 className="text-2xl font-bold text-white mb-4">錯誤的網路</h2>
+                <p className="text-gray-300">請切換到 BSC 網路以使用完整功能</p>
+              </Card>
+            </div>
+          ) : (
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/mint" element={<MintPage />} />
+              <Route path="/assets" element={<MyAssetsPage />} />
+              <Route path="/dungeon" element={<DungeonPage />} />
+              <Route path="/provisions" element={<ProvisionsPage />} />
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          )}
+        </main>
+      </div>
+    </Router>
+  );
+};
 
 export default App;

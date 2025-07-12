@@ -1,15 +1,15 @@
 {
-  "menu": {
+  "nav": {
     "dashboard": "Dashboard",
-    "profile": "Profile",
     "mint": "Mint",
-    "party": "Party",
     "dungeon": "Dungeon",
     "altar": "Altar",
-    "codex": "Codex",
+    "my_assets": "My Assets",
+    "provisions": "Provisions",
+    "profile": "Profile",
     "vip": "VIP",
     "referral": "Referral",
-    "explorer": "Explorer",
+    "codex": "Codex",
     "admin": "Admin"
   },
   "subtitle": "Your Fantasy Adventure Begins Here",
