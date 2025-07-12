@@ -1,5 +1,5 @@
-import { PartyCreated, Transfer } from "../generated/Party/Party"
-import { Party, Hero, Relic } from "../generated/schema"
+import { PartyCreated, Transfer, PartyMemberAdded, PartyMemberRemoved } from "../generated/Party/Party"
+import { Party, Hero, Relic, PartyMemberChange } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { log } from "@graphprotocol/graph-ts"
 import { getHeroContractAddress, getRelicContractAddress, createEntityId } from "./config"
@@ -141,4 +141,73 @@ export function handleRelicTransferForParty(event: Transfer): void {
     
     // 查找所有包含此 Relic 的 Party
     log.info('Relic transfer detected: {}, checking party associations', [relicId]);
+}
+
+export function handlePartyMemberAdded(event: PartyMemberAdded): void {
+    const partyId = createEntityId(event.address.toHexString(), event.params.partyId.toString())
+    const party = Party.load(partyId)
+    
+    if (!party) {
+        log.error('Party not found for member add event: {}', [partyId])
+        return
+    }
+
+    // 創建成員變更記錄
+    const changeId = event.transaction.hash.toHexString() + '-' + event.logIndex.toString()
+    const change = new PartyMemberChange(changeId)
+    change.party = partyId
+    change.owner = event.params.owner
+    change.changeType = 0 // 0 表示添加
+    change.hero = createEntityId(getHeroContractAddress(), event.params.heroId.toString())
+    change.timestamp = event.block.timestamp
+    change.save()
+
+    // 更新隊伍的英雄列表
+    const heroIds = party.heros
+    const heroId = createEntityId(getHeroContractAddress(), event.params.heroId.toString())
+    if (!heroIds.includes(heroId)) {
+        heroIds.push(heroId)
+        party.heros = heroIds
+        party.save()
+    }
+
+    log.info('Successfully processed PartyMemberAdded event: {} (Hero: {})', [
+        partyId,
+        event.params.heroId.toString()
+    ])
+}
+
+export function handlePartyMemberRemoved(event: PartyMemberRemoved): void {
+    const partyId = createEntityId(event.address.toHexString(), event.params.partyId.toString())
+    const party = Party.load(partyId)
+    
+    if (!party) {
+        log.error('Party not found for member remove event: {}', [partyId])
+        return
+    }
+
+    // 創建成員變更記錄
+    const changeId = event.transaction.hash.toHexString() + '-' + event.logIndex.toString()
+    const change = new PartyMemberChange(changeId)
+    change.party = partyId
+    change.owner = event.params.owner
+    change.changeType = 1 // 1 表示移除
+    change.hero = createEntityId(getHeroContractAddress(), event.params.heroId.toString())
+    change.timestamp = event.block.timestamp
+    change.save()
+
+    // 更新隊伍的英雄列表
+    const heroIds = party.heros
+    const heroId = createEntityId(getHeroContractAddress(), event.params.heroId.toString())
+    const index = heroIds.indexOf(heroId)
+    if (index > -1) {
+        heroIds.splice(index, 1)
+        party.heros = heroIds
+        party.save()
+    }
+
+    log.info('Successfully processed PartyMemberRemoved event: {} (Hero: {})', [
+        partyId,
+        event.params.heroId.toString()
+    ])
 }

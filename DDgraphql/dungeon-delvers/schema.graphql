@@ -38,6 +38,14 @@ type Hero @entity(immutable: false) {
   power: BigInt!
   " 創建時間戳 "
   createdAt: BigInt!
+  " 最後升級時間戳 "
+  lastUpgradedAt: BigInt
+  " 是否已被銷毀 "
+  isBurned: Boolean!
+  " 銷毀時間戳 "
+  burnedAt: BigInt
+  " 升級歷史 "
+  upgradeHistory: [HeroUpgrade!] @derivedFrom(field: "hero")
 }
 
 type Relic @entity(immutable: false) {
@@ -55,6 +63,14 @@ type Relic @entity(immutable: false) {
   capacity: Int!
   " 創建時間戳 "
   createdAt: BigInt!
+  " 最後升級時間戳 "
+  lastUpgradedAt: BigInt
+  " 是否已被銷毀 "
+  isBurned: Boolean!
+  " 銷毀時間戳 "
+  burnedAt: BigInt
+  " 升級歷史 "
+  upgradeHistory: [RelicUpgrade!] @derivedFrom(field: "relic")
 }
 
 type Party @entity(immutable: false) {
@@ -86,6 +102,12 @@ type Party @entity(immutable: false) {
   unclaimedRewards: BigInt!
   " 創建時間戳 "
   createdAt: BigInt!
+  " 是否已解散 "
+  isDisbanded: Boolean!
+  " 解散時間戳 "
+  disbandedAt: BigInt
+  " 成員變更歷史 "
+  memberHistory: [PartyMemberChange!] @derivedFrom(field: "party")
 }
 
 type PlayerProfile @entity(immutable: false) {
@@ -186,4 +208,53 @@ type PlayerStats @entity(immutable: false) {
   successfulUpgrades: Int!
   " 最後活動時間戳 "
   lastActivityAt: BigInt!
+}
+
+type HeroUpgrade @entity(immutable: true) {
+  " 使用 `txHash-logIndex` 作為唯一 ID "
+  id: String!
+  " 升級的英雄 "
+  hero: Hero!
+  " 執行升級的玩家 "
+  owner: Player!
+  " 原始稀有度 "
+  oldRarity: Int!
+  " 新稀有度 "
+  newRarity: Int!
+  " 新戰力 "
+  newPower: BigInt!
+  " 時間戳 "
+  timestamp: BigInt!
+}
+
+type RelicUpgrade @entity(immutable: true) {
+  " 使用 `txHash-logIndex` 作為唯一 ID "
+  id: String!
+  " 升級的聖物 "
+  relic: Relic!
+  " 執行升級的玩家 "
+  owner: Player!
+  " 原始稀有度 "
+  oldRarity: Int!
+  " 新稀有度 "
+  newRarity: Int!
+  " 新容量 "
+  newCapacity: Int!
+  " 時間戳 "
+  timestamp: BigInt!
+}
+
+type PartyMemberChange @entity(immutable: true) {
+  " 使用 `txHash-logIndex` 作為唯一 ID "
+  id: String!
+  " 變更的隊伍 "
+  party: Party!
+  " 執行變更的玩家 "
+  owner: Player!
+  " 變更類型 (0: 添加, 1: 移除) "
+  changeType: Int!
+  " 相關的英雄 "
+  hero: Hero!
+  " 時間戳 "
+  timestamp: BigInt!
 }

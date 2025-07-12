@@ -45,6 +45,8 @@ contract Relic is ERC721, Ownable, ReentrancyGuard, Pausable {
     event BaseURISet(string newBaseURI); // ★ 新增事件
     event ContractURIUpdated(string newContractURI); // ★ 新增事件
     event AscensionAltarSet(address indexed newAddress);
+    event RelicBurned(uint256 indexed tokenId, address indexed owner, uint8 rarity, uint8 capacity);
+    event RelicUpgraded(uint256 indexed tokenId, address indexed owner, uint8 oldRarity, uint8 newRarity, uint8 newCapacity);
     
     // --- 修飾符 ---
     modifier onlyAltar() {
@@ -113,6 +115,9 @@ contract Relic is ERC721, Ownable, ReentrancyGuard, Pausable {
     }
 
     function burnFromAltar(uint256 _tokenId) external onlyAltar {
+        address owner = ownerOf(_tokenId);
+        RelicData memory data = relicData[_tokenId];
+        emit RelicBurned(_tokenId, owner, data.rarity, data.capacity);
         _burn(_tokenId);
     }
 

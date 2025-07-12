@@ -1,6 +1,6 @@
 // DDgraphql/dungeondelvers/src/hero.ts (最終加固版)
-import { HeroMinted, Transfer } from "../generated/Hero/Hero"
-import { Hero } from "../generated/schema"
+import { HeroMinted, Transfer, HeroUpgraded, HeroBurned } from "../generated/Hero/Hero"
+import { Hero, HeroUpgrade } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { log, BigInt } from "@graphprotocol/graph-ts"
 import { createEntityId } from "./config"
@@ -82,4 +82,61 @@ export function handleTransfer(event: Transfer): void {
         log.warning("Transfer event for Hero that doesn't exist in subgraph: {} (skipping placeholder creation)", [heroId]);
         return;
     }
+}
+
+export function handleHeroUpgraded(event: HeroUpgraded): void {
+    const heroId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
+    const hero = Hero.load(heroId)
+    
+    if (!hero) {
+        log.error('Hero not found for upgrade event: {}', [heroId])
+        return
+    }
+
+    // 更新英雄屬性
+    hero.rarity = event.params.newRarity
+    hero.power = event.params.newPower
+    hero.lastUpgradedAt = event.block.timestamp
+    hero.save()
+
+    // 創建升級記錄
+    const upgradeId = event.transaction.hash.toHexString() + '-' + event.logIndex.toString()
+    const upgrade = new HeroUpgrade(upgradeId)
+    upgrade.hero = heroId
+    upgrade.owner = event.params.owner
+    upgrade.oldRarity = event.params.oldRarity
+    upgrade.newRarity = event.params.newRarity
+    upgrade.newPower = event.params.newPower
+    upgrade.timestamp = event.block.timestamp
+    upgrade.save()
+
+    log.info('Successfully processed HeroUpgraded event: {} (Rarity: {} -> {})', [
+        heroId,
+        event.params.oldRarity.toString(),
+        event.params.newRarity.toString()
+    ])
+}
+
+export function handleHeroBurned(event: HeroBurned): void {
+    const heroId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
+    const hero = Hero.load(heroId)
+    
+    if (!hero) {
+        log.error('Hero not found for burn event: {}', [heroId])
+        return
+    }
+
+    // 標記英雄為已銷毀
+    hero.isBurned = true
+    hero.burnedAt = event.block.timestamp
+    hero.save()
+
+    // 更新統計數據
+    updateGlobalStats(TOTAL_HEROES, -1, event.block.timestamp)
+    updatePlayerStats(event.params.owner, TOTAL_HEROES_MINTED, -1, event.block.timestamp)
+
+    log.info('Successfully processed HeroBurned event: {} (Rarity: {})', [
+        heroId,
+        event.params.rarity.toString()
+    ])
 }

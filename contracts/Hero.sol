@@ -41,6 +41,8 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable {
     event AscensionAltarSet(address indexed newAddress);
     event BaseURISet(string newBaseURI); // ★ 新增事件
     event ContractURIUpdated(string newContractURI); // ★ 新增事件
+    event HeroBurned(uint256 indexed tokenId, address indexed owner, uint8 rarity, uint256 power);
+    event HeroUpgraded(uint256 indexed tokenId, address indexed owner, uint8 oldRarity, uint8 newRarity, uint256 newPower);
 
     // --- 修飾符 ---
     modifier onlyAltar() {
@@ -127,6 +129,9 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable {
     }
 
     function burnFromAltar(uint256 _tokenId) external onlyAltar {
+        address owner = ownerOf(_tokenId);
+        HeroData memory data = heroData[_tokenId];
+        emit HeroBurned(_tokenId, owner, data.rarity, data.power);
         _burn(_tokenId);
     }
 

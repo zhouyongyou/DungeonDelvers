@@ -50,6 +50,10 @@ contract Party is ERC721, Ownable, ReentrancyGuard, Pausable, ERC721Holder {
     event BaseURISet(string newBaseURI); // ★ 新增事件
     event ContractURIUpdated(string newContractURI); // ★ 新增事件
     event OperatorApprovalSet(address indexed operator, bool approved);
+    event PartyDisbanded(uint256 indexed partyId, address indexed owner);
+    event PartyMemberChanged(uint256 indexed partyId, uint256[] heroIds, uint256[] relicIds);
+    event PartyMemberAdded(uint256 indexed partyId, address indexed owner, uint256 indexed heroId);
+    event PartyMemberRemoved(uint256 indexed partyId, address indexed owner, uint256 indexed heroId);
 
     // --- 建構函式 ---
     constructor(

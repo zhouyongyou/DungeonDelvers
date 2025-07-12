@@ -8,9 +8,9 @@ dataSources:
     name: Hero
     network: bsc
     source:
-      address: "0xe439b1aC9100732F33C757746AD916ADE6967C79"
+      address: "0xE22C45AcC80BFAEDa4F2Ec17352301a37Fbc0741"
       abi: Hero
-      startBlock: 53664913
+      startBlock: 53746925
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -18,6 +18,7 @@ dataSources:
       entities:
         - Hero
         - Player
+        - HeroUpgrade
       abis:
         - name: Hero
           file: ./abis/Hero.json
@@ -26,14 +27,18 @@ dataSources:
           handler: handleHeroMinted
         - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleTransfer
+        - event: HeroUpgraded(indexed uint256,indexed address,uint8,uint8,uint256)
+          handler: handleHeroUpgraded
+        - event: HeroBurned(indexed uint256,indexed address,uint8,uint256)
+          handler: handleHeroBurned
       file: ./src/hero.ts
   - kind: ethereum
     name: Relic
     network: bsc
     source:
-      address: "0x0a03BE7555f8B0f1F2299c4C8DCE1b8d82b2B8B4"
+      address: "0x5b03165dBD05c82480b69b94F59d0FE942ED9A36"
       abi: Relic
-      startBlock: 53664913
+      startBlock: 53746925
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -41,6 +46,7 @@ dataSources:
       entities:
         - Relic
         - Player
+        - RelicUpgrade
       abis:
         - name: Relic
           file: ./abis/Relic.json
@@ -49,14 +55,18 @@ dataSources:
           handler: handleRelicMinted
         - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleTransfer
+        - event: RelicUpgraded(indexed uint256,indexed address,uint8,uint8,uint8)
+          handler: handleRelicUpgraded
+        - event: RelicBurned(indexed uint256,indexed address,uint8,uint8)
+          handler: handleRelicBurned
       file: ./src/relic.ts
   - kind: ethereum
     name: Party
     network: bsc
     source:
-      address: "0x21326106f2D41E4d31B724B3316C780069F9274A"
+      address: "0xaE13E9FE44aB58D6d43014A32Cbd565bAEf01C01"
       abi: Party
-      startBlock: 53664913
+      startBlock: 53746925
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -64,6 +74,7 @@ dataSources:
       entities:
         - Party
         - Player
+        - PartyMemberChange
       abis:
         - name: Party
           file: ./abis/Party.json
@@ -72,14 +83,18 @@ dataSources:
           handler: handlePartyCreated
         - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handlePartyTransfer
+        - event: PartyMemberAdded(indexed uint256,indexed address,indexed uint256)
+          handler: handlePartyMemberAdded
+        - event: PartyMemberRemoved(indexed uint256,indexed address,indexed uint256)
+          handler: handlePartyMemberRemoved
       file: ./src/party.ts
   - kind: ethereum
     name: PlayerProfile
     network: bsc
     source:
-      address: "0xA19F45fC6372Ec8111E99399876e448Af05Fa735"
+      address: "0x21753CDc15804be66B4792F75C23Fc828A26203a"
       abi: PlayerProfile
-      startBlock: 53664913
+      startBlock: 53746925
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -99,9 +114,9 @@ dataSources:
     name: VIPStaking
     network: bsc
     source:
-      address: "0x77D81358C33c24282Ce183f00bFDE590dCc3915F"
+      address: "0x30a5374bcc612698B4eF1Df1348a21F18cbb3c9D"
       abi: VIPStaking
-      startBlock: 53664913
+      startBlock: 53746925
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -123,9 +138,9 @@ dataSources:
     name: DungeonMaster
     network: bsc
     source:
-      address: "0xD7CF07D71E0440B5cC8e2faAF3bbbc9C3588898F"
+      address: "0x00C5467a1eC8DF143bCFAfD7b6acCbe63c8d4A35"
       abi: DungeonMaster
-      startBlock: 53664913
+      startBlock: 53746925
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -147,9 +162,9 @@ dataSources:
     name: PlayerVault
     network: bsc
     source:
-      address: "0x4fE1e22A210d26fC40f8D6fA98A21d919793C282"
+      address: "0x2b010B3D6fE8fD7B1639A5176ddC26BDE29b8D2c"
       abi: PlayerVault
-      startBlock: 53664913
+      startBlock: 53746925
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -171,9 +186,9 @@ dataSources:
     name: AltarOfAscension
     network: bsc
     source:
-      address: "0x5186C497C7fB40Bf2B18191404E01Dd43b387cF2"
+      address: "0x602D86ea9178064128073F8fedF10Aa35b348A10"
       abi: AltarOfAscension
-      startBlock: 53664913
+      startBlock: 53746925
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9

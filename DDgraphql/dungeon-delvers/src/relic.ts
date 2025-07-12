@@ -1,6 +1,6 @@
 // DDgraphql/dungeondelvers/src/relic.ts (修復版)
-import { RelicMinted, Transfer } from "../generated/Relic/Relic"
-import { Relic } from "../generated/schema"
+import { RelicMinted, Transfer, RelicUpgraded, RelicBurned } from "../generated/Relic/Relic"
+import { Relic, RelicUpgrade } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { log } from "@graphprotocol/graph-ts"
 import { createEntityId } from "./config"
@@ -82,4 +82,61 @@ export function handleTransfer(event: Transfer): void {
         log.warning("Transfer event for Relic that doesn't exist in subgraph: {} (skipping placeholder creation)", [relicId]);
         return;
     }
+}
+
+export function handleRelicUpgraded(event: RelicUpgraded): void {
+    const relicId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
+    const relic = Relic.load(relicId)
+    
+    if (!relic) {
+        log.error('Relic not found for upgrade event: {}', [relicId])
+        return
+    }
+
+    // 更新聖物屬性
+    relic.rarity = event.params.newRarity
+    relic.capacity = event.params.newCapacity
+    relic.lastUpgradedAt = event.block.timestamp
+    relic.save()
+
+    // 創建升級記錄
+    const upgradeId = event.transaction.hash.toHexString() + '-' + event.logIndex.toString()
+    const upgrade = new RelicUpgrade(upgradeId)
+    upgrade.relic = relicId
+    upgrade.owner = event.params.owner
+    upgrade.oldRarity = event.params.oldRarity
+    upgrade.newRarity = event.params.newRarity
+    upgrade.newCapacity = event.params.newCapacity
+    upgrade.timestamp = event.block.timestamp
+    upgrade.save()
+
+    log.info('Successfully processed RelicUpgraded event: {} (Rarity: {} -> {})', [
+        relicId,
+        event.params.oldRarity.toString(),
+        event.params.newRarity.toString()
+    ])
+}
+
+export function handleRelicBurned(event: RelicBurned): void {
+    const relicId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
+    const relic = Relic.load(relicId)
+    
+    if (!relic) {
+        log.error('Relic not found for burn event: {}', [relicId])
+        return
+    }
+
+    // 標記聖物為已銷毀
+    relic.isBurned = true
+    relic.burnedAt = event.block.timestamp
+    relic.save()
+
+    // 更新統計數據
+    updateGlobalStats(TOTAL_RELICS, -1, event.block.timestamp)
+    updatePlayerStats(event.params.owner, TOTAL_RELICS_MINTED, -1, event.block.timestamp)
+
+    log.info('Successfully processed RelicBurned event: {} (Rarity: {})', [
+        relicId,
+        event.params.rarity.toString()
+    ])
 }
