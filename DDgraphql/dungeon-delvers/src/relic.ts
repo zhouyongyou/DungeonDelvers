@@ -37,6 +37,7 @@ export function handleRelicMinted(event: RelicMinted): void {
     relic.rarity = event.params.rarity
     relic.capacity = event.params.capacity
     relic.createdAt = event.block.timestamp
+    relic.isBurned = false
     relic.save()
     
     // 更新統計數據

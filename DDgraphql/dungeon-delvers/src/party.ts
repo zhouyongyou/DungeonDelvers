@@ -40,6 +40,7 @@ export function handlePartyCreated(event: PartyCreated): void {
     party.cooldownEndsAt = event.block.timestamp
     party.unclaimedRewards = event.params.totalPower 
     party.createdAt = event.block.timestamp
+    party.isDisbanded = false
 
     // 批量處理英雄關聯 - 使用配置系統
     const heroIds: string[] = []
@@ -89,15 +90,19 @@ export function handlePartyTransfer(event: Transfer): void {
     // 處理 burn 操作 (to = 0x0)
     if (event.params.to.toHexString() === '0x0000000000000000000000000000000000000000') {
         if (party) {
+            // 標記為已解散
+            party.isDisbanded = true
+            party.disbandedAt = event.block.timestamp
+            
             // 減少統計數據
             updateGlobalStats(TOTAL_PARTIES, -1, event.block.timestamp)
             // 注意：party.owner 是 Bytes 類型，需要轉換為 Address
             const ownerAddress = event.params.from // 使用 from 地址，因為這是 burn 前的擁有者
             updatePlayerStats(ownerAddress, TOTAL_PARTIES_CREATED, -1, event.block.timestamp)
             
-            // 從資料庫中移除 Party 實體
-            party.save() // 先保存任何變更
-            log.info('Party burned: {} from {}', [partyId, event.params.from.toHexString()]);
+            // 保存變更
+            party.save()
+            log.info('Party disbanded: {} from {}', [partyId, event.params.from.toHexString()]);
         } else {
             log.warning('Burn event for Party that does not exist: {}', [partyId]);
         }

@@ -37,6 +37,7 @@ export function handleHeroMinted(event: HeroMinted): void {
     hero.rarity = event.params.rarity
     hero.power = event.params.power
     hero.createdAt = event.block.timestamp
+    hero.isBurned = false
     hero.save()
     
     // 更新統計數據
