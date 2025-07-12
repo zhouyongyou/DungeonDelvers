@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useWriteContract } from 'wagmi';
 import { parseEther } from 'viem';
 import type { Abi } from 'viem';
@@ -20,8 +20,8 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
   
   const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
   
-  // 簡化的地下城配置 - 直接使用預設值
-  const defaultDungeons = [
+  // 簡化的地下城配置 - 直接使用預設值，使用 useMemo 避免重新渲染
+  const defaultDungeons = useMemo(() => [
     { id: 1, name: "新手礦洞", requiredPower: 100, rewardAmountUSD: 2, baseSuccessRate: 90 },
     { id: 2, name: "哥布林洞穴", requiredPower: 300, rewardAmountUSD: 5, baseSuccessRate: 85 },
     { id: 3, name: "食人魔山谷", requiredPower: 600, rewardAmountUSD: 10, baseSuccessRate: 80 },
@@ -32,7 +32,7 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
     { id: 8, name: "惡魔前哨站", requiredPower: 4000, rewardAmountUSD: 100, baseSuccessRate: 55 },
     { id: 9, name: "巨龍之巔", requiredPower: 5500, rewardAmountUSD: 200, baseSuccessRate: 50 },
     { id: 10, name: "混沌深淵", requiredPower: 7500, rewardAmountUSD: 500, baseSuccessRate: 45 }
-  ];
+  ], []);
 
   const [dungeonInputs, setDungeonInputs] = useState<Record<number, {
     requiredPower: string;
@@ -51,7 +51,7 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
       };
     });
     setDungeonInputs(initialInputs);
-  }, []);
+  }, [defaultDungeons]);
   
   const handleInputChange = (id: number, field: string, value: string) => {
     setDungeonInputs(prev => ({

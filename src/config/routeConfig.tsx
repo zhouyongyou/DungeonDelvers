@@ -1,8 +1,6 @@
-import { lazy, useEffect } from 'react';
+import { lazy } from 'react';
 import { Navigate } from 'react-router-dom';
 import type { RouteObject } from 'react-router-dom';
-import { usePage } from '../contexts/PageContext';
-import type { Page } from '../types/page';
 
 // Lazy load components
 const DashboardPage = lazy(() => import('../pages/DashboardPage'));
@@ -17,17 +15,6 @@ const ReferralPage = lazy(() => import('../pages/ReferralPage'));
 const AdminPage = lazy(() => import('../pages/AdminPage'));
 const CodexPage = lazy(() => import('../pages/CodexPage'));
 
-// Wrapper component to provide setActivePage
-const PageWrapper = ({ Component, page }: { Component: React.ComponentType<any>; page: Page }) => {
-  const { setActivePage } = usePage();
-  
-  useEffect(() => {
-    setActivePage(page);
-  }, [page, setActivePage]);
-
-  return <Component setActivePage={setActivePage} />;
-};
-
 // Route configuration
 export const routes: RouteObject[] = [
   {
@@ -36,47 +23,47 @@ export const routes: RouteObject[] = [
   },
   {
     path: '/dashboard',
-    element: <PageWrapper Component={DashboardPage} page="dashboard" />,
+    element: <DashboardPage />,
   },
   {
     path: '/mint',
-    element: <PageWrapper Component={MintPage} page="mint" />,
+    element: <MintPage />,
   },
   {
     path: '/dungeon',
-    element: <PageWrapper Component={DungeonPage} page="dungeon" />,
+    element: <DungeonPage />,
   },
   {
     path: '/altar',
-    element: <PageWrapper Component={AltarPage} page="altar" />,
+    element: <AltarPage />,
   },
   {
     path: '/my-assets',
-    element: <PageWrapper Component={MyAssetsPage} page="my-assets" />,
+    element: <MyAssetsPage />,
   },
   {
     path: '/provisions',
-    element: <PageWrapper Component={ProvisionsPage} page="provisions" />,
+    element: <ProvisionsPage />,
   },
   {
     path: '/profile',
-    element: <PageWrapper Component={ProfilePage} page="profile" />,
+    element: <ProfilePage />,
   },
   {
     path: '/vip',
-    element: <PageWrapper Component={VipPage} page="vip" />,
+    element: <VipPage />,
   },
   {
     path: '/referral',
-    element: <PageWrapper Component={ReferralPage} page="referral" />,
+    element: <ReferralPage />,
   },
   {
     path: '/admin',
-    element: <PageWrapper Component={AdminPage} page="admin" />,
+    element: <AdminPage />,
   },
   {
     path: '/codex',
-    element: <PageWrapper Component={CodexPage} page="codex" />,
+    element: <CodexPage />,
   },
   {
     path: '*',

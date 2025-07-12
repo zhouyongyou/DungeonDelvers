@@ -2,7 +2,7 @@ import React from 'react';
 import { useAccount, useSwitchChain } from 'wagmi';
 import { bsc } from 'wagmi/chains';
 import { ActionButton } from './ActionButton';
-import { Icons } from './icons';
+import { AlertTriangleIcon } from './icons';
 
 export const WrongNetworkBanner: React.FC = () => {
   const { chain, isConnected } = useAccount();
@@ -22,7 +22,7 @@ export const WrongNetworkBanner: React.FC = () => {
   return (
     <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mx-4 mt-4 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <Icons.AlertTriangle className="w-6 h-6 text-red-400" />
+        <AlertTriangleIcon className="w-6 h-6 text-red-400" />
         <div>
           <h3 className="text-red-400 font-medium">網路不正確</h3>
           <p className="text-red-300 text-sm">

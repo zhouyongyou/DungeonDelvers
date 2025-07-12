@@ -4,7 +4,7 @@ import React, { memo } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import { getContract } from '../../config/contracts';
 import { bsc } from 'wagmi/chains';
-import type { AnyNft, HeroNft, RelicNft, PartyNft, VipNft } from '../../types/nft';
+import type { AnyNft, HeroNft, RelicNft, PartyNft } from '../../types/nft';
 import { getRarityChineseName, getRarityColor as getRarityColorUtil } from '../../utils/rarityConverter';
 
 interface NftCardProps {
@@ -16,16 +16,25 @@ interface NftCardProps {
   className?: string;
 }
 
-const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, fallbackImage }) => {
+// 定義更具體的類型替代 any
+interface NFTData {
+  name?: string;
+  description?: string;
+  image?: string;
+  attributes?: Array<{ trait_type: string; value: string | number }>;
+  [key: string]: unknown;
+}
+
+// 將 any 替換為 NFTData
+const VipImage = memo(({ nft, fallbackImage }: { nft: NFTData; fallbackImage: string }) => {
   const { address, chainId } = useAccount();
   const vipStakingContract = getContract(chainId === bsc.id ? chainId : bsc.id, 'vipStaking');
   
   // ✅ 使用實時合約數據獲取VIP等級，而不是元數據
   const { data: realTimeVipLevel } = useReadContract({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ...(vipStakingContract as any),
-    functionName: 'getVipLevel' as any,
-    args: [address!] as any,
+    ...vipStakingContract,
+    functionName: 'getVipLevel',
+    args: [address!],
     query: { 
       enabled: !!address && !!vipStakingContract && chainId === bsc.id
     }
@@ -105,7 +114,7 @@ const NftCard: React.FC<NftCardProps> = memo(({
   const renderImage = () => {
     // VIP卡片使用專門的組件
     if (nft.type === 'vip') {
-      return <VipImage nft={nft as VipNft} fallbackImage={nft.image} />;
+      return <VipImage nft={nft as NFTData} fallbackImage={nft.image} />;
     }
 
     // 其他類型NFT的通用處理

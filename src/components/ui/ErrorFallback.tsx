@@ -1,18 +1,16 @@
-import { useTranslation } from 'react-i18next';
 import type { FallbackProps } from 'react-error-boundary';
 
 export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
-  const { t } = useTranslation();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-900">
       <div className="max-w-xl w-full mx-auto p-8">
         <div className="bg-red-900/50 rounded-lg p-8 text-center">
           <h2 className="text-2xl font-bold text-red-500 mb-4">
-            {t('errors.something_went_wrong')}
+            Something went wrong
           </h2>
           <div className="text-gray-300 mb-6">
-            <p className="mb-2">{t('errors.error_description')}</p>
+            <p className="mb-2">An unexpected error occurred. Please try again.</p>
             {process.env.NODE_ENV === 'development' && (
               <pre className="mt-4 p-4 bg-gray-800 rounded text-left overflow-auto text-sm">
                 {error.message}
@@ -23,7 +21,7 @@ export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
             onClick={resetErrorBoundary}
             className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
           >
-            {t('errors.try_again')}
+            Try Again
           </button>
         </div>
       </div>

@@ -1,11 +1,21 @@
 // src/components/layout/Footer.tsx
 
-import { useTranslation } from 'react-i18next';
-import { useNetwork } from 'wagmi';
+import { useChainId } from 'wagmi';
+import { bsc } from 'wagmi/chains';
 
 export function Footer() {
-  const { t } = useTranslation();
-  const { chain } = useNetwork();
+  // 移除 i18n 依賴，使用固定文本
+  const chainId = useChainId();
+
+  // 獲取當前鏈的名稱
+  const getChainName = (id: number) => {
+    switch (id) {
+      case bsc.id:
+        return 'BSC';
+      default:
+        return 'Unknown Network';
+    }
+  };
 
   return (
     <footer className="bg-bg-secondary/50 backdrop-blur-sm border-t border-white/10">
@@ -13,18 +23,16 @@ export function Footer() {
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="text-center sm:text-left">
             <p className="text-sm text-text-secondary">
-              {t('footer.copyright', { year: new Date().getFullYear() })}
+              © {new Date().getFullYear()} Dungeon Delvers. All rights reserved.
             </p>
           </div>
           
           <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
-            {chain && (
-              <div className="text-sm text-text-secondary">
-                {t('footer.network')}: <span className="text-text-primary">{chain.name}</span>
-              </div>
-            )}
             <div className="text-sm text-text-secondary">
-              {t('footer.version')}: <span className="text-text-primary">v1.0.0</span>
+              Network: <span className="text-text-primary">{getChainName(chainId)}</span>
+            </div>
+            <div className="text-sm text-text-secondary">
+              Version: <span className="text-text-primary">v1.0.0</span>
             </div>
           </div>
         </div>

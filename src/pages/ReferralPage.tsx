@@ -10,7 +10,7 @@ import { ActionButton } from '../components/ui/ActionButton';
 import { isAddress, formatEther } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { Icons } from '../components/ui/icons';
+import { CopyIcon, ExternalLinkIcon, HeroIcon } from '../components/ui/icons';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取 Hook
@@ -136,7 +136,7 @@ const ReferralPage: React.FC = () => {
             {/* 邀請收益展示 */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="card-bg p-6 rounded-xl text-center">
-                    <Icons.Copy className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
+                    <CopyIcon className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
                     <h3 className="font-bold text-lg text-white mb-2">我的邀請收益</h3>
                     {isLoading ? <LoadingSpinner size="h-8 w-8" /> : (
                         <p className="text-2xl font-bold text-yellow-400">
@@ -147,14 +147,14 @@ const ReferralPage: React.FC = () => {
                 </div>
                 
                 <div className="card-bg p-6 rounded-xl text-center">
-                    <Icons.ExternalLink className="w-12 h-12 text-green-400 mx-auto mb-3" />
+                    <ExternalLinkIcon className="w-12 h-12 text-green-400 mx-auto mb-3" />
                     <h3 className="font-bold text-lg text-white mb-2">佣金比例</h3>
                     <p className="text-2xl font-bold text-green-400">5%</p>
                     <p className="text-sm text-gray-400 mt-2">好友提領時的佣金</p>
                 </div>
                 
                 <div className="card-bg p-6 rounded-xl text-center">
-                    <Icons.Hero className="w-12 h-12 text-blue-400 mx-auto mb-3" />
+                    <HeroIcon className="w-12 h-12 text-blue-400 mx-auto mb-3" />
                     <h3 className="font-bold text-lg text-white mb-2">邀請人好處</h3>
                     <p className="text-2xl font-bold text-blue-400">終身收益</p>
                     <p className="text-sm text-gray-400 mt-2">持續獲得佣金</p>
@@ -219,7 +219,7 @@ const ReferralPage: React.FC = () => {
                         />
                     </div>
                     <ActionButton onClick={handleCopyLink} className="w-full sm:w-auto flex-shrink-0">
-                        {copied ? '已複製!' : <><Icons.Copy className="w-4 h-4 mr-2" />複製連結</>}
+                        {copied ? '已複製!' : <><CopyIcon className="w-4 h-4 mr-2" />複製連結</>}
                     </ActionButton>
                 </div>
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">

@@ -227,7 +227,7 @@ const AltarPage: React.FC = () => {
         if (!upgradeRulesData || rarity < 1 || rarity > 4) return null;
         const ruleResult = upgradeRulesData[rarity - 1];
         if (ruleResult.status === 'success' && Array.isArray(ruleResult.result)) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+             
             const [materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance] = ruleResult.result as unknown as [number, bigint, number, number, number];
             return { materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance };
         }

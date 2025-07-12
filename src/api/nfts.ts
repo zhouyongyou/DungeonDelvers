@@ -3,8 +3,8 @@
 import { createPublicClient, http, type Address } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { Buffer } from 'buffer';
-import { getContract, contracts } from '../config/contracts.js';
-import { nftMetadataCache } from '../cache/nftMetadataCache.js';
+import { getContract, contracts } from '../config/contracts';
+import { getCachedMetadata, setCachedMetadata } from '../cache/nftMetadataCache';
 import type { 
     AllNftCollections, 
     BaseNft, 
@@ -105,12 +105,11 @@ export async function fetchMetadata(
     
     console.log(`獲取 ${nftType} #${tokenId} 元數據 (嘗試 ${retryCount + 1}/${maxRetries + 1})`);
     
-    // 🔥 1. 先检查IndexedDB缓存
-    const cachedMetadata = await nftMetadataCache.getMetadata(tokenId, contractAddress);
+    // 🔥 1. 先检查内存缓存
+    const cacheKey = `${contractAddress}-${tokenId}`;
+    const cachedMetadata = getCachedMetadata(cacheKey);
     if (cachedMetadata) {
-        // CacheMetrics.recordHit(); // 已移除
         console.log(`${nftType} #${tokenId} 使用緩存數據`);
-        // name 屬性補空字串 fallback
         return {
             ...cachedMetadata,
             name: cachedMetadata.name ?? '',
@@ -120,8 +119,6 @@ export async function fetchMetadata(
             source: 'metadata',
         };
     }
-    
-    // CacheMetrics.recordMiss(); // 已移除
     
     try {
         let metadata: Omit<BaseNft, 'id' | 'contractAddress' | 'type'>;
@@ -175,7 +172,7 @@ export async function fetchMetadata(
         console.log(`${nftType} #${tokenId} 元數據載入成功 (${loadTime}ms)`);
         
         // 🔥 2. 成功获取后立即缓存
-        await nftMetadataCache.cacheMetadata(tokenId, contractAddress, metadata);
+        setCachedMetadata(cacheKey, metadata);
         
         return { ...metadata, source: 'metadata' };
     } catch (error) {
@@ -193,7 +190,7 @@ export async function fetchMetadata(
         
         // 🔥 根據 NFT 類型提供更好的 fallback 數據
         const fallbackData = generateFallbackMetadata(nftType, tokenId);
-        await nftMetadataCache.cacheMetadata(tokenId, contractAddress, fallbackData);
+        setCachedMetadata(cacheKey, fallbackData);
         console.log(`${nftType} #${tokenId} 使用 fallback 數據`);
         
         return { ...fallbackData, source: 'fallback' };

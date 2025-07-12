@@ -20,9 +20,19 @@ export default defineConfig({
   },
   define: {
     global: 'globalThis',
+    // 修復 React 生產模式問題
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+    __DEV__: process.env.NODE_ENV !== 'production',
   },
   plugins: [
-    react(),
+    react({
+      babel: {
+        // 添加 Lit 的 Babel 配置
+        plugins: [
+          ['@babel/plugin-transform-react-jsx', { runtime: 'automatic' }],
+        ],
+      },
+    }),
     // 包大小分析工具
     visualizer({
       filename: 'dist/stats.html',
@@ -34,6 +44,19 @@ export default defineConfig({
   ],
   optimizeDeps: {
     force: true,
+    include: [
+      '@rainbow-me/rainbowkit',
+      'react',
+      'react-dom',
+      'react-dom/client',
+      'wagmi',
+      'viem'
+    ],
+    esbuildOptions: {
+      define: {
+        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+      },
+    },
   },
   build: {
     target: 'es2020',

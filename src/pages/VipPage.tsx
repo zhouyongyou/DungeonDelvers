@@ -89,19 +89,19 @@ const VipPage: React.FC = () => {
     }, [allowance, amount, mode]);
 
     const handleApprove = useCallback(() => 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         writeContractAsync({ ...(soulShardContract as any), functionName: 'approve' as any, args: [vipStakingContract!.address, maxUint256] as any }), 
         [soulShardContract, vipStakingContract, writeContractAsync]);
     const handleStake = useCallback(() => 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         writeContractAsync({ ...(vipStakingContract as any), functionName: 'stake' as any, args: [parseEther(amount)] as any }), 
         [vipStakingContract, writeContractAsync, amount]);
     const handleRequestUnstake = useCallback(() => 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         writeContractAsync({ ...(vipStakingContract as any), functionName: 'requestUnstake' as any, args: [parseEther(amount)] as any }), 
         [vipStakingContract, writeContractAsync, amount]);
     const handleClaim = useCallback(() => 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         writeContractAsync({ ...(vipStakingContract as any), functionName: 'claimUnstaked' as any }), 
         [vipStakingContract, writeContractAsync]);
     const handleMainAction = useCallback(() => { if (mode === 'stake') { if (needsApproval) handleApprove(); else handleStake(); } else { handleRequestUnstake(); } }, [mode, needsApproval, handleApprove, handleStake, handleRequestUnstake]);

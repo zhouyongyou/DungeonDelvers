@@ -1,348 +1,195 @@
-// src/pages/DashboardPage.tsx (The Graph 改造版)
-
-import React, { useMemo } from 'react';
-import { useAccount, useReadContract, useReadContracts, useWriteContract } from 'wagmi';
-import { useQuery } from '@tanstack/react-query';
-import { formatEther } from 'viem';
-import { getContract, contracts } from '../config/contracts';
-import { ActionButton } from '../components/ui/ActionButton';
-import type { Page } from '../types/page';
-import { useTransactionStore } from '../stores/useTransactionStore';
-import { useAppToast } from '../hooks/useAppToast';
-import { Icons } from '../components/ui/icons';
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { useAccount, useChainId } from 'wagmi';
 import { bsc } from 'wagmi/chains';
-import { TownBulletin } from '../components/ui/TownBulletin';
-import { LocalErrorBoundary, LoadingState, ErrorState } from '../components/ui/ErrorBoundary';
 
-// =================================================================
-// Section: GraphQL 查詢與數據獲取 Hook
-// =================================================================
+const DashboardPage: React.FC = () => {
+  const { address, isConnected } = useAccount();
+  const chainId = useChainId();
 
-const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
+  const isCorrectNetwork = chainId === bsc.id;
 
-// 專為儀表板設計的 GraphQL 查詢
-const GET_DASHBOARD_STATS_QUERY = `
-  query GetDashboardStats($owner: ID!) {
-    player(id: $owner) {
-      id
-      heros {
-        id
-      }
-      relics {
-        id
-      }
-      parties {
-        id
-      }
-      profile {
-        level
-      }
-      vip {
-        id
-      }
-      vault {
-        withdrawableBalance
-      }
-    }
-  }
-`;
+  const quickActions = [
+    {
+      title: '🔨 批量鑄造',
+      description: '鑄造英雄、聖物和隊伍 NFT',
+      href: '/mint',
+      color: 'bg-blue-600 hover:bg-blue-700',
+      icon: '⚔️',
+    },
+    {
+      title: '🎒 我的資產',
+      description: '管理 NFT 和組建隊伍',
+      href: '/my-assets',
+      color: 'bg-green-600 hover:bg-green-700',
+      icon: '💎',
+    },
+    {
+      title: '🏰 地下城探險',
+      description: '派遣隊伍進行冒險',
+      href: '/dungeon',
+      color: 'bg-purple-600 hover:bg-purple-700',
+      icon: '🗡️',
+    },
+    {
+      title: '⚡ 升星祭壇',
+      description: '升級 NFT 稀有度和屬性',
+      href: '/altar',
+      color: 'bg-yellow-600 hover:bg-yellow-700',
+      icon: '✨',
+    },
+    {
+      title: '🛒 購買儲備',
+      description: '購買探險所需的儲備',
+      href: '/provisions',
+      color: 'bg-orange-600 hover:bg-orange-700',
+      icon: '🛍️',
+    },
+    {
+      title: '👑 VIP 質押',
+      description: '質押代幣獲得 VIP 特權',
+      href: '/vip',
+      color: 'bg-pink-600 hover:bg-pink-700',
+      icon: '👑',
+    },
+  ];
 
-// 新的 Hook，專門用來獲取儀表板的統計數據
-const useDashboardStats = () => {
-    const { address, chainId } = useAccount();
+  const stats = [
+    { label: '英雄數量', value: '0', icon: '⚔️' },
+    { label: '聖物數量', value: '0', icon: '💎' },
+    { label: '隊伍數量', value: '0', icon: '👥' },
+    { label: '探險次數', value: '0', icon: '🗺️' },
+  ];
 
-    const { data, isLoading, isError, refetch } = useQuery({
-        queryKey: ['dashboardStats', address, chainId],
-        queryFn: async () => {
-            if (!address || !THE_GRAPH_API_URL) return null;
-            
-            // 添加超時控制
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000); // 增加到15秒超時
-            
-            try {
-                const response = await fetch(THE_GRAPH_API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        query: GET_DASHBOARD_STATS_QUERY,
-                        variables: { owner: address.toLowerCase() },
-                    }),
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                
-                if (!response.ok) throw new Error('Network response was not ok');
-                const { data, errors } = await response.json();
-                
-                if (errors) {
-                    throw new Error(`GraphQL errors: ${errors.map((e: { message: string }) => e.message).join(', ')}`);
-                }
-                
-                return data.player;
-            } catch (error) {
-                clearTimeout(timeoutId);
-                if (error instanceof Error && error.name === 'AbortError') {
-                    throw new Error('請求超時，請稍後再試');
-                }
-                throw error;
-            }
-        },
-        enabled: !!address && chainId === bsc.id && !!THE_GRAPH_API_URL,
-        // ★★★ 網路優化：增加 staleTime，避免不必要的重複請求 ★★★
-        staleTime: 1000 * 60 * 5, // 5分鐘
-        // ★★★ 錯誤處理優化：添加重試配置 ★★★
-        retry: 3, // 增加重試次數
-        retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 10000), // 最大10秒延遲
-        // 添加重試條件
-        retryOnMount: true,
-        refetchOnWindowFocus: false,
-        refetchOnReconnect: true,
-    });
-
-    // 從查詢結果中解析數據
-    const stats = useMemo(() => {
-        return {
-            level: data?.profile?.level ? Number(data.profile.level) : 1,
-            heroCount: data?.heros?.length ?? 0,
-            relicCount: data?.relics?.length ?? 0,
-            partyCount: data?.parties?.length ?? 0,
-            isVip: !!data?.vip,
-            withdrawableBalance: data?.vault?.withdrawableBalance ? BigInt(data.vault.withdrawableBalance) : 0n,
-        };
-    }, [data]);
-
-    return { stats, isLoading, isError, refetch };
-};
-
-
-// 輔助函式與子元件 (保持不變)
-const StatCard: React.FC<{ title: string; value: string | number; isLoading?: boolean, icon: React.ReactNode, className?: string }> = ({ title, value, isLoading, icon, className }) => (
-    <div className={`card-bg p-4 rounded-xl shadow-lg flex items-center gap-4 ${className}`}>
-        <div className="text-indigo-400 bg-black/10 p-3 rounded-lg">{icon}</div>
-        <div>
-            <p className="text-sm text-gray-400">{title}</p>
-            {isLoading ? <div className="h-7 w-20 bg-gray-700 rounded-md animate-pulse mt-1"></div> : <p className="text-2xl font-bold text-white">{value}</p>}
-        </div>
-    </div>
-);
-
-const QuickActionButton: React.FC<{ title: string; description: string; onAction: () => void; icon: React.ReactNode }> = ({ title, description, onAction, icon }) => (
-    <button onClick={onAction} className="card-bg p-4 rounded-xl text-left w-full hover:bg-gray-700/70 transition-colors duration-200 flex items-center gap-4">
-        <div className="text-yellow-400">{icon}</div>
-        <div>
-            <p className="font-bold text-lg text-white">{title}</p>
-            <p className="text-xs text-gray-400">{description}</p>
-        </div>
-    </button>
-);
-
-const ExternalLinkButton: React.FC<{ title: string; url: string; icon: React.ReactNode }> = ({ title, url, icon }) => (
-    <a href={url} target="_blank" rel="noopener noreferrer" className="card-bg p-4 rounded-xl text-left w-full hover:bg-gray-700/70 transition-colors duration-200 flex items-center gap-4">
-        <div className="text-gray-400">{icon}</div>
-        <div>
-            <p className="font-bold text-lg text-white">{title}</p>
-            <p className="text-xs text-gray-500">在 OKX 市場交易</p>
-        </div>
-        <Icons.ExternalLink className="w-4 h-4 ml-auto text-gray-500" />
-    </a>
-);
-
-// 獲取稅率相關參數的 Hook (簡化版)
-const useTaxParams = () => {
-    const { address, chainId } = useAccount();
-    const isChainSupported = chainId === bsc.id;
-
-    const dungeonCoreContract = getContract(isChainSupported ? chainId! : bsc.id, 'dungeonCore');
-    const playerVaultContract = getContract(isChainSupported ? chainId! : bsc.id, 'playerVault');
-    const vipStakingContract = getContract(isChainSupported ? chainId! : bsc.id, 'vipStaking');
-    const playerProfileContract = getContract(isChainSupported ? chainId! : bsc.id, 'playerProfile');
-    
-    // 這個 Hook 現在只負責獲取合約層級的設定，不再獲取玩家個人數據
-    const contractsToRead = useMemo(() => {
-        if (!isChainSupported || !playerVaultContract || !vipStakingContract || !playerProfileContract || !address) return [];
-        return [
-            { ...playerVaultContract, functionName: 'playerInfo', args: [address] }, // 仍然需要 lastWithdrawTimestamp
-            { ...playerVaultContract, functionName: 'smallWithdrawThresholdUSD' },
-            { ...playerVaultContract, functionName: 'largeWithdrawThresholdUSD' },
-            { ...playerVaultContract, functionName: 'standardInitialRate' },
-            { ...playerVaultContract, functionName: 'largeWithdrawInitialRate' },
-            { ...playerVaultContract, functionName: 'decreaseRatePerPeriod' },
-            { ...playerVaultContract, functionName: 'periodDuration' },
-            { ...vipStakingContract, functionName: 'getVipTaxReduction', args: [address] },
-        ];
-    }, [isChainSupported, playerVaultContract, vipStakingContract, playerProfileContract, address]);
-
-    const { data: taxParams, isLoading: isLoadingTaxParams } = useReadContracts({
-        contracts: contractsToRead,
-        query: { enabled: contractsToRead.length > 0 }
-    });
-
-    return { taxParams, isLoadingTaxParams, dungeonCoreContract };
-};
-
-// =================================================================
-// Section: 主儀表板元件
-// =================================================================
-
-const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setActivePage }) => {
-    const { address, chainId } = useAccount();
-    const { addTransaction } = useTransactionStore();
-    const { showToast } = useAppToast();
-    
-    const { stats, isLoading: isLoadingStats, refetch: refetchStats } = useDashboardStats();
-    const { taxParams, isLoadingTaxParams, dungeonCoreContract } = useTaxParams();
-    
-    const { writeContractAsync, isPending: isWithdrawing } = useWriteContract();
-
-    const withdrawableBalance = stats.withdrawableBalance;
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: withdrawableBalanceInUSD } = useReadContract({ ...(dungeonCoreContract as any), functionName: 'getSoulShardAmountForUSD' as any, args: [withdrawableBalance] as any, query: { enabled: !!dungeonCoreContract && withdrawableBalance > 0n } });
-    
-    const currentTaxRate = useMemo(() => {
-        if (!taxParams || !stats) return 0;
-        const [ playerInfo, smallWithdrawThresholdUSD, largeWithdrawThresholdUSD, standardInitialRate, largeWithdrawInitialRate, decreaseRatePerPeriod, periodDuration, vipTaxReduction ] = taxParams.map(item => item.result);
-        if (!playerInfo || !Array.isArray(playerInfo)) return 0;
-
-        const lastWithdrawTimestamp = typeof playerInfo[1] === 'bigint' ? playerInfo[1] : 0n;
-        const lastFreeWithdrawTimestamp = typeof playerInfo[2] === 'bigint' ? playerInfo[2] : 0n;
-        const amountUSD = typeof withdrawableBalanceInUSD === 'bigint' ? withdrawableBalanceInUSD : 0n;
-        const smallUSD = typeof smallWithdrawThresholdUSD === 'bigint' ? smallWithdrawThresholdUSD : 0n;
-        const largeUSD = typeof largeWithdrawThresholdUSD === 'bigint' ? largeWithdrawThresholdUSD : 0n;
-        const stdInit = typeof standardInitialRate === 'bigint' ? standardInitialRate : 0n;
-        const largeInit = typeof largeWithdrawInitialRate === 'bigint' ? largeWithdrawInitialRate : 0n;
-        const decRate = typeof decreaseRatePerPeriod === 'bigint' ? decreaseRatePerPeriod : 0n;
-        const period = typeof periodDuration === 'bigint' ? periodDuration : 1n;
-        const vipRed = typeof vipTaxReduction === 'bigint' ? vipTaxReduction : 0n;
-        const levelReduction = BigInt(Math.floor(stats.level / 10)) * 100n;
-        
-        const oneDay = 24n * 60n * 60n;
-        if (amountUSD <= smallUSD && BigInt(Math.floor(Date.now() / 1000)) >= lastFreeWithdrawTimestamp + oneDay) return 0;
-        
-        const initialRate = (amountUSD > largeUSD) ? largeInit : stdInit;
-        const timeSinceLast = BigInt(Math.floor(Date.now() / 1000)) - lastWithdrawTimestamp;
-        const periodsPassed = timeSinceLast / period;
-        const timeDecay = periodsPassed * decRate;
-        
-        const totalReduction = timeDecay + vipRed + levelReduction;
-        if (totalReduction >= initialRate) return 0;
-        return Number(initialRate - totalReduction) / 100;
-    }, [taxParams, stats, withdrawableBalanceInUSD]);
-    
-    const externalMarkets = useMemo(() => {
-        if (!chainId || chainId !== bsc.id) return [];
-        const currentContracts = contracts[bsc.id];
-        if (!currentContracts) return [];
-        return [
-            { title: '英雄市場', address: currentContracts.hero?.address ?? '', icon: <Icons.Hero className="w-8 h-8"/> },
-            { title: '聖物市場', address: currentContracts.relic?.address ?? '', icon: <Icons.Relic className="w-8 h-8"/> },
-            { title: '隊伍市場', address: currentContracts.party?.address ?? '', icon: <Icons.Party className="w-8 h-8"/> },
-            // VIP市場已移除，因為VIP卡是靈魂代幣，無法轉移
-        ].filter(m => m.address && typeof m.address === 'string' && !m.address.includes('YOUR_'));
-    }, [chainId]);
-
-    const handleWithdraw = async () => {
-        if (!chainId || chainId !== bsc.id) return;
-        const playerVaultContract = getContract(chainId, 'playerVault');
-        if (!playerVaultContract || withdrawableBalance === 0n) return;
-        try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const hash = await writeContractAsync({ ...(playerVaultContract as any), functionName: 'withdraw' as any, args: [withdrawableBalance] as any });
-            addTransaction({ hash, description: '從金庫提領 $SoulShard' });
-        } catch(e: unknown) { 
-            const error = e as { shortMessage?: string };
-            showToast(error.shortMessage || "提領失敗", "error"); 
-        }
-    };
-
-    if (!chainId || chainId !== bsc.id) {
-        return <div className="flex justify-center items-center h-64"><p className="text-lg text-gray-500">請連接到支援的網路 (BSC) 以檢視儀表板。</p></div>;
-    }
-    
-    const isLoading = isLoadingStats || isLoadingTaxParams;
-
+  if (!isConnected) {
     return (
-        <section className="space-y-8">
-            <h2 className="page-title">玩家總覽中心</h2>
-            
-            <LocalErrorBoundary 
-                fallback={
-                    <ErrorState 
-                        message="儀表板數據載入失敗" 
-                        onRetry={refetchStats}
-                    />
-                }
-            >
-                {isLoading && !stats ? (
-                    <LoadingState message="載入儀表板數據..." />
-                ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-2 card-bg p-6 rounded-xl flex flex-col sm:flex-row items-center gap-6">
-                            <div className="text-center flex-shrink-0">
-                                <p className="text-sm text-gray-400">等級</p>
-                                <p className="text-6xl font-bold text-yellow-400">{stats.level}</p>
-                            </div>
-                            <div className="w-full">
-                                <h3 className="section-title text-xl mb-2">我的檔案</h3>
-                                <p className="font-mono text-xs break-all bg-black/20 p-2 rounded">{address}</p>
-                            </div>
-                        </div>
-                        <div className="card-bg p-6 rounded-xl flex flex-col justify-center">
-                            <h3 className="section-title text-xl">我的金庫</h3>
-                            <p className="text-3xl font-bold text-teal-400">{parseFloat(formatEther(withdrawableBalance)).toFixed(4)}</p>
-                            <p className="text-xs text-red-400">當前預估稅率: {currentTaxRate.toFixed(2)}%</p>
-                            <ActionButton onClick={handleWithdraw} isLoading={isWithdrawing} disabled={withdrawableBalance === 0n} className="mt-2 h-10 w-full">
-                                全部提領
-                            </ActionButton>
-                        </div>
-                    </div>
-                )}
-            </LocalErrorBoundary>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                    <h3 className="section-title">資產快照</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <StatCard title="英雄總數" value={stats.heroCount} isLoading={isLoadingStats} icon={<Icons.Hero className="w-6 h-6"/>} />
-                        <StatCard title="聖物總數" value={stats.relicCount} isLoading={isLoadingStats} icon={<Icons.Relic className="w-6 h-6"/>} />
-                        <StatCard title="隊伍總數" value={stats.partyCount} isLoading={isLoadingStats} icon={<Icons.Party className="w-6 h-6"/>} />
-                        <StatCard title="VIP 狀態" value={stats.isVip ? '質押中' : '未質押'} isLoading={isLoadingStats} icon={<Icons.Vip className="w-6 h-6"/>} />
-                    </div>
-                </div>
-                <div className="lg:col-span-1">
-                    <TownBulletin />
-                </div>
+      <div className="min-h-screen bg-gray-900 text-white p-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center">
+            <h1 className="text-5xl font-bold mb-4">🏰 Dungeon Delvers</h1>
+            <p className="text-xl text-gray-400 mb-8">歡迎來到地城探險者的世界</p>
+            <div className="bg-gray-800 rounded-lg p-8 max-w-md mx-auto">
+              <h2 className="text-2xl font-semibold mb-4">開始你的冒險</h2>
+              <p className="text-gray-300 mb-6">
+                連接錢包開始你的地城探險之旅
+              </p>
+              <div className="text-sm text-gray-400 space-y-2">
+                <p>• 鑄造強大的英雄和聖物</p>
+                <p>• 組建探險隊伍</p>
+                <p>• 探索神秘的地下城</p>
+                <p>• 獲得豐厚的獎勵</p>
+              </div>
             </div>
-
-            <div>
-                <h3 className="section-title">快捷操作</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    <QuickActionButton title="鑄造 NFT" description="獲取新的英雄與聖物" onAction={() => setActivePage('mint')} icon={<Icons.Mint className="w-8 h-8"/>} />
-                    <QuickActionButton title="升星祭壇" description="提升你的 NFT 星級" onAction={() => setActivePage('altar')} icon={<Icons.Altar className="w-8 h-8"/>}/>
-                    <QuickActionButton title="資產管理" description="創建隊伍、查看資產" onAction={() => setActivePage('party')} icon={<Icons.Assets className="w-8 h-8"/>}/>
-                    <QuickActionButton title="前往地下城" description="開始你的冒險" onAction={() => setActivePage('dungeon')} icon={<Icons.Dungeon className="w-8 h-8"/>}/>
-                </div>
-            </div>
-
-            <div>
-                <h3 className="section-title">外部市場 (OKX NFT)</h3>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {externalMarkets.map(market => (
-                        market.address ? (
-                            <ExternalLinkButton
-                                key={market.title}
-                                title={market.title}
-                                url={`https://www.okx.com/web3/nft/markets/collection/bscn/${market.address}`}
-                                icon={market.icon}
-                            />
-                        ) : null
-                    ))}
-                </div>
-            </div>
-        </section>
+          </div>
+        </div>
+      </div>
     );
+  }
+
+  if (!isCorrectNetwork) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white p-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold mb-4">⚠️ 網路錯誤</h1>
+            <p className="text-xl text-gray-400 mb-8">
+              請切換到 BSC 網路以使用完整功能
+            </p>
+            <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-6 max-w-md mx-auto">
+              <p className="text-yellow-300">
+                當前網路: {chainId === 1 ? 'Ethereum' : `Chain ID: ${chainId}`}
+              </p>
+              <p className="text-yellow-300 mt-2">
+                需要網路: BSC (Chain ID: {bsc.id})
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white p-8">
+      <div className="max-w-6xl mx-auto">
+        {/* 歡迎區域 */}
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold mb-4">🏰 Dungeon Delvers</h1>
+          <p className="text-xl text-gray-400 mb-4">
+            歡迎回來，冒險者！
+          </p>
+          <p className="text-sm text-gray-500">
+            錢包地址: {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '未知'}
+          </p>
+        </div>
+
+        {/* 統計卡片 */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+          {stats.map((stat, index) => (
+            <div key={index} className="bg-gray-800 rounded-lg p-6 text-center">
+              <div className="text-3xl mb-2">{stat.icon}</div>
+              <div className="text-2xl font-bold text-blue-400">{stat.value}</div>
+              <div className="text-sm text-gray-400">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* 快速操作 */}
+        <div className="mb-12">
+          <h2 className="text-3xl font-bold mb-6 text-center">快速操作</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {quickActions.map((action, index) => (
+              <Link
+                key={index}
+                to={action.href}
+                className={`${action.color} rounded-lg p-6 text-white transition-all duration-200 transform hover:scale-105`}
+              >
+                <div className="text-4xl mb-4">{action.icon}</div>
+                <h3 className="text-xl font-semibold mb-2">{action.title}</h3>
+                <p className="text-sm opacity-90">{action.description}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* 遊戲說明 */}
+        <div className="bg-gray-800 rounded-lg p-8">
+          <h2 className="text-2xl font-bold mb-6 text-center">🎮 遊戲指南</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h3 className="text-lg font-semibold mb-4 text-blue-400">新手入門</h3>
+              <ol className="space-y-2 text-sm text-gray-300">
+                <li>1. 🔨 鑄造英雄和聖物 NFT</li>
+                <li>2. 🎒 在「我的資產」中組建隊伍</li>
+                <li>3. 🛒 購買探險所需的儲備</li>
+                <li>4. 🏰 派遣隊伍進行地下城探險</li>
+                <li>5. ⚡ 使用升星祭壇提升 NFT 屬性</li>
+              </ol>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-4 text-green-400">進階玩法</h3>
+              <ol className="space-y-2 text-sm text-gray-300">
+                <li>1. 👑 參與 VIP 質押獲得特權</li>
+                <li>2. 🤝 使用推薦系統獲得獎勵</li>
+                <li>3. 📊 在圖鑑中查看所有 NFT 資訊</li>
+                <li>4. 🔍 使用探索器查看交易記錄</li>
+                <li>5. ⚙️ 管理員可訪問管理後台</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        {/* 最近活動 */}
+        <div className="mt-12 bg-gray-800 rounded-lg p-8">
+          <h2 className="text-2xl font-bold mb-6 text-center">📈 最近活動</h2>
+          <div className="text-center text-gray-400">
+            <p>還沒有任何活動記錄</p>
+            <p className="text-sm mt-2">開始你的第一次探險吧！</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default DashboardPage;

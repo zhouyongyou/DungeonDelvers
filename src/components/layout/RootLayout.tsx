@@ -1,7 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
-import { useTranslation } from 'react-i18next';
 
 import { Header } from './Header';
 import { Footer } from './Footer';
@@ -10,7 +9,6 @@ import { TransactionWatcher } from '../core/TransactionWatcher';
 
 export function RootLayout() {
   const { isConnected } = useAccount();
-  const { t } = useTranslation();
 
   return (
     <div className="min-h-screen flex flex-col gradient-bg text-text-primary">
@@ -22,10 +20,10 @@ export function RootLayout() {
           <div className="flex flex-col items-center justify-center h-[60vh] gap-8">
             <div className="text-center space-y-4">
               <h1 className="text-4xl font-bold text-text-primary">
-                {t('common.welcome')}
+                Welcome to Dungeon Delvers
               </h1>
               <p className="text-xl text-text-secondary">
-                {t('common.connect_wallet_to_continue')}
+                Connect your wallet to continue
               </p>
             </div>
             <ConnectButton />

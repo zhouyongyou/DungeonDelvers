@@ -2,27 +2,22 @@
 
 import { Link, useLocation } from 'react-router-dom';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useTranslation } from 'react-i18next';
 import { Disclosure } from '@headlessui/react';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
-import { LanguageSelector } from '../ui/LanguageSelector';
 
 const navigation = [
-  { name: 'nav.dashboard', href: '/dashboard' },
-  { name: 'nav.mint', href: '/mint' },
-  { name: 'nav.dungeon', href: '/dungeon' },
-  { name: 'nav.altar', href: '/altar' },
-  { name: 'nav.my_assets', href: '/my-assets' },
-  { name: 'nav.provisions', href: '/provisions' },
-  { name: 'nav.profile', href: '/profile' },
-  { name: 'nav.vip', href: '/vip' },
-  { name: 'nav.referral', href: '/referral' },
-  { name: 'nav.codex', href: '/codex' },
+  { name: '儀表板', href: '/dashboard' },
+  { name: '鑄造', href: '/mint' },
+  { name: '地下城', href: '/dungeon' },
+  { name: '祭壇', href: '/altar' },
+  { name: '我的資產', href: '/my-assets' },
+  { name: '補給', href: '/provisions' },
+  { name: 'VIP', href: '/vip' },
+  { name: '圖鑑', href: '/codex' },
 ];
 
 export function Header() {
-  const { t } = useTranslation();
   const location = useLocation();
 
   return (
@@ -37,30 +32,29 @@ export function Header() {
                     Dungeon Delvers
                   </Link>
                 </div>
-                <div className="hidden sm:ml-6 sm:flex sm:space-x-4">
+                <div className="hidden lg:ml-6 lg:flex lg:space-x-3">
                   {navigation.map((item) => (
                     <Link
                       key={item.href}
                       to={item.href}
                       className={clsx(
-                        'inline-flex items-center px-3 py-2 text-sm font-medium transition-colors',
+                        'inline-flex items-center px-2 py-2 text-sm font-medium transition-colors whitespace-nowrap',
                         location.pathname === item.href
                           ? 'text-text-primary border-b-2 border-primary'
                           : 'text-text-secondary hover:text-text-primary hover:border-b-2 hover:border-primary/50'
                       )}
                     >
-                      {t(item.name)}
+                      {item.name}
                     </Link>
                   ))}
                 </div>
               </div>
               
               <div className="flex items-center">
-                <div className="hidden sm:ml-6 sm:flex sm:items-center gap-4">
-                  <LanguageSelector />
+                <div className="hidden lg:ml-6 lg:flex lg:items-center gap-4">
                   <ConnectButton />
                 </div>
-                <div className="flex items-center sm:hidden">
+                <div className="flex items-center lg:hidden">
                   <Disclosure.Button className="inline-flex items-center justify-center rounded-md p-2 text-text-secondary hover:bg-bg-accent hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary">
                     <span className="sr-only">Open main menu</span>
                     {open ? (
@@ -74,7 +68,7 @@ export function Header() {
             </div>
           </div>
 
-          <Disclosure.Panel className="sm:hidden">
+          <Disclosure.Panel className="lg:hidden">
             <div className="space-y-1 px-2 pb-3 pt-2">
               {navigation.map((item) => (
                 <Disclosure.Button
@@ -88,13 +82,12 @@ export function Header() {
                       : 'text-text-secondary hover:bg-bg-accent hover:text-text-primary'
                   )}
                 >
-                  {t(item.name)}
+                  {item.name}
                 </Disclosure.Button>
               ))}
             </div>
             <div className="border-t border-white/10 pb-3 pt-4">
               <div className="px-4 space-y-3">
-                <LanguageSelector />
                 <ConnectButton />
               </div>
             </div>

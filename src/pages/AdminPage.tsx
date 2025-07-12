@@ -177,7 +177,12 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     if (!isAddress(newAddress)) { showToast('請輸入有效的地址', 'error'); return; }
     setPendingTx(key);
     try {
-      const hash = await writeContractAsync({ address: targetContract.address, abi: targetContract.abi, functionName: functionName as any, args: [newAddress] });
+      const hash = await writeContractAsync({ 
+        address: targetContract.address, 
+        abi: targetContract.abi, 
+        functionName: functionName as keyof typeof targetContract.abi, 
+        args: [newAddress] 
+      });
       addTransaction({ hash, description: `管理員設定: ${key}` });
       showToast(`${key} 設定交易已送出`, 'success');
     } catch (e: unknown) {
@@ -414,7 +419,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
             <h4 className="text-lg font-semibold">合約暫停/恢復</h4>
             <div className="space-y-2">
               {['hero', 'relic', 'party', 'dungeonMaster', 'vipStaking'].map(contractName => {
-                const contract = getContract(chainId, contractName as any);
+                const contract = getContract(chainId, contractName as ContractName);
                 if (!contract) return null;
                 return (
                   <div key={contractName} className="flex gap-2">
@@ -424,13 +429,14 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                           const hash = await writeContractAsync({ 
                             address: contract.address, 
                             abi: contract.abi, 
-                            functionName: 'pause' as any 
+                            functionName: 'pause' as keyof typeof contract.abi 
                           });
                           addTransaction({ hash, description: `暫停 ${contractName} 合約` });
                           showToast(`${contractName} 合約已暫停`, 'success');
-                        } catch (e: any) {
-                          if (!e.message?.includes('User rejected')) {
-                            showToast(`暫停 ${contractName} 失敗: ${e.shortMessage}`, 'error');
+                        } catch (e: unknown) {
+                          const error = e as { message?: string; shortMessage?: string };
+                          if (!error.message?.includes('User rejected')) {
+                            showToast(`暫停 ${contractName} 失敗: ${error.shortMessage}`, 'error');
                           }
                         }
                       }}
@@ -444,13 +450,14 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                           const hash = await writeContractAsync({ 
                             address: contract.address, 
                             abi: contract.abi, 
-                            functionName: 'unpause' as any 
+                            functionName: 'unpause' as keyof typeof contract.abi 
                           });
                           addTransaction({ hash, description: `恢復 ${contractName} 合約` });
                           showToast(`${contractName} 合約已恢復`, 'success');
-                        } catch (e: any) {
-                          if (!e.message?.includes('User rejected')) {
-                            showToast(`恢復 ${contractName} 失敗: ${e.shortMessage}`, 'error');
+                        } catch (e: unknown) {
+                          const error = e as { message?: string; shortMessage?: string };
+                          if (!error.message?.includes('User rejected')) {
+                            showToast(`恢復 ${contractName} 失敗: ${error.shortMessage}`, 'error');
                           }
                         }
                       }}
@@ -474,7 +481,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                 { name: 'playerVault', label: '玩家金庫' },
                 { name: 'vipStaking', label: 'VIP質押' }
               ].map(({ name, label }) => {
-                const contract = getContract(chainId, name as any);
+                const contract = getContract(chainId, name as ContractName);
                 if (!contract) return null;
                 return (
                   <ActionButton 
@@ -484,13 +491,14 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                         const hash = await writeContractAsync({ 
                           address: contract.address, 
                           abi: contract.abi, 
-                          functionName: 'withdrawSoulShard' as any 
+                          functionName: 'withdrawSoulShard' as keyof typeof contract.abi 
                         });
                         addTransaction({ hash, description: `提取 ${label} SoulShard` });
                         showToast(`${label} SoulShard 提取成功`, 'success');
-                      } catch (e: any) {
-                        if (!e.message?.includes('User rejected')) {
-                          showToast(`提取 ${label} 失敗: ${e.shortMessage}`, 'error');
+                      } catch (e: unknown) {
+                        const error = e as { message?: string; shortMessage?: string };
+                        if (!error.message?.includes('User rejected')) {
+                          showToast(`提取 ${label} 失敗: ${error.shortMessage}`, 'error');
                         }
                       }
                     }}
