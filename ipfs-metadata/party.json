@@ -1,0 +1,15 @@
+{
+  "name": "Dungeon Delvers Party",
+  "description": "A coordinated team of heroes and relics ready for dungeon exploration. Parties combine the strength of multiple heroes with the storage capacity of relics.",
+  "image": "ipfs://bafybeigpli7ddzkuwpvlaks7jvimvkzlm4z6qo76la7wp522jmhrhpubgm/images/party/party.png",
+  "attributes": [
+    {
+      "trait_type": "Type",
+      "value": "Party"
+    },
+    {
+      "trait_type": "Description",
+      "value": "Dynamic team composition"
+    }
+  ]
+} 

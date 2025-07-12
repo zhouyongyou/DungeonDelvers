@@ -1,0 +1,25 @@
+{
+  "name": "Dungeon Delvers Hero",
+  "description": "A skilled warrior with exceptional combat prowess. This Rare hero is a valuable asset in any dungeon expedition.",
+  "image": "ipfs://bafybeigpli7ddzkuwpvlaks7jvimvkzlm4z6qo76la7wp522jmhrhpubgm/images/hero/hero-3.png",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": 3,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Rarity Name",
+      "value": "Rare"
+    },
+    {
+      "trait_type": "Type",
+      "value": "Hero"
+    },
+    {
+      "trait_type": "Base Power",
+      "value": 125,
+      "display_type": "number"
+    }
+  ]
+} 

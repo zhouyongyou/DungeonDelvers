@@ -1,0 +1,25 @@
+{
+  "name": "Dungeon Delvers Relic",
+  "description": "An enhanced magical artifact with improved storage capabilities. This Uncommon relic can hold more heroes.",
+  "image": "ipfs://bafybeigpli7ddzkuwpvlaks7jvimvkzlm4z6qo76la7wp522jmhrhpubgm/images/relic/relic-2.png",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": 2,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Rarity Name",
+      "value": "Uncommon"
+    },
+    {
+      "trait_type": "Type",
+      "value": "Relic"
+    },
+    {
+      "trait_type": "Base Capacity",
+      "value": 2,
+      "display_type": "number"
+    }
+  ]
+} 

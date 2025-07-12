@@ -1,0 +1,25 @@
+{
+  "name": "Dungeon Delvers Hero",
+  "description": "An experienced hero with enhanced abilities. This Uncommon hero shows promise and can handle more challenging dungeons.",
+  "image": "ipfs://bafybeigpli7ddzkuwpvlaks7jvimvkzlm4z6qo76la7wp522jmhrhpubgm/images/hero/hero-2.png",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": 2,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Rarity Name",
+      "value": "Uncommon"
+    },
+    {
+      "trait_type": "Type",
+      "value": "Hero"
+    },
+    {
+      "trait_type": "Base Power",
+      "value": 75,
+      "display_type": "number"
+    }
+  ]
+} 
