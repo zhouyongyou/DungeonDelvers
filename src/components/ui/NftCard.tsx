@@ -76,6 +76,32 @@ const NftCard: React.FC<NftCardProps> = memo(({
     return names[rarity - 1] || '未知';
   };
 
+  // 新增：同步/資料來源提示
+  const renderSyncStatus = () => {
+    if (nft.syncing) {
+      return (
+        <div className="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded text-xs font-bold z-10 shadow">
+          資料同步中
+        </div>
+      );
+    }
+    if (nft.source === 'fallback') {
+      return (
+        <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded text-xs font-bold z-10 shadow">
+          暫用預設資料
+        </div>
+      );
+    }
+    if (nft.source === 'metadata') {
+      return (
+        <div className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded text-xs font-bold z-10 shadow">
+          僅本地資料
+        </div>
+      );
+    }
+    return null;
+  };
+
   const renderImage = () => {
     // VIP卡片使用專門的組件
     if (nft.type === 'vip') {
@@ -86,6 +112,7 @@ const NftCard: React.FC<NftCardProps> = memo(({
     const baseImageClass = "w-full h-full object-cover rounded-lg transition-transform duration-300 hover:scale-110";
     return (
       <div className="relative w-full h-full">
+        {renderSyncStatus()}
         <img 
           src={nft.image} 
           alt={nft.name}

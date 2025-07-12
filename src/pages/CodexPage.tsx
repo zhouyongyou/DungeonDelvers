@@ -40,7 +40,8 @@ const useAllPossibleNfts = () => useQuery({
                 type: 'hero', 
                 contractAddress: '0x0', 
                 power: heroPower, 
-                rarity: r 
+                rarity: r,
+                source: 'fallback' as const,
             });
             relics.push({ 
                 id: BigInt(r), 
@@ -54,7 +55,8 @@ const useAllPossibleNfts = () => useQuery({
                 type: 'relic', 
                 contractAddress: '0x0', 
                 capacity: relicCapacity, 
-                rarity: r 
+                rarity: r,
+                source: 'fallback' as const,
             });
         }
         return { heros, relics };

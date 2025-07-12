@@ -5,6 +5,7 @@ import { Party, PlayerProfile } from "../generated/schema"
 import { calculateLevel } from "./utils"
 import { getOrCreatePlayer } from "./common"
 import { getPartyContractAddress, createEntityId } from "./config"
+import { updatePlayerStats, updatePlayerStatsBigInt, TOTAL_EXPEDITIONS, SUCCESSFUL_EXPEDITIONS } from "./stats"
 
 export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
   const partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
@@ -22,6 +23,13 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
 
     const playerAddress = event.params.player
     getOrCreatePlayer(playerAddress)
+    
+    // 更新玩家統計數據
+    updatePlayerStats(playerAddress, TOTAL_EXPEDITIONS, 1, event.block.timestamp)
+    if (event.params.success) {
+      updatePlayerStats(playerAddress, SUCCESSFUL_EXPEDITIONS, 1, event.block.timestamp)
+      updatePlayerStatsBigInt(playerAddress, "totalRewardsEarned", event.params.reward, event.block.timestamp)
+    }
     
     const profile = PlayerProfile.load(playerAddress.toHexString());
     if (profile) {

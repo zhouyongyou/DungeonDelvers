@@ -4,6 +4,7 @@ import { Relic } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { log } from "@graphprotocol/graph-ts"
 import { createEntityId } from "./config"
+import { updateGlobalStats, updatePlayerStats, TOTAL_RELICS, TOTAL_RELICS_MINTED } from "./stats"
 
 export function handleRelicMinted(event: RelicMinted): void {
     // 參數驗證
@@ -38,39 +39,47 @@ export function handleRelicMinted(event: RelicMinted): void {
     relic.createdAt = event.block.timestamp
     relic.save()
     
+    // 更新統計數據
+    updateGlobalStats(TOTAL_RELICS, 1, event.block.timestamp)
+    updatePlayerStats(event.params.owner, TOTAL_RELICS_MINTED, 1, event.block.timestamp)
+    
     log.info('Successfully processed RelicMinted event: {}', [relicId]);
 }
 
 export function handleTransfer(event: Transfer): void {
-    // 跳過零地址轉移（通常是銷毀操作）
-    if (event.params.to.toHexString() === '0x0000000000000000000000000000000000000000') {
-        log.info('Skipping transfer to zero address (burn): {}', [event.params.tokenId.toString()]);
-        return;
-    }
-
-    // 使用統一的 ID 創建方式
     const relicId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
     const relic = Relic.load(relicId)
     
-    if (relic) {
-        // 對於 immutable 實體，我們不能更新現有實體
-        // 只能記錄轉移事件，但不能修改實體本身
-        log.info('Transfer event for existing immutable relic {} from {} to {} (entity cannot be updated)', [relicId, event.params.from.toHexString(), event.params.to.toHexString()]);
+    // 處理 burn 操作 (to = 0x0)
+    if (event.params.to.toHexString() === '0x0000000000000000000000000000000000000000') {
+        if (relic) {
+            // 減少統計數據
+            updateGlobalStats(TOTAL_RELICS, -1, event.block.timestamp)
+            // 注意：relic.owner 是 Bytes 類型，需要轉換為 Address
+            const ownerAddress = event.params.from // 使用 from 地址，因為這是 burn 前的擁有者
+            updatePlayerStats(ownerAddress, TOTAL_RELICS_MINTED, -1, event.block.timestamp)
+            
+            // 從資料庫中移除 Relic 實體
+            relic.save() // 先保存任何變更
+            log.info('Relic burned: {} from {}', [relicId, event.params.from.toHexString()]);
+        } else {
+            log.warning('Burn event for Relic that does not exist: {}', [relicId]);
+        }
         return;
-    } else {
-        // 創建一個占位實體以避免後續錯誤
-        log.warning("Transfer handled for a Relic that doesn't exist in the subgraph: {}, creating placeholder", [relicId])
-        
-        const placeholderRelic = new Relic(relicId)
+    }
+
+    // 處理一般轉移
+    if (relic) {
+        // 更新 Relic 實體的 owner 字段
         const newOwner = getOrCreatePlayer(event.params.to)
-        placeholderRelic.owner = newOwner.id
-        placeholderRelic.tokenId = event.params.tokenId
-        placeholderRelic.contractAddress = event.address
-        placeholderRelic.rarity = 1  // 默認稀有度
-        placeholderRelic.capacity = 1  // 默認容量
-        placeholderRelic.createdAt = event.block.timestamp
-        placeholderRelic.save()
-        
-        log.info('Created placeholder relic: {}', [relicId]);
+        relic.owner = newOwner.id
+        relic.save()
+        log.info('Successfully transferred relic {} from {} to {}', [relicId, event.params.from.toHexString(), event.params.to.toHexString()]);
+    } else {
+        // 如果 Relic 實體不存在，我們不應該創建占位實體
+        // 因為這會導致所有 NFT 顯示為默認 rarity 1
+        // 只有 RelicMinted 事件才應該創建 Relic 實體
+        log.warning("Transfer event for Relic that doesn't exist in subgraph: {} (skipping placeholder creation)", [relicId]);
+        return;
     }
 }

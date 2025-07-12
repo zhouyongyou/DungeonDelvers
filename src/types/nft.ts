@@ -22,6 +22,14 @@ export interface BaseNft {
   image: string;
   attributes: NftAttribute[];
   contractAddress: Address;
+  /**
+   * 資料來源：subgraph | metadata | fallback
+   */
+  source?: 'subgraph' | 'metadata' | 'fallback';
+  /**
+   * 是否為同步中（subgraph 與 metadata 不一致時）
+   */
+  syncing?: boolean;
 }
 
 // 英雄 NFT 的獨有屬性

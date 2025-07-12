@@ -23,7 +23,7 @@ type Player @entity(immutable: false) {
   stats: PlayerStats @derivedFrom(field: "player")
 }
 
-type Hero @entity(immutable: true) {
+type Hero @entity(immutable: false) {
   " 全域唯一 ID，格式為：`contractAddress-tokenId` "
   id: String!
   " NFT 的合約地址 "
@@ -40,7 +40,7 @@ type Hero @entity(immutable: true) {
   createdAt: BigInt!
 }
 
-type Relic @entity(immutable: true) {
+type Relic @entity(immutable: false) {
   " 全域唯一 ID，格式為：`contractAddress-tokenId` "
   id: String!
   " NFT 的合約地址 "

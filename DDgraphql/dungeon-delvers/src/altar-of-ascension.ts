@@ -2,6 +2,7 @@
 import { UpgradeProcessed } from "../generated/AltarOfAscension/AltarOfAscension"
 import { UpgradeAttempt } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
+import { updateGlobalStats, updatePlayerStats, TOTAL_UPGRADE_ATTEMPTS, SUCCESSFUL_UPGRADES, TOTAL_UPGRADE_ATTEMPTS_PLAYER, SUCCESSFUL_UPGRADES_PLAYER } from "./stats"
 
 export function handleUpgradeProcessed(event: UpgradeProcessed): void {
     // 使用 getOrCreatePlayer 確保玩家實體存在
@@ -17,4 +18,14 @@ export function handleUpgradeProcessed(event: UpgradeProcessed): void {
     upgradeAttempt.outcome = event.params.outcome
     upgradeAttempt.timestamp = event.block.timestamp
     upgradeAttempt.save()
+    
+    // 更新統計數據
+    updateGlobalStats(TOTAL_UPGRADE_ATTEMPTS, 1, event.block.timestamp)
+    updatePlayerStats(event.params.player, TOTAL_UPGRADE_ATTEMPTS_PLAYER, 1, event.block.timestamp)
+    
+    // 如果升級成功（outcome >= 2），更新成功統計
+    if (event.params.outcome >= 2) {
+        updateGlobalStats(SUCCESSFUL_UPGRADES, 1, event.block.timestamp)
+        updatePlayerStats(event.params.player, SUCCESSFUL_UPGRADES_PLAYER, 1, event.block.timestamp)
+    }
 }

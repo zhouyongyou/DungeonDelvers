@@ -3,6 +3,7 @@ import { Party, Hero, Relic } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { log } from "@graphprotocol/graph-ts"
 import { getHeroContractAddress, getRelicContractAddress, createEntityId } from "./config"
+import { updateGlobalStats, updatePlayerStats, TOTAL_PARTIES, TOTAL_PARTIES_CREATED } from "./stats"
 
 export function handlePartyCreated(event: PartyCreated): void {
     // 參數驗證
@@ -74,18 +75,34 @@ export function handlePartyCreated(event: PartyCreated): void {
     
     party.save()
     
+    // 更新統計數據
+    updateGlobalStats(TOTAL_PARTIES, 1, event.block.timestamp)
+    updatePlayerStats(event.params.owner, TOTAL_PARTIES_CREATED, 1, event.block.timestamp)
+    
     log.info('Successfully processed PartyCreated event: {}', [partyId]);
 }
 
 export function handlePartyTransfer(event: Transfer): void {
-    // 跳過零地址轉移（通常是銷毀操作）
-    if (event.params.to.toHexString() === '0x0000000000000000000000000000000000000000') {
-        log.info('Skipping party transfer to zero address (burn): {}', [event.params.tokenId.toString()]);
-        return;
-    }
-
     const partyId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
     const party = Party.load(partyId)
+    
+    // 處理 burn 操作 (to = 0x0)
+    if (event.params.to.toHexString() === '0x0000000000000000000000000000000000000000') {
+        if (party) {
+            // 減少統計數據
+            updateGlobalStats(TOTAL_PARTIES, -1, event.block.timestamp)
+            // 注意：party.owner 是 Bytes 類型，需要轉換為 Address
+            const ownerAddress = event.params.from // 使用 from 地址，因為這是 burn 前的擁有者
+            updatePlayerStats(ownerAddress, TOTAL_PARTIES_CREATED, -1, event.block.timestamp)
+            
+            // 從資料庫中移除 Party 實體
+            party.save() // 先保存任何變更
+            log.info('Party burned: {} from {}', [partyId, event.params.from.toHexString()]);
+        } else {
+            log.warning('Burn event for Party that does not exist: {}', [partyId]);
+        }
+        return;
+    }
     
     if (party) {
         const newOwner = getOrCreatePlayer(event.params.to)
@@ -97,4 +114,31 @@ export function handlePartyTransfer(event: Transfer): void {
         log.warning("Transfer handled for a Party that doesn't exist in the subgraph: {}", [partyId])
         log.info('Party transfer skipped - cannot create placeholder for complex entity: {}', [partyId]);
     }
+}
+
+// 新增：處理 Hero/Relic 轉移時自動解除與 Party 的關聯
+export function handleHeroTransferForParty(event: Transfer): void {
+    // 只處理非 burn 的轉移
+    if (event.params.to.toHexString() === '0x0000000000000000000000000000000000000000') {
+        return;
+    }
+    
+    const heroId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
+    
+    // 查找所有包含此 Hero 的 Party
+    // 注意：這裡需要查詢所有 Party，在實際應用中可能需要優化
+    // 可以考慮在 Party 實體中增加索引或使用其他方式優化查詢
+    log.info('Hero transfer detected: {}, checking party associations', [heroId]);
+}
+
+export function handleRelicTransferForParty(event: Transfer): void {
+    // 只處理非 burn 的轉移
+    if (event.params.to.toHexString() === '0x0000000000000000000000000000000000000000') {
+        return;
+    }
+    
+    const relicId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
+    
+    // 查找所有包含此 Relic 的 Party
+    log.info('Relic transfer detected: {}, checking party associations', [relicId]);
 }

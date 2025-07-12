@@ -95,6 +95,7 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
                             attributes: [],
                             contractAddress: contractAddress,
                             tokenId: BigInt(asset.tokenId),
+                            source: 'subgraph' as const,
                         };
 
                         if (nftType === 'hero') {

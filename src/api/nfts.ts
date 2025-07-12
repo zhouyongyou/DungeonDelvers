@@ -116,7 +116,8 @@ export async function fetchMetadata(
             name: cachedMetadata.name ?? '',
             description: cachedMetadata.description ?? '',
             image: cachedMetadata.image ?? '',
-            attributes: cachedMetadata.attributes ?? []
+            attributes: cachedMetadata.attributes ?? [],
+            source: 'metadata',
         };
     }
     
@@ -152,7 +153,7 @@ export async function fetchMetadata(
         // 🔥 2. 成功获取后立即缓存
         await nftMetadataCache.cacheMetadata(tokenId, contractAddress, metadata);
         
-        return metadata;
+        return { ...metadata, source: 'metadata' };
     } catch (error) {
         const loadTime = Date.now() - Date.now();
         console.warn(`${nftType} #${tokenId} 解析元數據時出錯 (嘗試 ${retryCount + 1}/${maxRetries + 1}, ${loadTime}ms):`, error);
@@ -168,12 +169,10 @@ export async function fetchMetadata(
         
         // 🔥 根據 NFT 類型提供更好的 fallback 數據
         const fallbackData = generateFallbackMetadata(nftType, tokenId);
+        await nftMetadataCache.cacheMetadata(tokenId, contractAddress, fallbackData);
         console.log(`${nftType} #${tokenId} 使用 fallback 數據`);
         
-        // 將 fallback 數據也緩存起來
-        await nftMetadataCache.cacheMetadata(tokenId, contractAddress, fallbackData);
-        
-        return fallbackData;
+        return { ...fallbackData, source: 'fallback' };
     }
 }
 
@@ -465,7 +464,7 @@ async function parseNfts<T extends AssetWithTokenId>(
 
         const findAttr = (trait: string, defaultValue: string | number = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
         
-        const baseNft = { ...metadata, id: BigInt(asset.tokenId), contractAddress };
+        const baseNft = { ...metadata, id: BigInt(asset.tokenId), contractAddress, source: metadata.source || 'metadata' };
 
         switch (type) {
             case 'hero': {
@@ -600,10 +599,10 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
         const vipCards = playerAssets.vip ? await parseNfts([playerAssets.vip], 'vip', chainId, client) : [];
 
         return {
-            heros: heroes.filter(Boolean) as HeroNft[],
-            relics: relics.filter(Boolean) as RelicNft[],
-            parties: parties.filter(Boolean) as PartyNft[],
-            vipCards: vipCards.filter(Boolean) as VipNft[],
+            heros: heroes.filter(Boolean).map(nft => ({ ...nft, source: nft.source || 'subgraph' })),
+            relics: relics.filter(Boolean).map(nft => ({ ...nft, source: nft.source || 'subgraph' })),
+            parties: parties.filter(Boolean).map(nft => ({ ...nft, source: nft.source || 'subgraph' })),
+            vipCards: vipCards.filter(Boolean).map(nft => ({ ...nft, source: nft.source || 'subgraph' })),
         };
 
     } catch (error) {

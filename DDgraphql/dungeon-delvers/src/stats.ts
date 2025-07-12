@@ -3,6 +3,21 @@
 import { BigInt, Address, log } from "@graphprotocol/graph-ts";
 import { GlobalStats, PlayerStats, Player } from "../generated/schema";
 
+// 定義統計字段常量
+const TOTAL_HEROES = 1;
+const TOTAL_RELICS = 2;
+const TOTAL_PARTIES = 3;
+const TOTAL_PLAYERS = 4;
+const TOTAL_UPGRADE_ATTEMPTS = 5;
+const SUCCESSFUL_UPGRADES = 6;
+const TOTAL_HEROES_MINTED = 7;
+const TOTAL_RELICS_MINTED = 8;
+const TOTAL_PARTIES_CREATED = 9;
+const TOTAL_EXPEDITIONS = 10;
+const SUCCESSFUL_EXPEDITIONS = 11;
+const TOTAL_UPGRADE_ATTEMPTS_PLAYER = 12;
+const SUCCESSFUL_UPGRADES_PLAYER = 13;
+
 /**
  * 獲取或創建全域統計數據
  */
@@ -50,33 +65,33 @@ export function getOrCreatePlayerStats(playerAddress: Address): PlayerStats {
  * 更新全域統計數據
  */
 export function updateGlobalStats(
-  field: string,
+  field: i32,
   increment: i32,
   timestamp: BigInt = BigInt.fromI32(0)
 ): void {
   const stats = getOrCreateGlobalStats();
   
   switch (field) {
-    case "totalHeroes":
+    case TOTAL_HEROES:
       stats.totalHeroes = stats.totalHeroes.plus(BigInt.fromI32(increment));
       break;
-    case "totalRelics":
+    case TOTAL_RELICS:
       stats.totalRelics = stats.totalRelics.plus(BigInt.fromI32(increment));
       break;
-    case "totalParties":
+    case TOTAL_PARTIES:
       stats.totalParties = stats.totalParties.plus(BigInt.fromI32(increment));
       break;
-    case "totalPlayers":
+    case TOTAL_PLAYERS:
       stats.totalPlayers = stats.totalPlayers.plus(BigInt.fromI32(increment));
       break;
-    case "totalUpgradeAttempts":
+    case TOTAL_UPGRADE_ATTEMPTS:
       stats.totalUpgradeAttempts = stats.totalUpgradeAttempts.plus(BigInt.fromI32(increment));
       break;
-    case "successfulUpgrades":
+    case SUCCESSFUL_UPGRADES:
       stats.successfulUpgrades = stats.successfulUpgrades.plus(BigInt.fromI32(increment));
       break;
     default:
-      log.warning("Unknown global stats field: {}", [field]);
+      log.warning("Unknown global stats field: {}", [field.toString()]);
       return;
   }
   
@@ -85,7 +100,7 @@ export function updateGlobalStats(
   }
   
   stats.save();
-  log.info("Updated global stats: {} by {}", [field, increment.toString()]);
+  log.info("Updated global stats: {} by {}", [field.toString(), increment.toString()]);
 }
 
 /**
@@ -93,7 +108,7 @@ export function updateGlobalStats(
  */
 export function updatePlayerStats(
   playerAddress: Address,
-  field: string,
+  field: i32,
   increment: i32,
   timestamp: BigInt = BigInt.fromI32(0)
 ): void {
@@ -101,29 +116,29 @@ export function updatePlayerStats(
   const playerId = playerAddress.toHexString();
   
   switch (field) {
-    case "totalHeroesMinted":
+    case TOTAL_HEROES_MINTED:
       stats.totalHeroesMinted = stats.totalHeroesMinted + increment;
       break;
-    case "totalRelicsMinted":
+    case TOTAL_RELICS_MINTED:
       stats.totalRelicsMinted = stats.totalRelicsMinted + increment;
       break;
-    case "totalPartiesCreated":
+    case TOTAL_PARTIES_CREATED:
       stats.totalPartiesCreated = stats.totalPartiesCreated + increment;
       break;
-    case "totalExpeditions":
+    case TOTAL_EXPEDITIONS:
       stats.totalExpeditions = stats.totalExpeditions + increment;
       break;
-    case "successfulExpeditions":
+    case SUCCESSFUL_EXPEDITIONS:
       stats.successfulExpeditions = stats.successfulExpeditions + increment;
       break;
-    case "totalUpgradeAttempts":
+    case TOTAL_UPGRADE_ATTEMPTS_PLAYER:
       stats.totalUpgradeAttempts = stats.totalUpgradeAttempts + increment;
       break;
-    case "successfulUpgrades":
+    case SUCCESSFUL_UPGRADES_PLAYER:
       stats.successfulUpgrades = stats.successfulUpgrades + increment;
       break;
     default:
-      log.warning("Unknown player stats field: {}", [field]);
+      log.warning("Unknown player stats field: {}", [field.toString()]);
       return;
   }
   
@@ -132,7 +147,7 @@ export function updatePlayerStats(
   }
   
   stats.save();
-  log.info("Updated player stats for {}: {} by {}", [playerId, field, increment.toString()]);
+  log.info("Updated player stats for {}: {} by {}", [playerId, field.toString(), increment.toString()]);
 }
 
 /**
@@ -147,18 +162,15 @@ export function updatePlayerStatsBigInt(
   const stats = getOrCreatePlayerStats(playerAddress);
   const playerId = playerAddress.toHexString();
   
-  switch (field) {
-    case "totalRewardsEarned":
-      stats.totalRewardsEarned = stats.totalRewardsEarned.plus(value);
-      break;
-    case "highestPartyPower":
-      if (value.gt(stats.highestPartyPower)) {
-        stats.highestPartyPower = value;
-      }
-      break;
-    default:
-      log.warning("Unknown player stats BigInt field: {}", [field]);
-      return;
+  if (field == "totalRewardsEarned") {
+    stats.totalRewardsEarned = stats.totalRewardsEarned.plus(value);
+  } else if (field == "highestPartyPower") {
+    if (value.gt(stats.highestPartyPower)) {
+      stats.highestPartyPower = value;
+    }
+  } else {
+    log.warning("Unknown player stats BigInt field: {}", [field]);
+    return;
   }
   
   if (timestamp.gt(BigInt.fromI32(0))) {
@@ -177,7 +189,16 @@ export function checkAndUpdatePlayerCount(playerAddress: Address, timestamp: Big
   const playerId = playerAddress.toHexString();
   if (!player) {
     // 這是新玩家，更新全域統計
-    updateGlobalStats("totalPlayers", 1, timestamp);
+    updateGlobalStats(TOTAL_PLAYERS, 1, timestamp);
     log.info("New player detected: {}", [playerId]);
   }
 }
+
+// 導出常量供其他文件使用
+export { 
+  TOTAL_HEROES, TOTAL_RELICS, TOTAL_PARTIES, TOTAL_PLAYERS, 
+  TOTAL_UPGRADE_ATTEMPTS, SUCCESSFUL_UPGRADES,
+  TOTAL_HEROES_MINTED, TOTAL_RELICS_MINTED, TOTAL_PARTIES_CREATED,
+  TOTAL_EXPEDITIONS, SUCCESSFUL_EXPEDITIONS,
+  TOTAL_UPGRADE_ATTEMPTS_PLAYER, SUCCESSFUL_UPGRADES_PLAYER
+};
