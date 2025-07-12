@@ -5,6 +5,7 @@ import { useAccount, useReadContract } from 'wagmi';
 import { getContract } from '../../config/contracts';
 import { bsc } from 'wagmi/chains';
 import type { AnyNft, HeroNft, RelicNft, PartyNft, VipNft } from '../../types/nft';
+import { getRarityChineseName, getRarityColor as getRarityColorUtil } from '../../utils/rarityConverter';
 
 interface NftCardProps {
   nft: AnyNft;
@@ -66,14 +67,13 @@ const NftCard: React.FC<NftCardProps> = memo(({
   showDetails = true,
   className = '' 
 }) => {
-  const getRarityColor = (rarity: number) => {
-    const colors = ['#9ca3af', '#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ec4899'];
-    return colors[rarity - 1] || colors[0];
+  // 使用新的稀有度轉換工具
+  const getRarityColor = (rarity: string | number | bigint) => {
+    return getRarityColorUtil(rarity);
   };
 
-  const getRarityName = (rarity: number) => {
-    const names = ['普通', '優秀', '稀有', '史詩', '傳說', '神話'];
-    return names[rarity - 1] || '未知';
+  const getRarityName = (rarity: string | number | bigint) => {
+    return getRarityChineseName(rarity);
   };
 
   // 新增：同步/資料來源提示
@@ -151,9 +151,9 @@ const NftCard: React.FC<NftCardProps> = memo(({
   const renderDetails = () => {
     if (!showDetails) return null;
 
-    // 處理不同NFT類型的稀有度
-    let rarity = 1;
-    if ('rarity' in nft && typeof nft.rarity === 'number') {
+    // 處理不同NFT類型的稀有度 - 使用新的轉換工具
+    let rarity: string | number | bigint = 1;
+    if ('rarity' in nft && nft.rarity !== undefined) {
       rarity = nft.rarity;
     } else if (nft.type === 'party') {
       const party = nft as PartyNft;

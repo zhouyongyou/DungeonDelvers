@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useReadContracts, useWriteContract } from 'wagmi';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatEther } from 'viem';
 // 不再需要從 nfts.ts 獲取數據
 // import { fetchAllOwnedNfts } from '../api/nfts';
@@ -68,34 +68,46 @@ const GET_PLAYER_PARTIES_QUERY = `
 // 新的 Hook，用於從 The Graph 獲取所有隊伍的數據
 const usePlayerParties = () => {
     const { address, chainId } = useAccount();
+    
     return useQuery<PartyNft[]>({
         queryKey: ['playerParties', address, chainId],
         queryFn: async () => {
             if (!address || !THE_GRAPH_API_URL) return [];
-            const response = await fetch(THE_GRAPH_API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    query: GET_PLAYER_PARTIES_QUERY,
-                    variables: { owner: address.toLowerCase() },
-                }),
-            });
-            if (!response.ok) throw new Error('GraphQL Network response was not ok');
-            const { data } = await response.json();
             
-            // 將 The Graph 回傳的數據轉換為我們前端的 PartyNft 型別
-            return data?.player?.parties?.map((p: {
-                tokenId: string;
-                totalPower: string;
-                totalCapacity: string;
-                partyRarity: string;
-                provisionsRemaining: string;
-                cooldownEndsAt: string;
-                unclaimedRewards: string;
-                fatigueLevel: string;
-                heros: Array<{ tokenId: string }>;
-                relics: Array<{ tokenId: string }>;
-            }) => ({
+            // 嘗試從多個來源獲取資料
+            const sources = [
+                // 主要來源：The Graph
+                fetch(THE_GRAPH_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: GET_PLAYER_PARTIES_QUERY,
+                        variables: { owner: address.toLowerCase() },
+                    }),
+                }),
+                // 備用來源：我們的metadata server
+                fetch(`${import.meta.env.VITE_METADATA_SERVER_URL || 'https://dungeon-delvers-metadata-server.onrender.com'}/api/player/${address.toLowerCase()}/assets?type=party`, {
+                    headers: { 'Content-Type': 'application/json' },
+                }).catch(() => null), // 忽略錯誤
+            ];
+            
+            const [graphqlResponse, metadataResponse] = await Promise.allSettled(sources);
+            
+            let parties: any[] = [];
+            
+            // 優先使用 GraphQL 資料
+            if (graphqlResponse.status === 'fulfilled' && graphqlResponse.value?.ok) {
+                const { data } = await graphqlResponse.value.json();
+                parties = data?.player?.parties || [];
+            }
+            // 如果 GraphQL 失敗，嘗試 metadata server
+            else if (metadataResponse.status === 'fulfilled' && metadataResponse.value) {
+                const metadataData = await metadataResponse.value.json();
+                parties = metadataData.assets || [];
+            }
+            
+            // 將資料轉換為前端格式
+            return parties.map((p: any) => ({
                 id: BigInt(p.tokenId),
                 tokenId: BigInt(p.tokenId),
                 name: `隊伍 #${p.tokenId}`,
@@ -104,20 +116,26 @@ const usePlayerParties = () => {
                 attributes: [],
                 contractAddress: getContract(bsc.id, 'party')?.address ?? '0x',
                 type: 'party',
-                totalPower: BigInt(p.totalPower),
-                totalCapacity: BigInt(p.totalCapacity),
-                // ★★★ 修正點：正確填充 heroIds 和 relicIds ★★★
-                heroIds: p.heros.map((h) => BigInt(h.tokenId)),
-                relicIds: p.relics.map((r) => BigInt(r.tokenId)),
-                partyRarity: p.partyRarity,
-                // 直接從 The Graph 獲取狀態
-                provisionsRemaining: BigInt(p.provisionsRemaining),
-                cooldownEndsAt: BigInt(p.cooldownEndsAt),
-                unclaimedRewards: BigInt(p.unclaimedRewards),
-                fatigueLevel: Number(p.fatigueLevel),
-            })) ?? [];
+                totalPower: BigInt(p.totalPower || '0'),
+                totalCapacity: BigInt(p.totalCapacity || '0'),
+                heroIds: (p.heros || []).map((h: any) => BigInt(h.tokenId)),
+                relicIds: (p.relics || []).map((r: any) => BigInt(r.tokenId)),
+                partyRarity: p.partyRarity || '1',
+                provisionsRemaining: BigInt(p.provisionsRemaining || '0'),
+                cooldownEndsAt: BigInt(p.cooldownEndsAt || '0'),
+                unclaimedRewards: BigInt(p.unclaimedRewards || '0'),
+                fatigueLevel: Number(p.fatigueLevel || '0'),
+            }));
         },
         enabled: !!address && chainId === bsc.id,
+        // 🔥 更積極的快取策略
+        staleTime: 1000 * 30, // 30秒內認為資料新鮮
+        gcTime: 1000 * 60 * 5, // 5分鐘垃圾回收
+        refetchOnWindowFocus: true, // 視窗聚焦時重新獲取
+        refetchOnMount: true, // 組件掛載時重新獲取
+        refetchOnReconnect: true, // 重新連接時重新獲取
+        retry: 3,
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     });
 };
 
@@ -233,6 +251,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
     const { chainId } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction, transactions } = useTransactionStore();
+    const queryClient = useQueryClient();
 
     const [isProvisionModalOpen, setIsProvisionModalOpen] = useState(false);
     const [selectedPartyForProvision, setSelectedPartyForProvision] = useState<bigint | null>(null);
@@ -242,7 +261,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
     // ★ 核心改造：使用新的 Hook 獲取隊伍數據
-    const { data: parties, isLoading: isLoadingParties } = usePlayerParties();
+    const { data: parties, isLoading: isLoadingParties, refetch: refetchParties } = usePlayerParties();
 
     // 獲取地城資訊的邏輯保持不變，因為這是全域數據
     const dungeonStorageContract = getContract(bsc.id, 'dungeonStorage');
@@ -281,6 +300,15 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const hash = await writeContractAsync({ ...(dungeonMasterContract as any), functionName: 'requestExpedition' as any, args: [partyId, dungeonId] as any, value: fee as any });
             addTransaction({ hash, description: `隊伍 #${partyId.toString()} 遠征地城 #${dungeonId}` });
+            
+            // 🔥 立即失效相關快取，強制重新獲取資料
+            queryClient.invalidateQueries({ queryKey: ['playerParties'] });
+            
+            // 延遲重新獲取，等待區塊鏈確認
+            setTimeout(() => {
+                refetchParties();
+            }, 3000);
+            
         } catch (e: unknown) { 
             const error = e as { message?: string; shortMessage?: string };
             if (!error.message?.includes('User rejected the request')) { 
@@ -295,6 +323,15 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const hash = await writeContractAsync({ ...(dungeonMasterContract as any), functionName: 'restParty' as any, args: [partyId] as any });
             addTransaction({ hash, description: `隊伍 #${partyId.toString()} 正在休息` });
+            
+            // 🔥 立即失效相關快取，強制重新獲取資料
+            queryClient.invalidateQueries({ queryKey: ['playerParties'] });
+            
+            // 延遲重新獲取，等待區塊鏈確認
+            setTimeout(() => {
+                refetchParties();
+            }, 3000);
+            
         } catch (e: unknown) { 
             const error = e as { message?: string; shortMessage?: string };
             if (!error.message?.includes('User rejected the request')) { 

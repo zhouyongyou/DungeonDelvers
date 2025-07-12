@@ -464,16 +464,25 @@ async function parseNfts<T extends AssetWithTokenId>(
 
         const findAttr = (trait: string, defaultValue: string | number = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
         
+        // 處理稀有度轉換 - 從 metadata 或子圖數據獲取
+        const getRarityFromMetadata = () => {
+          const rarityAttr = metadata.attributes?.find((a: NftAttribute) => a.trait_type === 'Rarity');
+          if (rarityAttr) {
+            return rarityAttr.value;
+          }
+          return assetRarity || 1;
+        };
+        
         const baseNft = { ...metadata, id: BigInt(asset.tokenId), contractAddress, source: metadata.source || 'metadata' };
 
         switch (type) {
             case 'hero': {
                 const heroAsset = asset as unknown as HeroAsset;
-                return { ...baseNft, type, power: Number(heroAsset.power), rarity: Number(heroAsset.rarity) };
+                return { ...baseNft, type, power: Number(heroAsset.power), rarity: getRarityFromMetadata() };
             }
             case 'relic': {
                 const relicAsset = asset as unknown as RelicAsset;
-                return { ...baseNft, type, capacity: Number(relicAsset.capacity), rarity: Number(relicAsset.rarity) };
+                return { ...baseNft, type, capacity: Number(relicAsset.capacity), rarity: getRarityFromMetadata() };
             }
             case 'party': {
                 const partyAsset = asset as unknown as PartyAsset;
