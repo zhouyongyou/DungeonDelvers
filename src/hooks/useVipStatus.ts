@@ -93,6 +93,22 @@ export const useVipStatus = () => {
         return { vipLevel: level, taxReduction: BigInt(reduction) };
     }, [contractVipLevel, contractTaxReduction, stakedAmount]);
 
+    // 調試信息：顯示詳細的 VIP 計算過程
+    useEffect(() => {
+        if (address && stakedAmount > 0n) {
+            console.log('🔍 VIP 調試信息:', {
+                address,
+                stakedAmount: stakedAmount.toString(),
+                contractVipLevel: contractVipLevel?.toString(),
+                contractTaxReduction: contractTaxReduction?.toString(),
+                finalVipLevel: vipLevel,
+                finalTaxReduction: taxReduction.toString(),
+                isUsingContract: contractVipLevel !== undefined,
+                stakedValueUSD: stakedValueUSD?.toString()
+            });
+        }
+    }, [address, stakedAmount, contractVipLevel, contractTaxReduction, vipLevel, taxReduction, stakedValueUSD]);
+
     // ★ 核心修正 #2: 確保即使 stakedAmount 為 0，也能安全地觸發後續查詢
     const { data: stakedValueUSD, isLoading: isLoadingStakedValueUSD, refetch: refetchStakedValueUSD } = useReadContract({
         ...oracleContract,
