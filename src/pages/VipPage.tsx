@@ -1,17 +1,16 @@
 // src/pages/VipPage.tsx (移除 SVG 讀取功能版)
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { useAccount, useWriteContract, usePublicClient } from 'wagmi';
+import { useAccount, usePublicClient } from 'wagmi';
 import { formatEther, maxUint256, parseEther } from 'viem';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { useAppToast } from '../hooks/useAppToast';
-import { useTransactionStore } from '../stores/useTransactionStore';
 import { bsc } from 'wagmi/chains';
 import { useVipStatus } from '../hooks/useVipStatus';
 import { logger } from '../utils/logger';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
-import { useGlobalLoading } from '../components/core/GlobalLoadingProvider';
+import { useContractTransaction, ContractOperations } from '../hooks/useContractTransaction';
+import { APP_CONSTANTS, getVipTier } from '../config/constants';
 
 const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undefined, vipLevel: number, contractAddress?: string }> = ({ tokenId, chainId, vipLevel, contractAddress }) => {
     // ✅ 條件渲染移到Hook之後
@@ -24,17 +23,24 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
     }
     
     // VIP 等級顏色和圖標
-    const getVipTier = (level: number) => {
-        if (level >= 13) return { name: "DIAMOND", color: "from-cyan-400 to-blue-600", icon: "💎" };
-        if (level >= 10) return { name: "PLATINUM", color: "from-gray-300 to-gray-500", icon: "⭐" };
-        if (level >= 7) return { name: "GOLD", color: "from-yellow-400 to-yellow-600", icon: "🏆" };
-        if (level >= 4) return { name: "SILVER", color: "from-gray-400 to-gray-600", icon: "🥈" };
-        if (level >= 1) return { name: "BRONZE", color: "from-orange-400 to-orange-600", icon: "🥉" };
-        return { name: "STANDARD", color: "from-gray-600 to-gray-800", icon: "👑" };
+    const getVipTierWithColor = (level: number) => {
+        const tier = getVipTier(level);
+        const colorMap = {
+            DIAMOND: "from-cyan-400 to-blue-600",
+            PLATINUM: "from-gray-300 to-gray-500", 
+            GOLD: "from-yellow-400 to-yellow-600",
+            SILVER: "from-gray-400 to-gray-600",
+            BRONZE: "from-orange-400 to-orange-600",
+            STANDARD: "from-gray-600 to-gray-800"
+        };
+        return {
+            ...tier,
+            color: colorMap[tier.name as keyof typeof colorMap] || colorMap.STANDARD
+        };
     };
     
-    const tier = getVipTier(vipLevel);
-    const bscScanUrl = `https://bscscan.com/token/${contractAddress}?a=${tokenId}`;
+    const tier = getVipTierWithColor(vipLevel);
+    const bscScanUrl = `${APP_CONSTANTS.EXTERNAL_LINKS.BSC_SCAN}/token/${contractAddress}?a=${tokenId}`;
     
     return (
         <div className="w-full space-y-4">
@@ -67,8 +73,6 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
 
 const VipPageContent: React.FC = () => {
     const { chainId } = useAccount();
-    const { showToast } = useAppToast();
-    const { addTransaction } = useTransactionStore();
     const publicClient = usePublicClient();
 
     const [amount, setAmount] = useState('');
@@ -82,82 +86,94 @@ const VipPageContent: React.FC = () => {
         pendingUnstakeAmount, isCooldownOver, countdown, allowance, refetchAll
     } = useVipStatus();
 
-    const getTxDescription = (functionName: string, txAmount: string): string => {
-        switch(functionName) {
-            case 'approve': return '批准 VIP 合約';
-            case 'stake': return `質押 ${txAmount} $SoulShard`;
-            case 'requestUnstake': return `請求贖回 ${txAmount} $SoulShard`;
-            case 'claimUnstaked': return '領取已贖回的代幣';
-            default: return 'VIP 相關交易';
-        }
-    };
-
-    const { setLoading } = useGlobalLoading();
-    const { writeContractAsync, isPending: isTxPending } = useWriteContract({
-        mutation: {
-            onSuccess: async (hash, variables) => {
-                const { functionName } = variables;
-                addTransaction({ hash, description: getTxDescription(functionName as string, amount) });
-                setLoading(true, '等待交易確認...');
-                try {
-                    await publicClient?.waitForTransactionReceipt({ 
-                        hash,
-                        confirmations: 1,
-                        timeout: 60_000 // 60 秒超時
-                    });
-                    if (functionName === 'approve') {
-                        showToast('授權成功！將自動為您質押...', 'success');
-                        setIsAwaitingStakeAfterApproval(true);
-                    } else {
-                        showToast(`${getTxDescription(functionName as string, amount)} 已成功！`, 'success');
-                    }
-                } catch (error) {
-                    logger.error('等待交易收據時發生錯誤:', error);
-                    // 不要拋出錯誤，讓使用者介面保持回應
-                    showToast('交易已提交，請稍後檢查交易狀態', 'info');
-                } finally {
-                    setLoading(false);
-                }
-                    if (functionName !== 'approve') setAmount('');
-                    refetchAll();
-                }
-            },
-            onError: (error: { message: string; shortMessage?: string }) => {
-                if (!error.message.includes('User rejected')) {
-                    showToast(error.shortMessage || "交易失敗", "error");
-                }
-            }
-        }
-    });
+    const { executeTransaction, isPending: isTxPending } = useContractTransaction();
     
     const needsApproval = useMemo(() => {
         if (mode !== 'stake' || !amount) return false;
         try { return typeof allowance === 'bigint' && allowance < parseEther(amount); } catch { return false; }
     }, [allowance, amount, mode]);
 
-    const handleApprove = useCallback(() => 
-                writeContractAsync({ address: soulShardContract?.address as `0x${string}`,
-        abi: soulShardContract?.abi,
-        functionName: 'approve',
-        args: [vipStakingContract!.address, maxUint256] }), 
-        [soulShardContract, vipStakingContract, writeContractAsync]);
-    const handleStake = useCallback(() => 
-                writeContractAsync({ address: vipStakingContract?.address as `0x${string}`,
-        abi: vipStakingContract?.abi,
-        functionName: 'stake',
-        args: [parseEther(amount)] }), 
-        [vipStakingContract, writeContractAsync, amount]);
-    const handleRequestUnstake = useCallback(() => 
-                writeContractAsync({ address: vipStakingContract?.address as `0x${string}`,
-        abi: vipStakingContract?.abi,
-        functionName: 'requestUnstake',
-        args: [parseEther(amount)] }), 
-        [vipStakingContract, writeContractAsync, amount]);
-    const handleClaim = useCallback(() => 
-                writeContractAsync({ address: vipStakingContract?.address as `0x${string}`,
-        abi: vipStakingContract?.abi,
-        functionName: 'claimUnstaked'}), 
-        [vipStakingContract, writeContractAsync]);
+    const handleApprove = useCallback(async () => {
+        if (!soulShardContract || !vipStakingContract) return;
+        
+        const hash = await executeTransaction({
+            contractCall: {
+                address: soulShardContract.address as `0x${string}`,
+                abi: soulShardContract.abi,
+                functionName: 'approve',
+                args: [vipStakingContract.address, maxUint256]
+            },
+            description: '批准 VIP 合約',
+            successMessage: '授權成功！將自動為您質押...',
+            errorMessage: '授權失敗',
+            loadingMessage: '正在授權...',
+            onSuccess: () => {
+                setIsAwaitingStakeAfterApproval(true);
+                refetchAll();
+            }
+        });
+    }, [soulShardContract, vipStakingContract, executeTransaction, refetchAll]);
+
+    const handleStake = useCallback(async () => {
+        if (!vipStakingContract || !amount) return;
+        
+        const hash = await executeTransaction({
+            contractCall: {
+                address: vipStakingContract.address as `0x${string}`,
+                abi: vipStakingContract.abi,
+                functionName: 'stake',
+                args: [parseEther(amount)]
+            },
+            description: `質押 ${amount} $SoulShard`,
+            successMessage: '質押成功！',
+            errorMessage: '質押失敗',
+            loadingMessage: '正在質押...',
+            onSuccess: () => {
+                setAmount('');
+                refetchAll();
+            }
+        });
+    }, [vipStakingContract, executeTransaction, amount, refetchAll]);
+
+    const handleRequestUnstake = useCallback(async () => {
+        if (!vipStakingContract || !amount) return;
+        
+        const hash = await executeTransaction({
+            contractCall: {
+                address: vipStakingContract.address as `0x${string}`,
+                abi: vipStakingContract.abi,
+                functionName: 'requestUnstake',
+                args: [parseEther(amount)]
+            },
+            description: `請求贖回 ${amount} $SoulShard`,
+            successMessage: '贖回請求已提交！',
+            errorMessage: '贖回請求失敗',
+            loadingMessage: '正在請求贖回...',
+            onSuccess: () => {
+                setAmount('');
+                refetchAll();
+            }
+        });
+    }, [vipStakingContract, executeTransaction, amount, refetchAll]);
+
+    const handleClaim = useCallback(async () => {
+        if (!vipStakingContract) return;
+        
+        const hash = await executeTransaction({
+            contractCall: {
+                address: vipStakingContract.address as `0x${string}`,
+                abi: vipStakingContract.abi,
+                functionName: 'claimUnstaked'
+            },
+            description: '領取已贖回的代幣',
+            successMessage: '領取成功！',
+            errorMessage: '領取失敗',
+            loadingMessage: '正在領取...',
+            onSuccess: () => {
+                refetchAll();
+            }
+        });
+    }, [vipStakingContract, executeTransaction, refetchAll]);
     const handleMainAction = useCallback(() => { if (mode === 'stake') { if (needsApproval) handleApprove(); else handleStake(); } else { handleRequestUnstake(); } }, [mode, needsApproval, handleApprove, handleStake, handleRequestUnstake]);
     const handlePercentageClick = useCallback((percentage: number) => {
         const balance = mode === 'stake' ? soulShardBalance : stakedAmount;

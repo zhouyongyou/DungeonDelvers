@@ -3,6 +3,7 @@ import { useAccount } from 'wagmi';
 import { getQueryConfig, queryKeys } from '../config/queryConfig';
 import { dedupeGraphQLQuery } from '../utils/requestDeduper';
 import { logger } from '../utils/logger';
+import { APP_CONSTANTS } from '../config/constants';
 
 const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
 
@@ -54,7 +55,7 @@ export function useGraphQLQuery<T = any>(
           logger.debug('Executing GraphQL query:', { queryName, variables: finalVariables });
 
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 秒超時
+          const timeoutId = setTimeout(() => controller.abort(), APP_CONSTANTS.GRAPHQL_REQUEST_TIMEOUT);
 
           try {
             const response = await fetch(THE_GRAPH_API_URL, {
@@ -149,7 +150,7 @@ export function usePlayerAssets(options: Omit<GraphQLQueryOptions<any>, 'variabl
   return useGraphQLQuery('playerAssets', query, {
     ...options,
     requiresAuth: true,
-    networkId: 56, // BSC
+    networkId: APP_CONSTANTS.SUPPORTED_CHAIN_ID,
   });
 }
 
@@ -179,7 +180,7 @@ export function usePlayerStats(options: Omit<GraphQLQueryOptions<any>, 'variable
   return useGraphQLQuery('playerStats', query, {
     ...options,
     requiresAuth: true,
-    networkId: 56,
+    networkId: APP_CONSTANTS.SUPPORTED_CHAIN_ID,
   });
 }
 
@@ -209,7 +210,7 @@ export function usePlayerParties(options: Omit<GraphQLQueryOptions<any>, 'variab
   return useGraphQLQuery('playerParties', query, {
     ...options,
     requiresAuth: true,
-    networkId: 56,
+    networkId: APP_CONSTANTS.SUPPORTED_CHAIN_ID,
   });
 }
 
@@ -229,7 +230,7 @@ export function useGlobalStats(options: Omit<GraphQLQueryOptions<any>, 'variable
 
   return useGraphQLQuery('globalStats', query, {
     ...options,
-    staleTime: 1000 * 60 * 5, // 5 分鐘
+    staleTime: APP_CONSTANTS.CACHE_TTL.MEDIUM,
   });
 }
 
@@ -260,7 +261,7 @@ export function useLeaderboard(
   return useGraphQLQuery(`leaderboard-${type}`, query, {
     variables: { limit },
     ...options,
-    staleTime: 1000 * 60 * 2, // 2 分鐘
+    staleTime: APP_CONSTANTS.CACHE_TTL.SHORT,
   });
 }
 
