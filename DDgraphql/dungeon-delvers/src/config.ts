@@ -16,15 +16,17 @@ import { dataSource } from "@graphprotocol/graph-ts"
  * 🕒 最後同步時間：7/12/2025, 5:56:47 PM
  */
 
-// 合約地址常量 (自動從 subgraph.yaml 同步)
-const HERO_ADDRESS = "0x2a046140668cBb8F598ff3852B08852A8EB23b6a"
-const RELIC_ADDRESS = "0x95F005e2e0d38381576DA36c5CA4619a87da550E"
-const PARTY_ADDRESS = "0x11FB68409222B53b04626d382d7e691e640A1DcD"
-const PLAYER_PROFILE_ADDRESS = "0x43a9BE911f1074788A00cE8e6E00732c7364c1F4"
-const V_I_P_STAKING_ADDRESS = "0xefdfF583944A2c6318d1597AD1E41159fCd8F6dB"
-const DUNGEON_MASTER_ADDRESS = "0xd14A5eFFc45D0131af3eb876992fC6eD9683f5B0"
-const PLAYER_VAULT_ADDRESS = "0x6187DBCcb58088E414437A6b8d58a42cD2BD1ec4"
-const ALTAR_OF_ASCENSION_ADDRESS = "0x83a7fB85E0892A67041FcFc4c1F0F1111e5aB3DA"
+// 合約地址常量 (v1.3.0 - VIP Oracle 修復版本)
+const HERO_ADDRESS = "0x648FcDf1f59a2598e9f68aB3210a25A877fAD353"
+const RELIC_ADDRESS = "0x6704d55c8736e373B001d54Ba00a80dbb0EC793b"
+const PARTY_ADDRESS = "0x66EA7C0b2BAA497EAf18bE9f3D4459Ffc20ba491"
+const PLAYER_PROFILE_ADDRESS = "0x5f041FE4f313AF8aB010319BA85b701b33De13B0"
+const V_I_P_STAKING_ADDRESS = "0xE9Cb85E3671486054133eC4EfcB19cF7fbF99706"
+const DUNGEON_MASTER_ADDRESS = "0xbD35485ccfc0aDF28582E2Acf2b2D22cD0F92529"
+const PLAYER_VAULT_ADDRESS = "0xbaD08C748596fD72D776B2F6aa5F26100334BD4B"
+const ALTAR_OF_ASCENSION_ADDRESS = "0xE29Bb0F3C613CCb56c4188026a7C60898Ad068C4"
+const DUNGEON_CORE_ADDRESS = "0x5f840dE828b4349f2391aF35721564a248C077Fc"
+const ORACLE_ADDRESS = "0xe72eDD302C51DAb2a2Fc599a8e2CF74247dc563B"
 
 // 導出函數來獲取各種合約地址
 export function getHeroContractAddress(): string {
@@ -57,6 +59,14 @@ export function getPlayerVaultContractAddress(): string {
 
 export function getAltarOfAscensionContractAddress(): string {
     return ALTAR_OF_ASCENSION_ADDRESS
+}
+
+export function getDungeonCoreContractAddress(): string {
+    return DUNGEON_CORE_ADDRESS
+}
+
+export function getOracleContractAddress(): string {
+    return ORACLE_ADDRESS
 }
 
 // 工具函數：驗證地址是否有效
