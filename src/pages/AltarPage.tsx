@@ -256,7 +256,7 @@ const AltarPage: React.FC = () => {
         if (!tokenContract) return showToast('合約地址未設定', 'error');
 
         // 調試信息：檢查選中的 NFT 稀有度
-
+        logger.debug('升星操作調試信息:', {
             nftType,
             targetRarity: rarity,
             selectedNfts: selectedNfts.map(id => id.toString()),
