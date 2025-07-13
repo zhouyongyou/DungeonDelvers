@@ -17,6 +17,7 @@ import { useTransactionStore } from '../stores/useTransactionStore';
 import type { AnyNft, HeroNft, NftAttribute, RelicNft, NftType } from '../types/nft';
 import { bsc } from 'wagmi/chains';
 import { Modal } from '../components/ui/Modal';
+import { logger } from '../utils/logger';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取 Hooks
@@ -54,24 +55,23 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
                 const result = await fetchFromGraph(GET_FILTERED_NFTS_QUERY, { owner: address.toLowerCase(), rarity });
                 
                 // 添加調試信息
-                console.log('GraphQL查詢結果:', result);
-                
+
                 // 檢查 result 是否存在
                 if (!result) {
-                    console.warn('GraphQL查詢返回空結果 - 可能是子圖正在同步新合約');
+                    logger.warn('GraphQL查詢返回空結果 - 可能是子圖正在同步新合約');
                     return [];
                 }
                 
                 const assets = nftType === 'hero' ? result.heros : result.relics;
 
                 if (!assets || !Array.isArray(assets)) {
-                    console.warn(`${nftType} 資產數組為空或不是數組:`, assets, '- 可能是子圖數據尚未同步');
+                    logger.warn(`${nftType} 資產數組為空或不是數組:`, assets, '- 可能是子圖數據尚未同步');
                     return [];
                 }
 
                 const contractAddress = (nftType === 'hero' ? getContract(bsc.id, 'hero') : getContract(bsc.id, 'relic'))?.address;
                 if (!contractAddress) {
-                    console.error(`找不到 ${nftType} 合約地址`);
+                    logger.error(`找不到 ${nftType} 合約地址`);
                     return [];
                 }
 
@@ -80,7 +80,7 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
                         // 嚴格檢查稀有度是否匹配查詢條件
                         const assetRarity = asset.rarity ? Number(asset.rarity) : null;
                         if (assetRarity !== rarity) {
-                            console.warn(`NFT #${asset.tokenId} 稀有度不匹配: 期望 ${rarity}，實際 ${assetRarity}`);
+                            logger.warn(`NFT #${asset.tokenId} 稀有度不匹配: 期望 ${rarity}，實際 ${assetRarity}`);
                             return false; // 過濾掉不匹配的 NFT
                         }
                         return true;
@@ -115,7 +115,7 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
                         }
                     });
             } catch (error) {
-                console.error(`獲取 ${nftType} 材料失敗:`, error);
+                logger.error(`獲取 ${nftType} 材料失敗:`, error);
                 return [];
             }
         },
@@ -139,7 +139,6 @@ const fetchFromGraph = async (query: string, variables: Record<string, unknown>)
     if (errors) throw new Error(`GraphQL errors: ${JSON.stringify(errors)}`);
     return data;
 };
-
 
 // =================================================================
 // Section: 子元件 (保持不變)
@@ -257,7 +256,7 @@ const AltarPage: React.FC = () => {
         if (!tokenContract) return showToast('合約地址未設定', 'error');
 
         // 調試信息：檢查選中的 NFT 稀有度
-        console.log('升星調試信息:', {
+
             nftType,
             targetRarity: rarity,
             selectedNfts: selectedNfts.map(id => id.toString()),
@@ -269,8 +268,10 @@ const AltarPage: React.FC = () => {
         });
 
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const hash = await writeContractAsync({ ...(altarContract as any), functionName: 'upgradeNFTs' as any, args: [tokenContract.address, selectedNfts] as any, value: currentRule.nativeFee as any });
+                        const hash = await writeContractAsync({ address: altarContract?.address as `0x${string}`,
+        abi: altarContract?.abi,
+        functionName: 'upgradeNFTs',
+        args: [tokenContract.address, selectedNfts], value: currentRule.nativeFee as any });
             addTransaction({ hash, description: `升星 ${rarity}★ ${nftType === 'hero' ? '英雄' : '聖物'}` });
             
             const receipt = await publicClient.waitForTransactionReceipt({ hash });

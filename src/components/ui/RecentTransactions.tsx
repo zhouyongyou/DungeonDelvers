@@ -65,7 +65,7 @@ export const RecentTransactions: React.FC = () => {
       </div>
       {transactions.length > 0 ? (
         <ul className="p-1 max-h-80 overflow-y-auto">
-          {transactions.map((tx) => (
+          {transactions.map((tx: unknown) => (
             <TransactionItem key={tx.hash} tx={tx} explorerUrl={explorerUrl} />
           ))}
         </ul>

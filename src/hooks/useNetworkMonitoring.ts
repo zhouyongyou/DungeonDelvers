@@ -61,7 +61,7 @@ export const useNetworkMonitoring = () => {
     });
 
     // 日誌記錄
-    console.log('網路狀態更新:', {
+
       isOnline: newStatus.isOnline,
       type: newStatus.connectionType,
       effectiveType: newStatus.effectiveType,
@@ -73,12 +73,12 @@ export const useNetworkMonitoring = () => {
 
 useEffect(() => {
     const handleOnline = () => {
-      console.log('🟢 網路連接已恢復');
+
       updateNetworkStatus();
     };
 
     const handleOffline = () => {
-      console.log('🔴 網路連接已斷開');
+
       updateNetworkStatus();
     };
 

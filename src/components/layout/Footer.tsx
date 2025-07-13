@@ -7,6 +7,7 @@ import { getBlockNumber }from 'viem/actions';
 import fourLogoUrl from '/assets/images/FOUR-logo4.png';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { getContract } from '../../config/contracts'; // 導入 getContract
+import { logger } from '../../utils/logger';
 
 // 新增：複製圖示元件
 const CopyIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -43,7 +44,6 @@ const ContractAddressItem: React.FC<{ name: string; address?: string }> = ({ nam
     </div>
   );
 };
-
 
 export const Footer: React.FC = () => {
   const { chain } = useAccount();
@@ -98,7 +98,7 @@ export const Footer: React.FC = () => {
               }
           } catch {
               // 如果無法解析 URL，保持原樣
-              console.warn('無法解析 RPC URL:', rpcUrl);
+              logger.warn('無法解析 RPC URL:', rpcUrl);
           }
       }
 
@@ -110,7 +110,7 @@ export const Footer: React.FC = () => {
         await getBlockNumber(client);
         setRpcStatus({ isHealthy: true, endpoint: rpcUrl });
       } catch (error) {
-        console.error("RPC health check failed:", error);
+        logger.error("RPC health check failed:", error);
         setRpcStatus({ isHealthy: false, endpoint: rpcUrl });
       }
     };

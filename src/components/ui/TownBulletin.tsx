@@ -36,7 +36,7 @@ export const TownBulletin: React.FC = () => {
             <LoadingSpinner />
           </div>
         ) : announcements.length > 0 ? (
-          announcements.map((item) => (
+          announcements.map((item: unknown) => (
             <div key={item.id} className="bg-black/10 dark:bg-gray-800/50 p-4 rounded-lg">
               <div className="flex justify-between items-start">
                 <h4 className="font-bold text-base md:text-lg text-white mb-1">{item.title}</h4>

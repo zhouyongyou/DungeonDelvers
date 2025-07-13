@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/pages/MyAssetsPage.tsx (組隊UI優化版)
 
 import React, { useState, useMemo } from 'react';
@@ -15,6 +14,8 @@ import { useTransactionStore } from '../stores/useTransactionStore';
 import type { HeroNft, RelicNft, NftType } from '../types/nft';
 import { formatEther } from 'viem';
 import { bsc } from 'wagmi/chains';
+import { ErrorBoundary } from '../components/ui/ErrorBoundary';
+import { useGlobalLoading } from '../components/core/GlobalLoadingProvider';
 
 // =================================================================
 // Section: 子元件 (TeamBuilder) - 優化版
@@ -273,7 +274,8 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
 // Section: 主頁面元件
 // =================================================================
 
-const MyAssetsPage: React.FC = () => {
+const MyAssetsPageContent: React.FC = () => {
+    const { setLoading } = useGlobalLoading();
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
@@ -289,9 +291,17 @@ const MyAssetsPage: React.FC = () => {
 
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
-    const { data: nfts, isLoading, refetch } = useQuery({
+    const { data: nfts, isLoading, refetch, error } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
-        queryFn: () => fetchAllOwnedNfts(address!, chainId!),
+        queryFn: async () => {
+            setLoading(true, '載入您的 NFT 資產...');
+            try {
+                const result = await fetchAllOwnedNfts(address!, chainId!);
+                return result;
+            } finally {
+                setLoading(false);
+            }
+        },
         enabled: !!address && !!chainId,
         
         // 🔥 NFT缓存策略 - 内联配置以避免部署问题
@@ -305,23 +315,25 @@ const MyAssetsPage: React.FC = () => {
     });
     
     const { data: platformFee, isLoading: isLoadingFee } = useReadContract({
-        ...(partyContract as any),
-        functionName: 'platformFee' as any,
-        query: { enabled: !!partyContract }
+        address: partyContract?.address as `0x${string}`,
+        abi: partyContract?.abi,
+        functionName: 'platformFee'query: { enabled: !!partyContract }
     });
 
     // 檢查授權狀態
     const { data: isHeroAuthorized } = useReadContract({
-        ...(heroContract as any),
-        functionName: 'isApprovedForAll' as any,
-        args: [address!, partyContract!.address] as any,
+        address: heroContract?.address as `0x${string}`,
+        abi: heroContract?.abi,
+        functionName: 'isApprovedForAll',
+        args: [address!, partyContract!.address],
         query: { enabled: !!address && !!heroContract && !!partyContract }
     });
 
     const { data: isRelicAuthorized } = useReadContract({
-        ...(relicContract as any),
-        functionName: 'isApprovedForAll' as any,
-        args: [address!, partyContract!.address] as any,
+        address: relicContract?.address as `0x${string}`,
+        abi: relicContract?.abi,
+        functionName: 'isApprovedForAll',
+        args: [address!, partyContract!.address],
         query: { enabled: !!address && !!relicContract && !!partyContract }
     });
 
@@ -369,8 +381,10 @@ const MyAssetsPage: React.FC = () => {
         if (!heroContract || !partyContract) return;
         setIsAuthorizing(true);
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const hash = await writeContractAsync({ ...(heroContract as any), functionName: 'setApprovalForAll' as any, args: [partyContract.address, true as any] as any });
+                        const hash = await writeContractAsync({ address: heroContract?.address as `0x${string}`,
+        abi: heroContract?.abi,
+        functionName: 'setApprovalForAll',
+        args: [partyContract.address, true as any] });
             addTransaction({ hash, description: '授權隊伍合約使用英雄' });
             showToast('英雄授權成功！', 'success');
         } catch (error: unknown) {
@@ -387,8 +401,10 @@ const MyAssetsPage: React.FC = () => {
         if (!relicContract || !partyContract) return;
         setIsAuthorizing(true);
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const hash = await writeContractAsync({ ...(relicContract as any), functionName: 'setApprovalForAll' as any, args: [partyContract.address, true as any] as any });
+                        const hash = await writeContractAsync({ address: relicContract?.address as `0x${string}`,
+        abi: relicContract?.abi,
+        functionName: 'setApprovalForAll',
+        args: [partyContract.address, true as any] });
             addTransaction({ hash, description: '授權隊伍合約使用聖物' });
             showToast('聖物授權成功！', 'success');
         } catch (error: unknown) {
@@ -406,8 +422,10 @@ const MyAssetsPage: React.FC = () => {
         
         try {
             const fee = typeof platformFee === 'bigint' ? platformFee : 0n;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const hash = await writeContractAsync({ ...(partyContract as any), functionName: 'createParty' as any, args: [heroIds as any, relicIds as any] as any, value: fee as any });
+                        const hash = await writeContractAsync({ address: partyContract?.address as `0x${string}`,
+        abi: partyContract?.abi,
+        functionName: 'createParty',
+        args: [heroIds as any, relicIds as any], value: fee });
             addTransaction({ hash, description: `創建新隊伍` });
             
             // 延遲失效緩存，等待 GraphQL 同步
@@ -432,6 +450,19 @@ const MyAssetsPage: React.FC = () => {
         { key: 'relic', label: '我的聖物' },
         { key: 'vip', label: '我的VIP卡' },
     ];
+
+    if (error) {
+        return (
+            <EmptyState 
+                message="載入 NFT 失敗" 
+                description={(error as Error).message}
+            >
+                <ActionButton onClick={() => refetch()} className="mt-4">
+                    重新載入
+                </ActionButton>
+            </EmptyState>
+        );
+    }
 
     if (isLoading) {
         return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
@@ -500,6 +531,16 @@ const MyAssetsPage: React.FC = () => {
                 )}
             </div>
         </section>
+    );
+};
+
+};
+
+const MyAssetsPage: React.FC = () => {
+    return (
+        <ErrorBoundary>
+            <MyAssetsPageContent />
+        </ErrorBoundary>
     );
 };
 

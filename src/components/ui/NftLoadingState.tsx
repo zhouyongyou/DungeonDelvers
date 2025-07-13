@@ -1,4 +1,5 @@
 import React from 'react';
+import { logger } from '../../utils/logger';
 
 interface NftLoadingStateProps {
   type: 'loading' | 'error' | 'retry' | 'success' | 'offline';
@@ -103,7 +104,7 @@ export const NftLoadingState: React.FC<NftLoadingStateProps> = ({
           <span className="text-xs text-yellow-400">{message || getDefaultMessage()}</span>
           <span className="text-xs text-gray-500 mt-1">第 {retryCount + 1} 次嘗試</span>
           <div className="flex space-x-1 mt-2">
-            {Array.from({ length: maxRetries }).map((_, i) => (
+            {Array.from({ length: maxRetries }).map((_: unknown, i: number) => (
               <div 
                 key={i}
                 className={`w-2 h-2 rounded-full ${
@@ -154,7 +155,7 @@ export const useSmartRetry = (maxRetries: number = 3) => {
       // 防止過於頻繁的重試（至少間隔1秒）
       if (now - lastRetryTime < 1000) {
         // eslint-disable-next-line no-console
-      console.warn('重試過於頻繁，請稍後再試');
+      logger.warn('重試過於頻繁，請稍後再試');
         return;
       }
       
@@ -167,7 +168,7 @@ export const useSmartRetry = (maxRetries: number = 3) => {
       setTimeout(() => setIsRetrying(false), delay);
       
       // eslint-disable-next-line no-console
-      console.log(`執行第 ${retryCount + 1} 次重試，延遲 ${delay}ms`);
+
     }
   }, [retryCount, maxRetries, lastRetryTime]);
   

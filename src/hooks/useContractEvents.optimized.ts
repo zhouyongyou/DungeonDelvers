@@ -11,6 +11,7 @@ import { useAppToast } from './useAppToast';
 import { useExpeditionResult } from '../contexts/ExpeditionContext';
 import type { AllNftCollections, PartyNft } from '../types/nft';
 import { bsc } from 'wagmi/chains';
+import { logger } from '../utils/logger';
 
 type DecodedLogWithArgs = {
     eventName: string;
@@ -118,14 +119,14 @@ function createContractEventHandler(
                 }
             } catch (error) {
                 // 🔥 優化：更好的錯誤處理
-                console.warn(`Failed to decode log for event ${eventName}:`, error);
+                logger.warn(`Failed to decode log for event ${eventName}:`, error);
             }
         });
 
         // 🔥 優化：性能監控
         const processingTime = performance.now() - startTime;
         if (processingTime > 100) { // 超過100ms記錄警告
-            console.warn(`Slow event processing: ${eventName} took ${processingTime.toFixed(2)}ms to process ${processedLogs} logs`);
+            logger.warn(`Slow event processing: ${eventName} took ${processingTime.toFixed(2)}ms to process ${processedLogs} logs`);
         }
     };
 }
@@ -162,7 +163,7 @@ export const useContractEventsOptimized = () => {
         ]).then(() => {
             showToast('✅ 資產數據已更新！', 'success');
         }).catch((error) => {
-            console.error('Failed to invalidate queries:', error);
+            logger.error('Failed to invalidate queries:', error);
             showToast('❌ 資產同步失敗，請重試', 'error');
         });
     }, [address, chainId, queryClient, showToast]);
@@ -208,7 +209,7 @@ export const useContractEventsOptimized = () => {
 
     // 🔥 優化：顯示當前輪詢狀態（開發階段可用）
     useEffect(() => {
-        console.log(`Event polling: ${userActivity} mode (${pollingInterval}ms interval)`);
+
     }, [userActivity, pollingInterval]);
 
     // --- 事件監聽設定 (使用自適應輪詢間隔) ---

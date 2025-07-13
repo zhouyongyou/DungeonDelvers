@@ -1,4 +1,5 @@
 // src/utils/marketDataIntegrator.ts
+import { logger } from './logger';
 // NFT市場資料整合工具
 
 export interface MarketData {
@@ -70,7 +71,7 @@ export async function fetchFromOKX(type: string, tokenId: string, contractAddres
       name: nft.name || `${type.charAt(0).toUpperCase() + type.slice(1)} #${tokenId}`,
       description: nft.description || 'Dungeon Delvers NFT',
       image: nft.image_url || nft.image,
-      attributes: nft.attributes?.map((attr: any) => ({
+      attributes: nft.attributes?.map((attr: { trait_type: string; value: unknown }) => ({
         trait_type: attr.trait_type,
         value: attr.value,
       })) || [],
@@ -78,7 +79,7 @@ export async function fetchFromOKX(type: string, tokenId: string, contractAddres
       source: 'okx' as const,
     };
   } catch (error) {
-    console.warn(`無法從OKX獲取 ${type} #${tokenId}:`, error);
+    logger.warn(`無法從OKX獲取 ${type} #${tokenId}:`, error);
     return null;
   }
 }
@@ -112,7 +113,7 @@ export async function fetchFromElement(type: string, tokenId: string, contractAd
       name: nft.name || `${type.charAt(0).toUpperCase() + type.slice(1)} #${tokenId}`,
       description: nft.description || 'Dungeon Delvers NFT',
       image: nft.image_url || nft.image,
-      attributes: nft.attributes?.map((attr: any) => ({
+      attributes: nft.attributes?.map((attr: { trait_type: string; value: unknown }) => ({
         trait_type: attr.trait_type,
         value: attr.value,
       })) || [],
@@ -120,7 +121,7 @@ export async function fetchFromElement(type: string, tokenId: string, contractAd
       source: 'element' as const,
     };
   } catch (error) {
-    console.warn(`無法從Element獲取 ${type} #${tokenId}:`, error);
+    logger.warn(`無法從Element獲取 ${type} #${tokenId}:`, error);
     return null;
   }
 }
@@ -160,7 +161,7 @@ export async function fetchFromOpenSea(type: string, tokenId: string, contractAd
       source: 'opensea' as const,
     };
   } catch (error) {
-    console.warn(`無法從OpenSea獲取 ${type} #${tokenId}:`, error);
+    logger.warn(`無法從OpenSea獲取 ${type} #${tokenId}:`, error);
     return null;
   }
 }
@@ -192,7 +193,7 @@ export async function fetchFromMetadataServer(type: string, tokenId: string): Pr
       source: 'metadata_server' as const,
     };
   } catch (error) {
-    console.warn(`無法從metadata server獲取 ${type} #${tokenId}:`, error);
+    logger.warn(`無法從metadata server獲取 ${type} #${tokenId}:`, error);
     return null;
   }
 }
@@ -233,7 +234,7 @@ export async function fetchPartyMarketData(tokenId: string): Promise<PartyMarket
       source: 'metadata_server' as const,
     };
   } catch (error) {
-    console.warn(`無法從metadata server獲取隊伍 #${tokenId}:`, error);
+    logger.warn(`無法從metadata server獲取隊伍 #${tokenId}:`, error);
     return null;
   }
 }
@@ -253,11 +254,11 @@ export async function fetchFromBSCMarkets(type: string, tokenId: string, contrac
     try {
       const data = await source.fetchFn();
       if (data) {
-        console.log(`✅ 從 ${source.name} 獲取到 ${type} #${tokenId} 資料`);
+
         return data;
       }
     } catch (error) {
-      console.warn(`❌ 從 ${source.name} 獲取 ${type} #${tokenId} 失敗:`, error);
+      logger.warn(`❌ 從 ${source.name} 獲取 ${type} #${tokenId} 失敗:`, error);
       continue;
     }
   }
@@ -283,10 +284,10 @@ export async function refreshNFTCache(type: string, tokenId: string): Promise<bo
     }
 
     const result = await response.json();
-    console.log(`快取刷新成功: ${type} #${tokenId}`, result);
+
     return true;
   } catch (error) {
-    console.warn(`快取刷新失敗 ${type} #${tokenId}:`, error);
+    logger.warn(`快取刷新失敗 ${type} #${tokenId}:`, error);
     return false;
   }
 }

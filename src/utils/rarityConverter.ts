@@ -1,4 +1,5 @@
 // src/utils/rarityConverter.ts
+import { logger } from './logger';
 // 稀有度轉換工具
 
 export interface RarityInfo {
@@ -45,7 +46,7 @@ export function convertRarity(input: string | number | bigint): RarityInfo {
   }
   
   // 默認返回普通
-  console.warn(`未知的稀有度值: ${input}，使用默認值 Common`);
+  logger.warn(`未知的稀有度值: ${input}，使用默認值 Common`);
   return RARITY_MAP['common'];
 }
 

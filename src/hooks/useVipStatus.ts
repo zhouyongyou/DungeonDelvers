@@ -5,6 +5,7 @@ import { useMemo, useEffect } from 'react';
 import { bsc } from 'wagmi/chains';
 import { getContract } from '../config/contracts';
 import { useCountdown } from './useCountdown';
+import { logger } from '../utils/logger';
 
 /**
  * @notice 專門用於獲取和管理 VIP 頁面所有狀態的自定義 Hook。
@@ -18,7 +19,7 @@ export const useVipStatus = () => {
     const vipStakingContract = useMemo(() => {
         if (!isSupportedChain) return null;
         const contract = getContract(chainId, 'vipStaking');
-        console.log('🔍 VIP合約地址:', contract?.address);
+
         return contract;
     }, [chainId, isSupportedChain]);
     
@@ -62,8 +63,7 @@ export const useVipStatus = () => {
         if (contractVipLevel !== undefined && contractTaxReduction !== undefined) {
             const level = Number(contractVipLevel);
             const reduction = BigInt(contractTaxReduction);
-            
-            console.log('🔍 VIP合約數據 - 等級:', level, '稅率減免:', `${Number(reduction) / 10000}%`);
+
             return { vipLevel: level, taxReduction: reduction };
         }
         
@@ -77,8 +77,7 @@ export const useVipStatus = () => {
         // 基於你提供的數據：6,314,607 SoulShard ≈ $371.62 USD
         // 計算：$371.62 / 6,314,607 ≈ $0.0000588 per SoulShard
         const estimatedUSD = amountInEther * 0.0000588;
-        console.log('🔍 VIP Fallback計算 - 質押金額:', amountInEther.toLocaleString(), 'Soul Shard, 估算USD:', estimatedUSD.toFixed(2));
-        
+
         let level = 0;
         
         if (estimatedUSD >= 100) {
@@ -89,8 +88,7 @@ export const useVipStatus = () => {
         }
         
         const reduction = level * 50; // 50 BP per level
-        
-        console.log('🔍 VIP Fallback結果 - 等級:', level, '稅率減免:', `${reduction / 10000}%`, '(', reduction, 'BP)');
+
         return { vipLevel: level, taxReduction: BigInt(reduction) };
     }, [contractVipLevel, contractTaxReduction, stakedAmount]);
 
@@ -112,10 +110,10 @@ export const useVipStatus = () => {
     // ★ 核心修正 #3: 添加錯誤處理和調試信息
     useEffect(() => {
         if (vipDataError) {
-            console.error('🚨 VIP數據讀取錯誤:', vipDataError);
+            logger.error('🚨 VIP數據讀取錯誤:', vipDataError);
         }
         if (vipData) {
-            console.log('📊 VIP數據更新:', {
+
                 address,
                 stakedAmount: stakedAmount.toString(),
                 contractVipLevel: contractVipLevel?.toString(),
@@ -131,7 +129,7 @@ export const useVipStatus = () => {
 
     const refetchAll = async () => {
         try {
-            console.log('🔄 刷新VIP狀態...');
+
             // 並行執行所有refetch操作
             const promises = [
                 refetchVipData(),
@@ -144,9 +142,9 @@ export const useVipStatus = () => {
             if (stakedAmount > 0n) {
                 await refetchStakedValueUSD();
             }
-            console.log('✅ VIP狀態刷新完成');
+
         } catch (error) {
-            console.error('❌ 刷新VIP狀態時發生錯誤:', error);
+            logger.error('❌ 刷新VIP狀態時發生錯誤:', error);
         }
     };
 

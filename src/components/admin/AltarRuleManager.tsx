@@ -118,7 +118,7 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
 
   return (
     <div className="space-y-3">
-      {rulesData?.map((d, i) => {
+      {rulesData?.map((d: unknown, i: number) =>  {
         const ruleId = i + 1;
         if (d.status !== 'success' || !d.result) {
           return (

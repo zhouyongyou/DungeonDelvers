@@ -22,10 +22,10 @@ const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, 
   
   // ✅ 使用實時合約數據獲取VIP等級，而不是元數據
   const { data: realTimeVipLevel } = useReadContract({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ...(vipStakingContract as any),
-    functionName: 'getVipLevel' as any,
-    args: [address!] as any,
+        address: vipStakingContract?.address as `0x${string}`,
+        abi: vipStakingContract?.abi,
+        functionName: 'getVipLevel',
+        args: [address!],
     query: { 
       enabled: !!address && !!vipStakingContract && chainId === bsc.id
     }
@@ -185,7 +185,7 @@ const NftCard: React.FC<NftCardProps> = memo(({
         
         {nft.attributes && nft.attributes.length > 0 && (
           <div className="flex flex-wrap gap-1">
-            {nft.attributes.slice(0, 3).map((attr, index) => (
+            {nft.attributes.slice(0, 3).map((attr: unknown, index: number) => (
               <span 
                 key={index}
                 className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded"

@@ -11,6 +11,9 @@ import type { Page } from './types/page';
 import { TransactionWatcher } from './components/core/TransactionWatcher';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { WrongNetworkBanner } from './components/ui/WrongNetworkBanner';
+import { GlobalErrorBoundary } from './components/core/GlobalErrorBoundary';
+import { GlobalLoadingProvider } from './components/core/GlobalLoadingProvider';
+import { usePrefetchOnHover } from './hooks/usePagePrefetch';
 
 // 動態導入所有頁面
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -64,6 +67,9 @@ function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  // 預取鉤子
+  const { prefetchNftData, prefetchPlayerData } = usePrefetchOnHover();
+
   const handleSetPage = (page: Page) => {
     const newUrl = new URL(window.location.href);
     newUrl.hash = `/${page}`;
@@ -101,20 +107,30 @@ function App() {
   };
 
   return (
-    <ErrorBoundary>
-      <div className="min-h-screen flex flex-col bg-gray-900">
-        <Header activePage={activePage} setActivePage={handleSetPage} />
-        <WrongNetworkBanner />
-        <main className="flex-grow container mx-auto px-4 py-8 md:px-6 md:py-12">
-            <Suspense fallback={<PageLoader />}>
-                {renderPage()}
-            </Suspense>
-        </main>
-        <Footer />
-        {/* 這個元件負責在背景追蹤已發送交易的狀態 */}
-        <TransactionWatcher />
-      </div>
-    </ErrorBoundary>
+    <GlobalErrorBoundary>
+      <GlobalLoadingProvider>
+        <ErrorBoundary>
+          <div className="min-h-screen flex flex-col bg-gray-900">
+            <Header 
+              activePage={activePage} 
+              setActivePage={handleSetPage}
+              onHoverMint={prefetchNftData}
+              onHoverParty={prefetchNftData}
+              onHoverDashboard={prefetchPlayerData}
+            />
+            <WrongNetworkBanner />
+            <main className="flex-grow container mx-auto px-4 py-8 md:px-6 md:py-12">
+                <Suspense fallback={<PageLoader />}>
+                    {renderPage()}
+                </Suspense>
+            </main>
+            <Footer />
+            {/* 這個元件負責在背景追蹤已發送交易的狀態 */}
+            <TransactionWatcher />
+          </div>
+        </ErrorBoundary>
+      </GlobalLoadingProvider>
+    </GlobalErrorBoundary>
   );
 }
 

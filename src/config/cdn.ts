@@ -153,8 +153,7 @@ export async function loadResourceWithFallback<T>(
     
     try {
       const url = buildResourceUrl(type, resourcePath, i);
-      console.log(`🔄 嘗試載入資源: ${url} (優先級 ${config.priority})`);
-      
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), config.timeout);
       
@@ -171,9 +170,7 @@ export async function loadResourceWithFallback<T>(
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
-      console.log(`✅ 資源載入成功: ${url}`);
-      
+
       if (parser) {
         return await parser(response);
       }
@@ -181,15 +178,14 @@ export async function loadResourceWithFallback<T>(
       return response as unknown as T;
       
     } catch (error) {
-      console.log(`❌ 資源載入失敗: ${config.baseUrl} -`, error);
+
       lastError = error instanceof Error ? error : new Error('未知錯誤');
       
       // 嘗試 fallback URL
       if (config.fallbackUrl) {
         try {
           const fallbackUrl = `${config.fallbackUrl}/${type}/${resourcePath}`;
-          console.log(`🔄 嘗試備用 URL: ${fallbackUrl}`);
-          
+
           const response = await fetch(fallbackUrl, {
             headers: {
               'Accept': type === 'api' ? 'application/json' : '*/*'
@@ -197,14 +193,14 @@ export async function loadResourceWithFallback<T>(
           });
           
           if (response.ok) {
-            console.log(`✅ 備用 URL 成功: ${fallbackUrl}`);
+
             if (parser) {
               return await parser(response);
             }
             return response as unknown as T;
           }
         } catch (fallbackError) {
-          console.log(`❌ 備用 URL 也失敗:`, fallbackError);
+
         }
       }
       
@@ -235,6 +231,5 @@ export function preloadCriticalResources() {
     link.href = url;
     document.head.appendChild(link);
   });
-  
-  console.log(`🚀 預載入 ${criticalImages.length} 個關鍵資源`);
+
 } 

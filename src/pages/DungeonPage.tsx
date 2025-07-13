@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/pages/DungeonPage.tsx (The Graph 改造版)
 
 import React, { useState, useMemo } from 'react';
@@ -18,6 +17,9 @@ import type { PartyNft } from '../types/nft';
 import { Modal } from '../components/ui/Modal';
 import ProvisionsPage from './ProvisionsPage';
 import { bsc } from 'wagmi/chains';
+import { ErrorBoundary } from '../components/ui/ErrorBoundary';
+import { useGlobalLoading } from '../components/core/GlobalLoadingProvider';
+import { logger } from '../utils/logger';
 
 // =================================================================
 // Section: 型別定義與 GraphQL 查詢
@@ -68,10 +70,12 @@ const GET_PLAYER_PARTIES_QUERY = `
 // 新的 Hook，用於從 The Graph 獲取所有隊伍的數據
 const usePlayerParties = () => {
     const { address, chainId } = useAccount();
+    const { setLoading } = useGlobalLoading();
     
     return useQuery<PartyNft[]>({
         queryKey: ['playerParties', address, chainId],
         queryFn: async () => {
+            setLoading(true, '載入你的隊伍資料...');
             if (!address || !THE_GRAPH_API_URL) return [];
             
             // 嘗試從多個來源獲取資料
@@ -107,7 +111,8 @@ const usePlayerParties = () => {
             }
             
             // 將資料轉換為前端格式
-            return parties.map((p: any) => ({
+            setLoading(false);
+            return parties.map((p: { tokenId: string; [key: string]: unknown }) => ({
                 id: BigInt(p.tokenId),
                 tokenId: BigInt(p.tokenId),
                 name: `隊伍 #${p.tokenId}`,
@@ -118,8 +123,8 @@ const usePlayerParties = () => {
                 type: 'party',
                 totalPower: BigInt(p.totalPower || '0'),
                 totalCapacity: BigInt(p.totalCapacity || '0'),
-                heroIds: (p.heros || []).map((h: any) => BigInt(h.tokenId)),
-                relicIds: (p.relics || []).map((r: any) => BigInt(r.tokenId)),
+                heroIds: (p.heros || []).map((h: { tokenId: string }) => BigInt(h.tokenId)),
+                relicIds: (p.relics || []).map((r: { tokenId: string }) => BigInt(r.tokenId)),
                 partyRarity: p.partyRarity || '1',
                 provisionsRemaining: BigInt(p.provisionsRemaining || '0'),
                 cooldownEndsAt: BigInt(p.cooldownEndsAt || '0'),
@@ -160,9 +165,9 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
     const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
     
     const { data: explorationFee } = useReadContract({
-        ...(dungeonMasterContract as any),
-        functionName: 'explorationFee' as any,
-        query: { enabled: !!dungeonMasterContract }
+        address: dungeonMasterContract?.address as `0x${string}`,
+        abi: dungeonMasterContract?.abi,
+        functionName: 'explorationFee'query: { enabled: !!dungeonMasterContract }
     });
 
     const { isOnCooldown, effectivePower, fatigueColorClass } = useMemo(() => {
@@ -247,7 +252,8 @@ const DungeonInfoCard: React.FC<{ dungeon: Dungeon }> = ({ dungeon }) => (
 // Section: 主頁面元件
 // =================================================================
 
-const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setActivePage }) => {
+const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setActivePage }) => {
+    const { setLoading } = useGlobalLoading();
     const { chainId } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction, transactions } = useTransactionStore();
@@ -261,7 +267,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
     const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
     // ★ 核心改造：使用新的 Hook 獲取隊伍數據
-    const { data: parties, isLoading: isLoadingParties, refetch: refetchParties } = usePlayerParties();
+    const { data: parties, isLoading: isLoadingParties, refetch: refetchParties, error: partiesError } = usePlayerParties();
 
     // 獲取地城資訊的邏輯保持不變，因為這是全域數據
     const dungeonStorageContract = getContract(bsc.id, 'dungeonStorage');
@@ -269,8 +275,8 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
         contracts: Array.from({ length: 10 }, (_, i) => ({
             address: dungeonStorageContract?.address as `0x${string}`,
             abi: dungeonStorageContract?.abi as any,
-            functionName: 'getDungeon' as any,
-            args: [BigInt(i + 1)] as any,
+            functionName: 'getDungeon',
+            args: [BigInt(i + 1)],
         })),
         query: { enabled: !!dungeonStorageContract && chainId === bsc.id }
     });
@@ -278,7 +284,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
     const dungeons: Dungeon[] = useMemo(() => {
         const getDungeonName = (id: number) => ["", "新手礦洞", "哥布林洞穴", "食人魔山谷", "蜘蛛巢穴", "石化蜥蜴沼澤", "巫妖墓穴", "奇美拉之巢", "惡魔前哨站", "巨龍之巔", "混沌深淵"][id] || "未知地城";
         if (!dungeonsData) return [];
-        return dungeonsData.map((d, i) => {
+        return dungeonsData.map((d: unknown, i: number) =>  {
             if (d.status !== 'success' || !Array.isArray(d.result)) return null;
             const [requiredPower, rewardAmountUSD, baseSuccessRate, isInitialized] = d.result as unknown as [bigint, bigint, number, boolean];
             return { id: i + 1, name: getDungeonName(i + 1), requiredPower, rewardAmountUSD, baseSuccessRate, isInitialized };
@@ -296,9 +302,12 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
 
     const handleStartExpedition = async (partyId: bigint, dungeonId: bigint, fee: bigint) => {
         if (!dungeonMasterContract) return;
+        setLoading(true, `正在派遣隊伍 #${partyId} 遠征...`);
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const hash = await writeContractAsync({ ...(dungeonMasterContract as any), functionName: 'requestExpedition' as any, args: [partyId, dungeonId] as any, value: fee as any });
+                        const hash = await writeContractAsync({ address: dungeonMasterContract?.address as `0x${string}`,
+        abi: dungeonMasterContract?.abi,
+        functionName: 'requestExpedition',
+        args: [partyId, dungeonId], value: fee });
             addTransaction({ hash, description: `隊伍 #${partyId.toString()} 遠征地城 #${dungeonId}` });
             
             // 🔥 立即失效相關快取，強制重新獲取資料
@@ -314,14 +323,19 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
             if (!error.message?.includes('User rejected the request')) { 
                 showToast(error.shortMessage || "遠征請求失敗", "error"); 
             } 
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleRest = async (partyId: bigint) => {
         if (!dungeonMasterContract) return;
+        setLoading(true, `隊伍 #${partyId} 正在休息...`);
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const hash = await writeContractAsync({ ...(dungeonMasterContract as any), functionName: 'restParty' as any, args: [partyId] as any });
+                        const hash = await writeContractAsync({ address: dungeonMasterContract?.address as `0x${string}`,
+        abi: dungeonMasterContract?.abi,
+        functionName: 'restParty',
+        args: [partyId] });
             addTransaction({ hash, description: `隊伍 #${partyId.toString()} 正在休息` });
             
             // 🔥 立即失效相關快取，強制重新獲取資料
@@ -337,6 +351,8 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
             if (!error.message?.includes('User rejected the request')) { 
                 showToast(error.shortMessage || "休息失敗", "error"); 
             } 
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -346,6 +362,19 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
     };
 
     const isLoading = isLoadingParties || isLoadingDungeons;
+
+    if (partiesError) {
+        return (
+            <EmptyState 
+                message="載入隊伍失敗" 
+                description={(partiesError as Error).message}
+            >
+                <ActionButton onClick={() => refetchParties()} className="mt-4">
+                    重新載入
+                </ActionButton>
+            </EmptyState>
+        );
+    }
 
     if (isLoading) return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
 
@@ -365,7 +394,7 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
                     </EmptyState>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {parties.map((party) => (
+                        {parties.map((party: unknown) => (
                             <PartyStatusCard
                                 key={party.id.toString()}
                                 party={party as PartyNft & { provisionsRemaining: bigint; cooldownEndsAt: bigint; fatigueLevel: number; }}
@@ -388,6 +417,16 @@ const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setAc
                 </div>
             </div>
         </section>
+    );
+};
+
+};
+
+const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setActivePage }) => {
+    return (
+        <ErrorBoundary>
+            <DungeonPageContent setActivePage={setActivePage} />
+        </ErrorBoundary>
     );
 };
 

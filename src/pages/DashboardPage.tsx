@@ -200,8 +200,10 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
 
     const withdrawableBalance = stats.withdrawableBalance;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: withdrawableBalanceInUSD } = useReadContract({ ...(dungeonCoreContract as any), functionName: 'getSoulShardAmountForUSD' as any, args: [withdrawableBalance] as any, query: { enabled: !!dungeonCoreContract && withdrawableBalance > 0n } });
+        const { data: withdrawableBalanceInUSD } = useReadContract({ address: dungeonCoreContract?.address as `0x${string}`,
+        abi: dungeonCoreContract?.abi,
+        functionName: 'getSoulShardAmountForUSD',
+        args: [withdrawableBalance], query: { enabled: !!dungeonCoreContract && withdrawableBalance > 0n } });
     
     const currentTaxRate = useMemo(() => {
         if (!taxParams || !stats) return 0;
@@ -250,8 +252,10 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
         const playerVaultContract = getContract(chainId, 'playerVault');
         if (!playerVaultContract || withdrawableBalance === 0n) return;
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const hash = await writeContractAsync({ ...(playerVaultContract as any), functionName: 'withdraw' as any, args: [withdrawableBalance] as any });
+                        const hash = await writeContractAsync({ address: playerVaultContract?.address as `0x${string}`,
+        abi: playerVaultContract?.abi,
+        functionName: 'withdraw',
+        args: [withdrawableBalance] });
             addTransaction({ hash, description: '從金庫提領 $SoulShard' });
         } catch(e: unknown) { 
             const error = e as { shortMessage?: string };

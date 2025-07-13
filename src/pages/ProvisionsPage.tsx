@@ -30,18 +30,17 @@ const useProvisionsLogic = (quantity: number) => {
 
     // 獲取儲備價格
     const { data: provisionPriceUSD, isLoading: isLoadingPrice } = useReadContract({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ...(dungeonMasterContract as any),
-        functionName: 'provisionPriceUSD' as any,
-        query: { enabled: !!dungeonMasterContract },
+                address: dungeonMasterContract?.address as `0x${string}`,
+        abi: dungeonMasterContract?.abi,
+        functionName: 'provisionPriceUSD'query: { enabled: !!dungeonMasterContract },
     });
 
     // 計算所需的 SoulShard 數量
     const { data: requiredAmount, isLoading: isLoadingConversion } = useReadContract({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ...(dungeonCoreContract as any),
-        functionName: 'getSoulShardAmountForUSD' as any,
-        args: [typeof provisionPriceUSD === 'bigint' ? provisionPriceUSD * BigInt(quantity) : 0n] as any,
+                address: dungeonCoreContract?.address as `0x${string}`,
+        abi: dungeonCoreContract?.abi,
+        functionName: 'getSoulShardAmountForUSD',
+        args: [typeof provisionPriceUSD === 'bigint' ? provisionPriceUSD * BigInt(quantity) : 0n],
         query: { enabled: !!dungeonCoreContract && typeof provisionPriceUSD === 'bigint' && quantity > 0 },
     });
 
@@ -50,10 +49,10 @@ const useProvisionsLogic = (quantity: number) => {
 
     // 檢查授權額度
     const { data: allowance, refetch: refetchAllowance } = useReadContract({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ...(soulShardContract as any),
-        functionName: 'allowance' as any,
-        args: [address!, dungeonMasterContract?.address] as any,
+                address: soulShardContract?.address as `0x${string}`,
+        abi: soulShardContract?.abi,
+        functionName: 'allowance',
+        args: [address!, dungeonMasterContract?.address],
         query: { enabled: !!address && !!soulShardContract && !!dungeonMasterContract },
     });
 

@@ -46,7 +46,7 @@ export const TransactionWatcher: React.FC = () => {
 
   return (
     <>
-      {pendingTransactions.map((tx) => (
+      {pendingTransactions.map((tx: unknown) => (
         <TrackedTransaction key={tx.hash} hash={tx.hash} />
       ))}
     </>

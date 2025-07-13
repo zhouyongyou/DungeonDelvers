@@ -5,7 +5,12 @@ import { bsc } from 'wagmi/chains';
 import { Buffer } from 'buffer';
 import { getContract, contracts } from '../config/contracts.js';
 import { nftMetadataCache } from '../cache/nftMetadataCache.js';
+import { nftMetadataPersistentCache } from '../cache/persistentCache';
+import { nftMetadataBatcher } from '../utils/requestBatcher';
+import { getQueryConfig, queryKeys } from '../config/queryConfig';
+import { dedupeNFTMetadata, dedupeGraphQLQuery } from '../utils/requestDeduper';
 import type { 
+import { logger } from '../utils/logger';
     AllNftCollections, 
     BaseNft, 
     HeroNft,
@@ -109,13 +114,11 @@ export async function fetchMetadata(
         addressLower === '0x11fb68409222b53b04626d382d7e691e640a1dcb' ? 'party' :    // Party v1.2.6 (舊版)
         addressLower === '0xefdfff583944a2c6318d1597ad1e41159fcd8f6db' ? 'vip' :      // VIP v1.2.6 (舊版)
         'unknown';
-    
-    console.log(`獲取 ${nftType} #${tokenId} 元數據 (嘗試 ${retryCount + 1}/${maxRetries + 1})`);
-    
-    // 🔥 1. 先检查IndexedDB缓存
-    const cachedMetadata = await nftMetadataCache.getMetadata(tokenId, contractAddress);
+
+    // 🔥 1. 先检查持久化缓存
+    const cacheKey = `${contractAddress}-${tokenId}`;
+    const cachedMetadata = await nftMetadataPersistentCache.get(cacheKey);
     if (cachedMetadata) {
-        console.log(`${nftType} #${tokenId} 使用緩存數據`);
         return {
             ...cachedMetadata,
             name: cachedMetadata.name ?? '',
@@ -126,44 +129,44 @@ export async function fetchMetadata(
         };
     }
     
-    try {
-        let metadata: Omit<BaseNft, 'id' | 'contractAddress' | 'type'>;
-        const startTime = Date.now();
-        
-        // 🔥 2. 優先使用本地 API（最快）
+    // 使用請求去重
+    return dedupeNFTMetadata(contractAddress, tokenId, async () => {
         try {
-            console.log(`${nftType} #${tokenId} 嘗試本地 API`);
-            metadata = await fetchFromLocalAPI(nftType, tokenId, timeout);
-            const loadTime = Date.now() - startTime;
-            console.log(`${nftType} #${tokenId} 本地 API 載入成功 (${loadTime}ms)`);
+            let metadata: Omit<BaseNft, 'id' | 'contractAddress' | 'type'>;
+            const startTime = Date.now();
             
-            // 成功後立即緩存
-            await nftMetadataCache.cacheMetadata(tokenId, contractAddress, metadata);
-            return { ...metadata, source: 'local-api' };
-        } catch (localError) {
-            console.log(`${nftType} #${tokenId} 本地 API 失敗，嘗試其他方案:`, localError);
-        }
+            // 🔥 2. 優先使用本地 API（最快）
+            try {
+
+                metadata = await fetchFromLocalAPI(nftType, tokenId, timeout);
+                const loadTime = Date.now() - startTime;
+
+                // 成功後立即緩存
+                await nftMetadataPersistentCache.set(cacheKey, metadata);
+                return { ...metadata, source: 'local-api' };
+            } catch (localError) {
+
+            }
         
         // 🔥 3. 如果本地 API 失敗，嘗試 CDN（次選）
         try {
-            console.log(`${nftType} #${tokenId} 嘗試 CDN`);
+
             metadata = await fetchFromCDN(nftType, tokenId, timeout);
             const loadTime = Date.now() - startTime;
-            console.log(`${nftType} #${tokenId} CDN 載入成功 (${loadTime}ms)`);
-            
-            await nftMetadataCache.cacheMetadata(tokenId, contractAddress, metadata);
+
+            await nftMetadataPersistentCache.set(cacheKey, metadata);
             return { ...metadata, source: 'cdn' };
         } catch (cdnError) {
-            console.log(`${nftType} #${tokenId} CDN 失敗，嘗試原始方案:`, cdnError);
+
         }
         
         // 🔥 4. 原始邏輯作為最後備援
         if (uri.startsWith('data:application/json;base64,')) {
-            console.log(`${nftType} #${tokenId} 解析 base64 編碼的元數據`);
+
             const json = Buffer.from(uri.substring('data:application/json;base64,'.length), 'base64').toString();
             metadata = JSON.parse(json);
         } else if (uri.startsWith('ipfs://')) {
-            console.log(`${nftType} #${tokenId} 從 IPFS 載入元數據（備援）`);
+
             // 🔥 優化IPFS載入 - 使用更少的網關和更短的超時
             const ipfsHash = uri.replace('ipfs://', '');
             
@@ -178,36 +181,35 @@ export async function fetchMetadata(
             
             metadata = await fetchWithMultipleGateways(gateways, Math.min(timeout, 3000)); // 最多3秒
         } else {
-            console.log(`${nftType} #${tokenId} 從 HTTP 載入元數據: ${uri}`);
+
             metadata = await fetchWithTimeout(uri, timeout);
         }
         
         const loadTime = Date.now() - startTime;
-        console.log(`${nftType} #${tokenId} 元數據載入成功 (${loadTime}ms)`);
-        
+
         // 🔥 成功获取后立即缓存
-        await nftMetadataCache.cacheMetadata(tokenId, contractAddress, metadata);
+        await nftMetadataPersistentCache.set(cacheKey, metadata);
         
         return { ...metadata, source: 'fallback' };
     } catch (error) {
         const loadTime = Date.now() - Date.now();
-        console.warn(`${nftType} #${tokenId} 解析元數據時出錯 (嘗試 ${retryCount + 1}/${maxRetries + 1}, ${loadTime}ms):`, error);
+        logger.warn(`${nftType} #${tokenId} 解析元數據時出錯 (嘗試 ${retryCount + 1}/${maxRetries + 1}, ${loadTime}ms):`, error);
         
         // 如果還有重試次數，使用指數回退策略重試
         if (retryCount < maxRetries) {
             const retryDelay = Math.min(500 * Math.pow(2, retryCount), 2000); // 更短的重試延遲
-            console.log(`${nftType} #${tokenId} 將在 ${retryDelay}ms 後重試...`);
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
+
+            await new Promise<void>(resolve => setTimeout(resolve, retryDelay));
             return fetchMetadata(uri, tokenId, contractAddress, retryCount + 1);
         }
         
         // 🔥 根據 NFT 類型提供更好的 fallback 數據
         const fallbackData = generateFallbackMetadata(nftType, tokenId);
-        await nftMetadataCache.cacheMetadata(tokenId, contractAddress, fallbackData);
-        console.log(`${nftType} #${tokenId} 使用 fallback 數據`);
-        
-        return { ...fallbackData, source: 'fallback' };
-    }
+        await nftMetadataPersistentCache.set(cacheKey, fallbackData);
+
+            return { ...fallbackData, source: 'fallback' };
+        }
+    });
 }
 
 // 新增：根據 NFT 類型和稀有度生成 fallback 元數據
@@ -282,10 +284,9 @@ async function fetchWithMultipleGateways(gateways: string[], timeout: number): P
     }, timeout);
     
     try {
-        console.log(`🔄 IPFS 備援載入: 嘗試 ${gateways.length} 個網關 (${timeout}ms 超時)`);
-        
-        // 🔥 優化：使用 Promise.race 而不是 allSettled，第一個成功就返回
-        const racePromises = gateways.map((url, index) => 
+        // 🔥 優化：使用 Promise.race 並取消其他請求
+        let completed = false;
+        const racePromises = gateways.map((url: string) => 
             fetch(url, {
                 signal: controller.signal,
                 headers: {
@@ -294,18 +295,15 @@ async function fetchWithMultipleGateways(gateways: string[], timeout: number): P
                     'Cache-Control': 'max-age=300'
                 }
             }).then(response => {
-                const loadTime = Date.now() - startTime;
+                if (completed) throw new Error('Request cancelled');
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
-                console.log(`✅ IPFS 網關 ${index + 1} 成功 (${loadTime}ms)`);
+                completed = true;
+                controller.abort(); // 取消其他請求
                 return response.json();
-            }).catch(error => {
-                const loadTime = Date.now() - startTime;
-                console.log(`❌ IPFS 網關 ${index + 1} 失敗 (${loadTime}ms):`, error.message);
-                throw error;
             })
         );
         
@@ -314,7 +312,10 @@ async function fetchWithMultipleGateways(gateways: string[], timeout: number): P
         clearTimeout(timeoutId);
         
         const totalTime = Date.now() - startTime;
-        console.log(`🎉 IPFS 載入成功 (${totalTime}ms)`);
+        if (totalTime > 1000) {
+            logger.warn(`IPFS fetch took ${totalTime}ms`);
+        }
+
         return result;
         
     } catch (error) {
@@ -322,11 +323,11 @@ async function fetchWithMultipleGateways(gateways: string[], timeout: number): P
         const totalTime = Date.now() - startTime;
         
         if (error instanceof Error && error.name === 'AbortError') {
-            console.warn(`⏰ IPFS 載入超時 (${timeout}ms)`);
+            logger.warn(`⏰ IPFS 載入超時 (${timeout}ms)`);
             throw new Error(`IPFS 網關請求超時 (${timeout}ms)`);
         }
         
-        console.warn(`🚫 IPFS 載入失敗 (${totalTime}ms):`, error);
+        logger.warn(`🚫 IPFS 載入失敗 (${totalTime}ms):`, error);
         throw new Error(`IPFS 網關無法訪問: ${error instanceof Error ? error.message : '未知錯誤'}`);
     }
 }
@@ -443,7 +444,7 @@ async function fetchFromCDN(nftType: string, tokenId: string, timeout: number): 
         try {
             return await fetchWithTimeout(url, Math.min(timeout, 2000)); // CDN 最多2秒超時
         } catch (error) {
-            console.log(`CDN ${url} 失敗:`, error);
+
             continue;
         }
     }
@@ -470,7 +471,7 @@ async function batchProcess<T, R>(
         
         // 在批次之間添加小延遲以避免過載
         if (i + batchSize < items.length) {
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise<void>(resolve => setTimeout(resolve, 100));
         }
     }
     
@@ -524,7 +525,7 @@ async function parseNfts<T extends AssetWithTokenId>(
 
     const contract = getContract(chainId, contractKeyMap[type]);
     if (!contract) {
-        console.warn(`在 chainId: ${chainId} 上找不到 '${contractKeyMap[type]}' 的合約設定`);
+        logger.warn(`在 chainId: ${chainId} 上找不到 '${contractKeyMap[type]}' 的合約設定`);
         return [];
     }
     const contractAddress = contract.address;
@@ -561,7 +562,7 @@ async function parseNfts<T extends AssetWithTokenId>(
                 contractAddress
             );
         } else {
-            console.warn(`無法獲取 ${type} #${asset.tokenId} 的 tokenURI，使用稀有度 ${assetRarity} 的 fallback`);
+            logger.warn(`無法獲取 ${type} #${asset.tokenId} 的 tokenURI，使用稀有度 ${assetRarity} 的 fallback`);
             // 使用增強的 fallback，包含稀有度信息
             metadata = generateFallbackMetadata(type, asset.tokenId.toString(), assetRarity);
         }
@@ -615,7 +616,7 @@ async function parseNfts<T extends AssetWithTokenId>(
     };
 
     // 使用批量處理來處理資產，限制並發數量
-    const assetsWithIndex = assets.map((asset, index) => ({ asset, index }));
+    const assetsWithIndex = assets.map((asset: unknown, index: number) => ({ asset, index }));
     const results = await batchProcess(
         assetsWithIndex,
         ({ asset, index }) => processAsset(asset, index),
@@ -629,45 +630,54 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
     const emptyResult: AllNftCollections = { heros: [], relics: [], parties: [], vipCards: [] };
     
     if (!isSupportedChain(chainId)) {
-        console.error(`不支援的鏈 ID: ${chainId}`);
+        logger.error(`不支援的鏈 ID: ${chainId}`);
         return emptyResult;
     }
 
     if (!THE_GRAPH_API_URL) {
-        console.error('The Graph API URL 未配置');
+        logger.error('The Graph API URL 未配置');
         return emptyResult;
     }
 
     try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-        
-        const response = await fetch(THE_GRAPH_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                query: GET_PLAYER_ASSETS_QUERY,
-                variables: { owner: owner.toLowerCase() },
-            }),
-            signal: controller.signal
-        });
+        // 使用請求去重
+        const data = await dedupeGraphQLQuery(
+            GET_PLAYER_ASSETS_QUERY,
+            { owner: owner.toLowerCase() },
+            async () => {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const response = await fetch(THE_GRAPH_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: GET_PLAYER_ASSETS_QUERY,
+                        variables: { owner: owner.toLowerCase() },
+                    }),
+                    signal: controller.signal
+                });
 
-        clearTimeout(timeoutId);
+                clearTimeout(timeoutId);
 
-        if (!response.ok) {
-            throw new Error(`GraphQL 請求失敗: ${response.status} ${response.statusText}`);
-        }
-        
-        const { data, errors } = await response.json();
-        
-        if (errors) {
-            console.error('GraphQL 錯誤:', errors);
-            throw new Error(`GraphQL 查詢錯誤: ${errors.map((e: { message: string }) => e.message).join(', ')}`);
-        }
+                if (!response.ok) {
+                    throw new Error(`GraphQL 請求失敗: ${response.status} ${response.statusText}`);
+                }
+                
+                const { data, errors } = await response.json();
+                
+                if (errors) {
+                    logger.error('GraphQL 錯誤:', errors);
+                    throw new Error(`GraphQL 查詢錯誤: ${errors.map((e: { message: string }) => e.message).join(', ')}`);
+                }
+                
+                return data;
+            }
+        );
         
         const playerAssets = data?.player;
         if (!playerAssets) {
-            console.log('未找到玩家資產數據，可能是新用戶');
+
             return emptyResult;
         }
 
@@ -696,15 +706,14 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
                     party.totalCapacity > 0n
                 );
                 if (hasValidParties || retryCount === maxRetries - 1) break;
-                
-                console.log(`隊伍數據不完整，重試 ${retryCount + 1}/${maxRetries}`);
-                await new Promise(resolve => setTimeout(resolve, 2000)); // 等待2秒
+
+                await new Promise<void>(resolve => setTimeout(resolve, 2000)); // 等待2秒
                 retryCount++;
             } catch (error) {
-                console.warn(`解析隊伍數據失敗，重試 ${retryCount + 1}/${maxRetries}:`, error);
+                logger.warn(`解析隊伍數據失敗，重試 ${retryCount + 1}/${maxRetries}:`, error);
                 retryCount++;
                 if (retryCount < maxRetries) {
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    await new Promise<void>(resolve => setTimeout(resolve, 2000));
                 }
             }
         }
@@ -720,9 +729,9 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
 
     } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
-            console.error("GraphQL 請求超時");
+            logger.error("GraphQL 請求超時");
         } else {
-            console.error("獲取 NFT 數據時發生錯誤: ", error);
+            logger.error("獲取 NFT 數據時發生錯誤: ", error);
         }
         return emptyResult;
     }

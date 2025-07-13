@@ -12,8 +12,25 @@ import client from './apolloClient'; // 2. 引入我們設定好的 Apollo Clien
 import { ToastProvider } from './contexts/ToastContext';
 import { ExpeditionProvider } from './contexts/ExpeditionContext';
 import App from './App';
+import { defaultQueryErrorHandler } from './config/queryConfig';
 
-const queryClient = new QueryClient();
+// 優化的 QueryClient 配置
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // 全局預設配置
+      staleTime: 1000 * 60, // 1 分鐘
+      gcTime: 1000 * 60 * 10, // 10 分鐘
+      retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: 1,
+      onError: defaultQueryErrorHandler,
+    },
+  },
+});
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Failed to find the root element');
 const root = ReactDOM.createRoot(rootElement);

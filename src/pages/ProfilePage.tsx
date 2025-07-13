@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/pages/ProfilePage.tsx (移除 SVG 邏輯版)
 
 import React, { useMemo } from 'react';
@@ -11,6 +10,7 @@ import { ActionButton } from '../components/ui/ActionButton';
 import type { Page } from '../types/page';
 import { bsc } from 'wagmi/chains';
 import { isAddress, type Address } from 'viem';
+import { logger } from '../utils/logger';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取 Hooks
@@ -73,9 +73,10 @@ const usePlayerProfile = (targetAddress: Address | undefined) => {
 
     // 步驟 2: 使用從 The Graph 獲取的 tokenId 來讀取 tokenURI
     const { data: tokenURI, isLoading: isLoadingUri } = useReadContract({
-        ...(playerProfileContract as any),
-        functionName: 'tokenURI' as any,
-        args: [tokenId!] as any,
+        address: playerProfileContract?.address as `0x${string}`,
+        abi: playerProfileContract?.abi,
+        functionName: 'tokenURI',
+        args: [tokenId!],
         query: { enabled: !!tokenId && !!playerProfileContract },
     });
 
@@ -87,7 +88,6 @@ const usePlayerProfile = (targetAddress: Address | undefined) => {
         hasProfile: !!graphData,
     };
 };
-
 
 // =================================================================
 // Section: 主頁面元件
@@ -154,7 +154,7 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                     </div>
                 );
             } catch (error) {
-                 console.error("解析 Profile 失敗:", error);
+                 logger.error("解析 Profile 失敗:", error);
                  return <EmptyState message="無法載入此玩家的個人檔案視覺效果。" />;
             }
         }

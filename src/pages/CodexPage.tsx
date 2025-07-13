@@ -146,7 +146,7 @@ const CodexPage: React.FC = () => {
                 <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>
             ) : displayNfts.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    {displayNfts.map((nft, index) => {
+                    {displayNfts.map((nft: unknown, index: number) =>  {
                         const isUnlocked = getIsUnlocked(nft);
                         return (
                             <div key={index} className={`transition-all duration-500 ${isUnlocked ? 'opacity-100' : 'opacity-50 grayscale'}`}>

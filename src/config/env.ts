@@ -1,4 +1,5 @@
 /**
+import { logger } from '../utils/logger';
  * 簡化的環境變數管理
  * 只保留必要的配置，減少複雜度
  */
@@ -25,7 +26,7 @@ export const ENV = {
 // 簡化的環境變數驗證
 export function validateEnvironment(): void {
   if (!ENV.THE_GRAPH_API_URL) {
-    console.warn('VITE_THE_GRAPH_STUDIO_API_URL is not set, using fallback URL');
+    logger.warn('VITE_THE_GRAPH_STUDIO_API_URL is not set, using fallback URL');
   }
 }
 

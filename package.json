@@ -14,7 +14,16 @@
     "deploy": "./deploy-all.sh development",
     "deploy:prod": "./deploy-all.sh production",
     "baseuri:api": "tsx scripts/set-baseuri-simple.ts api",
-    "baseuri:ipfs": "tsx scripts/set-baseuri-simple.ts ipfs"
+    "baseuri:ipfs": "tsx scripts/set-baseuri-simple.ts ipfs",
+    "console:analyze": "node scripts/manage-console-logs.mjs analyze",
+    "console:dry-run": "node scripts/manage-console-logs.mjs dry-run",
+    "console:apply": "node scripts/manage-console-logs.mjs apply",
+    "ts:find-any": "node scripts/fix-typescript-any.mjs",
+    "ts:fix-any:dry": "node scripts/fix-typescript-any.mjs --dry-run",
+    "ts:fix-any:apply": "node scripts/fix-typescript-any.mjs --apply",
+    "ts:fix-any:script": "node scripts/fix-typescript-any.mjs --generate-script",
+    "ts:quick-fix": "node scripts/quick-fix-any-patterns.mjs",
+    "ts:quick-fix:dry": "node scripts/quick-fix-any-patterns.mjs --dry-run"
   },
   "dependencies": {
     "@apollo/client": "^3.8.8",
@@ -37,6 +46,7 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "ethers": "^6.15.0",
+    "glob": "^11.0.3",
     "postcss": "^8.4.32",
     "rollup-plugin-visualizer": "^6.0.3",
     "tailwindcss": "^3.3.6",

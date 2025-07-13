@@ -84,7 +84,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
         當前值: <span className="text-yellow-400">{displayValue}</span>
       </div>
       <div className="flex flex-col sm:flex-row gap-2 md:col-span-1">
-        {inputValues.map((val, index) => (
+        {inputValues.map((val: unknown, index: number) => (
           <div key={index} className="flex-1">
             <label htmlFor={`setting-${label.replace(/\s+/g, '-')}-${index}`} className="sr-only">
               {placeholders[index]}

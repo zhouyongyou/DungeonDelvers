@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/pages/VipPage.tsx (移除 SVG 讀取功能版)
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -10,6 +9,9 @@ import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { bsc } from 'wagmi/chains';
 import { useVipStatus } from '../hooks/useVipStatus';
+import { logger } from '../utils/logger';
+import { ErrorBoundary } from '../components/ui/ErrorBoundary';
+import { useGlobalLoading } from '../components/core/GlobalLoadingProvider';
 
 const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undefined, vipLevel: number, contractAddress?: string }> = ({ tokenId, chainId, vipLevel, contractAddress }) => {
     // ✅ 條件渲染移到Hook之後
@@ -63,8 +65,7 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
     );
 };
 
-
-const VipPage: React.FC = () => {
+const VipPageContent: React.FC = () => {
     const { chainId } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
@@ -91,11 +92,13 @@ const VipPage: React.FC = () => {
         }
     };
 
+    const { setLoading } = useGlobalLoading();
     const { writeContractAsync, isPending: isTxPending } = useWriteContract({
         mutation: {
             onSuccess: async (hash, variables) => {
                 const { functionName } = variables;
                 addTransaction({ hash, description: getTxDescription(functionName as string, amount) });
+                setLoading(true, '等待交易確認...');
                 try {
                     await publicClient?.waitForTransactionReceipt({ 
                         hash,
@@ -109,9 +112,11 @@ const VipPage: React.FC = () => {
                         showToast(`${getTxDescription(functionName as string, amount)} 已成功！`, 'success');
                     }
                 } catch (error) {
-                    console.error('等待交易收據時發生錯誤:', error);
+                    logger.error('等待交易收據時發生錯誤:', error);
                     // 不要拋出錯誤，讓使用者介面保持回應
                     showToast('交易已提交，請稍後檢查交易狀態', 'info');
+                } finally {
+                    setLoading(false);
                 }
                     if (functionName !== 'approve') setAmount('');
                     refetchAll();
@@ -131,20 +136,27 @@ const VipPage: React.FC = () => {
     }, [allowance, amount, mode]);
 
     const handleApprove = useCallback(() => 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        writeContractAsync({ ...(soulShardContract as any), functionName: 'approve' as any, args: [vipStakingContract!.address, maxUint256] as any }), 
+                writeContractAsync({ address: soulShardContract?.address as `0x${string}`,
+        abi: soulShardContract?.abi,
+        functionName: 'approve',
+        args: [vipStakingContract!.address, maxUint256] }), 
         [soulShardContract, vipStakingContract, writeContractAsync]);
     const handleStake = useCallback(() => 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        writeContractAsync({ ...(vipStakingContract as any), functionName: 'stake' as any, args: [parseEther(amount)] as any }), 
+                writeContractAsync({ address: vipStakingContract?.address as `0x${string}`,
+        abi: vipStakingContract?.abi,
+        functionName: 'stake',
+        args: [parseEther(amount)] }), 
         [vipStakingContract, writeContractAsync, amount]);
     const handleRequestUnstake = useCallback(() => 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        writeContractAsync({ ...(vipStakingContract as any), functionName: 'requestUnstake' as any, args: [parseEther(amount)] as any }), 
+                writeContractAsync({ address: vipStakingContract?.address as `0x${string}`,
+        abi: vipStakingContract?.abi,
+        functionName: 'requestUnstake',
+        args: [parseEther(amount)] }), 
         [vipStakingContract, writeContractAsync, amount]);
     const handleClaim = useCallback(() => 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        writeContractAsync({ ...(vipStakingContract as any), functionName: 'claimUnstaked' as any }), 
+                writeContractAsync({ address: vipStakingContract?.address as `0x${string}`,
+        abi: vipStakingContract?.abi,
+        functionName: 'claimUnstaked'}), 
         [vipStakingContract, writeContractAsync]);
     const handleMainAction = useCallback(() => { if (mode === 'stake') { if (needsApproval) handleApprove(); else handleStake(); } else { handleRequestUnstake(); } }, [mode, needsApproval, handleApprove, handleStake, handleRequestUnstake]);
     const handlePercentageClick = useCallback((percentage: number) => {
@@ -156,7 +168,7 @@ const VipPage: React.FC = () => {
         async function handlePostApproval() {
             if (isAwaitingStakeAfterApproval && !isTxPending) {
                 // 等待足夠時間確保區塊鏈狀態更新
-                await new Promise(resolve => setTimeout(resolve, 3000));
+                await new Promise<void>(resolve => setTimeout(resolve, 3000));
                 await refetchAll();
                 setIsAwaitingStakeAfterApproval(false);
                 if (mode === 'stake' && amount) {
@@ -169,7 +181,7 @@ const VipPage: React.FC = () => {
                             showToast('授權尚未完成，請稍後重試', 'info');
                         }
                     } catch (error) {
-                        console.error('解析質押金額失敗:', error);
+                        logger.error('解析質押金額失敗:', error);
                     }
                 }
             }
@@ -317,7 +329,6 @@ const VipPage: React.FC = () => {
             
             {/* 錢包授權說明 */}
 
-            
             {isLoading && !tokenId ? (
                 <div className="flex justify-center"><LoadingSpinner /></div>
             ) : hasStaked ? (
@@ -391,6 +402,14 @@ const VipPage: React.FC = () => {
                 </div>
             )}
         </section>
+    );
+};
+
+const VipPage: React.FC = () => {
+    return (
+        <ErrorBoundary>
+            <VipPageContent />
+        </ErrorBoundary>
     );
 };
 

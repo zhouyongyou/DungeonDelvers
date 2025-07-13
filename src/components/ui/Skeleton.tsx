@@ -65,7 +65,7 @@ export const SkeletonCard: React.FC<{ className?: string }> = ({ className = '' 
 // NFT 網格骨架屏
 export const NFTGridSkeleton: React.FC<{ count?: number }> = ({ count = 6 }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-    {Array.from({ length: count }).map((_, i) => (
+    {Array.from({ length: count }).map((_: unknown, i: number) => (
       <div key={i} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
         <Skeleton variant="rectangular" height={200} className="mb-4" />
         <div className="space-y-2">
@@ -84,7 +84,7 @@ export const NFTGridSkeleton: React.FC<{ count?: number }> = ({ count = 6 }) => 
 // 列表骨架屏
 export const ListSkeleton: React.FC<{ count?: number }> = ({ count = 5 }) => (
   <div className="space-y-4">
-    {Array.from({ length: count }).map((_, i) => (
+    {Array.from({ length: count }).map((_: unknown, i: number) => (
       <div key={i} className="flex items-center space-x-4 p-4 bg-gray-800 rounded-lg border border-gray-700">
         <Skeleton variant="circular" width={48} height={48} />
         <div className="flex-1 space-y-2">
@@ -113,7 +113,7 @@ export const StatCardSkeleton: React.FC = () => (
 // 統計卡片網格骨架屏
 export const StatGridSkeleton: React.FC<{ count?: number }> = ({ count = 4 }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-    {Array.from({ length: count }).map((_, i) => (
+    {Array.from({ length: count }).map((_: unknown, i: number) => (
       <StatCardSkeleton key={i} />
     ))}
   </div>
@@ -128,7 +128,7 @@ export const TableSkeleton: React.FC<{ rows?: number; cols?: number }> = ({
     {/* 表頭 */}
     <div className="p-4 border-b border-gray-700 bg-gray-700">
       <div className="flex space-x-4">
-        {Array.from({ length: cols }).map((_, i) => (
+        {Array.from({ length: cols }).map((_: unknown, i: number) => (
           <Skeleton key={i} width="20%" height={20} />
         ))}
       </div>
@@ -136,10 +136,10 @@ export const TableSkeleton: React.FC<{ rows?: number; cols?: number }> = ({
     
     {/* 表格內容 */}
     <div className="divide-y divide-gray-700">
-      {Array.from({ length: rows }).map((_, i) => (
+      {Array.from({ length: rows }).map((_: unknown, i: number) => (
         <div key={i} className="p-4">
           <div className="flex space-x-4">
-            {Array.from({ length: cols }).map((_, j) => (
+            {Array.from({ length: cols }).map((_: unknown, j: number) => (
               <Skeleton key={j} width="20%" />
             ))}
           </div>
