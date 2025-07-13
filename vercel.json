@@ -1,6 +1,6 @@
 {
   "functions": {
-    "api/metadata/[collection]/[tokenId].js": {
+    "api/metadata/[...params].ts": {
       "maxDuration": 10
     }
   },
@@ -29,8 +29,8 @@
   ],
   "rewrites": [
     {
-      "source": "/metadata/:collection/:tokenId",
-      "destination": "/api/metadata/:collection/:tokenId"
+      "source": "/metadata/:params*",
+      "destination": "/api/metadata/:params*"
     }
   ]
-} 
+}
