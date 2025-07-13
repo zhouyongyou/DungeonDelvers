@@ -1,4 +1,5 @@
-import { ApolloClient, InMemoryCache, NormalizedCacheObject, ApolloLink, Observable } from '@apollo/client';
+import { ApolloClient, InMemoryCache, ApolloLink, Observable } from '@apollo/client';
+import type { NormalizedCacheObject } from '@apollo/client';
 import { onError } from '@apollo/client/link/error';
 import { graphqlPersistentCache } from '../cache/persistentCache';
 import { logger } from '../utils/logger';

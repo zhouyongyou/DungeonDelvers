@@ -395,8 +395,7 @@ async function fetchFromLocalAPI(nftType: string, tokenId: string, timeout: numb
             (response) => response.json()
         );
     } catch (error) {
-        // 如果 CDN 配置載入失敗，回退到原始方法
-        const baseUrl = window.location.origin;
+        // 如果 CDN 配置載入失敗，使用相對路徑
         let apiPath = '';
         
         switch (nftType) {
@@ -416,26 +415,24 @@ async function fetchFromLocalAPI(nftType: string, tokenId: string, timeout: numb
                 throw new Error(`不支援的 NFT 類型: ${nftType}`);
         }
         
-        const url = `${baseUrl}${apiPath}`;
-        return await fetchWithTimeout(url, Math.min(timeout, 1000));
+        return await fetchWithTimeout(apiPath, Math.min(timeout, 1000));
     }
 }
 
 // 🔥 新增：CDN 載入函數
 async function fetchFromCDN(nftType: string, tokenId: string, timeout: number): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
-    // 使用當前域名避免 CORS 問題
-    const currentDomain = window.location.origin;
+    // 使用相對路徑避免 CORS 問題
     const cdnUrls = [
-        `${currentDomain}/api/${nftType}/${tokenId}.json`,
+        `/api/${nftType}/${tokenId}.json`,
         `https://dungeon-delvers-metadata-server.onrender.com/api/${nftType}/${tokenId}.json`
     ];
     
     // 對於 party 和 vip，使用固定檔案名
     if (nftType === 'party') {
-        cdnUrls[0] = `${currentDomain}/api/party/party.json`;
+        cdnUrls[0] = `/api/party/party.json`;
         cdnUrls[1] = `https://dungeon-delvers-metadata-server.onrender.com/api/party/party.json`;
     } else if (nftType === 'vip') {
-        cdnUrls[0] = `${currentDomain}/api/vip/vip.json`;
+        cdnUrls[0] = `/api/vip/vip.json`;
         cdnUrls[1] = `https://dungeon-delvers-metadata-server.onrender.com/api/vip/vip.json`;
     }
     

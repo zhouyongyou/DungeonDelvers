@@ -1,4 +1,4 @@
-import { UseQueryOptions } from '@tanstack/react-query';
+import type { UseQueryOptions } from '@tanstack/react-query';
 
 // 查詢類型定義
 export type QueryCategory = 'NFT' | 'CONTRACT' | 'GRAPHQL' | 'METADATA';

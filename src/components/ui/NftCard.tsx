@@ -44,7 +44,7 @@ const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, 
         alt={nft.name || `VIP #${nft.id.toString()}`} 
         className="w-full h-full object-cover bg-gray-700 transition-transform duration-300 hover:scale-110"
         nftType="vip"
-        rarity={vipLevel}
+        rarity={1}
         lazy={true}
         showRetry={true}
       />
@@ -82,21 +82,21 @@ const NftCard: React.FC<NftCardProps> = memo(({
 
   // 新增：同步/資料來源提示
   const renderSyncStatus = () => {
-    if (nft.syncing) {
+    if ('syncing' in nft && nft.syncing) {
       return (
         <div className="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded text-xs font-bold z-10 shadow">
           資料同步中
         </div>
       );
     }
-    if (nft.source === 'fallback') {
+    if ('source' in nft && nft.source === 'fallback') {
       return (
         <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded text-xs font-bold z-10 shadow">
           暫用預設資料
         </div>
       );
     }
-    if (nft.source === 'metadata') {
+    if ('source' in nft && nft.source === 'metadata') {
       return (
         <div className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded text-xs font-bold z-10 shadow">
           僅本地資料
@@ -115,12 +115,17 @@ const NftCard: React.FC<NftCardProps> = memo(({
     // 其他類型NFT的通用處理 - 使用增強的圖片組件
     const baseImageClass = "w-full h-full object-cover rounded-lg transition-transform duration-300 hover:scale-110";
     
-    // 獲取 NFT 稀有度用於智能回退
+    // 獲取 NFT 稀有度用於智能回退 - 修正稀有度獲取邏輯
     let rarity: number = 1;
-    if ('rarity' in nft && typeof nft.rarity === 'number') {
-      rarity = nft.rarity;
-    } else if (nft.type === 'party') {
-      rarity = (nft as PartyNft).partyRarity || 1;
+    if ('rarity' in nft) {
+      // 確保稀有度是數字並在有效範圍內
+      const rarityValue = typeof nft.rarity === 'number' ? nft.rarity : 
+                         typeof nft.rarity === 'string' ? parseInt(nft.rarity) : 
+                         typeof nft.rarity === 'bigint' ? Number(nft.rarity) : 1;
+      rarity = Math.max(1, Math.min(5, rarityValue));
+    } else if (nft.type === 'party' && 'partyRarity' in nft) {
+      const partyRarity = (nft as PartyNft).partyRarity;
+      rarity = Math.max(1, Math.min(5, partyRarity || 1));
     }
     
     return (
@@ -149,17 +154,25 @@ const NftCard: React.FC<NftCardProps> = memo(({
            nft.type === 'vip' ? '👑 VIP' : '❓ 未知'}
         </div>
 
-        {/* 稀有度星星 - 右上角 */}
+        {/* 稀有度星星 - 右上角 - 根據同步狀態動態調整位置 */}
         {(() => {
           let rarity: number = 1;
-          if ('rarity' in nft && typeof nft.rarity === 'number') {
-            rarity = nft.rarity;
-          } else if (nft.type === 'party') {
-            rarity = (nft as PartyNft).partyRarity || 1;
+          if ('rarity' in nft) {
+            const rarityValue = typeof nft.rarity === 'number' ? nft.rarity : 
+                               typeof nft.rarity === 'string' ? parseInt(nft.rarity) : 
+                               typeof nft.rarity === 'bigint' ? Number(nft.rarity) : 1;
+            rarity = Math.max(1, Math.min(5, rarityValue));
+          } else if (nft.type === 'party' && 'partyRarity' in nft) {
+            const partyRarity = (nft as PartyNft).partyRarity;
+            rarity = Math.max(1, Math.min(5, partyRarity || 1));
           }
           
+          // 如果有同步狀態標籤，星星移到右下
+          const hasStatusBadge = ('syncing' in nft && nft.syncing) || 
+                                ('source' in nft && (nft.source === 'fallback' || nft.source === 'metadata'));
+          
           return (
-            <div className="absolute top-2 right-2 bg-black/70 text-yellow-400 px-2 py-1 rounded text-xs font-bold">
+            <div className={`absolute ${hasStatusBadge ? 'bottom-12 right-2' : 'top-2 right-2'} bg-black/70 text-yellow-400 px-2 py-1 rounded text-xs font-bold`}>
               {'★'.repeat(rarity)}{'☆'.repeat(Math.max(0, 5 - rarity))}
             </div>
           );

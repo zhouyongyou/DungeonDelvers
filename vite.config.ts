@@ -22,6 +22,10 @@ export default defineConfig({
   },
   build: {
     target: 'es2020',
+    // 🔥 修復：確保模組格式正確
+    modulePreload: {
+      polyfill: false
+    },
     // 🔥 優化：代碼分割優化
     rollupOptions: {
       output: {
@@ -60,10 +64,10 @@ export default defineConfig({
           ]
         },
         
-        // 🔥 新增：資源文件名優化
-        chunkFileNames: () => {
-          return `js/[name]-[hash].js`;
-        },
+        // 🔥 修復：確保正確的模組格式和 MIME 類型
+        format: 'es',
+        entryFileNames: `js/[name]-[hash].js`,
+        chunkFileNames: `js/[name]-[hash].js`,
         assetFileNames: (assetInfo) => {
           if (!assetInfo.name) {
             return `assets/[name]-[hash][extname]`;
@@ -116,6 +120,10 @@ export default defineConfig({
     // 🔥 新增：HMR 優化
     hmr: {
       overlay: false // 減少開發環境錯誤覆蓋的干擾
+    },
+    // 🔥 修復：MIME 類型配置
+    headers: {
+      'Content-Type': 'text/javascript; charset=utf-8'
     },
     // 🔥 新增：API 代理設置
     proxy: {

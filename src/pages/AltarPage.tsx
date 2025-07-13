@@ -362,16 +362,22 @@ const AltarPage: React.FC = () => {
                                     <div 
                                         key={nft.id.toString()} 
                                         onClick={() => handleSelectNft(nft.id)}
-                                        className={`cursor-pointer transition-all duration-200 ${
+                                        className={`relative cursor-pointer transition-all duration-200 ${
                                             selectedNfts.includes(nft.id) 
-                                                ? 'ring-2 ring-yellow-400 scale-105' 
-                                                : 'hover:scale-105'
+                                                ? 'ring-2 ring-yellow-400 scale-105 shadow-xl shadow-yellow-400/30' 
+                                                : 'hover:scale-105 hover:shadow-lg'
                                         }`}
                                     >
                                         <NftCard 
                                             nft={nft} 
                                             selected={selectedNfts.includes(nft.id)}
                                         />
+                                        {/* 選中狀態指示器 */}
+                                        {selectedNfts.includes(nft.id) && (
+                                            <div className="absolute top-2 left-2 bg-yellow-400 text-gray-900 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
+                                                {selectedNfts.indexOf(nft.id) + 1}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
