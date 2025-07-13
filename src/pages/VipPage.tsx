@@ -96,12 +96,23 @@ const VipPage: React.FC = () => {
             onSuccess: async (hash, variables) => {
                 const { functionName } = variables;
                 addTransaction({ hash, description: getTxDescription(functionName as string, amount) });
-                await publicClient?.waitForTransactionReceipt({ hash });
-                if (functionName === 'approve') {
-                    showToast('授權成功！將自動為您質押...', 'success');
-                    setIsAwaitingStakeAfterApproval(true);
-                } else {
-                    showToast(`${getTxDescription(functionName as string, amount)} 已成功！`, 'success');
+                try {
+                    await publicClient?.waitForTransactionReceipt({ 
+                        hash,
+                        confirmations: 1,
+                        timeout: 60_000 // 60 秒超時
+                    });
+                    if (functionName === 'approve') {
+                        showToast('授權成功！將自動為您質押...', 'success');
+                        setIsAwaitingStakeAfterApproval(true);
+                    } else {
+                        showToast(`${getTxDescription(functionName as string, amount)} 已成功！`, 'success');
+                    }
+                } catch (error) {
+                    console.error('等待交易收據時發生錯誤:', error);
+                    // 不要拋出錯誤，讓使用者介面保持回應
+                    showToast('交易已提交，請稍後檢查交易狀態', 'info');
+                }
                     if (functionName !== 'approve') setAmount('');
                     refetchAll();
                 }
@@ -257,39 +268,39 @@ const VipPage: React.FC = () => {
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 1</span>
                             <span className="text-yellow-400">$100+ USD 質押價值</span>
-                            <span className="text-green-400">50 BP 稅率減免</span>
+                            <span className="text-green-400">50 BP (0.5%) 稅率減免</span>
                         </div>
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 2</span>
                             <span className="text-yellow-400">$400+ USD 質押價值</span>
-                            <span className="text-green-400">100 BP 稅率減免</span>
+                            <span className="text-green-400">100 BP (1%) 稅率減免</span>
                         </div>
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 3</span>
                             <span className="text-yellow-400">$900+ USD 質押價值</span>
-                            <span className="text-green-400">150 BP 稅率減免</span>
+                            <span className="text-green-400">150 BP (1.5%) 稅率減免</span>
                         </div>
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 4</span>
                             <span className="text-yellow-400">$1,600+ USD 質押價值</span>
-                            <span className="text-green-400">200 BP 稅率減免</span>
+                            <span className="text-green-400">200 BP (2%) 稅率減免</span>
                         </div>
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 5</span>
                             <span className="text-yellow-400">$2,500+ USD 質押價值</span>
-                            <span className="text-green-400">250 BP 稅率減免</span>
+                            <span className="text-green-400">250 BP (2.5%) 稅率減免</span>
                         </div>
                     </div>
                     <div className="space-y-2">
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 10</span>
                             <span className="text-yellow-400">$10,000+ USD 質押價值</span>
-                            <span className="text-green-400">500 BP 稅率減免</span>
+                            <span className="text-green-400">500 BP (5%) 稅率減免</span>
                         </div>
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 20</span>
                             <span className="text-yellow-400">$40,000+ USD 質押價值</span>
-                            <span className="text-green-400">1000 BP 稅率減免</span>
+                            <span className="text-green-400">1000 BP (10%) 稅率減免</span>
                         </div>
                         <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded">
                             <p className="text-xs text-blue-300 mb-2">
@@ -332,7 +343,7 @@ const VipPage: React.FC = () => {
                             <div>
                                 <div className="text-sm text-gray-400">稅率減免</div>
                                 <div className="font-bold text-2xl text-green-400">
-                                    {isLoading ? '...' : `${Number(taxReduction) / 10000}%`}
+                                    {isLoading ? '...' : `${Number(taxReduction)} BP (${Number(taxReduction) / 100}%)`}
                                 </div>
                             </div>
                         </div>
