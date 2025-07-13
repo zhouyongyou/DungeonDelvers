@@ -20,7 +20,8 @@
     "dungeonMaster": "0xd14A5eFFc45D0131af3eb876992fC6eD9683f5B0",
     "oracle": "0xc5bBFfFf552167D1328432AA856B752e9c4b4838",
     "playerVault": "0x6187DBCcb58088E414437A6b8d58a42cD2BD1ec4",
-    "altarOfAscension": "0x83a7fB85E0892A67041FcFc4c1F0F1111e5aB3DA"
+    "altarOfAscension": "0x83a7fB85E0892A67041FcFc4c1F0F1111e5aB3DA",
+    "dungeonStorage": "0x976d8C71DbbAaBF1898B9fD8d28dC6Db7B17cD66"
   },
   "tokens": {
     "soulShard": "0xc88dAD283Ac209D77Bfe452807d378615AB8B94a",
@@ -32,7 +33,7 @@
       "id": "dungeon-delvers"
     },
     "metadataServer": {
-      "development": "http://localhost:3001",
+      "development": "https://dungeon-delvers-metadata-server.onrender.com",
       "production": "https://dungeon-delvers-metadata-server.onrender.com"
     },
     "frontend": {

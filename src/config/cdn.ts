@@ -18,11 +18,11 @@ const isDevelopment = import.meta.env.DEV;
 
 // 🚀 CDN 配置
 export const cdnConfig: CDNConfig = {
-  // 開發環境：優先使用本地後端服務器
+  // 開發環境：優先使用線上後端服務器
   development: [
     {
-      baseUrl: 'http://localhost:3001', // 本地後端服務器
-      timeout: 1000,
+      baseUrl: 'https://dungeon-delvers-metadata-server.onrender.com', // 線上後端服務器
+      timeout: 3000,
       priority: 1
     },
     {
@@ -113,7 +113,7 @@ export function getMetadataUrl(nftType: string, tokenId: string | number): strin
   const configs = getResourceConfig();
   
   // 開發環境：使用後端 API 端點
-  if (isDevelopment && configs[0].baseUrl === 'http://localhost:3001') {
+  if (isDevelopment && configs[0].baseUrl === 'https://dungeon-delvers-metadata-server.onrender.com') {
     return `${configs[0].baseUrl}/api/${nftType}/${tokenId}`;
   }
   

@@ -217,17 +217,7 @@ const VipPage: React.FC = () => {
             </p>
             
             {/* 錢包授權說明 */}
-            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 max-w-2xl mx-auto">
-                <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
-                        <span className="text-white text-xs font-bold">!</span>
-                    </div>
-                    <div className="text-sm text-blue-200">
-                        <p className="font-medium mb-1">關於錢包授權彈窗：</p>
-                        <p>授權時出現的彈窗語言由您的錢包設定決定。如需中文界面，請在錢包（如MetaMask）設定中調整語言為中文。授權完成後頁面會自動更新，無需手動刷新。</p>
-                    </div>
-                </div>
-            </div>
+
             
             {isLoading && !tokenId ? (
                 <div className="flex justify-center"><LoadingSpinner /></div>

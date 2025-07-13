@@ -1,7 +1,7 @@
 // src/hooks/useVipStatus.ts (修正後)
 
 import { useAccount, useReadContract, useBalance, useReadContracts } from 'wagmi';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { bsc } from 'wagmi/chains';
 import { getContract } from '../config/contracts';
 import { useCountdown } from './useCountdown';
@@ -15,7 +15,13 @@ export const useVipStatus = () => {
 
     const isSupportedChain = chainId === bsc.id;
 
-    const vipStakingContract = useMemo(() => isSupportedChain ? getContract(chainId, 'vipStaking') : null, [chainId, isSupportedChain]);
+    const vipStakingContract = useMemo(() => {
+        if (!isSupportedChain) return null;
+        const contract = getContract(chainId, 'vipStaking');
+        console.log('🔍 VIP合約地址:', contract?.address);
+        return contract;
+    }, [chainId, isSupportedChain]);
+    
     const soulShardContract = useMemo(() => isSupportedChain ? getContract(chainId, 'soulShard') : null, [chainId, isSupportedChain]);
     const oracleContract = useMemo(() => isSupportedChain ? getContract(chainId, 'oracle') : null, [chainId, isSupportedChain]);
 
@@ -23,7 +29,7 @@ export const useVipStatus = () => {
     const { data: soulShardBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useBalance({ address, token: soulShardContract?.address, query: { enabled: !!address && !!soulShardContract } });
     
     // ★ 核心修正 #1: 使用 useReadContracts 一次性獲取多個數據，減少 RPC 呼叫
-    const { data: vipData, isLoading: isLoadingVipData, refetch: refetchVipData } = useReadContracts({
+    const { data: vipData, isLoading: isLoadingVipData, error: vipDataError, refetch: refetchVipData } = useReadContracts({
         contracts: [
             { ...vipStakingContract, functionName: 'userStakes', args: [address!] },
             { ...vipStakingContract, functionName: 'getVipLevel', args: [address!] },
@@ -33,6 +39,8 @@ export const useVipStatus = () => {
         ],
         query: { 
             enabled: !!address && !!vipStakingContract && !!soulShardContract && !!vipStakingContract?.address,
+            retry: 3,
+            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
         }
     });
 
