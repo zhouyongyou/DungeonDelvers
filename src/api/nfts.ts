@@ -98,9 +98,9 @@ export async function fetchMetadata(
     retryCount = 0
 ): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
   
-    const maxRetries = 1; // 減少重試次數，因為有多個數據源
-    const baseTimeout = 2000; // 減少基礎超時時間
-    const timeout = baseTimeout + (retryCount * 500); // 更短的漸進式超時
+    const maxRetries = 2; // 增加重試次數以提高可靠性
+    const baseTimeout = 5000; // 增加基礎超時時間以適應 IPFS 網關
+    const timeout = baseTimeout + (retryCount * 1000); // 更長的漸進式超時
     
     // 識別 NFT 類型以提供更好的錯誤處理 - 使用實際合約地址
     const addressLower = contractAddress.toLowerCase();
@@ -179,7 +179,7 @@ export async function fetchMetadata(
                 `https://gateway.ipfs.io/ipfs/${ipfsHash}`
             ];
             
-            metadata = await fetchWithMultipleGateways(gateways, Math.min(timeout, 3000)); // 最多3秒
+            metadata = await fetchWithMultipleGateways(gateways, Math.min(timeout, 8000)); // 最多8秒，提高 IPFS 載入成功率
         } else {
 
             metadata = await fetchWithTimeout(uri, timeout);

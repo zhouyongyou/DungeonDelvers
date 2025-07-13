@@ -6,6 +6,7 @@ import { getContract } from '../../config/contracts';
 import { bsc } from 'wagmi/chains';
 import type { AnyNft, HeroNft, RelicNft, PartyNft, VipNft } from '../../types/nft';
 import { getRarityChineseName, getRarityColor as getRarityColorUtil } from '../../utils/rarityConverter';
+import ImageWithFallback from './ImageWithFallback';
 
 interface NftCardProps {
   nft: AnyNft;
@@ -38,11 +39,14 @@ const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, 
   
   return (
     <div className="relative w-full h-full">
-      <img 
+      <ImageWithFallback
         src={fallbackImage} 
         alt={nft.name || `VIP #${nft.id.toString()}`} 
-        className="w-full h-full object-cover bg-gray-700 transition-transform duration-300 hover:scale-110" 
-        loading="lazy"
+        className="w-full h-full object-cover bg-gray-700 transition-transform duration-300 hover:scale-110"
+        nftType="vip"
+        rarity={vipLevel}
+        lazy={true}
+        showRetry={true}
       />
       {/* VIP 等級顯示 - 使用實時數據 */}
       <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
@@ -108,42 +112,82 @@ const NftCard: React.FC<NftCardProps> = memo(({
       return <VipImage nft={nft as VipNft} fallbackImage={nft.image} />;
     }
 
-    // 其他類型NFT的通用處理
+    // 其他類型NFT的通用處理 - 使用增強的圖片組件
     const baseImageClass = "w-full h-full object-cover rounded-lg transition-transform duration-300 hover:scale-110";
+    
+    // 獲取 NFT 稀有度用於智能回退
+    let rarity: number = 1;
+    if ('rarity' in nft && typeof nft.rarity === 'number') {
+      rarity = nft.rarity;
+    } else if (nft.type === 'party') {
+      rarity = (nft as PartyNft).partyRarity || 1;
+    }
+    
     return (
       <div className="relative w-full h-full">
         {renderSyncStatus()}
-        <img 
-          src={nft.image} 
+        <ImageWithFallback
+          src={nft.image}
           alt={nft.name}
           className={baseImageClass}
-          loading="lazy"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.src = "/images/hero/hero-1.png";
-          }}
+          nftType={nft.type}
+          rarity={rarity}
+          lazy={true}
+          showRetry={true}
         />
-        {/* 額外資訊顯示（如戰力、容量等）可根據 nft.type 顯示 */}
-        {nft.type === 'hero' && (
-          <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
-            ⚔️ {(nft as HeroNft).power?.toLocaleString?.() ?? ''}
-          </div>
-        )}
-        {nft.type === 'relic' && (
-          <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
-            📦 {(nft as RelicNft).capacity ?? ''}
-          </div>
-        )}
-        {nft.type === 'party' && (
-          <>
-            <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
-              ⚔️ {(nft as PartyNft).totalPower?.toString() ?? ''}
+        {/* 類型標籤 - 左上角 */}
+        <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${
+          nft.type === 'hero' ? 'bg-red-600/90 text-white' :
+          nft.type === 'relic' ? 'bg-blue-600/90 text-white' :
+          nft.type === 'party' ? 'bg-purple-600/90 text-white' :
+          nft.type === 'vip' ? 'bg-yellow-600/90 text-black' :
+          'bg-gray-600/90 text-white'
+        }`}>
+          {nft.type === 'hero' ? '🗡️ 英雄' :
+           nft.type === 'relic' ? '🔮 聖物' :
+           nft.type === 'party' ? '👥 隊伍' :
+           nft.type === 'vip' ? '👑 VIP' : '❓ 未知'}
+        </div>
+
+        {/* 稀有度星星 - 右上角 */}
+        {(() => {
+          let rarity: number = 1;
+          if ('rarity' in nft && typeof nft.rarity === 'number') {
+            rarity = nft.rarity;
+          } else if (nft.type === 'party') {
+            rarity = (nft as PartyNft).partyRarity || 1;
+          }
+          
+          return (
+            <div className="absolute top-2 right-2 bg-black/70 text-yellow-400 px-2 py-1 rounded text-xs font-bold">
+              {'★'.repeat(rarity)}{'☆'.repeat(Math.max(0, 5 - rarity))}
             </div>
-            <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
-              📦 {(nft as PartyNft).totalCapacity?.toString() ?? ''}
+          );
+        })()}
+
+        {/* 底部屬性顯示 */}
+        <div className="absolute bottom-2 left-2 right-2 flex justify-between">
+          {nft.type === 'hero' && (
+            <div className="bg-red-900/80 text-white px-2 py-1 rounded text-xs font-bold">
+              ⚔️ {(nft as HeroNft).power?.toLocaleString?.() ?? '0'}
             </div>
-          </>
-        )}
+          )}
+          {nft.type === 'relic' && (
+            <div className="bg-blue-900/80 text-white px-2 py-1 rounded text-xs font-bold">
+              📦 {(nft as RelicNft).capacity ?? '0'}
+            </div>
+          )}
+          {nft.type === 'party' && (
+            <>
+              <div className="bg-purple-900/80 text-white px-2 py-1 rounded text-xs font-bold">
+                ⚔️ {(nft as PartyNft).totalPower?.toString() ?? '0'}
+              </div>
+              <div className="bg-purple-900/80 text-white px-2 py-1 rounded text-xs font-bold">
+                📦 {(nft as PartyNft).totalCapacity?.toString() ?? '0'}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     );
   };

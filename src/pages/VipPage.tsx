@@ -13,6 +13,9 @@ import { useContractTransaction, ContractOperations } from '../hooks/useContract
 import { APP_CONSTANTS, getVipTier } from '../config/constants';
 
 const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undefined, vipLevel: number, contractAddress?: string }> = ({ tokenId, chainId, vipLevel, contractAddress }) => {
+    const [nftImage, setNftImage] = useState<string | null>(null);
+    const [imageError, setImageError] = useState(false);
+
     // ✅ 條件渲染移到Hook之後
     if (!chainId || (chainId !== bsc.id)) {
         return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-500">網路不支援</div>;
@@ -41,16 +44,75 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
     
     const tier = getVipTierWithColor(vipLevel);
     const bscScanUrl = `${APP_CONSTANTS.EXTERNAL_LINKS.BSC_SCAN}/token/${contractAddress}?a=${tokenId}`;
+
+    // 嘗試載入實際的 NFT 圖片
+    useEffect(() => {
+        const loadNftImage = async () => {
+            if (!contractAddress || !tokenId) return;
+            
+            try {
+                // 嘗試多個 metadata 來源
+                const metadataUrls = [
+                    `https://www.dungeondelvers.xyz/api/vip/${tokenId}.json`,
+                    `https://dungeon-delvers-metadata-server.onrender.com/api/vip/${tokenId}.json`,
+                    `/api/vip/vip.json` // 備用靜態文件
+                ];
+
+                for (const url of metadataUrls) {
+                    try {
+                        const response = await fetch(url);
+                        if (response.ok) {
+                            const metadata = await response.json();
+                            if (metadata.image) {
+                                setNftImage(metadata.image);
+                                return;
+                            }
+                        }
+                    } catch (e) {
+                        continue;
+                    }
+                }
+            } catch (error) {
+                logger.error('Failed to load VIP NFT image:', error);
+                setImageError(true);
+            }
+        };
+
+        loadNftImage();
+    }, [contractAddress, tokenId]);
     
     return (
         <div className="w-full space-y-4">
-            <div className={`w-full aspect-square bg-gradient-to-br ${tier.color} rounded-xl overflow-hidden flex flex-col items-center justify-center p-6 shadow-lg border border-white/20`}>
-                <div className="text-center text-white">
-                    <div className="text-5xl mb-3">{tier.icon}</div>
-                    <div className="text-xl font-bold mb-1">VIP #{tokenId.toString()}</div>
-                    <div className="text-sm opacity-90 mb-2">{tier.name}</div>
-                    <div className="text-lg font-semibold">LEVEL {vipLevel}</div>
-                </div>
+            <div className="w-full aspect-square rounded-xl overflow-hidden shadow-lg border border-white/20 bg-gray-900">
+                {!imageError && nftImage ? (
+                    <img
+                        src={nftImage}
+                        alt={`VIP Card #${tokenId.toString()}`}
+                        className="w-full h-full object-cover"
+                        onError={() => {
+                            setImageError(true);
+                            setNftImage(null);
+                        }}
+                        loading="lazy"
+                    />
+                ) : (
+                    // 降級到自定義設計
+                    <div className={`w-full h-full bg-gradient-to-br ${tier.color} flex flex-col items-center justify-center p-6`}>
+                        <div className="text-center text-white">
+                            <div className="text-5xl mb-3">{tier.icon}</div>
+                            <div className="text-xl font-bold mb-1">VIP #{tokenId.toString()}</div>
+                            <div className="text-sm opacity-90 mb-2">{tier.name}</div>
+                            <div className="text-lg font-semibold">LEVEL {vipLevel}</div>
+                        </div>
+                        {/* VIP 等級進度條 */}
+                        <div className="w-full mt-4 bg-black/20 rounded-full h-2">
+                            <div 
+                                className="bg-white/80 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${Math.min((vipLevel / 20) * 100, 100)}%` }}
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
             
             {/* BSC Scan 鏈接 */}
@@ -370,7 +432,7 @@ const VipPageContent: React.FC = () => {
                             <div>
                                 <div className="text-sm text-gray-400">稅率減免</div>
                                 <div className="font-bold text-2xl text-green-400">
-                                    {isLoading ? '...' : `${Number(taxReduction)} BP (${Number(taxReduction) / 100}%)`}
+                                    {isLoading ? '...' : `${Number(taxReduction)} BP (${(Number(taxReduction) / 10000 * 100).toFixed(1)}%)`}
                                 </div>
                             </div>
                         </div>
