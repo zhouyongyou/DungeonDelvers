@@ -11,7 +11,7 @@ import { useTransactionStore } from '../stores/useTransactionStore';
 import { bsc } from 'wagmi/chains';
 import { useVipStatus } from '../hooks/useVipStatus';
 
-const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undefined }> = ({ tokenId, chainId }) => {
+const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undefined, vipLevel: number, contractAddress?: string }> = ({ tokenId, chainId, vipLevel, contractAddress }) => {
     // ✅ 條件渲染移到Hook之後
     if (!chainId || (chainId !== bsc.id)) {
         return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-500">網路不支援</div>;
@@ -21,13 +21,44 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
         return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-400 dark:text-gray-500">無 VIP 卡</div>;
     }
     
+    // VIP 等級顏色和圖標
+    const getVipTier = (level: number) => {
+        if (level >= 13) return { name: "DIAMOND", color: "from-cyan-400 to-blue-600", icon: "💎" };
+        if (level >= 10) return { name: "PLATINUM", color: "from-gray-300 to-gray-500", icon: "⭐" };
+        if (level >= 7) return { name: "GOLD", color: "from-yellow-400 to-yellow-600", icon: "🏆" };
+        if (level >= 4) return { name: "SILVER", color: "from-gray-400 to-gray-600", icon: "🥈" };
+        if (level >= 1) return { name: "BRONZE", color: "from-orange-400 to-orange-600", icon: "🥉" };
+        return { name: "STANDARD", color: "from-gray-600 to-gray-800", icon: "👑" };
+    };
+    
+    const tier = getVipTier(vipLevel);
+    const bscScanUrl = `https://bscscan.com/token/${contractAddress}?a=${tokenId}`;
+    
     return (
-        <div className="w-full aspect-square bg-gray-900/50 rounded-xl overflow-hidden flex items-center justify-center">
-            <div className="text-center">
-                <div className="text-4xl mb-2">👑</div>
-                <div className="text-lg font-bold">VIP #{tokenId.toString()}</div>
-                <div className="text-sm text-gray-400">VIP 等級卡片</div>
+        <div className="w-full space-y-4">
+            <div className={`w-full aspect-square bg-gradient-to-br ${tier.color} rounded-xl overflow-hidden flex flex-col items-center justify-center p-6 shadow-lg border border-white/20`}>
+                <div className="text-center text-white">
+                    <div className="text-5xl mb-3">{tier.icon}</div>
+                    <div className="text-xl font-bold mb-1">VIP #{tokenId.toString()}</div>
+                    <div className="text-sm opacity-90 mb-2">{tier.name}</div>
+                    <div className="text-lg font-semibold">LEVEL {vipLevel}</div>
+                </div>
             </div>
+            
+            {/* BSC Scan 鏈接 */}
+            {contractAddress && (
+                <div className="flex justify-center">
+                    <a 
+                        href={bscScanUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded-lg transition-colors"
+                    >
+                        <span>🔍</span>
+                        在 BSC Scan 查看
+                    </a>
+                </div>
+            )}
         </div>
     );
 };
@@ -225,30 +256,40 @@ const VipPage: React.FC = () => {
                     <div className="space-y-2">
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 1</span>
-                            <span className="text-yellow-400">10,000+ $SoulShard</span>
-                            <span className="text-green-400">5% 稅率減免</span>
+                            <span className="text-yellow-400">$100+ USD 質押價值</span>
+                            <span className="text-green-400">0.5% 稅率減免</span>
                         </div>
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 2</span>
-                            <span className="text-yellow-400">100,000+ $SoulShard</span>
-                            <span className="text-green-400">10% 稅率減免</span>
+                            <span className="text-yellow-400">$400+ USD 質押價值</span>
+                            <span className="text-green-400">1.0% 稅率減免</span>
                         </div>
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 3</span>
-                            <span className="text-yellow-400">1,000,000+ $SoulShard</span>
-                            <span className="text-green-400">15% 稅率減免</span>
+                            <span className="text-yellow-400">$900+ USD 質押價值</span>
+                            <span className="text-green-400">1.5% 稅率減免</span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
+                            <span className="text-gray-300">VIP 4</span>
+                            <span className="text-yellow-400">$1,600+ USD 質押價值</span>
+                            <span className="text-green-400">2.0% 稅率減免</span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
+                            <span className="text-gray-300">VIP 5</span>
+                            <span className="text-yellow-400">$2,500+ USD 質押價值</span>
+                            <span className="text-green-400">2.5% 稅率減免</span>
                         </div>
                     </div>
                     <div className="space-y-2">
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
-                            <span className="text-gray-300">VIP 4</span>
-                            <span className="text-yellow-400">5,000,000+ $SoulShard</span>
-                            <span className="text-green-400">20% 稅率減免</span>
+                            <span className="text-gray-300">VIP 10</span>
+                            <span className="text-yellow-400">$10,000+ USD 質押價值</span>
+                            <span className="text-green-400">5.0% 稅率減免</span>
                         </div>
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
-                            <span className="text-gray-300">VIP 5</span>
-                            <span className="text-yellow-400">10,000,000+ $SoulShard</span>
-                            <span className="text-green-400">25% 稅率減免</span>
+                            <span className="text-gray-300">VIP 20</span>
+                            <span className="text-yellow-400">$40,000+ USD 質押價值</span>
+                            <span className="text-green-400">10.0% 稅率減免</span>
                         </div>
                         <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded">
                             <p className="text-xs text-blue-300 mb-2">
@@ -320,7 +361,12 @@ const VipPage: React.FC = () => {
                     
                     <div className="lg:col-span-1">
                         <h3 className="section-title text-xl text-center mb-4">我的 VIP 卡</h3>
-                        <VipCardDisplay tokenId={tokenId} chainId={chainId} />
+                        <VipCardDisplay 
+                            tokenId={tokenId} 
+                            chainId={chainId} 
+                            vipLevel={vipLevel}
+                            contractAddress={vipStakingContract?.address}
+                        />
                     </div>
                 </div>
             ) : (

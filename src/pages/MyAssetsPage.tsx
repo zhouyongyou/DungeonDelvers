@@ -441,6 +441,19 @@ const MyAssetsPage: React.FC = () => {
         <section className="space-y-8">
             <h2 className="page-title">我的資產與隊伍</h2>
             
+            {/* 等待提示信息 */}
+            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                    <span className="text-blue-400">ℹ️</span>
+                    <span className="text-sm font-medium text-blue-300">NFT 同步提示</span>
+                </div>
+                <ul className="text-xs text-gray-400 space-y-1">
+                    <li>• 新鑄造的 NFT 需要 <strong className="text-blue-300">2-3 分鐘</strong> 才會在此頁面顯示</li>
+                    <li>• 如果您剛完成鑄造，請稍作等待或刷新頁面</li>
+                    <li>• 系統正在同步區塊鏈數據和更新索引</li>
+                </ul>
+            </div>
+            
             <TeamBuilder 
                 heroes={availableHeroes} 
                 relics={availableRelics}

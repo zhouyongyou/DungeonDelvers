@@ -97,11 +97,18 @@ export async function fetchMetadata(
     const baseTimeout = 2000; // 減少基礎超時時間
     const timeout = baseTimeout + (retryCount * 500); // 更短的漸進式超時
     
-    // 識別 NFT 類型以提供更好的錯誤處理
-    const nftType = contractAddress.toLowerCase().includes('relic') ? 'relic' : 
-                   contractAddress.toLowerCase().includes('hero') ? 'hero' :
-                   contractAddress.toLowerCase().includes('party') ? 'party' :
-                   contractAddress.toLowerCase().includes('vip') ? 'vip' : 'unknown';
+    // 識別 NFT 類型以提供更好的錯誤處理 - 使用實際合約地址
+    const addressLower = contractAddress.toLowerCase();
+    const nftType = 
+        addressLower === '0x648fcdf1f59a2598e9f68ab3210a25a877fad353' ? 'hero' :     // Hero v1.3.0
+        addressLower === '0x6704d55c8736e373b001d54ba00a80dbb0ec793b' ? 'relic' :    // Relic v1.3.0  
+        addressLower === '0x66ea7c0b2baa497eaf18be9f3d4459ffc20ba491' ? 'party' :    // Party v1.3.0
+        addressLower === '0xe9cb85e3671486054133ec4efcb19cf7fbf99706' ? 'vip' :      // VIP Staking v1.3.0
+        addressLower === '0x2a046140668cbb8f598ff3852b08852a8eb23b6a' ? 'hero' :     // Hero v1.2.6 (舊版)
+        addressLower === '0x95f005e2e0d38381576da36c5ca4619a87da550e' ? 'relic' :    // Relic v1.2.6 (舊版)
+        addressLower === '0x11fb68409222b53b04626d382d7e691e640a1dcb' ? 'party' :    // Party v1.2.6 (舊版)
+        addressLower === '0xefdfff583944a2c6318d1597ad1e41159fcd8f6db' ? 'vip' :      // VIP v1.2.6 (舊版)
+        'unknown';
     
     console.log(`獲取 ${nftType} #${tokenId} 元數據 (嘗試 ${retryCount + 1}/${maxRetries + 1})`);
     
