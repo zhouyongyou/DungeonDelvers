@@ -180,5 +180,12 @@ export const useVipStatus = () => {
         countdown,
         allowance: allowance ?? 0n,
         refetchAll,
+        // 調試信息
+        isChainSupported: isSupportedChain,
+        hasContracts: !!vipStakingContract && !!soulShardContract,
+        contractAddresses: {
+            vipStaking: vipStakingContract?.address,
+            soulShard: soulShardContract?.address
+        }
     };
 };
