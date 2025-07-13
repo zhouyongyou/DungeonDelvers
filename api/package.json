@@ -1,0 +1,9 @@
+{
+  "name": "dungeon-delvers-api",
+  "version": "1.0.0",
+  "description": "Dynamic NFT metadata API for Dungeon Delvers",
+  "type": "module",
+  "dependencies": {
+    "viem": "^2.7.9"
+  }
+} 

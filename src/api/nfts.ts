@@ -93,9 +93,9 @@ export async function fetchMetadata(
     retryCount = 0
 ): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
   
-    const maxRetries = 2; // 增加重試次數但使用漸進延遲
-    const baseTimeout = 3000; // 基礎超時時間
-    const timeout = baseTimeout + (retryCount * 1000); // 漸進式增加超時時間
+    const maxRetries = 1; // 減少重試次數，因為有多個數據源
+    const baseTimeout = 2000; // 減少基礎超時時間
+    const timeout = baseTimeout + (retryCount * 500); // 更短的漸進式超時
     
     // 識別 NFT 類型以提供更好的錯誤處理
     const nftType = contractAddress.toLowerCase().includes('relic') ? 'relic' : 
@@ -108,64 +108,68 @@ export async function fetchMetadata(
     // 🔥 1. 先检查IndexedDB缓存
     const cachedMetadata = await nftMetadataCache.getMetadata(tokenId, contractAddress);
     if (cachedMetadata) {
-        // CacheMetrics.recordHit(); // 已移除
         console.log(`${nftType} #${tokenId} 使用緩存數據`);
-        // name 屬性補空字串 fallback
         return {
             ...cachedMetadata,
             name: cachedMetadata.name ?? '',
             description: cachedMetadata.description ?? '',
             image: cachedMetadata.image ?? '',
             attributes: cachedMetadata.attributes ?? [],
-            source: 'metadata',
+            source: 'cache',
         };
     }
-    
-    // CacheMetrics.recordMiss(); // 已移除
     
     try {
         let metadata: Omit<BaseNft, 'id' | 'contractAddress' | 'type'>;
         const startTime = Date.now();
         
+        // 🔥 2. 優先使用本地 API（最快）
+        try {
+            console.log(`${nftType} #${tokenId} 嘗試本地 API`);
+            metadata = await fetchFromLocalAPI(nftType, tokenId, timeout);
+            const loadTime = Date.now() - startTime;
+            console.log(`${nftType} #${tokenId} 本地 API 載入成功 (${loadTime}ms)`);
+            
+            // 成功後立即緩存
+            await nftMetadataCache.cacheMetadata(tokenId, contractAddress, metadata);
+            return { ...metadata, source: 'local-api' };
+        } catch (localError) {
+            console.log(`${nftType} #${tokenId} 本地 API 失敗，嘗試其他方案:`, localError);
+        }
+        
+        // 🔥 3. 如果本地 API 失敗，嘗試 CDN（次選）
+        try {
+            console.log(`${nftType} #${tokenId} 嘗試 CDN`);
+            metadata = await fetchFromCDN(nftType, tokenId, timeout);
+            const loadTime = Date.now() - startTime;
+            console.log(`${nftType} #${tokenId} CDN 載入成功 (${loadTime}ms)`);
+            
+            await nftMetadataCache.cacheMetadata(tokenId, contractAddress, metadata);
+            return { ...metadata, source: 'cdn' };
+        } catch (cdnError) {
+            console.log(`${nftType} #${tokenId} CDN 失敗，嘗試原始方案:`, cdnError);
+        }
+        
+        // 🔥 4. 原始邏輯作為最後備援
         if (uri.startsWith('data:application/json;base64,')) {
             console.log(`${nftType} #${tokenId} 解析 base64 編碼的元數據`);
             const json = Buffer.from(uri.substring('data:application/json;base64,'.length), 'base64').toString();
             metadata = JSON.parse(json);
         } else if (uri.startsWith('ipfs://')) {
-            console.log(`${nftType} #${tokenId} 從 IPFS 載入元數據`);
-            // 🔥 優化IPFS載入 - 使用多個網關並行請求
+            console.log(`${nftType} #${tokenId} 從 IPFS 載入元數據（備援）`);
+            // 🔥 優化IPFS載入 - 使用更少的網關和更短的超時
             const ipfsHash = uri.replace('ipfs://', '');
             
-            // 檢查是否包含子路徑（如 /1, /2 等）
-            const hasSubPath = ipfsHash.includes('/');
-            const baseHash = hasSubPath ? ipfsHash.split('/')[0] : ipfsHash;
-            const subPath = hasSubPath ? ipfsHash.substring(ipfsHash.indexOf('/')) : '';
-            
-            console.log(`IPFS Hash: ${ipfsHash}, Base: ${baseHash}, SubPath: ${subPath}`);
-            
+            // 只使用最可靠的 IPFS 網關
             const gateways = [
                 `https://ipfs.io/ipfs/${ipfsHash}`,
                 `https://gateway.pinata.cloud/ipfs/${ipfsHash}`,
                 `https://cloudflare-ipfs.com/ipfs/${ipfsHash}`,
                 `https://ipfs.infura.io/ipfs/${ipfsHash}`,
-                `https://gateway.ipfs.io/ipfs/${ipfsHash}`,
-                `https://ipfs.fleek.co/ipfs/${ipfsHash}`,
-                `https://cf-ipfs.com/ipfs/${ipfsHash}`,
-                `https://4everland.io/ipfs/${ipfsHash}`,
-                `https://w3s.link/ipfs/${ipfsHash}`,
-                `https://nftstorage.link/ipfs/${ipfsHash}`
+                `https://gateway.ipfs.io/ipfs/${ipfsHash}`
             ];
             
-            // 如果有子路徑，也嘗試載入根目錄
-            if (hasSubPath) {
-                gateways.push(
-                    `https://ipfs.io/ipfs/${baseHash}${subPath}`,
-                    `https://gateway.pinata.cloud/ipfs/${baseHash}${subPath}`,
-                    `https://cloudflare-ipfs.com/ipfs/${baseHash}${subPath}`
-                );
-            }
-            
-            metadata = await fetchWithMultipleGateways(gateways, timeout);
+            metadata = await fetchWithMultipleGateways(gateways, Math.min(timeout, 3000)); // 最多3秒
         } else {
             console.log(`${nftType} #${tokenId} 從 HTTP 載入元數據: ${uri}`);
             metadata = await fetchWithTimeout(uri, timeout);
@@ -174,18 +178,17 @@ export async function fetchMetadata(
         const loadTime = Date.now() - startTime;
         console.log(`${nftType} #${tokenId} 元數據載入成功 (${loadTime}ms)`);
         
-        // 🔥 2. 成功获取后立即缓存
+        // 🔥 成功获取后立即缓存
         await nftMetadataCache.cacheMetadata(tokenId, contractAddress, metadata);
         
-        return { ...metadata, source: 'metadata' };
+        return { ...metadata, source: 'fallback' };
     } catch (error) {
         const loadTime = Date.now() - Date.now();
         console.warn(`${nftType} #${tokenId} 解析元數據時出錯 (嘗試 ${retryCount + 1}/${maxRetries + 1}, ${loadTime}ms):`, error);
         
         // 如果還有重試次數，使用指數回退策略重試
         if (retryCount < maxRetries) {
-          
-            const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // 指數回退，最大5秒
+            const retryDelay = Math.min(500 * Math.pow(2, retryCount), 2000); // 更短的重試延遲
             console.log(`${nftType} #${tokenId} 將在 ${retryDelay}ms 後重試...`);
             await new Promise(resolve => setTimeout(resolve, retryDelay));
             return fetchMetadata(uri, tokenId, contractAddress, retryCount + 1);
@@ -262,7 +265,7 @@ function generateFallbackMetadata(nftType: string, tokenId: string, rarity?: num
     }
 }
 
-// 增強版本：多個IPFS網關並行請求函數
+// 🔥 優化版本：更快的 IPFS 網關處理
 async function fetchWithMultipleGateways(gateways: string[], timeout: number): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
     const controller = new AbortController();
     const startTime = Date.now();
@@ -272,82 +275,52 @@ async function fetchWithMultipleGateways(gateways: string[], timeout: number): P
     }, timeout);
     
     try {
-        // 記錄嘗試的網關
-        console.log(`開始嘗試 ${gateways.length} 個 IPFS 網關...`);
+        console.log(`🔄 IPFS 備援載入: 嘗試 ${gateways.length} 個網關 (${timeout}ms 超時)`);
         
-        // 並行請求所有網關，使用 Promise.allSettled 來收集所有結果
-        const requests = gateways.map((url, index) => 
+        // 🔥 優化：使用 Promise.race 而不是 allSettled，第一個成功就返回
+        const racePromises = gateways.map((url, index) => 
             fetch(url, {
                 signal: controller.signal,
                 headers: {
                     'Accept': 'application/json',
                     'User-Agent': 'DungeonDelvers/1.0',
-                    'Cache-Control': 'max-age=300' // 5分鐘緩存
+                    'Cache-Control': 'max-age=300'
                 }
             }).then(response => {
                 const loadTime = Date.now() - startTime;
-                console.log(`IPFS網關 ${index + 1} (${url}) 響應時間: ${loadTime}ms`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
+                
+                console.log(`✅ IPFS 網關 ${index + 1} 成功 (${loadTime}ms)`);
                 return response.json();
             }).catch(error => {
                 const loadTime = Date.now() - startTime;
-                console.warn(`IPFS網關 ${index + 1} (${url}) 請求失敗 (${loadTime}ms):`, error.message);
+                console.log(`❌ IPFS 網關 ${index + 1} 失敗 (${loadTime}ms):`, error.message);
                 throw error;
             })
         );
         
-        // 使用 Promise.allSettled 來處理所有請求
-        const results = await Promise.allSettled(requests);
+        // 使用 Promise.race 獲取第一個成功的結果
+        const result = await Promise.race(racePromises);
         clearTimeout(timeoutId);
         
-        // 尋找第一個成功的結果
-        for (let i = 0; i < results.length; i++) {
-            const result = results[i];
-            if (result.status === 'fulfilled') {
-                const totalTime = Date.now() - startTime;
-                console.log(`IPFS 載入成功，使用網關 ${i + 1}，總時間: ${totalTime}ms`);
-                return result.value;
-            }
-        }
-        
-        // 如果所有請求都失敗，收集錯誤信息
-        const errors = results
-            .filter(r => r.status === 'rejected')
-            .map((r, index) => `網關${index + 1}: ${r.reason?.message || '未知錯誤'}`)
-            .join('; ');
-        
         const totalTime = Date.now() - startTime;
-        console.error(`所有 IPFS 網關都失敗 (${totalTime}ms): ${errors}`);
-        
-        // 提供更詳細的錯誤信息
-        const errorDetails = {
-            message: `所有IPFS網關都失敗: ${errors}`,
-            totalTime,
-            attemptedGateways: gateways.length,
-            failedGateways: results.filter(r => r.status === 'rejected').length,
-            errors: results.filter(r => r.status === 'rejected').map((r, index) => ({
-                gateway: gateways[index],
-                error: r.reason?.message || '未知錯誤'
-            }))
-        };
-        
-        console.error('IPFS 載入詳細錯誤:', errorDetails);
-        throw new Error(`所有IPFS網關都失敗: ${errors}`);
+        console.log(`🎉 IPFS 載入成功 (${totalTime}ms)`);
+        return result;
         
     } catch (error) {
         clearTimeout(timeoutId);
         const totalTime = Date.now() - startTime;
         
         if (error instanceof Error && error.name === 'AbortError') {
-            console.error(`IPFS載入超時 (${timeout}ms)`);
-            throw new Error(`所有IPFS網關請求超時 (${timeout}ms)`);
+            console.warn(`⏰ IPFS 載入超時 (${timeout}ms)`);
+            throw new Error(`IPFS 網關請求超時 (${timeout}ms)`);
         }
         
-        console.error(`IPFS載入失敗 (${totalTime}ms):`, error);
-        throw new Error(`IPFS網關無法訪問: ${error instanceof Error ? error.message : '未知錯誤'}`);
+        console.warn(`🚫 IPFS 載入失敗 (${totalTime}ms):`, error);
+        throw new Error(`IPFS 網關無法訪問: ${error instanceof Error ? error.message : '未知錯誤'}`);
     }
 }
 
@@ -383,6 +356,91 @@ async function fetchWithTimeout(url: string, timeout: number): Promise<Omit<Base
         }
         throw error;
     }
+}
+
+// 🔥 新增：本地 API 載入函數
+async function fetchFromLocalAPI(nftType: string, tokenId: string, timeout: number): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
+    // 使用 CDN 配置來獲取資源
+    const { getMetadataUrl, loadResourceWithFallback } = await import('../config/cdn');
+    
+    try {
+        // 構建資源路徑
+        let resourcePath = '';
+        switch (nftType) {
+            case 'hero':
+            case 'relic':
+                resourcePath = `${nftType}/${tokenId}.json`;
+                break;
+            case 'party':
+                resourcePath = `party/party.json`;
+                break;
+            case 'vip':
+                resourcePath = `vip/vip.json`;
+                break;
+            default:
+                throw new Error(`不支援的 NFT 類型: ${nftType}`);
+        }
+        
+        return await loadResourceWithFallback(
+            resourcePath,
+            'api',
+            (response) => response.json()
+        );
+    } catch (error) {
+        // 如果 CDN 配置載入失敗，回退到原始方法
+        const baseUrl = window.location.origin;
+        let apiPath = '';
+        
+        switch (nftType) {
+            case 'hero':
+                apiPath = `/api/hero/${tokenId}.json`;
+                break;
+            case 'relic':
+                apiPath = `/api/relic/${tokenId}.json`;
+                break;
+            case 'party':
+                apiPath = `/api/party/party.json`;
+                break;
+            case 'vip':
+                apiPath = `/api/vip/vip.json`;
+                break;
+            default:
+                throw new Error(`不支援的 NFT 類型: ${nftType}`);
+        }
+        
+        const url = `${baseUrl}${apiPath}`;
+        return await fetchWithTimeout(url, Math.min(timeout, 1000));
+    }
+}
+
+// 🔥 新增：CDN 載入函數
+async function fetchFromCDN(nftType: string, tokenId: string, timeout: number): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
+    // 使用你的域名作為 CDN
+    const cdnUrls = [
+        `https://www.dungeondelvers.xyz/api/${nftType}/${tokenId}.json`,
+        `https://dungeondelvers.xyz/api/${nftType}/${tokenId}.json`
+    ];
+    
+    // 對於 party 和 vip，使用固定檔案名
+    if (nftType === 'party') {
+        cdnUrls[0] = `https://www.dungeondelvers.xyz/api/party/party.json`;
+        cdnUrls[1] = `https://dungeondelvers.xyz/api/party/party.json`;
+    } else if (nftType === 'vip') {
+        cdnUrls[0] = `https://www.dungeondelvers.xyz/api/vip/vip.json`;
+        cdnUrls[1] = `https://dungeondelvers.xyz/api/vip/vip.json`;
+    }
+    
+    // 嘗試所有 CDN URL
+    for (const url of cdnUrls) {
+        try {
+            return await fetchWithTimeout(url, Math.min(timeout, 2000)); // CDN 最多2秒超時
+        } catch (error) {
+            console.log(`CDN ${url} 失敗:`, error);
+            continue;
+        }
+    }
+    
+    throw new Error('所有 CDN 都失敗');
 }
 
 // =================================================================

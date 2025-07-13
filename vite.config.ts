@@ -116,6 +116,15 @@ export default defineConfig({
     // 🔥 新增：HMR 優化
     hmr: {
       overlay: false // 減少開發環境錯誤覆蓋的干擾
+    },
+    // 🔥 新增：API 代理設置
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path // 保持原路徑
+      }
     }
   },
   

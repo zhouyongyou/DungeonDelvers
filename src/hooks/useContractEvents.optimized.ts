@@ -357,3 +357,6 @@ export const useContractEventsOptimized = () => {
         isEnabled
     };
 };
+
+// 為了保持向後兼容性，導出一個別名
+export const useContractEvents = useContractEventsOptimized;
