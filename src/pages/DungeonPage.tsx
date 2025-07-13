@@ -167,7 +167,8 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
     const { data: explorationFee } = useReadContract({
         address: dungeonMasterContract?.address as `0x${string}`,
         abi: dungeonMasterContract?.abi,
-        functionName: 'explorationFee'query: { enabled: !!dungeonMasterContract }
+        functionName: 'explorationFee',
+        query: { enabled: !!dungeonMasterContract }
     });
 
     const { isOnCooldown, effectivePower, fatigueColorClass } = useMemo(() => {
