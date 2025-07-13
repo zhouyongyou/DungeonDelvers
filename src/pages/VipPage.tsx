@@ -296,7 +296,8 @@ const VipPage: React.FC = () => {
                                 💡 <strong>稅率減免</strong>適用於從玩家金庫提取代幣時的手續費 (BP = 基點，1 BP = 0.01%)
                             </p>
                             <p className="text-xs text-green-300">
-                                ✅ <strong>等級計算</strong>現已直接從智能合約獲取，確保準確性
+                                ✅ <strong>等級計算</strong>：VIP等級 = √(USD價值/100)，平滑成長無上限<br/>
+                                🔢 <strong>稅率公式</strong>：每個VIP等級減免50基點 (0.5%)
                             </p>
                         </div>
                     </div>

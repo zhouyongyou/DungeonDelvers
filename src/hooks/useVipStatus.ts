@@ -67,28 +67,27 @@ export const useVipStatus = () => {
             return { vipLevel: level, taxReduction: reduction };
         }
         
-        // 如果合約數據不可用，fallback 到前端計算
+        // 如果合約數據不可用，fallback 到前端計算（使用平方根方式）
         if (!stakedAmount || stakedAmount === 0n) {
             return { vipLevel: 0, taxReduction: 0n };
         }
         
+        // 假設 stakedValueUSD（這裡需要從 Oracle 獲取，暫時用估算）
         const amountInEther = Number(stakedAmount) / 1e18;
-        console.log('🔍 VIP Fallback計算 - 質押金額:', amountInEther.toLocaleString(), 'Soul Shard');
+        // 簡單估算：假設 1 SoulShard ≈ $0.01 USD（實際應該從 Oracle 獲取）
+        const estimatedUSD = amountInEther * 0.01;
+        console.log('🔍 VIP Fallback計算 - 質押金額:', amountInEther.toLocaleString(), 'Soul Shard, 估算USD:', estimatedUSD.toFixed(2));
         
         let level = 0;
-        let reduction = 0;
         
-        if (amountInEther >= 10000000) {
-            level = 5; reduction = 250; // 250 BP = 2.5%
-        } else if (amountInEther >= 5000000) {
-            level = 4; reduction = 200; // 200 BP = 2.0%
-        } else if (amountInEther >= 1000000) {
-            level = 3; reduction = 150; // 150 BP = 1.5%
-        } else if (amountInEther >= 100000) {
-            level = 2; reduction = 100; // 100 BP = 1.0%
-        } else if (amountInEther >= 10000) {
-            level = 1; reduction = 50; // 50 BP = 0.5%
+        if (estimatedUSD >= 100) {
+            // 使用平方根計算：level = sqrt(USD / 100)
+            level = Math.floor(Math.sqrt(estimatedUSD / 100));
+            // 限制最大等級
+            level = Math.min(level, 255);
         }
+        
+        const reduction = level * 50; // 50 BP per level
         
         console.log('🔍 VIP Fallback結果 - 等級:', level, '稅率減免:', `${reduction / 100}%`, '(', reduction, 'BP)');
         return { vipLevel: level, taxReduction: BigInt(reduction) };
