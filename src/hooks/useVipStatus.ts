@@ -28,12 +28,10 @@ export const useVipStatus = () => {
     // 讀取鏈上數據
     const { data: soulShardBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useBalance({ address, token: soulShardContract?.address, query: { enabled: !!address && !!soulShardContract } });
     
-    // ★ 核心修正 #1: 使用 useReadContracts 一次性獲取多個數據，減少 RPC 呼叫
+    // ★ 核心修正 #1: 只獲取我們知道能工作的數據，VIP等級通過質押金額計算
     const { data: vipData, isLoading: isLoadingVipData, error: vipDataError, refetch: refetchVipData } = useReadContracts({
         contracts: [
             { ...vipStakingContract, functionName: 'userStakes', args: [address!] },
-            { ...vipStakingContract, functionName: 'getVipLevel', args: [address!] },
-            { ...vipStakingContract, functionName: 'getVipTaxReduction', args: [address!] },
             { ...vipStakingContract, functionName: 'unstakeQueue', args: [address!] },
             { ...soulShardContract, functionName: 'allowance', args: [address!, vipStakingContract?.address as `0x${string}`] },
         ],
@@ -46,14 +44,46 @@ export const useVipStatus = () => {
 
     const [
         stakeInfo,
-        vipLevel,
-        taxReduction,
         unstakeQueue,
         allowance
     ] = useMemo(() => vipData?.map(d => d.result) ?? [], [vipData]);
 
     const stakedAmount = useMemo(() => (stakeInfo as readonly [bigint, bigint])?.[0] ?? 0n, [stakeInfo]);
     const tokenId = useMemo(() => (stakeInfo as readonly [bigint, bigint])?.[1], [stakeInfo]);
+    
+    // ★ 核心修正 #2: 基於質押金額計算VIP等級和稅率減免
+    const { vipLevel, taxReduction } = useMemo(() => {
+        if (!stakedAmount || stakedAmount === 0n) {
+            return { vipLevel: 0, taxReduction: 0n };
+        }
+        
+        const amountInEther = Number(stakedAmount) / 1e18;
+        console.log('🔍 VIP計算 - 質押金額:', amountInEther.toLocaleString(), 'Soul Shard');
+        
+        let level = 0;
+        let reduction = 0;
+        
+        if (amountInEther >= 10000000) {
+            level = 5;
+            reduction = 2500; // 25%
+        } else if (amountInEther >= 5000000) {
+            level = 4; 
+            reduction = 2000; // 20%
+        } else if (amountInEther >= 1000000) {
+            level = 3;
+            reduction = 1500; // 15%
+        } else if (amountInEther >= 100000) {
+            level = 2;
+            reduction = 1000; // 10%
+        } else if (amountInEther >= 10000) {
+            level = 1;
+            reduction = 500; // 5%
+        }
+        
+        console.log('🔍 VIP計算結果 - 等級:', level, '稅率減免:', `${reduction / 100}%`);
+        
+        return { vipLevel: level, taxReduction: BigInt(reduction) };
+    }, [stakedAmount]);
 
     // ★ 核心修正 #2: 確保即使 stakedAmount 為 0，也能安全地觸發後續查詢
     const { data: stakedValueUSD, isLoading: isLoadingStakedValueUSD, refetch: refetchStakedValueUSD } = useReadContract({
@@ -70,8 +100,25 @@ export const useVipStatus = () => {
 
     const { isOver: isCooldownOver, formatted: countdown } = useCountdown(unstakeAvailableAt);
 
+    // ★ 核心修正 #3: 添加錯誤處理和調試信息
+    useEffect(() => {
+        if (vipDataError) {
+            console.error('🚨 VIP數據讀取錯誤:', vipDataError);
+        }
+        if (vipData) {
+            console.log('📊 VIP數據更新:', {
+                address,
+                stakedAmount: stakedAmount.toString(),
+                vipLevel,
+                taxReduction: taxReduction.toString(),
+                contractAddress: vipStakingContract?.address
+            });
+        }
+    }, [vipData, vipDataError, address, stakedAmount, vipLevel, taxReduction, vipStakingContract?.address]);
+
     const refetchAll = async () => {
         try {
+            console.log('🔄 刷新VIP狀態...');
             // 並行執行所有refetch操作
             const promises = [
                 refetchVipData(),
@@ -84,21 +131,23 @@ export const useVipStatus = () => {
             if (stakedAmount > 0n) {
                 await refetchStakedValueUSD();
             }
+            console.log('✅ VIP狀態刷新完成');
         } catch (error) {
-            console.error('刷新VIP狀態時發生錯誤:', error);
+            console.error('❌ 刷新VIP狀態時發生錯誤:', error);
         }
     };
 
     return {
         isLoading: isLoadingVipData || isLoadingBalance || (stakedAmount > 0n && isLoadingStakedValueUSD),
+        error: vipDataError,
         vipStakingContract,
         soulShardContract,
         soulShardBalance: soulShardBalance?.value ?? 0n,
         stakedAmount,
         stakedValueUSD: (stakedValueUSD as bigint) ?? 0n,
         tokenId,
-        vipLevel: vipLevel ?? 0,
-        taxReduction: taxReduction ?? 0n,
+        vipLevel,
+        taxReduction,
         pendingUnstakeAmount,
         isCooldownOver,
         countdown,
