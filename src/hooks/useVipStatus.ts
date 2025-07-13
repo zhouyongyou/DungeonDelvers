@@ -113,7 +113,7 @@ export const useVipStatus = () => {
             logger.error('🚨 VIP數據讀取錯誤:', vipDataError);
         }
         if (vipData) {
-
+            logger.debug('🎯 VIP狀態數據:', {
                 address,
                 stakedAmount: stakedAmount.toString(),
                 contractVipLevel: contractVipLevel?.toString(),

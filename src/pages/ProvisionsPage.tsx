@@ -32,7 +32,8 @@ const useProvisionsLogic = (quantity: number) => {
     const { data: provisionPriceUSD, isLoading: isLoadingPrice } = useReadContract({
                 address: dungeonMasterContract?.address as `0x${string}`,
         abi: dungeonMasterContract?.abi,
-        functionName: 'provisionPriceUSD'query: { enabled: !!dungeonMasterContract },
+        functionName: 'provisionPriceUSD',
+        query: { enabled: !!dungeonMasterContract },
     });
 
     // 計算所需的 SoulShard 數量

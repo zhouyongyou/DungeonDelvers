@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useLocation } from 'react-router-dom';
 import { useAccount } from 'wagmi';
 import { queryKeys } from '../config/queryConfig';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { logger } from '../utils/logger';
+import type { Page } from '../types/page';
 
 // 頁面間的預取策略
 const prefetchStrategies: Record<string, string[]> = {
@@ -18,16 +18,13 @@ const prefetchStrategies: Record<string, string[]> = {
   'dungeon': ['party', 'provisions'],
 };
 
-export function usePagePrefetch() {
+export function usePagePrefetch(currentPage: Page) {
   const queryClient = useQueryClient();
   const { address, chainId } = useAccount();
-  const location = useLocation();
 
   useEffect(() => {
     if (!address || !chainId) return;
 
-    // 從 URL 獲取當前頁面
-    const currentPage = location.pathname.replace(/^\/|#\//g, '') || 'dashboard';
     const pagesToPrefetch = prefetchStrategies[currentPage] || [];
 
     logger.debug('Prefetching pages:', pagesToPrefetch);
@@ -70,7 +67,7 @@ export function usePagePrefetch() {
           break;
       }
     });
-  }, [location.pathname, address, chainId, queryClient]);
+  }, [currentPage, address, chainId, queryClient]);
 }
 
 // 鼠標懸停預取

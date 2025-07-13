@@ -10,7 +10,6 @@ import { nftMetadataBatcher } from '../utils/requestBatcher';
 import { getQueryConfig, queryKeys } from '../config/queryConfig';
 import { dedupeNFTMetadata, dedupeGraphQLQuery } from '../utils/requestDeduper';
 import type { 
-import { logger } from '../utils/logger';
     AllNftCollections, 
     BaseNft, 
     HeroNft,
@@ -20,6 +19,7 @@ import { logger } from '../utils/logger';
     NftAttribute,
     NftType
 } from '../types/nft';
+import { logger } from '../utils/logger';
 
 // =================================================================
 // Section 1: The Graph API 設定 (保持不變)

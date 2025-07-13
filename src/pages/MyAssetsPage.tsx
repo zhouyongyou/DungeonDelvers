@@ -317,7 +317,8 @@ const MyAssetsPageContent: React.FC = () => {
     const { data: platformFee, isLoading: isLoadingFee } = useReadContract({
         address: partyContract?.address as `0x${string}`,
         abi: partyContract?.abi,
-        functionName: 'platformFee'query: { enabled: !!partyContract }
+        functionName: 'platformFee',
+        query: { enabled: !!partyContract }
     });
 
     // 檢查授權狀態
@@ -532,8 +533,6 @@ const MyAssetsPageContent: React.FC = () => {
             </div>
         </section>
     );
-};
-
 };
 
 const MyAssetsPage: React.FC = () => {

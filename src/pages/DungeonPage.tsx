@@ -421,8 +421,6 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
     );
 };
 
-};
-
 const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setActivePage }) => {
     return (
         <ErrorBoundary>

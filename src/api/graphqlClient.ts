@@ -1,6 +1,6 @@
 import { ApolloClient, InMemoryCache, NormalizedCacheObject, ApolloLink, Observable } from '@apollo/client';
 import { onError } from '@apollo/client/link/error';
-import { persistentCache } from '../cache/persistentCache';
+import { graphqlPersistentCache } from '../cache/persistentCache';
 import { logger } from '../utils/logger';
 
 // GraphQL Fragments for reuse
@@ -114,7 +114,7 @@ const cachingLink = new ApolloLink((operation, forward) => {
       const cacheKey = `${operation.operationName}:${JSON.stringify(operation.variables)}`;
       
       // Try to get from cache
-      persistentCache.graphqlPersistentCache.get(cacheKey).then(cachedData => {
+      graphqlPersistentCache.get(cacheKey).then(cachedData => {
         if (cachedData) {
           observer.next(cachedData);
           observer.complete();
@@ -125,7 +125,7 @@ const cachingLink = new ApolloLink((operation, forward) => {
         const subscription = forward(operation).subscribe({
           next: data => {
             // Cache the result
-            persistentCache.graphqlPersistentCache.set(cacheKey, data, cacheTTL);
+            graphqlPersistentCache.set(cacheKey, data, cacheTTL);
             observer.next(data);
           },
           error: observer.error.bind(observer),
