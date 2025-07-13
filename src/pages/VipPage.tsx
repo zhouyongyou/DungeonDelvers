@@ -11,6 +11,7 @@ import { logger } from '../utils/logger';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useContractTransaction, ContractOperations } from '../hooks/useContractTransaction';
 import { APP_CONSTANTS, getVipTier } from '../config/constants';
+import { useAppToast } from '../hooks/useAppToast';
 
 const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undefined, vipLevel: number, contractAddress?: string }> = ({ tokenId, chainId, vipLevel, contractAddress }) => {
     const [nftImage, setNftImage] = useState<string | null>(null);
@@ -51,11 +52,9 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
             if (!contractAddress || !tokenId) return;
             
             try {
-                // 嘗試多個 metadata 來源
+                // 使用本地 metadata 文件
                 const metadataUrls = [
-                    `https://www.dungeondelvers.xyz/api/vip/${tokenId}.json`,
-                    `https://dungeon-delvers-metadata-server.onrender.com/api/vip/${tokenId}.json`,
-                    `/api/vip/vip.json` // 備用靜態文件
+                    `/api/vip/vip.json` // 只使用本地文件，避免 CORS 問題
                 ];
 
                 for (const url of metadataUrls) {
@@ -72,6 +71,9 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
                         continue;
                     }
                 }
+                
+                // 如果所有 metadata 來源都失敗，使用本地後備圖片
+                setNftImage('/images/vip/vip.png');
             } catch (error) {
                 logger.error('Failed to load VIP NFT image:', error);
                 setImageError(true);
@@ -81,13 +83,20 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
         loadNftImage();
     }, [contractAddress, tokenId]);
     
+    // 根據 VIP 等級動態選擇圖片
+    const getVipImageByLevel = (level: number) => {
+        // 可以根據等級返回不同的圖片
+        // 未來可以擴展為: vip-bronze.png, vip-silver.png, vip-gold.png 等
+        return '/images/vip/vip.png';
+    };
+    
     return (
         <div className="w-full space-y-4">
             <div className="w-full aspect-square rounded-xl overflow-hidden shadow-lg border border-white/20 bg-gray-900">
-                {!imageError && nftImage ? (
+                {!imageError && (nftImage || tokenId) ? (
                     <img
-                        src={nftImage}
-                        alt={`VIP Card #${tokenId.toString()}`}
+                        src={nftImage || getVipImageByLevel(vipLevel)}
+                        alt={`VIP Card #${tokenId?.toString() || 'VIP'}`}
                         className="w-full h-full object-cover"
                         onError={() => {
                             setImageError(true);
@@ -136,6 +145,7 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
 const VipPageContent: React.FC = () => {
     const { chainId } = useAccount();
     const publicClient = usePublicClient();
+    const { showToast } = useAppToast();
 
     const [amount, setAmount] = useState('');
     const [mode, setMode] = useState<'stake' | 'unstake'>('stake');

@@ -28,6 +28,9 @@
     "ts:fix-any:apply": "node scripts/fix-typescript-any.mjs --apply",
     "ts:fix-any:script": "node scripts/fix-typescript-any.mjs --generate-script",
     "ts:quick-fix": "node scripts/quick-fix-any-patterns.mjs",
+    "build:server": "tsc src/api/*.ts --outDir dist/api --module commonjs",
+    "start:server": "node server/metadata-api.js",
+    "dev:server": "nodemon server/metadata-api.js",
     "ts:quick-fix:dry": "node scripts/quick-fix-any-patterns.mjs --dry-run"
   },
   "dependencies": {

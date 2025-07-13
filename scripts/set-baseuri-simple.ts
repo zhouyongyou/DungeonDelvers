@@ -27,8 +27,8 @@ const ENVIRONMENT = process.env.NODE_ENV || 'development';
 // BaseURI 配置
 const BASE_URI_CONFIG = {
   api: {
-    development: "http://localhost:3001/api/",
-    production: "https://dungeon-delvers-metadata-server.onrender.com/api/"
+    development: "http://localhost:3001/api/metadata/",
+    production: "https://dungeondelvers-metadata-api.onrender.com/api/metadata/"
   },
   ipfs: {
     // 更新的 IPFS 哈希 - 如果你有新的 IPFS 部署，請更新這個

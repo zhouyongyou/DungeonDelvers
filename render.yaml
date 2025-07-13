@@ -1,0 +1,23 @@
+# render.yaml - Render.com 部署配置
+
+services:
+  # Metadata API 服務
+  - type: web
+    name: dungeondelvers-metadata-api
+    env: node
+    region: singapore # 選擇亞洲區域，降低延遲
+    buildCommand: "npm install && npm run build"
+    startCommand: "node server/metadata-api.js"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: THE_GRAPH_STUDIO_API_URL
+        sync: false # 需要在 Render 控制台設置
+      - key: PORT
+        value: 3001
+    
+    # 健康檢查
+    healthCheckPath: /health
+    
+    # 自動擴展（付費功能）
+    autoDeploy: true # 連接 GitHub 後自動部署

@@ -7,6 +7,8 @@ import { bsc } from 'wagmi/chains';
 import type { AnyNft, HeroNft, RelicNft, PartyNft, VipNft } from '../../types/nft';
 import { getRarityChineseName, getRarityColor as getRarityColorUtil } from '../../utils/rarityConverter';
 import ImageWithFallback from './ImageWithFallback';
+import { NftSvgDisplay } from './NftSvgDisplay';
+import { useNftDisplayMode } from '../../hooks/useNftDisplayMode';
 
 interface NftCardProps {
   nft: AnyNft;
@@ -71,6 +73,7 @@ const NftCard: React.FC<NftCardProps> = memo(({
   showDetails = true,
   className = '' 
 }) => {
+  const { shouldUseSvg } = useNftDisplayMode();
   // 使用新的稀有度轉換工具
   const getRarityColor = (rarity: string | number | bigint) => {
     return getRarityColorUtil(rarity);
@@ -131,7 +134,14 @@ const NftCard: React.FC<NftCardProps> = memo(({
     return (
       <div className="relative w-full h-full">
         {renderSyncStatus()}
-        <ImageWithFallback
+        {shouldUseSvg() ? (
+          <NftSvgDisplay 
+            nft={nft} 
+            className="w-full h-full rounded-lg"
+            showFallback={false}
+          />
+        ) : (
+          <ImageWithFallback
           src={nft.image}
           alt={nft.name}
           className={baseImageClass}
@@ -140,6 +150,7 @@ const NftCard: React.FC<NftCardProps> = memo(({
           lazy={true}
           showRetry={true}
         />
+        )}
         {/* 類型標籤 - 左上角 */}
         <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${
           nft.type === 'hero' ? 'bg-red-600/90 text-white' :

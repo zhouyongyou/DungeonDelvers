@@ -222,8 +222,12 @@ function generateFallbackMetadata(nftType: string, tokenId: string, rarity?: num
     };
     
     // 根據稀有度選擇圖片 (1-5星)
-    const getImageByRarity = (type: string, rarity: number = 1): string => {
-        const rarityIndex = Math.max(1, Math.min(5, rarity)); // 確保在1-5範圍內
+    const getImageByRarity = (type: string, rarity: number | undefined): string => {
+        // 如果稀有度未知，使用占位圖片而不是默認1星
+        if (!rarity || rarity === 0) {
+            return `/images/${type}/${type}-placeholder.png`; // 需要創建占位圖片
+        }
+        const rarityIndex = Math.max(1, Math.min(5, rarity));
         return `/images/${type}/${type}-${rarityIndex}.png`;
     };
     
