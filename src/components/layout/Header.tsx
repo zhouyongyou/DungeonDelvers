@@ -10,6 +10,8 @@ import { DEVELOPER_ADDRESS } from '../../config/constants';
 import { RecentTransactions } from '../ui/RecentTransactions';
 import { Icons } from '../ui/icons';
 import { NetworkSwitcher } from '../ui/NetworkSwitcher';
+import { useMobileOptimization } from '../../hooks/useMobileOptimization';
+import { formatMobileAddress } from '../../utils/mobileUtils';
 
 const usePlayerLevel = () => {
     // 簡化版本，暫時返回 null 避免 TypeScript 錯誤
@@ -31,10 +33,25 @@ const XIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
-export const Header: React.FC<{ activePage: Page; setActivePage: (page: Page) => void }> = ({ activePage, setActivePage }) => {
+interface HeaderProps {
+  activePage: Page;
+  setActivePage: (page: Page) => void;
+  onHoverMint?: () => void;
+  onHoverParty?: () => void;
+  onHoverDashboard?: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({ 
+  activePage, 
+  setActivePage,
+  onHoverMint,
+  onHoverParty,
+  onHoverDashboard,
+}) => {
   const { address, isConnected, isConnecting } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
+  const { isMobile } = useMobileOptimization();
 
   const [isTxPopoverOpen, setIsTxPopoverOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);

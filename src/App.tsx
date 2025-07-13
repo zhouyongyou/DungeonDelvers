@@ -14,6 +14,8 @@ import { WrongNetworkBanner } from './components/ui/WrongNetworkBanner';
 import { GlobalErrorBoundary } from './components/core/GlobalErrorBoundary';
 import { GlobalLoadingProvider } from './components/core/GlobalLoadingProvider';
 import { usePrefetchOnHover } from './hooks/usePagePrefetch';
+import { MobileNavigation } from './components/mobile/MobileNavigation';
+import { useMobileOptimization } from './hooks/useMobileOptimization';
 
 // 動態導入所有頁面
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -55,8 +57,9 @@ const getPageFromHash = (): Page => {
 };
 
 function App() {
-  const [activePage, setActivePage] = useState<Page>(getPageFromHash);
+  const [activePage, setActivePage] = useState<Page>(getPageFromHash());
   const { isConnected } = useAccount();
+  const { isMobile } = useMobileOptimization();
   
   // 這個 Hook 會在背景監聽鏈上事件，並自動更新相關數據
   useContractEvents();
@@ -124,9 +127,19 @@ function App() {
                     {renderPage()}
                 </Suspense>
             </main>
-            <Footer />
+            {!isMobile && <Footer />}
+            {/* 移動端底部導航 */}
+            {isMobile && (
+              <MobileNavigation 
+                activePage={activePage}
+                setActivePage={handleSetPage}
+                isConnected={isConnected}
+              />
+            )}
             {/* 這個元件負責在背景追蹤已發送交易的狀態 */}
             <TransactionWatcher />
+            {/* 移動端底部安全區域 */}
+            {isMobile && <div className="h-16" />}
           </div>
         </ErrorBoundary>
       </GlobalLoadingProvider>

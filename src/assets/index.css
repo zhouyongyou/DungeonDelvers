@@ -2,6 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 移動端優化樣式 */
+@layer base {
+  /* 防止 iOS 橡皮筋效果 */
+  html {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 安全區域變數 */
+  :root {
+    --sat: env(safe-area-inset-top);
+    --sar: env(safe-area-inset-right);
+    --sab: env(safe-area-inset-bottom);
+    --sal: env(safe-area-inset-left);
+  }
+
+  /* 防止文字選擇（移動端） */
+  @media (max-width: 768px) {
+    body {
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    
+    input, textarea {
+      -webkit-user-select: text;
+      user-select: text;
+    }
+  }
+
+  /* 優化觸控反饋 */
+  button, a, .clickable {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
 /* ★ 核心修正：將 keyframes 定義移至 @layer 外部，解決語法錯誤 */
 @keyframes slide-in-right {
   from {
@@ -34,6 +69,12 @@
 
     /* 強制深色主題 */
     @apply bg-gray-900 font-sans text-gray-200;
+    
+    /* 移動端優化 */
+    @media (max-width: 768px) {
+      font-size: 16px; /* 防止 iOS 縮放 */
+      touch-action: pan-y; /* 允許垂直滾動，防止水平滾動 */
+    }
   }
 
   input, select, textarea {
