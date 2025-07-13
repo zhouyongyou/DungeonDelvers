@@ -39,8 +39,8 @@ export const useVipStatus = () => {
         ],
         query: { 
             enabled: !!address && !!vipStakingContract && !!soulShardContract && !!vipStakingContract?.address && isSupportedChain,
-            retry: 2,
-            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+            retry: 3,
+            retryDelay: (attemptIndex) => Math.min(3000 * 2 ** attemptIndex, 30000), // 更慢的重試：3秒、6秒、12秒，最多30秒
             throwOnError: false, // 防止錯誤導致頁面崩潰
         }
     });
@@ -74,8 +74,9 @@ export const useVipStatus = () => {
         
         // 假設 stakedValueUSD（這裡需要從 Oracle 獲取，暫時用估算）
         const amountInEther = Number(stakedAmount) / 1e18;
-        // 簡單估算：假設 1 SoulShard ≈ $0.01 USD（實際應該從 Oracle 獲取）
-        const estimatedUSD = amountInEther * 0.01;
+        // 基於你提供的數據：6,314,607 SoulShard ≈ $371.62 USD
+        // 計算：$371.62 / 6,314,607 ≈ $0.0000588 per SoulShard
+        const estimatedUSD = amountInEther * 0.0000588;
         console.log('🔍 VIP Fallback計算 - 質押金額:', amountInEther.toLocaleString(), 'Soul Shard, 估算USD:', estimatedUSD.toFixed(2));
         
         let level = 0;
@@ -89,7 +90,7 @@ export const useVipStatus = () => {
         
         const reduction = level * 50; // 50 BP per level
         
-        console.log('🔍 VIP Fallback結果 - 等級:', level, '稅率減免:', `${reduction / 100}%`, '(', reduction, 'BP)');
+        console.log('🔍 VIP Fallback結果 - 等級:', level, '稅率減免:', `${reduction / 10000}%`, '(', reduction, 'BP)');
         return { vipLevel: level, taxReduction: BigInt(reduction) };
     }, [contractVipLevel, contractTaxReduction, stakedAmount]);
 

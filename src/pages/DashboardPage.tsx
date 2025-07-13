@@ -47,25 +47,35 @@ const GET_DASHBOARD_STATS_QUERY = `
   }
 `;
 
-// 新的 Hook，專門用來獲取儀表板的統計數據
+// 簡化的 Hook，只獲取必要的金庫和等級數據
 const useDashboardStats = () => {
     const { address, chainId } = useAccount();
 
     const { data, isLoading, isError, refetch } = useQuery({
-        queryKey: ['dashboardStats', address, chainId],
+        queryKey: ['dashboardSimpleStats', address, chainId],
         queryFn: async () => {
             if (!address || !THE_GRAPH_API_URL) return null;
             
-            // 添加超時控制
+            // 簡化的查詢，只獲取金庫和等級數據
+            const simplifiedQuery = `
+                query GetSimpleStats($owner: ID!) {
+                    player(id: $owner) {
+                        id
+                        profile { level }
+                        vault { balance }
+                    }
+                }
+            `;
+            
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000); // 增加到15秒超時
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
             
             try {
                 const response = await fetch(THE_GRAPH_API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        query: GET_DASHBOARD_STATS_QUERY,
+                        query: simplifiedQuery,
                         variables: { owner: address.toLowerCase() },
                     }),
                     signal: controller.signal
@@ -90,26 +100,18 @@ const useDashboardStats = () => {
             }
         },
         enabled: !!address && chainId === bsc.id && !!THE_GRAPH_API_URL,
-        // ★★★ 網路優化：增加 staleTime，避免不必要的重複請求 ★★★
         staleTime: 1000 * 60 * 5, // 5分鐘
-        // ★★★ 錯誤處理優化：添加重試配置 ★★★
-        retry: 3, // 增加重試次數
-        retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 10000), // 最大10秒延遲
-        // 添加重試條件
-        retryOnMount: true,
+        retry: 2, // 減少重試次數
+        retryDelay: (attemptIndex: number) => Math.min(2000 * 2 ** attemptIndex, 8000),
         refetchOnWindowFocus: false,
         refetchOnReconnect: true,
     });
 
-    // 從查詢結果中解析數據
+    // 簡化的統計數據
     const stats = useMemo(() => {
         return {
             level: data?.profile?.level ? Number(data.profile.level) : 1,
-            heroCount: data?.heros?.length ?? 0,
-            relicCount: data?.relics?.length ?? 0,
-            partyCount: data?.parties?.length ?? 0,
-            isVip: !!data?.vip,
-            withdrawableBalance: data?.vault?.withdrawableBalance ? BigInt(data.vault.withdrawableBalance) : 0n,
+            withdrawableBalance: data?.vault?.balance ? BigInt(data.vault.balance) : 0n,
         };
     }, [data]);
 
@@ -302,16 +304,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
             </LocalErrorBoundary>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                    <h3 className="section-title">資產快照</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <StatCard title="英雄總數" value={stats.heroCount} isLoading={isLoadingStats} icon={<Icons.Hero className="w-6 h-6"/>} />
-                        <StatCard title="聖物總數" value={stats.relicCount} isLoading={isLoadingStats} icon={<Icons.Relic className="w-6 h-6"/>} />
-                        <StatCard title="隊伍總數" value={stats.partyCount} isLoading={isLoadingStats} icon={<Icons.Party className="w-6 h-6"/>} />
-                        <StatCard title="VIP 狀態" value={stats.isVip ? '質押中' : '未質押'} isLoading={isLoadingStats} icon={<Icons.Vip className="w-6 h-6"/>} />
-                    </div>
-                </div>
-                <div className="lg:col-span-1">
+                <div className="lg:col-span-3">
                     <TownBulletin />
                 </div>
             </div>

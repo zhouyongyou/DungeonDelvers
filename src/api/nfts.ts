@@ -422,19 +422,20 @@ async function fetchFromLocalAPI(nftType: string, tokenId: string, timeout: numb
 
 // 🔥 新增：CDN 載入函數
 async function fetchFromCDN(nftType: string, tokenId: string, timeout: number): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
-    // 使用你的域名作為 CDN
+    // 使用當前域名避免 CORS 問題
+    const currentDomain = window.location.origin;
     const cdnUrls = [
-        `https://www.dungeondelvers.xyz/api/${nftType}/${tokenId}.json`,
-        `https://dungeondelvers.xyz/api/${nftType}/${tokenId}.json`
+        `${currentDomain}/api/${nftType}/${tokenId}.json`,
+        `https://dungeon-delvers-metadata-server.onrender.com/api/${nftType}/${tokenId}.json`
     ];
     
     // 對於 party 和 vip，使用固定檔案名
     if (nftType === 'party') {
-        cdnUrls[0] = `https://www.dungeondelvers.xyz/api/party/party.json`;
-        cdnUrls[1] = `https://dungeondelvers.xyz/api/party/party.json`;
+        cdnUrls[0] = `${currentDomain}/api/party/party.json`;
+        cdnUrls[1] = `https://dungeon-delvers-metadata-server.onrender.com/api/party/party.json`;
     } else if (nftType === 'vip') {
-        cdnUrls[0] = `https://www.dungeondelvers.xyz/api/vip/vip.json`;
-        cdnUrls[1] = `https://dungeondelvers.xyz/api/vip/vip.json`;
+        cdnUrls[0] = `${currentDomain}/api/vip/vip.json`;
+        cdnUrls[1] = `https://dungeon-delvers-metadata-server.onrender.com/api/vip/vip.json`;
     }
     
     // 嘗試所有 CDN URL
