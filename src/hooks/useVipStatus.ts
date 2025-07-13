@@ -28,12 +28,14 @@ export const useVipStatus = () => {
     // 讀取鏈上數據
     const { data: soulShardBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useBalance({ address, token: soulShardContract?.address, query: { enabled: !!address && !!soulShardContract } });
     
-    // ★ 核心修正 #1: 只獲取我們知道能工作的數據，VIP等級通過質押金額計算
+    // ★ 核心修正 #1: 使用合約方法獲取 VIP 等級和稅率減免
     const { data: vipData, isLoading: isLoadingVipData, error: vipDataError, refetch: refetchVipData } = useReadContracts({
         contracts: [
             { ...vipStakingContract, functionName: 'userStakes', args: [address!] },
             { ...vipStakingContract, functionName: 'unstakeQueue', args: [address!] },
             { ...soulShardContract, functionName: 'allowance', args: [address!, vipStakingContract?.address as `0x${string}`] },
+            { ...vipStakingContract, functionName: 'getVipLevel', args: [address!] },
+            { ...vipStakingContract, functionName: 'getVipTaxReduction', args: [address!] },
         ],
         query: { 
             enabled: !!address && !!vipStakingContract && !!soulShardContract && !!vipStakingContract?.address,
@@ -45,45 +47,51 @@ export const useVipStatus = () => {
     const [
         stakeInfo,
         unstakeQueue,
-        allowance
+        allowance,
+        contractVipLevel,
+        contractTaxReduction
     ] = useMemo(() => vipData?.map(d => d.result) ?? [], [vipData]);
 
     const stakedAmount = useMemo(() => (stakeInfo as readonly [bigint, bigint])?.[0] ?? 0n, [stakeInfo]);
     const tokenId = useMemo(() => (stakeInfo as readonly [bigint, bigint])?.[1], [stakeInfo]);
     
-    // ★ 核心修正 #2: 基於質押金額計算VIP等級和稅率減免
+    // ★ 核心修正 #2: 使用合約方法獲取VIP等級和稅率減免
     const { vipLevel, taxReduction } = useMemo(() => {
+        // 優先使用合約返回的數據
+        if (contractVipLevel !== undefined && contractTaxReduction !== undefined) {
+            const level = Number(contractVipLevel);
+            const reduction = BigInt(contractTaxReduction);
+            
+            console.log('🔍 VIP合約數據 - 等級:', level, '稅率減免:', `${Number(reduction) / 100}%`);
+            return { vipLevel: level, taxReduction: reduction };
+        }
+        
+        // 如果合約數據不可用，fallback 到前端計算
         if (!stakedAmount || stakedAmount === 0n) {
             return { vipLevel: 0, taxReduction: 0n };
         }
         
         const amountInEther = Number(stakedAmount) / 1e18;
-        console.log('🔍 VIP計算 - 質押金額:', amountInEther.toLocaleString(), 'Soul Shard');
+        console.log('🔍 VIP Fallback計算 - 質押金額:', amountInEther.toLocaleString(), 'Soul Shard');
         
         let level = 0;
         let reduction = 0;
         
         if (amountInEther >= 10000000) {
-            level = 5;
-            reduction = 2500; // 25%
+            level = 5; reduction = 2500; // 25%
         } else if (amountInEther >= 5000000) {
-            level = 4; 
-            reduction = 2000; // 20%
+            level = 4; reduction = 2000; // 20%
         } else if (amountInEther >= 1000000) {
-            level = 3;
-            reduction = 1500; // 15%
+            level = 3; reduction = 1500; // 15%
         } else if (amountInEther >= 100000) {
-            level = 2;
-            reduction = 1000; // 10%
+            level = 2; reduction = 1000; // 10%
         } else if (amountInEther >= 10000) {
-            level = 1;
-            reduction = 500; // 5%
+            level = 1; reduction = 500; // 5%
         }
         
-        console.log('🔍 VIP計算結果 - 等級:', level, '稅率減免:', `${reduction / 100}%`);
-        
+        console.log('🔍 VIP Fallback結果 - 等級:', level, '稅率減免:', `${reduction / 100}%`);
         return { vipLevel: level, taxReduction: BigInt(reduction) };
-    }, [stakedAmount]);
+    }, [contractVipLevel, contractTaxReduction, stakedAmount]);
 
     // ★ 核心修正 #2: 確保即使 stakedAmount 為 0，也能安全地觸發後續查詢
     const { data: stakedValueUSD, isLoading: isLoadingStakedValueUSD, refetch: refetchStakedValueUSD } = useReadContract({
@@ -109,9 +117,12 @@ export const useVipStatus = () => {
             console.log('📊 VIP數據更新:', {
                 address,
                 stakedAmount: stakedAmount.toString(),
-                vipLevel,
-                taxReduction: taxReduction.toString(),
-                contractAddress: vipStakingContract?.address
+                contractVipLevel: contractVipLevel?.toString(),
+                contractTaxReduction: contractTaxReduction?.toString(),
+                finalVipLevel: vipLevel,
+                finalTaxReduction: taxReduction.toString(),
+                contractAddress: vipStakingContract?.address,
+                dataSource: contractVipLevel !== undefined ? 'contract' : 'fallback'
             });
         }
     }, [vipData, vipDataError, address, stakedAmount, vipLevel, taxReduction, vipStakingContract?.address]);

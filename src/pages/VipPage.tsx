@@ -113,8 +113,8 @@ const VipPage: React.FC = () => {
     useEffect(() => {
         async function handlePostApproval() {
             if (isAwaitingStakeAfterApproval && !isTxPending) {
-                // 等待一小段時間確保區塊鏈狀態更新
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // 等待足夠時間確保區塊鏈狀態更新
+                await new Promise(resolve => setTimeout(resolve, 3000));
                 await refetchAll();
                 setIsAwaitingStakeAfterApproval(false);
                 if (mode === 'stake' && amount) {
@@ -215,6 +215,52 @@ const VipPage: React.FC = () => {
             <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto -mt-4">
                 質押您的 $SoulShard 代幣以提升 VIP 等級，享受提現稅率減免等尊榮禮遇。
             </p>
+            
+            {/* VIP 等級說明卡片 */}
+            <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 p-6 rounded-xl border border-purple-500/20">
+                <h3 className="text-lg font-bold text-purple-300 mb-4 flex items-center gap-2">
+                    <span>👑</span> VIP 等級與福利
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
+                            <span className="text-gray-300">VIP 1</span>
+                            <span className="text-yellow-400">10,000+ $SoulShard</span>
+                            <span className="text-green-400">5% 稅率減免</span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
+                            <span className="text-gray-300">VIP 2</span>
+                            <span className="text-yellow-400">100,000+ $SoulShard</span>
+                            <span className="text-green-400">10% 稅率減免</span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
+                            <span className="text-gray-300">VIP 3</span>
+                            <span className="text-yellow-400">1,000,000+ $SoulShard</span>
+                            <span className="text-green-400">15% 稅率減免</span>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
+                            <span className="text-gray-300">VIP 4</span>
+                            <span className="text-yellow-400">5,000,000+ $SoulShard</span>
+                            <span className="text-green-400">20% 稅率減免</span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
+                            <span className="text-gray-300">VIP 5</span>
+                            <span className="text-yellow-400">10,000,000+ $SoulShard</span>
+                            <span className="text-green-400">25% 稅率減免</span>
+                        </div>
+                        <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded">
+                            <p className="text-xs text-blue-300 mb-2">
+                                💡 <strong>稅率減免</strong>適用於從玩家金庫提取代幣時的手續費
+                            </p>
+                            <p className="text-xs text-green-300">
+                                ✅ <strong>等級計算</strong>現已直接從智能合約獲取，確保準確性
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
             
             {/* 錢包授權說明 */}
 

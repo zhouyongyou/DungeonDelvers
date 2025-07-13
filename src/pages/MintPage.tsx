@@ -123,6 +123,17 @@ const MintResultModal: React.FC<{ nft: AnyNft | null; onClose: () => void }> = (
             <div className="flex flex-col items-center">
                 <p className="mb-4 text-center text-gray-300">恭喜您獲得了新的{nft.type === 'hero' ? '英雄' : '聖物'}！</p>
                 <div className="w-64"><NftCard nft={nft} /></div>
+                <div className="mt-6 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="text-blue-400">ℹ️</span>
+                        <span className="text-sm font-medium text-blue-300">溫馨提示</span>
+                    </div>
+                    <ul className="text-xs text-gray-400 space-y-1">
+                        <li>• 您的 NFT 將在 <strong className="text-blue-300">2-3 分鐘</strong> 後可用於組隊</li>
+                        <li>• 需等待區塊鏈確認和數據同步完成</li>
+                        <li>• 可在「我的資產」頁面查看最新狀態</li>
+                    </ul>
+                </div>
             </div>
         </Modal>
     );
