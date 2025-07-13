@@ -114,9 +114,9 @@ dataSources:
     name: VIPStaking
     network: bsc
     source:
-      address: "0xE9Cb85E3671486054133eC4EfcB19cF7fbF99706"
+      address: "0xA1830C9E9Acb7356C9FcdF177A81A5B0D90b3062"
       abi: VIPStaking
-      startBlock: 53863343
+      startBlock: 53870235
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
