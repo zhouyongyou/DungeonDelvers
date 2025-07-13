@@ -28,7 +28,7 @@ export const useVipStatus = () => {
     // 讀取鏈上數據
     const { data: soulShardBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useBalance({ address, token: soulShardContract?.address, query: { enabled: !!address && !!soulShardContract } });
     
-    // ★ 核心修正 #1: 使用合約方法獲取 VIP 等級和稅率減免
+    // ★ 核心修正 #1: 使用合約方法獲取 VIP 等級和稅率減免（增強錯誤處理）
     const { data: vipData, isLoading: isLoadingVipData, error: vipDataError, refetch: refetchVipData } = useReadContracts({
         contracts: [
             { ...vipStakingContract, functionName: 'userStakes', args: [address!] },
@@ -38,9 +38,10 @@ export const useVipStatus = () => {
             { ...vipStakingContract, functionName: 'getVipTaxReduction', args: [address!] },
         ],
         query: { 
-            enabled: !!address && !!vipStakingContract && !!soulShardContract && !!vipStakingContract?.address,
-            retry: 3,
-            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+            enabled: !!address && !!vipStakingContract && !!soulShardContract && !!vipStakingContract?.address && isSupportedChain,
+            retry: 2,
+            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+            throwOnError: false, // 防止錯誤導致頁面崩潰
         }
     });
 
@@ -62,7 +63,7 @@ export const useVipStatus = () => {
             const level = Number(contractVipLevel);
             const reduction = BigInt(contractTaxReduction);
             
-            console.log('🔍 VIP合約數據 - 等級:', level, '稅率減免:', `${Number(reduction) / 100}%`);
+            console.log('🔍 VIP合約數據 - 等級:', level, '稅率減免:', `${Number(reduction) / 10000}%`);
             return { vipLevel: level, taxReduction: reduction };
         }
         
@@ -78,18 +79,18 @@ export const useVipStatus = () => {
         let reduction = 0;
         
         if (amountInEther >= 10000000) {
-            level = 5; reduction = 2500; // 25%
+            level = 5; reduction = 250; // 250 BP = 2.5%
         } else if (amountInEther >= 5000000) {
-            level = 4; reduction = 2000; // 20%
+            level = 4; reduction = 200; // 200 BP = 2.0%
         } else if (amountInEther >= 1000000) {
-            level = 3; reduction = 1500; // 15%
+            level = 3; reduction = 150; // 150 BP = 1.5%
         } else if (amountInEther >= 100000) {
-            level = 2; reduction = 1000; // 10%
+            level = 2; reduction = 100; // 100 BP = 1.0%
         } else if (amountInEther >= 10000) {
-            level = 1; reduction = 500; // 5%
+            level = 1; reduction = 50; // 50 BP = 0.5%
         }
         
-        console.log('🔍 VIP Fallback結果 - 等級:', level, '稅率減免:', `${reduction / 100}%`);
+        console.log('🔍 VIP Fallback結果 - 等級:', level, '稅率減免:', `${reduction / 100}%`, '(', reduction, 'BP)');
         return { vipLevel: level, taxReduction: BigInt(reduction) };
     }, [contractVipLevel, contractTaxReduction, stakedAmount]);
 
