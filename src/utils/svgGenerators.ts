@@ -62,7 +62,8 @@ const getGradientDefs = (primaryColor: string, accentColor: string) => `
 // ============= Hero SVG 生成器 =============
 
 export function generateHeroSVG(hero: HeroNft): string {
-    const rarityColor = getRarityColor(hero.rarity);
+    const rarityValue = typeof hero.rarity === 'string' ? parseInt(hero.rarity) : hero.rarity;
+    const rarityColor = getRarityColor(rarityValue);
     
     return `${getSVGHeader()}
         ${getGlobalStyles()}
@@ -91,8 +92,8 @@ export function generateHeroSVG(hero: HeroNft): string {
         <text x="200" y="415" text-anchor="middle" class="stat-value">${hero.power}</text>
         
         <!-- 稀有度 -->
-        <text x="200" y="480" text-anchor="middle" class="rarity">${getRarityStars(hero.rarity)}</text>
-        <text x="200" y="505" text-anchor="middle" class="stat-label">RARITY ${hero.rarity}</text>
+        <text x="200" y="480" text-anchor="middle" class="rarity">${getRarityStars(rarityValue)}</text>
+        <text x="200" y="505" text-anchor="middle" class="stat-label">RARITY ${rarityValue}</text>
         
         <!-- 頁腳 -->
         <text x="200" y="560" text-anchor="middle" class="footer">© Dungeon Delvers</text>
@@ -102,7 +103,8 @@ export function generateHeroSVG(hero: HeroNft): string {
 // ============= Relic SVG 生成器 =============
 
 export function generateRelicSVG(relic: RelicNft): string {
-    const rarityColor = getRarityColor(relic.rarity);
+    const rarityValue = typeof relic.rarity === 'string' ? parseInt(relic.rarity) : relic.rarity;
+    const rarityColor = getRarityColor(rarityValue);
     
     return `${getSVGHeader()}
         ${getGlobalStyles()}
@@ -131,8 +133,8 @@ export function generateRelicSVG(relic: RelicNft): string {
         <text x="200" y="415" text-anchor="middle" class="stat-value">${relic.capacity}</text>
         
         <!-- 稀有度 -->
-        <text x="200" y="480" text-anchor="middle" class="rarity">${getRarityStars(relic.rarity)}</text>
-        <text x="200" y="505" text-anchor="middle" class="stat-label">RARITY ${relic.rarity}</text>
+        <text x="200" y="480" text-anchor="middle" class="rarity">${getRarityStars(rarityValue)}</text>
+        <text x="200" y="505" text-anchor="middle" class="stat-label">RARITY ${rarityValue}</text>
         
         <!-- 頁腳 -->
         <text x="200" y="560" text-anchor="middle" class="footer">© Dungeon Delvers</text>
