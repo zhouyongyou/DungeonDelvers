@@ -38,22 +38,21 @@ export const cdnConfig: CDNConfig = {
     }
   ],
   
-  // 生產環境：優先使用 CDN
+  // 生產環境：優先使用後端服務器
   production: [
     {
-      baseUrl: 'https://cdn.dungeondelvers.xyz', // 主要 CDN
-      timeout: 2000,
-      priority: 1
-    },
-    {
-      baseUrl: 'https://www.dungeondelvers.xyz', // 備用 CDN
-      fallbackUrl: 'https://dungeondelvers.xyz',
+      baseUrl: 'https://dungeon-delvers-metadata-server.onrender.com', // 主要後端服務器
       timeout: 3000,
-      priority: 2
+      priority: 1
     },
     {
       baseUrl: window.location.origin, // 本地備援
       timeout: 1000,
+      priority: 2
+    },
+    {
+      baseUrl: 'https://dungeondelvers.xyz', // 備用域名
+      timeout: 2000,
       priority: 3
     }
   ]

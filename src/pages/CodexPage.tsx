@@ -135,6 +135,19 @@ const CodexPage: React.FC = () => {
             <p className="text-center text-gray-400 max-w-2xl mx-auto -mt-4 mb-6">探索埃索斯大陸上所有傳說中的英雄與聖物。點亮您已擁有的收藏！</p>
             <div className="text-center mb-8"><a href="#/mint"><ActionButton className="px-8 py-3 text-lg">前往鑄造英雄/聖物</ActionButton></a></div>
 
+            {/* 圖鑑說明 */}
+            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-6 max-w-4xl mx-auto">
+                <div className="flex items-center gap-2 mb-2">
+                    <span className="text-blue-400">📖</span>
+                    <span className="text-sm font-medium text-blue-300">圖鑑說明</span>
+                </div>
+                <ul className="text-xs text-gray-400 space-y-1">
+                    <li>• <strong className="text-blue-300">已解鎖</strong>：擁有該稀有度的 NFT 後即可在圖鑑中查看</li>
+                    <li>• <strong className="text-yellow-300">隊伍中的 NFT</strong>：已組建隊伍的英雄和聖物會顯示為"鎖定"狀態，無法單獨使用</li>
+                    <li>• <strong className="text-green-300">數據同步</strong>：新鑄造或組隊的 NFT 需要 2-3 分鐘才會在圖鑑中更新</li>
+                </ul>
+            </div>
+
             <div className="flex justify-center mb-6">
                 <div className="flex items-center gap-2 bg-gray-900/50 p-1 rounded-lg">
                     <button onClick={() => setFilter('hero')} className={`px-6 py-2 text-sm font-medium rounded-md transition ${filter === 'hero' ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'}`}>英雄圖鑑</button>

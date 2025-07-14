@@ -391,12 +391,20 @@ const MyAssetsPageContent: React.FC = () => {
         if (!heroContract || !partyContract) return;
         setIsAuthorizing(true);
         try {
-                        const hash = await writeContractAsync({ address: heroContract?.address as `0x${string}`,
-        abi: heroContract?.abi,
-        functionName: 'setApprovalForAll',
-        args: [partyContract.address, true as any] });
+            const hash = await writeContractAsync({ 
+                address: heroContract?.address as `0x${string}`,
+                abi: heroContract?.abi,
+                functionName: 'setApprovalForAll',
+                args: [partyContract.address, true as any] 
+            });
             addTransaction({ hash, description: '授權隊伍合約使用英雄' });
-            showToast('英雄授權成功！', 'success');
+            showToast('英雄授權成功！請等待約 30 秒後可創建隊伍', 'success');
+            
+            // 延遲刷新授權狀態
+            setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['isApprovedForAll'] });
+            }, 30000);
+            
         } catch (error: unknown) {
             const e = error as { message?: string; shortMessage?: string };
             if (!e.message?.includes('User rejected the request')) {
@@ -411,12 +419,20 @@ const MyAssetsPageContent: React.FC = () => {
         if (!relicContract || !partyContract) return;
         setIsAuthorizing(true);
         try {
-                        const hash = await writeContractAsync({ address: relicContract?.address as `0x${string}`,
-        abi: relicContract?.abi,
-        functionName: 'setApprovalForAll',
-        args: [partyContract.address, true as any] });
+            const hash = await writeContractAsync({ 
+                address: relicContract?.address as `0x${string}`,
+                abi: relicContract?.abi,
+                functionName: 'setApprovalForAll',
+                args: [partyContract.address, true as any] 
+            });
             addTransaction({ hash, description: '授權隊伍合約使用聖物' });
-            showToast('聖物授權成功！', 'success');
+            showToast('聖物授權成功！請等待約 30 秒後可創建隊伍', 'success');
+            
+            // 延遲刷新授權狀態
+            setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['isApprovedForAll'] });
+            }, 30000);
+            
         } catch (error: unknown) {
             const e = error as { message?: string; shortMessage?: string };
             if (!e.message?.includes('User rejected the request')) {
@@ -432,19 +448,39 @@ const MyAssetsPageContent: React.FC = () => {
         
         try {
             const fee = typeof platformFee === 'bigint' ? platformFee : 0n;
-                        const hash = await writeContractAsync({ address: partyContract?.address as `0x${string}`,
-        abi: partyContract?.abi,
-        functionName: 'createParty',
-        args: [heroIds as any, relicIds as any], value: fee });
+            const hash = await writeContractAsync({ 
+                address: partyContract?.address as `0x${string}`,
+                abi: partyContract?.abi,
+                functionName: 'createParty',
+                args: [heroIds as any, relicIds as any], 
+                value: fee 
+            });
+            
             addTransaction({ hash, description: `創建新隊伍` });
             
-            // 延遲失效緩存，等待 GraphQL 同步
+            // 立即顯示詳細的成功消息
+            showToast(
+                '🎉 隊伍創建成功！\n⏱️ 數據同步需要約 2-3 分鐘\n🔄 頁面將自動更新', 
+                'success',
+                8000 // 8秒顯示時間
+            );
+            
+            // 多階段刷新策略
+            // 立即刷新一次
+            queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
+            
+            // 30秒後再次刷新（區塊確認）
             setTimeout(() => {
                 queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
-            }, 3000); // 3秒後重新獲取數據
+                refetch();
+            }, 30000);
             
-            // 立即顯示成功消息
-            showToast('隊伍創建成功！數據正在同步中...', 'success');
+            // 2分鐘後最終刷新（子圖同步）
+            setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
+                refetch();
+                showToast('✅ 隊伍數據已同步完成！', 'info');
+            }, 120000);
 
         } catch (error: unknown) {
             const e = error as { message?: string; shortMessage?: string };
