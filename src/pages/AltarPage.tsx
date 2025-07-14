@@ -75,7 +75,7 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
                     return [];
                 }
 
-                return assets
+                const filteredAssets = assets
                     .filter((asset: { tokenId: string; power?: string; capacity?: string; rarity?: string }) => {
                         // 嚴格檢查稀有度是否匹配查詢條件
                         const assetRarity = asset.rarity ? Number(asset.rarity) : null;
@@ -114,6 +114,17 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
                             } as RelicNft;
                         }
                     });
+                
+                // 排序：戰力/容量從低到高（方便選擇弱的材料來升級）
+                const sortedAssets = filteredAssets.sort((a, b) => {
+                    if (nftType === 'hero') {
+                        return (a as HeroNft).power - (b as HeroNft).power;
+                    } else {
+                        return (a as RelicNft).capacity - (b as RelicNft).capacity;
+                    }
+                });
+                
+                return sortedAssets;
             } catch (error) {
                 logger.error(`獲取 ${nftType} 材料失敗:`, error);
                 return [];
