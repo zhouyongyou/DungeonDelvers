@@ -91,7 +91,7 @@ export const NftSvgDisplay: React.FC<NftSvgDisplayProps> = ({
 export const NftSvgThumbnail: React.FC<{ nft: AnyNft; size?: number }> = ({ nft, size = 200 }) => {
     return (
         <div 
-            style={{ width: size, height: size * 1.5 }} 
+            style={{ width: size, height: size }} 
             className="relative overflow-hidden rounded-lg"
         >
             <NftSvgDisplay 

@@ -120,6 +120,10 @@ export default defineConfig({
     // 🔥 新增：HMR 優化
     hmr: {
       overlay: false // 減少開發環境錯誤覆蓋的干擾
+    },
+    // 🔥 修復：設置正確的 MIME 類型
+    headers: {
+      'Content-Type': 'application/javascript'
     }
   },
   

@@ -142,7 +142,8 @@ const VipPageContent: React.FC = () => {
         isLoading, vipStakingContract, soulShardContract,
         soulShardBalance, stakedAmount, stakedValueUSD,
         tokenId, vipLevel, taxReduction,
-        pendingUnstakeAmount, isCooldownOver, countdown, allowance, refetchAll
+        pendingUnstakeAmount, isCooldownOver, countdown, allowance, 
+        cooldownDays, cooldownFormatted, refetchAll
     } = useVipStatus();
 
     const { executeTransaction, isPending: isTxPending } = useContractTransaction();
@@ -350,6 +351,12 @@ const VipPageContent: React.FC = () => {
                 <h3 className="text-lg font-bold text-purple-300 mb-4 flex items-center gap-2">
                     <span>👑</span> VIP 等級與福利
                 </h3>
+                {/* 質押冷卻期提示 */}
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded">
+                    <p className="text-sm text-blue-300">
+                        ⏱️ <strong>質押冷卻期</strong>：贖回請求後需等待 <span className="text-yellow-400 font-bold">{cooldownFormatted}</span> 才能領取
+                    </p>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div className="space-y-2">
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">

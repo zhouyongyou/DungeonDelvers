@@ -138,7 +138,7 @@ dataSources:
     name: DungeonMaster
     network: bsc
     source:
-      address: '0xd14A5eFFc45D0131af3eb876992fC6eD9683f5B0'
+      address: '0x4424BAE8E132DC83A2F39c76Bc2d9dD44E4A47B0'
       abi: DungeonMaster
       startBlock: 53970855
     mapping:
@@ -162,7 +162,7 @@ dataSources:
     name: PlayerVault
     network: bsc
     source:
-      address: '0x6187DBCcb58088E414437A6b8d58a42cD2BD1ec4'
+      address: '0x294Fb94d5a543cd77c9932fD34282462a74bFf1A'
       abi: PlayerVault
       startBlock: 53970855
     mapping:
@@ -186,7 +186,7 @@ dataSources:
     name: AltarOfAscension
     network: bsc
     source:
-      address: '0x83a7fB85E0892A67041FcFc4c1F0F1111e5aB3DA'
+      address: '0xD26444ec19e567B872824fe0B9c104e45A3a3341'
       abi: AltarOfAscension
       startBlock: 53970855
     mapping:
@@ -206,7 +206,7 @@ dataSources:
     name: DungeonCore
     network: bsc
     source:
-      address: '0x4CbAC0E4AEC9Ef3B11C93805483c23224ed1f118'
+      address: '0x3dCcbcbf81911A635E2b21e2e49925F6441B08B6'
       abi: DungeonCore
       startBlock: 53970855
     mapping:

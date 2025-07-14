@@ -20,6 +20,8 @@ import AddressSettingRow from '../components/admin/AddressSettingRow';
 import SettingRow from '../components/admin/SettingRow';
 import DungeonManager from '../components/admin/DungeonManager';
 import AltarRuleManager from '../components/admin/AltarRuleManager';
+import FundsWithdrawal from '../components/admin/FundsWithdrawal';
+import VipSettingsManager from '../components/admin/VipSettingsManager';
 
 type SupportedChainId = typeof bsc.id;
 type Address = `0x${string}`;
@@ -292,6 +294,10 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         <AltarRuleManager chainId={chainId} />
       </AdminSection>
       
+      <AdminSection title="VIP 質押設定管理">
+        <VipSettingsManager chainId={chainId} />
+      </AdminSection>
+      
       <AdminSection title="核心價格管理 (USD)">
         {parameterConfig.filter(p => p.unit === 'USD').map((p) => {
           const { key, setter, ...rest } = p;
@@ -464,44 +470,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
             </div>
           </div>
           
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold">資金提取</h4>
-            <div className="space-y-2">
-              {[
-                { name: 'hero', label: '英雄合約' },
-                { name: 'relic', label: '聖物合約' },
-                { name: 'party', label: '隊伍合約' },
-                { name: 'playerVault', label: '玩家金庫' },
-                { name: 'vipStaking', label: 'VIP質押' }
-              ].map(({ name, label }) => {
-                const contract = getContract(chainId, name);
-                if (!contract) return null;
-                return (
-                  <ActionButton 
-                    key={name}
-                    onClick={async () => {
-                      try {
-                        const hash = await writeContractAsync({ 
-                          address: contract.address, 
-                          abi: contract.abi, 
-                          functionName: 'withdrawSoulShard' 
-                        });
-                        addTransaction({ hash, description: `提取 ${label} SoulShard` });
-                        showToast(`${label} SoulShard 提取成功`, 'success');
-                      } catch (e) {
-                        if (!e.message?.includes('User rejected')) {
-                          showToast(`提取 ${label} 失敗: ${e.shortMessage}`, 'error');
-                        }
-                      }
-                    }}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
-                  >
-                    提取 {label} SoulShard
-                  </ActionButton>
-                );
-              })}
-            </div>
-          </div>
+          <FundsWithdrawal chainId={chainId} />
         </div>
       </AdminSection>
     </>

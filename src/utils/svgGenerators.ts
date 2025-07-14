@@ -4,7 +4,7 @@ import type { HeroNft, RelicNft, PartyNft, VipNft } from '../types/nft';
 
 // ============= 通用樣式和輔助函數 =============
 
-const getSVGHeader = () => `<svg viewBox="0 0 400 600" preserveAspectRatio="xMidYMid meet" style="width: 100%; height: 100%;" xmlns="http://www.w3.org/2000/svg">`;
+const getSVGHeader = () => `<svg viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet" style="width: 100%; height: 100%;" xmlns="http://www.w3.org/2000/svg">`;
 
 const getGlobalStyles = () => `
 <style>
@@ -70,33 +70,28 @@ export function generateHeroSVG(hero: HeroNft): string {
         ${getGradientDefs(rarityColor, '#1e293b')}
         
         <!-- 背景 -->
-        <rect width="400" height="600" rx="20" fill="url(#bg-gradient)"/>
-        <rect width="400" height="600" rx="20" fill="url(#grid)"/>
+        <rect width="400" height="400" rx="20" fill="url(#bg-gradient)"/>
+        <rect width="400" height="400" rx="20" fill="url(#grid)"/>
         
         <!-- 邊框 -->
-        <rect x="10" y="10" width="380" height="580" rx="15" fill="none" 
+        <rect x="10" y="10" width="380" height="380" rx="15" fill="none" 
               stroke="${rarityColor}" stroke-width="3" opacity="0.8" class="glow"/>
         
         <!-- 標題區 -->
-        <text x="200" y="50" text-anchor="middle" class="title">HERO #${hero.id}</text>
-        <text x="200" y="75" text-anchor="middle" class="subtitle">Dungeon Delvers</text>
+        <text x="200" y="40" text-anchor="middle" class="title">HERO #${hero.id}</text>
         
         <!-- 中央圖像 -->
-        <g transform="translate(200, 250)" class="float">
-            <text text-anchor="middle" style="font-size: 120px;">⚔️</text>
+        <g transform="translate(200, 180)" class="float">
+            <text text-anchor="middle" style="font-size: 140px;">⚔️</text>
         </g>
         
         <!-- 主要屬性 -->
-        <rect x="50" y="350" width="300" height="80" rx="10" fill="${rarityColor}" opacity="0.1"/>
-        <text x="200" y="380" text-anchor="middle" class="stat-label">POWER</text>
-        <text x="200" y="415" text-anchor="middle" class="stat-value">${hero.power}</text>
+        <rect x="50" y="280" width="300" height="60" rx="10" fill="${rarityColor}" opacity="0.1"/>
+        <text x="200" y="305" text-anchor="middle" class="stat-label">POWER</text>
+        <text x="200" y="330" text-anchor="middle" class="stat-value">${hero.power}</text>
         
         <!-- 稀有度 -->
-        <text x="200" y="480" text-anchor="middle" class="rarity">${getRarityStars(rarityValue)}</text>
-        <text x="200" y="505" text-anchor="middle" class="stat-label">RARITY ${rarityValue}</text>
-        
-        <!-- 頁腳 -->
-        <text x="200" y="560" text-anchor="middle" class="footer">© Dungeon Delvers</text>
+        <text x="200" y="370" text-anchor="middle" class="rarity">${getRarityStars(rarityValue)}</text>
     </svg>`;
 }
 
@@ -111,33 +106,28 @@ export function generateRelicSVG(relic: RelicNft): string {
         ${getGradientDefs(rarityColor, '#1e293b')}
         
         <!-- 背景 -->
-        <rect width="400" height="600" rx="20" fill="url(#bg-gradient)"/>
-        <rect width="400" height="600" rx="20" fill="url(#grid)"/>
+        <rect width="400" height="400" rx="20" fill="url(#bg-gradient)"/>
+        <rect width="400" height="400" rx="20" fill="url(#grid)"/>
         
         <!-- 邊框 -->
-        <rect x="10" y="10" width="380" height="580" rx="15" fill="none" 
+        <rect x="10" y="10" width="380" height="380" rx="15" fill="none" 
               stroke="${rarityColor}" stroke-width="3" opacity="0.8" class="glow"/>
         
         <!-- 標題區 -->
-        <text x="200" y="50" text-anchor="middle" class="title">RELIC #${relic.id}</text>
-        <text x="200" y="75" text-anchor="middle" class="subtitle">Ancient Artifact</text>
+        <text x="200" y="40" text-anchor="middle" class="title">RELIC #${relic.id}</text>
         
         <!-- 中央圖像 -->
-        <g transform="translate(200, 250)" class="float">
-            <text text-anchor="middle" style="font-size: 120px;">💎</text>
+        <g transform="translate(200, 180)" class="float">
+            <text text-anchor="middle" style="font-size: 140px;">💎</text>
         </g>
         
         <!-- 主要屬性 -->
-        <rect x="50" y="350" width="300" height="80" rx="10" fill="${rarityColor}" opacity="0.1"/>
-        <text x="200" y="380" text-anchor="middle" class="stat-label">CAPACITY</text>
-        <text x="200" y="415" text-anchor="middle" class="stat-value">${relic.capacity}</text>
+        <rect x="50" y="280" width="300" height="60" rx="10" fill="${rarityColor}" opacity="0.1"/>
+        <text x="200" y="305" text-anchor="middle" class="stat-label">CAPACITY</text>
+        <text x="200" y="330" text-anchor="middle" class="stat-value">${relic.capacity}</text>
         
         <!-- 稀有度 -->
-        <text x="200" y="480" text-anchor="middle" class="rarity">${getRarityStars(rarityValue)}</text>
-        <text x="200" y="505" text-anchor="middle" class="stat-label">RARITY ${rarityValue}</text>
-        
-        <!-- 頁腳 -->
-        <text x="200" y="560" text-anchor="middle" class="footer">© Dungeon Delvers</text>
+        <text x="200" y="370" text-anchor="middle" class="rarity">${getRarityStars(rarityValue)}</text>
     </svg>`;
 }
 
@@ -152,48 +142,39 @@ export function generatePartySVG(party: PartyNft): string {
         ${getGradientDefs(rarityColor, '#1e293b')}
         
         <!-- 背景 -->
-        <rect width="400" height="600" rx="20" fill="url(#bg-gradient)"/>
-        <rect width="400" height="600" rx="20" fill="url(#grid)"/>
+        <rect width="400" height="400" rx="20" fill="url(#bg-gradient)"/>
+        <rect width="400" height="400" rx="20" fill="url(#grid)"/>
         
         <!-- 邊框 -->
-        <rect x="10" y="10" width="380" height="580" rx="15" fill="none" 
+        <rect x="10" y="10" width="380" height="380" rx="15" fill="none" 
               stroke="${rarityColor}" stroke-width="3" opacity="0.8" class="glow"/>
         
         <!-- 標題區 -->
-        <text x="200" y="50" text-anchor="middle" class="title">PARTY #${party.id}</text>
-        <text x="200" y="75" text-anchor="middle" class="subtitle">${tierName} Tier</text>
+        <text x="200" y="40" text-anchor="middle" class="title">PARTY #${party.id}</text>
         
         <!-- 中央圖像 -->
-        <g transform="translate(200, 220)">
-            ${party.heroIds.map((_, i) => `
-                <g transform="translate(${(i - party.heroIds.length/2) * 40 + 20}, ${i % 2 * 20})" class="float" style="animation-delay: ${i * 0.2}s">
-                    <text text-anchor="middle" style="font-size: 60px;">👤</text>
-                </g>
-            `).join('')}
+        <g transform="translate(200, 180)" class="float">
+            <text text-anchor="middle" style="font-size: 120px;">👥</text>
         </g>
         
         <!-- 統計數據 -->
-        <g transform="translate(0, 340)">
+        <g transform="translate(0, 260)">
             <!-- Power -->
-            <rect x="50" y="0" width="140" height="70" rx="10" fill="${rarityColor}" opacity="0.1"/>
-            <text x="120" y="25" text-anchor="middle" class="stat-label">POWER</text>
-            <text x="120" y="55" text-anchor="middle" class="stat-value" style="font-size: 24px">${party.totalPower}</text>
+            <rect x="50" y="0" width="140" height="50" rx="10" fill="${rarityColor}" opacity="0.1"/>
+            <text x="120" y="20" text-anchor="middle" class="stat-label">POWER</text>
+            <text x="120" y="40" text-anchor="middle" class="stat-value" style="font-size: 20px">${party.totalPower}</text>
             
             <!-- Capacity -->
-            <rect x="210" y="0" width="140" height="70" rx="10" fill="${rarityColor}" opacity="0.1"/>
-            <text x="280" y="25" text-anchor="middle" class="stat-label">CAPACITY</text>
-            <text x="280" y="55" text-anchor="middle" class="stat-value" style="font-size: 24px">${party.totalCapacity}</text>
+            <rect x="210" y="0" width="140" height="50" rx="10" fill="${rarityColor}" opacity="0.1"/>
+            <text x="280" y="20" text-anchor="middle" class="stat-label">CAPACITY</text>
+            <text x="280" y="40" text-anchor="middle" class="stat-value" style="font-size: 20px">${party.totalCapacity}</text>
         </g>
         
         <!-- 隊伍成員數 -->
-        <text x="200" y="450" text-anchor="middle" class="stat-label">HEROES: ${party.heroIds.length} / RELICS: ${party.relicIds.length}</text>
+        <text x="200" y="340" text-anchor="middle" class="stat-label">HEROES: ${party.heroIds.length} / RELICS: ${party.relicIds.length}</text>
         
         <!-- 稀有度 -->
-        <text x="200" y="490" text-anchor="middle" class="rarity">${getRarityStars(party.partyRarity)}</text>
-        <text x="200" y="515" text-anchor="middle" class="stat-label">${tierName.toUpperCase()} PARTY</text>
-        
-        <!-- 頁腳 -->
-        <text x="200" y="560" text-anchor="middle" class="footer">© Dungeon Delvers</text>
+        <text x="200" y="370" text-anchor="middle" class="rarity">${getRarityStars(party.partyRarity)}</text>
     </svg>`;
 }
 
@@ -228,49 +209,43 @@ export function generateVipSVG(vip: VipNft): string {
         </defs>
         
         <!-- 背景 -->
-        <rect width="400" height="600" rx="20" fill="url(#vip-gradient)"/>
+        <rect width="400" height="400" rx="20" fill="url(#vip-gradient)"/>
         
         <!-- 動畫星星背景 -->
-        ${Array.from({length: 20}, (_, i) => `
-            <circle cx="${Math.random() * 400}" cy="${Math.random() * 600}" r="${1 + Math.random() * 2}" 
+        ${Array.from({length: 15}, (_, i) => `
+            <circle cx="${Math.random() * 400}" cy="${Math.random() * 400}" r="${1 + Math.random() * 2}" 
                     fill="${tier.color}" opacity="0.3" class="breathe" 
                     style="animation-delay: ${Math.random() * 3}s"/>
         `).join('')}
         
         <!-- 邊框 -->
-        <rect x="10" y="10" width="380" height="580" rx="15" fill="none" 
+        <rect x="10" y="10" width="380" height="380" rx="15" fill="none" 
               stroke="${tier.color}" stroke-width="4" filter="url(#vip-glow)"/>
         
         <!-- 標題區 -->
-        <text x="200" y="60" text-anchor="middle" class="title" fill="${tier.color}">${tier.name} VIP</text>
-        <text x="200" y="90" text-anchor="middle" class="subtitle">PRIVILEGE CARD #${vip.id}</text>
+        <text x="200" y="50" text-anchor="middle" class="title" fill="${tier.color}">${tier.name} VIP</text>
         
         <!-- 中央圖標 -->
-        <g transform="translate(200, 200)">
-            <circle r="80" fill="${tier.color}" opacity="0.1" class="breathe"/>
+        <g transform="translate(200, 180)">
+            <circle r="70" fill="${tier.color}" opacity="0.1" class="breathe"/>
             <text text-anchor="middle" style="font-size: 80px;" class="float">${tier.icon}</text>
         </g>
         
         <!-- VIP 等級 -->
-        <text x="200" y="350" text-anchor="middle" style="font-size: 60px; fill: ${tier.color}; font-weight: bold;">
+        <text x="200" y="280" text-anchor="middle" style="font-size: 40px; fill: ${tier.color}; font-weight: bold;">
             LEVEL ${vip.level}
         </text>
         
         <!-- 質押資訊 -->
-        <rect x="50" y="380" width="300" height="60" rx="10" fill="${tier.color}" opacity="0.1"/>
-        <text x="200" y="405" text-anchor="middle" class="stat-label">STAKED AMOUNT</text>
-        <text x="200" y="430" text-anchor="middle" class="stat-value" style="font-size: 20px">
+        <rect x="50" y="300" width="300" height="40" rx="10" fill="${tier.color}" opacity="0.1"/>
+        <text x="200" y="325" text-anchor="middle" class="stat-value" style="font-size: 16px">
             ${(Number(vip.stakedAmount) / 1e18).toFixed(2)} $SOUL
         </text>
         
         <!-- 稅率減免 -->
-        <text x="200" y="480" text-anchor="middle" class="stat-label">TAX REDUCTION</text>
-        <text x="200" y="510" text-anchor="middle" class="stat-value" style="font-size: 24px; fill: ${tier.color}">
-            ${vip.level * 50} BP (${(vip.level * 0.5).toFixed(1)}%)
+        <text x="200" y="370" text-anchor="middle" class="stat-value" style="font-size: 20px; fill: ${tier.color}">
+            -${(vip.level * 0.5).toFixed(1)}% TAX
         </text>
-        
-        <!-- 頁腳 -->
-        <text x="200" y="560" text-anchor="middle" class="footer">© Dungeon Delvers VIP Club</text>
     </svg>`;
 }
 

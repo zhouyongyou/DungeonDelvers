@@ -7,6 +7,29 @@ import { getContract } from '../config/contracts';
 import { useCountdown } from './useCountdown';
 import { logger } from '../utils/logger';
 
+// 格式化冷卻期的輔助函數
+const formatCooldownPeriod = (cooldownPeriod: any): string => {
+    if (!cooldownPeriod) return '7 天';
+    
+    const seconds = Number(cooldownPeriod);
+    
+    if (seconds < 60) {
+        return `${seconds} 秒`;
+    } else if (seconds < 3600) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return remainingSeconds > 0 ? `${minutes} 分 ${remainingSeconds} 秒` : `${minutes} 分鐘`;
+    } else if (seconds < 86400) {
+        const hours = Math.floor(seconds / 3600);
+        const remainingMinutes = Math.floor((seconds % 3600) / 60);
+        return remainingMinutes > 0 ? `${hours} 小時 ${remainingMinutes} 分鐘` : `${hours} 小時`;
+    } else {
+        const days = Math.floor(seconds / 86400);
+        const remainingHours = Math.floor((seconds % 86400) / 3600);
+        return remainingHours > 0 ? `${days} 天 ${remainingHours} 小時` : `${days} 天`;
+    }
+};
+
 /**
  * @notice 專門用於獲取和管理 VIP 頁面所有狀態的自定義 Hook。
  * @dev 封裝了所有與 VIP 合約的互動、數據讀取和狀態計算，使 VipPage 元件更簡潔。
@@ -37,6 +60,7 @@ export const useVipStatus = () => {
             { ...soulShardContract, functionName: 'allowance', args: [address!, vipStakingContract?.address as `0x${string}`] },
             { ...vipStakingContract, functionName: 'getVipLevel', args: [address!] },
             { ...vipStakingContract, functionName: 'getVipTaxReduction', args: [address!] },
+            { ...vipStakingContract, functionName: 'unstakeCooldown' }, // 添加冷卻期讀取
         ],
         query: { 
             enabled: !!address && !!vipStakingContract && !!soulShardContract && !!vipStakingContract?.address && isSupportedChain,
@@ -51,7 +75,8 @@ export const useVipStatus = () => {
         unstakeQueue,
         allowance,
         contractVipLevel,
-        contractTaxReduction
+        contractTaxReduction,
+        cooldownPeriod
     ] = useMemo(() => vipData?.map(d => d.result) ?? [], [vipData]);
 
     const stakedAmount = useMemo(() => (stakeInfo as readonly [bigint, bigint])?.[0] ?? 0n, [stakeInfo]);
@@ -163,6 +188,9 @@ export const useVipStatus = () => {
         isCooldownOver,
         countdown,
         allowance: allowance ?? 0n,
+        cooldownPeriod: cooldownPeriod as bigint | undefined,
+        cooldownDays: cooldownPeriod ? Number(cooldownPeriod) / 86400 : 7,
+        cooldownFormatted: formatCooldownPeriod(cooldownPeriod),
         refetchAll,
         // 調試信息
         isChainSupported: isSupportedChain,

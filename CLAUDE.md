@@ -1,223 +1,150 @@
-# CLAUDE.md - DungeonDelvers 專案助手指南
+# DungeonDelvers 前端 - AI 開發指南
 
 ## 專案概述
+使用 React + TypeScript + Vite 構建的 Web3 遊戲前端，整合 wagmi v2 進行區塊鏈交互。
 
-DungeonDelvers 是一個基於 BNB Smart Chain 的 Web3 NFT 遊戲平台。本文檔幫助 Claude 或其他 AI 助手快速理解專案結構和開發需求。
+## 技術棧
+- **框架**: React 18 + TypeScript
+- **構建工具**: Vite
+- **Web3**: wagmi v2 + viem
+- **樣式**: Tailwind CSS
+- **路由**: React Router v6
+- **狀態管理**: Zustand
+- **UI 組件**: 自定義組件庫
 
-## 快速導航
-
-### 核心技術棧
-- **前端**: React 18 + TypeScript + Vite + Tailwind CSS
-- **Web3**: Wagmi + Viem + WalletConnect
-- **區塊鏈**: BNB Smart Chain (BSC)
-- **智能合約**: Solidity 0.8.20
-
-### 重要目錄結構
+## 環境變數
+```bash
+# 必要的環境變數
+VITE_WALLETCONNECT_PROJECT_ID=你的WalletConnect項目ID
+VITE_ALCHEMY_KEY=你的Alchemy API金鑰（可選）
+VITE_GRAPHQL_URL=https://api.studio.thegraph.com/query/88982/dungeondelvers/v0.0.19
+VITE_SERVER_URL=https://dungeondelvers-backend.onrender.com
 ```
-/src
-  /components - UI 組件
-  /pages - 頁面組件
-  /hooks - 自定義 React Hooks
-  /config - 配置文件（合約地址、ABI等）
-  /utils - 工具函數
-  /api - API 接口
-  /types - TypeScript 類型定義
-/contracts - Solidity 智能合約
-/DDgraphql - The Graph 子圖
-/public - 靜態資源
+
+## 目錄結構
+```
+src/
+├── components/      # 可重用組件
+│   ├── ui/         # 基礎 UI 組件
+│   ├── admin/      # 管理頁面組件
+│   └── wallet/     # 錢包相關組件
+├── pages/          # 頁面組件
+├── hooks/          # 自定義 React hooks
+├── stores/         # Zustand 狀態管理
+├── utils/          # 工具函數
+├── config/         # 配置文件
+│   ├── contracts.ts # 合約地址和 ABI
+│   └── constants.ts # 常量定義
+└── api/            # API 相關邏輯
+```
+
+## 重要文件說明
+
+### 合約配置 (src/config/contracts.ts)
+- 包含所有合約的地址和 ABI
+- 支援多鏈配置（目前僅 BSC）
+- 有環境變數覆蓋機制
+
+### 常用 Hooks
+1. **useContractTransaction** - 處理合約交易的統一介面
+2. **useVipStatus** - VIP 狀態管理
+3. **useHeroStats** - 英雄數據管理
+4. **useAppToast** - 通知提示管理
+
+## 開發指令
+```bash
+# 安裝依賴
+npm install
+
+# 開發模式
+npm run dev
+
+# 構建生產版本
+npm run build
+
+# 預覽構建結果
+npm run preview
+
+# 類型檢查
+npm run type-check
+
+# 代碼檢查
+npm run lint
 ```
 
 ## 常見開發任務
 
-### 1. 添加新的 NFT 類型
+### 1. 更新合約地址
+編輯 `src/config/contracts.ts`，更新對應網路的合約地址。
+
+### 2. 添加新頁面
+1. 在 `src/pages/` 創建新組件
+2. 在 `src/App.tsx` 添加路由
+3. 在導航組件中添加鏈接
+
+### 3. 處理合約交互
 ```typescript
-// 1. 在 types/nft.ts 添加類型定義
-export interface NewNFT extends BaseNft {
-  // 特定屬性
-}
+// 使用 useContractTransaction hook
+const { executeTransaction } = useContractTransaction();
 
-// 2. 在 config/contracts.ts 添加合約配置
-export const newNftContract = {
-  address: '0x...',
-  abi: [...],
-}
-
-// 3. 創建對應的頁面和組件
-```
-
-### 2. 合約交互模式
-```typescript
-// 讀取數據
-const { data } = useContractRead({
-  ...contractConfig,
-  functionName: 'functionName',
-  args: [arg1, arg2],
-});
-
-// 寫入數據
-const { writeContractAsync } = useWriteContract();
-const hash = await writeContractAsync({
-  ...contractConfig,
-  functionName: 'functionName',
-  args: [arg1, arg2],
-  value: BigInt(0), // 如果需要發送 BNB
+await executeTransaction({
+  contractCall: {
+    address: contractAddress,
+    abi: contractAbi,
+    functionName: 'functionName',
+    args: [arg1, arg2]
+  },
+  description: '操作描述',
+  successMessage: '成功提示',
+  errorMessage: '錯誤提示'
 });
 ```
 
-### 3. 添加新頁面
-1. 在 `/src/pages` 創建新組件
-2. 在 `App.tsx` 添加路由
-3. 在 `Header.tsx` 添加導航連結
-4. 更新國際化文件 `/public/locales`
+### 4. SVG 生成器
+- 位置：`src/utils/svgGenerators.ts`
+- 用於生成英雄、聖物、隊伍、VIP 的 SVG 圖像
+- 統一使用 400x400 正方形格式
 
-## 關鍵配置文件
-
-### 環境變量 (.env)
-```
-VITE_ALCHEMY_BSC_MAINNET_RPC_URL=
-VITE_MAINNET_URL=https://dungeondelvers.xyz
-VITE_METADATA_SERVER_URL=
-VITE_THE_GRAPH_STUDIO_API_URL=
-VITE_DEVELOPER_ADDRESS=
-```
-
-### 合約地址
-所有合約地址都在 `/src/config/contracts.ts` 中管理。
-
-## 常見問題解決
-
-### 1. 類型錯誤
-- 檢查 `tsconfig.json` 配置
-- 使用 `npm run type-check` 驗證
-- 避免使用 `any` 類型
-
-### 2. 合約調用失敗
-- 確認網絡正確（BSC Mainnet）
-- 檢查用戶餘額
-- 驗證合約 ABI 匹配
-
-### 3. 構建問題
-- 清除快取: `rm -rf node_modules .cache dist`
-- 重新安裝: `npm install`
-- 檢查環境變量
-
-## 代碼規範
-
-### 命名規則
-- 組件: PascalCase (如 `HeroCard.tsx`)
-- 函數: camelCase (如 `fetchHeroData`)
-- 常量: UPPER_SNAKE_CASE (如 `MAX_HEROES`)
-- 文件: kebab-case (如 `use-hero-data.ts`)
-
-### 提交規範
-```
-feat: 新功能
-fix: 修復問題
-docs: 文檔更新
-style: 代碼格式
-refactor: 重構
-test: 測試相關
-chore: 其他更改
-```
-
-## 測試指南
-
-### 本地測試
-1. 啟動開發服務器: `npm run dev`
-2. 連接 MetaMask 到 BSC 測試網
-3. 使用測試幣進行交互
-
-### 單元測試
-```bash
-npm run test
-```
-
-### E2E 測試
-```bash
-npm run test:e2e
-```
+## UI/UX 規範
+1. **顏色主題**: 深色主題為主，使用灰色系配合品牌色
+2. **響應式設計**: 支援手機、平板、桌面
+3. **加載狀態**: 使用 LoadingSpinner 組件
+4. **錯誤處理**: 使用 ErrorBoundary 和 toast 通知
 
 ## 部署流程
 
-### 前端部署
-1. 構建: `npm run build`
-2. 預覽: `npm run preview`
-3. 部署到 Vercel/Netlify
+### Vercel 部署
+1. 連接 GitHub 倉庫
+2. 設定環境變數
+3. 部署命令：`npm run build`
+4. 輸出目錄：`dist`
 
-### 合約部署
-1. 編譯: `npx hardhat compile`
-2. 測試: `npx hardhat test`
-3. 部署: `npx hardhat run scripts/deploy.js`
-
-## 調試技巧
-
-### 1. 使用 Logger
-```typescript
-import { logger } from '@/utils/logger';
-logger.debug('Debug info', data);
+### 本地預覽
+```bash
+npm run build
+npm run preview
 ```
-
-### 2. Chrome DevTools
-- Network 標籤查看 API 請求
-- Console 查看日誌
-- Application 查看 LocalStorage
-
-### 3. React DevTools
-- 檢查組件狀態
-- 分析性能問題
 
 ## 性能優化建議
+1. 使用 React.lazy 進行代碼分割
+2. 圖片使用 WebP 格式
+3. 實現虛擬滾動處理大列表
+4. 使用 React.memo 優化重渲染
 
-1. **使用 React.memo** 避免不必要的重渲染
-2. **使用 useMemo/useCallback** 優化計算和函數
-3. **懶加載** 大型組件和路由
-4. **優化圖片** 使用 WebP 格式和適當尺寸
-5. **使用快取** 減少重複的 API 請求
+## 調試技巧
+1. 使用 `logger.ts` 記錄日誌
+2. Chrome DevTools 的 Network 標籤查看請求
+3. React Developer Tools 檢查組件狀態
+4. 使用 `wagmi` 的調試模式
 
-## 安全注意事項
+## 常見問題
+1. **MIME type 錯誤**: 檢查 vercel.json 配置
+2. **合約調用失敗**: 確認網路和地址正確
+3. **圖片 404**: 檢查公共資源路徑
+4. **狀態不同步**: 使用 refetch 函數更新
 
-1. **永不暴露私鑰** 在代碼中
-2. **驗證用戶輸入** 防止注入攻擊
-3. **使用環境變量** 管理敏感配置
-4. **定期更新依賴** 修復安全漏洞
-5. **審計智能合約** 確保資金安全
-
-## 需要幫助？
-
-### 查看文檔
-- [專案分析報告](./COMPREHENSIVE_PROJECT_ANALYSIS.md)
-- [部署指南](./BASEURI-MANAGEMENT.md)
-- [白皮書](./dungeon-delvers-whitepaper/)
-
-### 相關資源
-- [React 文檔](https://react.dev)
-- [Wagmi 文檔](https://wagmi.sh)
-- [Viem 文檔](https://viem.sh)
-- [Tailwind CSS](https://tailwindcss.com)
-
-## 快速命令參考
-
-```bash
-# 開發
-npm run dev              # 啟動開發服務器
-npm run build           # 構建生產版本
-npm run preview         # 預覽構建結果
-
-# 測試
-npm run test            # 運行測試
-npm run lint            # 代碼檢查
-npm run type-check      # 類型檢查
-
-# 部署
-npm run deploy          # 部署到生產環境
-npm run set-baseuri:api # 設置 API BaseURI
-npm run set-baseuri:ipfs # 設置 IPFS BaseURI
-
-# 工具
-npm run analyze         # 分析包大小
-npm run clean           # 清理緩存和構建文件
-```
-
----
-
-**提示**: 使用此文檔作為快速參考，詳細信息請查看具體的源代碼和文檔。
+## 最近的重要更新
+- 2025-01-14: 修復 unknown NFT 類型錯誤
+- 2025-01-14: 改進 SVG 顯示為正方形格式
+- 2025-01-14: 添加 VIP 冷卻期動態顯示
+- 2025-01-14: 後台添加 BNB 提取和折疊功能
