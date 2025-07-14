@@ -358,14 +358,23 @@ const MyAssetsPageContent: React.FC = () => {
         
         switch (filter) {
             case 'hero': 
-                // 英雄按戰力排序
-                return [...nfts.heros].sort((a, b) => b.power - a.power);
+                // 英雄按稀有度排序（高到低），相同稀有度按戰力排序
+                return [...nfts.heros].sort((a, b) => {
+                    if (b.rarity !== a.rarity) return b.rarity - a.rarity;
+                    return b.power - a.power;
+                });
             case 'relic': 
-                // 聖物按容量排序
-                return [...nfts.relics].sort((a, b) => b.capacity - a.capacity);
+                // 聖物按稀有度排序（高到低），相同稀有度按容量排序
+                return [...nfts.relics].sort((a, b) => {
+                    if (b.rarity !== a.rarity) return b.rarity - a.rarity;
+                    return b.capacity - a.capacity;
+                });
             case 'party': 
-                // 隊伍按稀有度排序
-                return [...nfts.parties].sort((a, b) => b.partyRarity - a.partyRarity);
+                // 隊伍按稀有度排序（高到低），相同稀有度按總戰力排序
+                return [...nfts.parties].sort((a, b) => {
+                    if (b.partyRarity !== a.partyRarity) return b.partyRarity - a.partyRarity;
+                    return Number(b.totalPower - a.totalPower);
+                });
             case 'vip': 
                 return nfts.vipCards;
             default: 

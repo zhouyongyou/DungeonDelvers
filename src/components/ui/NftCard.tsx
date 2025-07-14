@@ -83,27 +83,18 @@ const NftCard: React.FC<NftCardProps> = memo(({
     return getRarityChineseName(rarity);
   };
 
-  // 新增：同步/資料來源提示
+  // 新增：同步/資料來源提示 - 簡化版
   const renderSyncStatus = () => {
     if ('syncing' in nft && nft.syncing) {
       return (
-        <div className="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded text-xs font-bold z-10 shadow">
-          資料同步中
-        </div>
+        <div className="absolute top-1 right-1 w-2 h-2 bg-yellow-500 rounded-full animate-pulse" 
+             title="資料同步中"></div>
       );
     }
     if ('source' in nft && nft.source === 'fallback') {
       return (
-        <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded text-xs font-bold z-10 shadow">
-          暫用預設資料
-        </div>
-      );
-    }
-    if ('source' in nft && nft.source === 'metadata') {
-      return (
-        <div className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded text-xs font-bold z-10 shadow">
-          僅本地資料
-        </div>
+        <div className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full animate-pulse" 
+             title="載入中"></div>
       );
     }
     return null;
@@ -151,67 +142,34 @@ const NftCard: React.FC<NftCardProps> = memo(({
           showRetry={true}
         />
         )}
-        {/* 類型標籤 - 左上角 */}
-        <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${
-          nft.type === 'hero' ? 'bg-red-600/90 text-white' :
-          nft.type === 'relic' ? 'bg-blue-600/90 text-white' :
-          nft.type === 'party' ? 'bg-purple-600/90 text-white' :
-          nft.type === 'vip' ? 'bg-yellow-600/90 text-black' :
-          'bg-gray-600/90 text-white'
-        }`}>
-          {nft.type === 'hero' ? '🗡️ 英雄' :
-           nft.type === 'relic' ? '🔮 聖物' :
-           nft.type === 'party' ? '👥 隊伍' :
-           nft.type === 'vip' ? '👑 VIP' : '❓ 未知'}
-        </div>
-
-        {/* 稀有度星星 - 右上角 - 根據同步狀態動態調整位置 */}
-        {(() => {
-          let rarity: number = 1;
-          if ('rarity' in nft) {
-            const rarityValue = typeof nft.rarity === 'number' ? nft.rarity : 
-                               typeof nft.rarity === 'string' ? parseInt(nft.rarity) : 
-                               typeof nft.rarity === 'bigint' ? Number(nft.rarity) : 1;
-            rarity = Math.max(1, Math.min(5, rarityValue));
-          } else if (nft.type === 'party' && 'partyRarity' in nft) {
-            const partyRarity = (nft as PartyNft).partyRarity;
-            rarity = Math.max(1, Math.min(5, partyRarity || 1));
-          }
-          
-          // 如果有同步狀態標籤，星星移到右下
-          const hasStatusBadge = ('syncing' in nft && nft.syncing) || 
-                                ('source' in nft && (nft.source === 'fallback' || nft.source === 'metadata'));
-          
-          return (
-            <div className={`absolute ${hasStatusBadge ? 'bottom-12 right-2' : 'top-2 right-2'} bg-black/70 text-yellow-400 px-2 py-1 rounded text-xs font-bold`}>
-              {'★'.repeat(rarity)}{'☆'.repeat(Math.max(0, 5 - rarity))}
+        {/* 只在圖片上顯示最重要的資訊 */}
+        {showDetails && (
+          <>
+            {/* 底部屬性顯示 - 簡化版 */}
+            <div className="absolute bottom-2 left-2 right-2 flex justify-between">
+              {nft.type === 'hero' && (
+                <div className="bg-black/60 text-white px-2 py-1 rounded text-xs">
+                  ⚔️ {(nft as HeroNft).power?.toLocaleString?.() ?? '0'}
+                </div>
+              )}
+              {nft.type === 'relic' && (
+                <div className="bg-black/60 text-white px-2 py-1 rounded text-xs">
+                  📦 {(nft as RelicNft).capacity ?? '0'}
+                </div>
+              )}
+              {nft.type === 'party' && (
+                <>
+                  <div className="bg-black/60 text-white px-1.5 py-0.5 rounded text-xs">
+                    ⚔️ {(nft as PartyNft).totalPower?.toString() ?? '0'}
+                  </div>
+                  <div className="bg-black/60 text-white px-1.5 py-0.5 rounded text-xs">
+                    📦 {(nft as PartyNft).totalCapacity?.toString() ?? '0'}
+                  </div>
+                </>
+              )}
             </div>
-          );
-        })()}
-
-        {/* 底部屬性顯示 */}
-        <div className="absolute bottom-2 left-2 right-2 flex justify-between">
-          {nft.type === 'hero' && (
-            <div className="bg-red-900/80 text-white px-2 py-1 rounded text-xs font-bold">
-              ⚔️ {(nft as HeroNft).power?.toLocaleString?.() ?? '0'}
-            </div>
-          )}
-          {nft.type === 'relic' && (
-            <div className="bg-blue-900/80 text-white px-2 py-1 rounded text-xs font-bold">
-              📦 {(nft as RelicNft).capacity ?? '0'}
-            </div>
-          )}
-          {nft.type === 'party' && (
-            <>
-              <div className="bg-purple-900/80 text-white px-2 py-1 rounded text-xs font-bold">
-                ⚔️ {(nft as PartyNft).totalPower?.toString() ?? '0'}
-              </div>
-              <div className="bg-purple-900/80 text-white px-2 py-1 rounded text-xs font-bold">
-                📦 {(nft as PartyNft).totalCapacity?.toString() ?? '0'}
-              </div>
-            </>
-          )}
-        </div>
+          </>
+        )}
       </div>
     );
   };
@@ -229,38 +187,22 @@ const NftCard: React.FC<NftCardProps> = memo(({
     }
 
     return (
-      <div className="p-3 space-y-2">
-        <div className="flex justify-between items-start">
+      <div className="p-3 space-y-1">
+        <div className="flex justify-between items-center">
           <h3 className="font-semibold text-white text-sm truncate flex-1">
             {nft.name}
           </h3>
-          <span 
-            className="text-xs font-bold px-2 py-1 rounded ml-2"
-            style={{ 
-              backgroundColor: getRarityColor(rarity) + '20',
-              color: getRarityColor(rarity)
-            }}
-          >
-            {getRarityName(rarity)}
-          </span>
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-yellow-400">
+              {'★'.repeat(Math.min(5, Number(rarity)))}
+            </span>
+          </div>
         </div>
         
-        {nft.description && (
-          <p className="text-gray-400 text-xs line-clamp-2">
-            {nft.description}
-          </p>
-        )}
-        
-        {nft.attributes && nft.attributes.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {nft.attributes.slice(0, 3).map((attr: unknown, index: number) => (
-              <span 
-                key={index}
-                className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded"
-              >
-                {attr.trait_type}: {attr.value}
-              </span>
-            ))}
+        {/* 只顯示最重要的屬性，避免重複 */}
+        {nft.type === 'party' && 'heroIds' in nft && (
+          <div className="text-xs text-gray-400">
+            成員: {(nft as PartyNft).heroIds?.length || 0} 英雄, {(nft as PartyNft).relicIds?.length || 0} 聖物
           </div>
         )}
       </div>

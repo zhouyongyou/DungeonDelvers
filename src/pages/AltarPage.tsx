@@ -90,7 +90,7 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
                         const baseNft = {
                             id: BigInt(asset.tokenId),
                             name: `${nftType === 'hero' ? '英雄' : '聖物'} #${asset.tokenId}`,
-                            image: '',
+                            image: `/images/${nftType}/${nftType}-${assetRarity}.png`,  // 根據稀有度設定正確的圖片
                             description: '',
                             attributes: [],
                             contractAddress: contractAddress,
