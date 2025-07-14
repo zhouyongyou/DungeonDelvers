@@ -124,20 +124,7 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
                 )}
             </div>
             
-            {/* BSC Scan 鏈接 */}
-            {contractAddress && (
-                <div className="flex justify-center">
-                    <a 
-                        href={bscScanUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded-lg transition-colors"
-                    >
-                        <span>🔍</span>
-                        在 BSC Scan 查看
-                    </a>
-                </div>
-            )}
+            {/* 移除 BSC Scan 鏈接 */}
         </div>
     );
 };
@@ -472,12 +459,14 @@ const VipPageContent: React.FC = () => {
                     
                     <div className="lg:col-span-1">
                         <h3 className="section-title text-xl text-center mb-4">我的 VIP 卡</h3>
-                        <VipCardDisplay 
-                            tokenId={tokenId} 
-                            chainId={chainId} 
-                            vipLevel={vipLevel}
-                            contractAddress={vipStakingContract?.address}
-                        />
+                        <div className="max-w-sm mx-auto">
+                            <VipCardDisplay 
+                                tokenId={tokenId} 
+                                chainId={chainId} 
+                                vipLevel={vipLevel}
+                                contractAddress={vipStakingContract?.address}
+                            />
+                        </div>
                     </div>
                 </div>
             ) : (

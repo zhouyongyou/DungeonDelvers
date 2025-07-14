@@ -4,7 +4,7 @@ import type { HeroNft, RelicNft, PartyNft, VipNft } from '../types/nft';
 
 // ============= 通用樣式和輔助函數 =============
 
-const getSVGHeader = () => `<svg width="400" height="600" viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg">`;
+const getSVGHeader = () => `<svg viewBox="0 0 400 600" preserveAspectRatio="xMidYMid meet" style="width: 100%; height: 100%;" xmlns="http://www.w3.org/2000/svg">`;
 
 const getGlobalStyles = () => `
 <style>

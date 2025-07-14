@@ -67,8 +67,23 @@ export const NftSvgDisplay: React.FC<NftSvgDisplayProps> = ({
                 ${interactive ? 'hover:scale-105 transition-transform duration-300' : ''} 
                 ${className}
             `}
-            dangerouslySetInnerHTML={{ __html: svgContent }}
-        />
+            style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+            }}
+        >
+            <div 
+                style={{ 
+                    width: '100%',
+                    height: '100%',
+                    maxWidth: '100%',
+                    maxHeight: '100%'
+                }}
+                className="[&>svg]:w-full [&>svg]:h-full"
+                dangerouslySetInnerHTML={{ __html: svgContent }}
+            />
+        </div>
     );
 };
 

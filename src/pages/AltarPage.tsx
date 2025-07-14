@@ -352,48 +352,61 @@ const AltarPage: React.FC = () => {
                         />
                     }
                 >
-                    <div className="lg:col-span-2 card-bg p-6 rounded-2xl">
-                        <h3 className="section-title">2. 選擇材料 ({selectedNfts.length} / {currentRule?.materialsRequired ?? '...'})</h3>
-                        {isLoading ? (
-                            <LoadingState message="載入材料中..." />
-                        ) : availableNfts && availableNfts.length > 0 ? (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                {availableNfts.map(nft => (
-                                    <div 
-                                        key={nft.id.toString()} 
-                                        onClick={() => handleSelectNft(nft.id)}
-                                        className={`relative cursor-pointer transition-all duration-200 ${
-                                            selectedNfts.includes(nft.id) 
-                                                ? 'ring-2 ring-yellow-400 scale-105 shadow-xl shadow-yellow-400/30' 
-                                                : 'hover:scale-105 hover:shadow-lg'
-                                        }`}
-                                    >
-                                        <NftCard 
-                                            nft={nft} 
-                                            selected={selectedNfts.includes(nft.id)}
-                                        />
-                                        {/* 選中狀態指示器 */}
-                                        {selectedNfts.includes(nft.id) && (
-                                            <div className="absolute top-2 left-2 bg-yellow-400 text-gray-900 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
-                                                {selectedNfts.indexOf(nft.id) + 1}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-8">
-                                <EmptyState message={`沒有可用的 ${rarity}★ ${nftType === 'hero' ? '英雄' : '聖物'}`} />
-                                <div className="mt-4 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
-                                    <p className="text-sm text-blue-200">
-                                        📊 <strong>數據同步中</strong>
-                                    </p>
-                                    <p className="text-xs text-blue-300 mt-1">
-                                        合約已升級至最新版本，子圖正在同步新數據。請稍後再試或檢查您的資產頁面。
-                                    </p>
+                    <div className="lg:col-span-2 relative overflow-hidden rounded-2xl">
+                        {/* 毛玻璃背景層 */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 to-blue-900/20 backdrop-blur-md"></div>
+                        <div className="absolute inset-0 bg-gray-900/40"></div>
+                        
+                        {/* 內容層 */}
+                        <div className="relative z-10 p-6">
+                            <h3 className="section-title">2. 選擇材料 ({selectedNfts.length} / {currentRule?.materialsRequired ?? '...'})</h3>
+                            {isLoading ? (
+                                <LoadingState message="載入材料中..." />
+                            ) : availableNfts && availableNfts.length > 0 ? (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                    {availableNfts.map(nft => (
+                                        <div 
+                                            key={nft.id.toString()} 
+                                            onClick={() => handleSelectNft(nft.id)}
+                                            className={`relative cursor-pointer transition-all duration-300 ${
+                                                selectedNfts.includes(nft.id) 
+                                                    ? 'ring-2 ring-yellow-400 scale-105 shadow-2xl shadow-yellow-400/40 transform -translate-y-1' 
+                                                    : 'hover:scale-105 hover:shadow-xl hover:transform hover:-translate-y-0.5'
+                                            }`}
+                                        >
+                                            {/* 選中時的光暈效果 */}
+                                            {selectedNfts.includes(nft.id) && (
+                                                <div className="absolute inset-0 bg-gradient-to-t from-yellow-400/20 to-transparent rounded-xl blur-xl"></div>
+                                            )}
+                                            
+                                            <NftCard 
+                                                nft={nft} 
+                                                selected={selectedNfts.includes(nft.id)}
+                                            />
+                                            
+                                            {/* 選中狀態指示器 - 改進樣式 */}
+                                            {selectedNfts.includes(nft.id) && (
+                                                <div className="absolute top-2 left-2 bg-gradient-to-br from-yellow-400 to-yellow-600 text-gray-900 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-xl border-2 border-yellow-300">
+                                                    {selectedNfts.indexOf(nft.id) + 1}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
-                            </div>
-                        )}
+                            ) : (
+                                <div className="text-center py-8">
+                                    <EmptyState message={`沒有可用的 ${rarity}★ ${nftType === 'hero' ? '英雄' : '聖物'}`} />
+                                    <div className="mt-4 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg backdrop-blur-sm">
+                                        <p className="text-sm text-blue-200">
+                                            📊 <strong>數據同步中</strong>
+                                        </p>
+                                        <p className="text-xs text-blue-300 mt-1">
+                                            合約已升級至最新版本，子圖正在同步新數據。請稍後再試或檢查您的資產頁面。
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </LocalErrorBoundary>
             </div>
