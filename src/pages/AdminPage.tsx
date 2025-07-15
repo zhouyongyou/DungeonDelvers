@@ -44,6 +44,11 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   const { writeContractAsync } = useWriteContract();
   const queryClient = useQueryClient();
   
+  // 調試 chainId
+  useEffect(() => {
+    logger.debug('AdminPageContent chainId 變更:', { chainId, type: typeof chainId });
+  }, [chainId]);
+  
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [isBatchSetting, setIsBatchSetting] = useState(false);
   const [pendingTx, setPendingTx] = useState<string | null>(null);
@@ -99,20 +104,36 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   }, []);
 
   const contractsToRead = useMemo(() => {
-    if (!chainId || !setupConfig) return [];
+    if (!chainId || !setupConfig) {
+      logger.debug('contractsToRead: 基礎數據不完整', { chainId, setupConfig: setupConfig ? 'exists' : 'undefined' });
+      return [];
+    }
     
     const coreContract = getContract(chainId, 'dungeonCore');
+    if (!coreContract || !coreContract.address) {
+      logger.warn('DungeonCore 合約未找到或地址無效', { chainId, coreContract });
+      return [];
+    }
+    
     const configs = setupConfig.map(c => {
       const contract = getContract(chainId, c.targetContractName);
-      if (!contract || !contract.address) return null;
+      if (!contract || !contract.address) {
+        logger.warn(`合約未找到: ${c.targetContractName}`, { chainId, contract });
+        return null;
+      }
       return { ...contract, functionName: c.getterFunctionName };
     });
     
-    if (coreContract && coreContract.address) {
-      configs.unshift({ ...coreContract, functionName: 'owner' });
-    }
+    configs.unshift({ ...coreContract, functionName: 'owner' });
     
-    return configs.filter((c): c is NonNullable<typeof c> => c !== null && !!c.address);
+    const filteredConfigs = configs.filter((c): c is NonNullable<typeof c> => c !== null && !!c.address);
+    logger.debug('contractsToRead 計算完成', { 
+      totalConfigs: configs.length,
+      filteredConfigs: filteredConfigs.length,
+      chainId
+    });
+    
+    return filteredConfigs;
   }, [chainId, setupConfig]);
 
 
@@ -133,7 +154,15 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   });
 
   const currentAddressMap: Record<string, Address | undefined> = useMemo(() => {
-    if (!readResults || !Array.isArray(readResults) || !setupConfig || !Array.isArray(setupConfig)) return {};
+    if (!readResults || !Array.isArray(readResults) || !setupConfig || !Array.isArray(setupConfig)) {
+      logger.debug('currentAddressMap: 數據不完整', { 
+        readResults: readResults ? 'exists' : 'undefined',
+        readResultsLength: readResults?.length,
+        setupConfig: setupConfig ? 'exists' : 'undefined',
+        setupConfigLength: setupConfig?.length
+      });
+      return {};
+    }
     
     const owner = readResults[0]?.result as Address | undefined;
     const settings = setupConfig.reduce((acc, config, index) => {
@@ -143,6 +172,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       return acc;
     }, {} as Record<string, Address | undefined>);
     
+    logger.debug('currentAddressMap 計算完成', { owner, settingsCount: Object.keys(settings).length });
     return { owner, ...settings };
   }, [readResults, setupConfig]);
   
