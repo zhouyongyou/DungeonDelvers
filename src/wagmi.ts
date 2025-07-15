@@ -1,4 +1,4 @@
-// src/wagmi.ts (智能 RPC 版本 + Watch 優化)
+// src/wagmi.ts (直接 Alchemy RPC 版本)
 
 import { createConfig } from 'wagmi';
 import { bsc } from 'wagmi/chains';
@@ -10,7 +10,7 @@ const isAdminPage = () => {
   return window.location.hash.includes('admin');
 };
 
-// 使用智能 RPC 傳輸層
+// 使用直接 RPC 傳輸層
 export const wagmiConfig = createConfig({
   chains: [bsc],
   transports: {

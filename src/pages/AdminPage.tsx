@@ -16,6 +16,8 @@ import { bsc } from 'wagmi/chains';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { getOptimizedQueryConfig } from '../config/rpcOptimization';
 import { watchManager } from '../config/watchConfig';
+import { AdminPageDebugger } from '../utils/adminPageDebugger';
+import { logger } from '../utils/logger';
 
 // Import newly created admin components
 import AdminSection from '../components/admin/AdminSection';
@@ -113,7 +115,14 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     return configs.filter((c): c is NonNullable<typeof c> => c !== null && !!c.address);
   }, [chainId, setupConfig]);
 
-  const { data: readResults, isLoading: isLoadingSettings } = useMonitoredReadContracts({
+  // 診斷模式：在開發環境中執行診斷
+  useEffect(() => {
+    if (import.meta.env.DEV && contractsToRead.length > 0) {
+      AdminPageDebugger.runFullDiagnostics(chainId, contractsToRead, address, currentAddressMap.owner);
+    }
+  }, [chainId, contractsToRead, address, currentAddressMap.owner]);
+
+  const { data: readResults, isLoading: isLoadingSettings, error: settingsError } = useMonitoredReadContracts({
     contracts: contractsToRead,
     contractName: 'adminSettings',
     batchName: 'adminContractsBatch',
@@ -319,6 +328,12 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   
   const ownerAddress = currentAddressMap.owner;
   
+  // 錯誤處理
+  if (settingsError) {
+    showToast(`讀取合約設定失敗: ${settingsError.message || '未知錯誤'}`, 'error');
+    logger.error('讀取管理員設定失敗:', settingsError);
+  }
+
   // 只在第一次加載合約串接中心時顯示全屏加載
   if (loadedSections.contractCenter && isLoadingSettings && !ownerAddress) {
     return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
