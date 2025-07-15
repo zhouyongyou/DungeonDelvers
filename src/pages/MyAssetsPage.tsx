@@ -1,6 +1,6 @@
 // src/pages/MyAssetsPage.tsx (組隊UI優化版)
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, memo } from 'react';
 import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchAllOwnedNfts } from '../api/nfts';
@@ -17,6 +17,7 @@ import { bsc } from 'wagmi/chains';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useGlobalLoading } from '../components/core/GlobalLoadingProvider';
 import { logger } from '../utils/logger';
+import { OptimizedNftGrid } from '../components/ui/OptimizedNftGrid';
 
 // =================================================================
 // Section: 子元件 (TeamBuilder) - 優化版
@@ -51,6 +52,9 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
 }: TeamBuilderProps) => {
     const [selectedHeroes, setSelectedHeroes] = useState<bigint[]>([]);
     const [selectedRelics, setSelectedRelics] = useState<bigint[]>([]);
+    const [showAllRelics, setShowAllRelics] = useState(false);
+    const [showAllHeroes, setShowAllHeroes] = useState(false);
+    const [currentStep, setCurrentStep] = useState<'select-relic' | 'select-hero' | 'ready'>('select-relic');
     const { showToast } = useAppToast();
 
     const { totalPower, totalCapacity } = useMemo(() => {
@@ -75,6 +79,10 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                 setList(list.filter(i => i !== id));
             } else if (list.length < limit) {
                 setList([...list, id]);
+                // 當選擇了聖物後，自動進入下一步
+                if (list.length === 0) {
+                    setCurrentStep('select-hero');
+                }
             } else {
                 showToast(`最多只能選擇 ${limit} 個聖物`, 'error');
             }
@@ -89,6 +97,10 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                 showToast('請先選擇聖物以決定隊伍容量', 'info');
             } else if (list.length < limit) {
                 setList([...list, id]);
+                // 當選擇了英雄後，標記為準備完成
+                if (list.length === 0 && selectedRelics.length > 0) {
+                    setCurrentStep('ready');
+                }
             } else {
                 showToast(`英雄數量已達隊伍容量上限 (${limit})`, 'error');
             }
@@ -118,10 +130,56 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
 
     const canCreate = selectedHeroes.length > 0 && selectedRelics.length > 0 && selectedHeroes.length <= totalCapacity && isHeroAuthorized && isRelicAuthorized;
 
+    // 組合授權處理
+    const handleAuthorizeAll = async () => {
+        if (!isRelicAuthorized) {
+            await onAuthorizeRelic();
+            // 等待一下再授權英雄
+            setTimeout(() => {
+                if (!isHeroAuthorized) {
+                    onAuthorizeHero();
+                }
+            }, 2000);
+        } else if (!isHeroAuthorized) {
+            await onAuthorizeHero();
+        }
+    };
+
     return (
         <div className="card-bg p-4 md:p-6 rounded-2xl shadow-xl">
             <h3 className="section-title">創建新隊伍</h3>
-            <p className="text-sm text-gray-400 mb-4">選擇英雄和聖物來組建你的冒險隊伍。隊伍的英雄數量不能超過聖物的總容量。</p>
+            
+            {/* 步驟指引 */}
+            <div className="flex items-center justify-between mb-6 bg-gray-900/50 p-3 rounded-lg">
+                <div className="flex items-center gap-4">
+                    <div className={`flex items-center gap-2 ${currentStep === 'select-relic' ? 'text-yellow-400' : 'text-gray-500'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            selectedRelics.length > 0 ? 'bg-green-600' : currentStep === 'select-relic' ? 'bg-yellow-600' : 'bg-gray-600'
+                        }`}>
+                            {selectedRelics.length > 0 ? '✓' : '1'}
+                        </div>
+                        <span className="text-sm font-medium">選擇聖物</span>
+                    </div>
+                    <div className="text-gray-600">→</div>
+                    <div className={`flex items-center gap-2 ${currentStep === 'select-hero' ? 'text-yellow-400' : 'text-gray-500'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            selectedHeroes.length > 0 ? 'bg-green-600' : currentStep === 'select-hero' ? 'bg-yellow-600' : 'bg-gray-600'
+                        }`}>
+                            {selectedHeroes.length > 0 ? '✓' : '2'}
+                        </div>
+                        <span className="text-sm font-medium">選擇英雄</span>
+                    </div>
+                    <div className="text-gray-600">→</div>
+                    <div className={`flex items-center gap-2 ${currentStep === 'ready' ? 'text-yellow-400' : 'text-gray-500'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            canCreate ? 'bg-green-600' : 'bg-gray-600'
+                        }`}>
+                            {canCreate ? '✓' : '3'}
+                        </div>
+                        <span className="text-sm font-medium">創建隊伍</span>
+                    </div>
+                </div>
+            </div>
             
             {/* 創建隊伍按鈕 - 移到最上方 */}
             <div className="flex justify-center mb-6">
@@ -167,49 +225,51 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                 </div>
             </div>
 
-            {/* 授權按鈕區域 - 調整順序：先聖物後英雄 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div className="flex items-center gap-3">
+            {/* 統一授權按鈕 */}
+            {(!isRelicAuthorized || !isHeroAuthorized) && (
+                <div className="flex justify-center mb-6">
                     <ActionButton 
-                        onClick={onAuthorizeRelic}
+                        onClick={handleAuthorizeAll}
                         isLoading={isAuthorizing}
-                        disabled={isRelicAuthorized || isAuthorizing}
-                        className={`h-12 flex-1 ${isRelicAuthorized ? 'bg-green-600' : 'bg-yellow-600'}`}
+                        className="bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500"
                     >
-                        {isRelicAuthorized ? '✓ 聖物已授權' : (isAuthorizing ? '授權中...' : '授權聖物')}
-                    </ActionButton>
-                    <ActionButton 
-                        onClick={handleAutoSelectRelics}
-                        disabled={relics.length === 0}
-                        className="h-12 px-4 bg-blue-600 hover:bg-blue-500"
-                    >
-                        一鍵選擇
+                        {isAuthorizing ? '授權中...' : '一鍵授權所有合約'}
                     </ActionButton>
                 </div>
-                <div className="flex items-center gap-3">
-                    <ActionButton 
-                        onClick={onAuthorizeHero}
-                        isLoading={isAuthorizing}
-                        disabled={isHeroAuthorized || isAuthorizing}
-                        className={`h-12 flex-1 ${isHeroAuthorized ? 'bg-green-600' : 'bg-yellow-600'}`}
-                    >
-                        {isHeroAuthorized ? '✓ 英雄已授權' : (isAuthorizing ? '授權中...' : '授權英雄')}
-                    </ActionButton>
-                    <ActionButton 
-                        onClick={handleAutoSelectHeroes}
-                        disabled={heroes.length === 0 || totalCapacity === 0}
-                        className="h-12 px-4 bg-blue-600 hover:bg-blue-500"
-                    >
-                        一鍵選擇
-                    </ActionButton>
-                </div>
-            </div>
+            )}
 
             <div className="flex flex-col md:grid md:grid-cols-2 gap-6 mb-4">
                 <div>
-                    <h4 className="font-semibold text-lg mb-2 text-white">選擇聖物 (上限: 5)</h4>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
-                        {relics.length > 0 ? relics.map(relic => (
+                    <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-lg text-white">
+                            {currentStep === 'select-relic' && '👉 '} 
+                            步驟 1：選擇聖物 (上限: 5)
+                        </h4>
+                        {relics.length > 20 && (
+                            <button
+                                onClick={() => setShowAllRelics(!showAllRelics)}
+                                className="text-xs text-blue-400 hover:text-blue-300 underline"
+                            >
+                                {showAllRelics ? '顯示較少' : `顯示全部 (${relics.length})`}
+                            </button>
+                        )}
+                    </div>
+                    {currentStep === 'select-relic' && (
+                        <p className="text-xs text-yellow-300 mb-2 animate-pulse">
+                            👆 請先選擇 1-5 個聖物，聖物的容量決定可攜帶的英雄數量
+                        </p>
+                    )}
+                    <div className="flex justify-end mb-2">
+                        <ActionButton 
+                            onClick={handleAutoSelectRelics}
+                            disabled={relics.length === 0}
+                            className="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-500"
+                        >
+                            一鍵選擇最大容量
+                        </ActionButton>
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px] max-h-[300px] overflow-y-auto">
+                        {relics.length > 0 ? (showAllRelics ? relics : relics.slice(0, 20)).map(relic => (
                             <div 
                                 key={`select-${relic.id}`}
                                 onClick={() => toggleSelection(relic.id, 'relic')}
@@ -236,9 +296,43 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                     </div>
                 </div>
                 <div>
-                    <h4 className="font-semibold text-lg mb-2 text-white">選擇英雄 (上限: {totalCapacity})</h4>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px]">
-                        {heroes.length > 0 ? heroes.map(hero => (
+                    <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-lg text-white">
+                            {currentStep === 'select-hero' && '👉 '} 
+                            步驟 2：選擇英雄 (上限: {totalCapacity})
+                        </h4>
+                        {heroes.length > 20 && (
+                            <button
+                                onClick={() => setShowAllHeroes(!showAllHeroes)}
+                                className="text-xs text-blue-400 hover:text-blue-300 underline"
+                            >
+                                {showAllHeroes ? '顯示較少' : `顯示全部 (${heroes.length})`}
+                            </button>
+                        )}
+                    </div>
+                    {currentStep === 'select-hero' && totalCapacity > 0 && (
+                        <p className="text-xs text-yellow-300 mb-2 animate-pulse">
+                            👆 現在選擇最多 {totalCapacity} 個英雄加入隊伍
+                        </p>
+                    )}
+                    {totalCapacity === 0 && (
+                        <p className="text-xs text-red-300 mb-2">
+                            ⚠️ 請先選擇聖物，聖物容量決定可攜帶的英雄數量
+                        </p>
+                    )}
+                    {totalCapacity > 0 && (
+                        <div className="flex justify-end mb-2">
+                            <ActionButton 
+                                onClick={handleAutoSelectHeroes}
+                                disabled={heroes.length === 0}
+                                className="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-500"
+                            >
+                                一鍵選擇最強英雄
+                            </ActionButton>
+                        </div>
+                    )}
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 bg-black/20 p-2 rounded-lg min-h-[100px] max-h-[300px] overflow-y-auto">
+                        {heroes.length > 0 ? (showAllHeroes ? heroes : heroes.slice(0, 20)).map(hero => (
                             <div 
                                 key={`select-${hero.id}`}
                                 onClick={() => toggleSelection(hero.id, 'hero')}
@@ -531,7 +625,7 @@ const MyAssetsPageContent: React.FC = () => {
         <section className="space-y-8">
             <h2 className="page-title">我的資產與隊伍</h2>
             
-            {/* 等待提示信息 */}
+            {/* 等待提示信息 - 增強版 */}
             <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
                     <span className="text-blue-400">ℹ️</span>
@@ -541,6 +635,9 @@ const MyAssetsPageContent: React.FC = () => {
                     <li>• 新鑄造的 NFT 需要 <strong className="text-blue-300">2-3 分鐘</strong> 才會在此頁面顯示</li>
                     <li>• 如果您剛完成鑄造，請稍作等待或刷新頁面</li>
                     <li>• 系統正在同步區塊鏈數據和更新索引</li>
+                    {nfts && (nfts.heros.length + nfts.relics.length + nfts.parties.length) > 50 && (
+                        <li className="text-yellow-300">• ⚠️ 您擁有大量 NFT，載入可能需要較長時間</li>
+                    )}
                 </ul>
             </div>
             
@@ -574,9 +671,7 @@ const MyAssetsPageContent: React.FC = () => {
                     </div>
                 </div>
                 {filteredNfts.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                        {filteredNfts.map(nft => <NftCard key={nft.id.toString()} nft={nft} />)}
-                    </div>
+                    <OptimizedNftGrid nfts={filteredNfts} pageSize={30} />
                 ) : (
                     <div className="text-center py-8">
                         <EmptyState message="這裡空空如也..." />
