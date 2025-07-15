@@ -16,6 +16,8 @@ import { GlobalLoadingProvider } from './components/core/GlobalLoadingProvider';
 import { usePrefetchOnHover } from './hooks/usePagePrefetch';
 import { MobileNavigation } from './components/mobile/MobileNavigation';
 import { useMobileOptimization } from './hooks/useMobileOptimization';
+import { RpcStatusMonitor } from './components/debug/RpcStatusMonitor';
+import { preloadCriticalImages, setupSmartPreloading } from './utils/imagePreloadStrategy';
 
 // 動態導入所有頁面
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -67,6 +69,11 @@ function App() {
   useEffect(() => {
     const handleHashChange = () => setActivePage(getPageFromHash());
     window.addEventListener('hashchange', handleHashChange);
+    
+    // 初始化圖片預加載
+    preloadCriticalImages();
+    setupSmartPreloading();
+    
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
@@ -138,6 +145,8 @@ function App() {
             )}
             {/* 這個元件負責在背景追蹤已發送交易的狀態 */}
             <TransactionWatcher />
+            {/* RPC 狀態監控（開發環境） */}
+            <RpcStatusMonitor />
             {/* 移動端底部安全區域 */}
             {isMobile && <div className="h-16" />}
           </div>

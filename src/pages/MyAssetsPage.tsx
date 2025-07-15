@@ -1,7 +1,7 @@
 // src/pages/MyAssetsPage.tsx (組隊UI優化版)
 
 import React, { useState, useMemo, useCallback, memo } from 'react';
-import { useAccount, useReadContract, useWriteContract } from 'wagmi';
+import { useAccount, useReadContract } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { NftCard } from '../components/ui/NftCard';
@@ -10,8 +10,10 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { getContract } from '../config/contracts';
 import { useAppToast } from '../hooks/useAppToast';
-import { useTransactionStore } from '../stores/useTransactionStore';
-import type { HeroNft, RelicNft, NftType } from '../types/nft';
+import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';
+import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
+import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
+import type { HeroNft, RelicNft, NftType, PartyNft } from '../types/nft';
 import { formatEther } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
@@ -373,18 +375,17 @@ const MyAssetsPageContent: React.FC = () => {
     const { setLoading } = useGlobalLoading();
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
-    const { addTransaction } = useTransactionStore();
     const queryClient = useQueryClient();
 
     const [filter, setFilter] = useState<NftType>('party');
-    const [isAuthorizing, setIsAuthorizing] = useState(false);
+    const [showProgressModal, setShowProgressModal] = useState(false);
+    const [currentTransactionType, setCurrentTransactionType] = useState<'hero' | 'relic' | 'party'>('hero');
+    const [currentPartyData, setCurrentPartyData] = useState<{ heroIds: bigint[], relicIds: bigint[] } | null>(null);
 
     // Move all hooks to be called before any early returns
     const heroContract = useMemo(() => chainId ? getContract(bsc.id, 'hero') : null, [chainId]);
     const relicContract = useMemo(() => chainId ? getContract(bsc.id, 'relic') : null, [chainId]);
     const partyContract = useMemo(() => chainId ? getContract(bsc.id, 'party') : null, [chainId]);
-
-    const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
     const { data: nfts, isLoading, refetch, error } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
@@ -424,6 +425,134 @@ const MyAssetsPageContent: React.FC = () => {
         functionName: 'platformFee',
         query: { enabled: !!partyContract }
     });
+
+    // 交易進度 Hooks - 英雄授權
+    const { execute: executeHeroAuth, progress: heroAuthProgress, reset: resetHeroAuth } = useTransactionWithProgress({
+        onSuccess: () => {
+            showToast('英雄授權成功！', 'success');
+            // 延遲刷新授權狀態
+            setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['isApprovedForAll'] });
+            }, 3000);
+            setShowProgressModal(false);
+            confirmHeroAuthUpdate();
+        },
+        onError: () => {
+            rollbackHeroAuthUpdate();
+        },
+        successMessage: '英雄授權成功！',
+        errorMessage: '英雄授權失敗',
+    });
+
+    // 交易進度 Hooks - 聖物授權
+    const { execute: executeRelicAuth, progress: relicAuthProgress, reset: resetRelicAuth } = useTransactionWithProgress({
+        onSuccess: () => {
+            showToast('聖物授權成功！', 'success');
+            // 延遲刷新授權狀態
+            setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['isApprovedForAll'] });
+            }, 3000);
+            setShowProgressModal(false);
+            confirmRelicAuthUpdate();
+        },
+        onError: () => {
+            rollbackRelicAuthUpdate();
+        },
+        successMessage: '聖物授權成功！',
+        errorMessage: '聖物授權失敗',
+    });
+
+    // 交易進度 Hooks - 創建隊伍
+    const { execute: executeCreateParty, progress: createPartyProgress, reset: resetCreateParty } = useTransactionWithProgress({
+        onSuccess: () => {
+            showToast(
+                '🎉 隊伍創建成功！\n⏱️ 數據同步需要約 2-3 分鐘\n🔄 頁面將自動更新', 
+                'success',
+                8000
+            );
+            
+            // 多階段刷新策略
+            queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
+            
+            setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
+                refetch();
+            }, 30000);
+            
+            setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
+                refetch();
+                showToast('✅ 隊伍數據已同步完成！', 'info');
+            }, 120000);
+            
+            setShowProgressModal(false);
+            confirmCreatePartyUpdate();
+            setCurrentPartyData(null);
+        },
+        onError: () => {
+            rollbackCreatePartyUpdate();
+            setCurrentPartyData(null);
+        },
+        successMessage: '隊伍創建成功！',
+        errorMessage: '創建隊伍失敗',
+    });
+
+    // 樂觀更新 - 英雄授權
+    const { optimisticUpdate: optimisticHeroAuthUpdate, confirmUpdate: confirmHeroAuthUpdate, rollback: rollbackHeroAuthUpdate } = useOptimisticUpdate({
+        queryKey: ['isApprovedForAll'],
+        updateFn: () => true // 立即設為已授權
+    });
+
+    // 樂觀更新 - 聖物授權
+    const { optimisticUpdate: optimisticRelicAuthUpdate, confirmUpdate: confirmRelicAuthUpdate, rollback: rollbackRelicAuthUpdate } = useOptimisticUpdate({
+        queryKey: ['isApprovedForAll'],
+        updateFn: () => true // 立即設為已授權
+    });
+
+    // 樂觀更新 - 創建隊伍
+    const { optimisticUpdate: optimisticCreatePartyUpdate, confirmUpdate: confirmCreatePartyUpdate, rollback: rollbackCreatePartyUpdate } = useOptimisticUpdate({
+        queryKey: ['ownedNfts', address, chainId],
+        updateFn: (oldData: any) => {
+            if (!oldData || !currentPartyData) return oldData;
+            
+            // 創建臨時隊伍數據
+            const tempParty: PartyNft = {
+                id: BigInt(Date.now()), // 臨時ID
+                tokenId: BigInt(Date.now()),
+                name: `新隊伍 (創建中...)`,
+                image: '',
+                description: '隊伍創建中，請稍候...',
+                attributes: [],
+                contractAddress: partyContract?.address ?? '0x',
+                type: 'party',
+                totalPower: currentPartyData.heroIds.length * 100n, // 估算值
+                totalCapacity: BigInt(currentPartyData.heroIds.length),
+                heroIds: currentPartyData.heroIds,
+                relicIds: currentPartyData.relicIds,
+                partyRarity: '1',
+            };
+            
+            // 更新可用英雄和聖物列表（移除已選擇的）
+            const updatedHeros = oldData.heros.filter((h: HeroNft) => 
+                !currentPartyData.heroIds.includes(h.id)
+            );
+            const updatedRelics = oldData.relics.filter((r: RelicNft) => 
+                !currentPartyData.relicIds.includes(r.id)
+            );
+            
+            return {
+                ...oldData,
+                heros: updatedHeros,
+                relics: updatedRelics,
+                parties: [...oldData.parties, tempParty]
+            };
+        }
+    });
+
+    // 獲取當前進度
+    const currentProgress = currentTransactionType === 'hero' ? heroAuthProgress : 
+                           currentTransactionType === 'relic' ? relicAuthProgress : 
+                           createPartyProgress;
 
     // 檢查授權狀態
     const { data: isHeroAuthorized } = useReadContract({
@@ -493,107 +622,80 @@ const MyAssetsPageContent: React.FC = () => {
 
     const handleAuthorizeHero = async () => {
         if (!heroContract || !partyContract) return;
+        
         logger.debug('開始授權英雄合約', { heroContract: heroContract.address, partyContract: partyContract.address });
-        setIsAuthorizing(true);
+        setCurrentTransactionType('hero');
+        setShowProgressModal(true);
+        resetHeroAuth();
+        
+        // 立即執行樂觀更新
+        optimisticHeroAuthUpdate();
+        
         try {
-            const hash = await writeContractAsync({ 
-                address: heroContract?.address as `0x${string}`,
-                abi: heroContract?.abi,
-                functionName: 'setApprovalForAll',
-                args: [partyContract.address, true as any] 
-            });
-            logger.info('英雄授權交易已發送', { hash });
-            addTransaction({ hash, description: '授權隊伍合約使用英雄' });
-            showToast('英雄授權成功！請等待約 30 秒後可創建隊伍', 'success');
-            
-            // 延遲刷新授權狀態
-            setTimeout(() => {
-                logger.debug('刷新英雄授權狀態');
-                queryClient.invalidateQueries({ queryKey: ['isApprovedForAll'] });
-            }, 30000);
-            
-        } catch (error: unknown) {
-            const e = error as { message?: string; shortMessage?: string };
-            if (!e.message?.includes('User rejected the request')) {
-                showToast(e.shortMessage || "英雄授權失敗", "error");
-            }
-        } finally {
-            setIsAuthorizing(false);
+            await executeHeroAuth(
+                {
+                    address: heroContract.address as `0x${string}`,
+                    abi: heroContract.abi,
+                    functionName: 'setApprovalForAll',
+                    args: [partyContract.address, true]
+                },
+                '授權隊伍合約使用英雄'
+            );
+        } catch (error) {
+            // 錯誤已在 hook 中處理
         }
     };
 
     const handleAuthorizeRelic = async () => {
         if (!relicContract || !partyContract) return;
-        setIsAuthorizing(true);
+        
+        setCurrentTransactionType('relic');
+        setShowProgressModal(true);
+        resetRelicAuth();
+        
+        // 立即執行樂觀更新
+        optimisticRelicAuthUpdate();
+        
         try {
-            const hash = await writeContractAsync({ 
-                address: relicContract?.address as `0x${string}`,
-                abi: relicContract?.abi,
-                functionName: 'setApprovalForAll',
-                args: [partyContract.address, true as any] 
-            });
-            addTransaction({ hash, description: '授權隊伍合約使用聖物' });
-            showToast('聖物授權成功！請等待約 30 秒後可創建隊伍', 'success');
-            
-            // 延遲刷新授權狀態
-            setTimeout(() => {
-                queryClient.invalidateQueries({ queryKey: ['isApprovedForAll'] });
-            }, 30000);
-            
-        } catch (error: unknown) {
-            const e = error as { message?: string; shortMessage?: string };
-            if (!e.message?.includes('User rejected the request')) {
-                showToast(e.shortMessage || "聖物授權失敗", "error");
-            }
-        } finally {
-            setIsAuthorizing(false);
+            await executeRelicAuth(
+                {
+                    address: relicContract.address as `0x${string}`,
+                    abi: relicContract.abi,
+                    functionName: 'setApprovalForAll',
+                    args: [partyContract.address, true]
+                },
+                '授權隊伍合約使用聖物'
+            );
+        } catch (error) {
+            // 錯誤已在 hook 中處理
         }
     };
 
     const handleCreateParty = async (heroIds: bigint[], relicIds: bigint[]) => {
         if (!partyContract || !address) return;
         
+        setCurrentTransactionType('party');
+        setCurrentPartyData({ heroIds, relicIds });
+        setShowProgressModal(true);
+        resetCreateParty();
+        
+        // 立即執行樂觀更新
+        optimisticCreatePartyUpdate();
+        
         try {
             const fee = typeof platformFee === 'bigint' ? platformFee : 0n;
-            const hash = await writeContractAsync({ 
-                address: partyContract?.address as `0x${string}`,
-                abi: partyContract?.abi,
-                functionName: 'createParty',
-                args: [heroIds as any, relicIds as any], 
-                value: fee 
-            });
-            
-            addTransaction({ hash, description: `創建新隊伍` });
-            
-            // 立即顯示詳細的成功消息
-            showToast(
-                '🎉 隊伍創建成功！\n⏱️ 數據同步需要約 2-3 分鐘\n🔄 頁面將自動更新', 
-                'success',
-                8000 // 8秒顯示時間
+            await executeCreateParty(
+                {
+                    address: partyContract.address as `0x${string}`,
+                    abi: partyContract.abi,
+                    functionName: 'createParty',
+                    args: [heroIds, relicIds],
+                    value: fee
+                },
+                `創建新隊伍`
             );
-            
-            // 多階段刷新策略
-            // 立即刷新一次
-            queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
-            
-            // 30秒後再次刷新（區塊確認）
-            setTimeout(() => {
-                queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
-                refetch();
-            }, 30000);
-            
-            // 2分鐘後最終刷新（子圖同步）
-            setTimeout(() => {
-                queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
-                refetch();
-                showToast('✅ 隊伍數據已同步完成！', 'info');
-            }, 120000);
-
-        } catch (error: unknown) {
-            const e = error as { message?: string; shortMessage?: string };
-            if (!e.message?.includes('User rejected the request')) {
-                showToast(e.shortMessage || "創建隊伍失敗", "error");
-            }
+        } catch (error) {
+            // 錯誤已在 hook 中處理
         }
     };
     
@@ -641,18 +743,29 @@ const MyAssetsPageContent: React.FC = () => {
                 </ul>
             </div>
             
+            <TransactionProgressModal
+                isOpen={showProgressModal}
+                onClose={() => setShowProgressModal(false)}
+                progress={currentProgress}
+                title={
+                    currentTransactionType === 'hero' ? '英雄授權進度' :
+                    currentTransactionType === 'relic' ? '聖物授權進度' :
+                    '創建隊伍進度'
+                }
+            />
+            
             <TeamBuilder 
                 heroes={availableHeroes} 
                 relics={availableRelics}
                 onCreateParty={handleCreateParty}
-                isCreating={isTxPending}
+                isCreating={createPartyProgress.status !== 'idle' && createPartyProgress.status !== 'error'}
                 platformFee={typeof platformFee === 'bigint' ? platformFee : undefined}
                 isLoadingFee={isLoadingFee}
                 isHeroAuthorized={Boolean(isHeroAuthorized)}
                 isRelicAuthorized={Boolean(isRelicAuthorized)}
                 onAuthorizeHero={handleAuthorizeHero}
                 onAuthorizeRelic={handleAuthorizeRelic}
-                isAuthorizing={isAuthorizing}
+                isAuthorizing={heroAuthProgress.status !== 'idle' || relicAuthProgress.status !== 'idle'}
             />
 
             <div className="card-bg p-4 md:p-6 rounded-2xl shadow-xl">

@@ -143,6 +143,8 @@ const CodexPage: React.FC = () => {
                 </div>
                 <ul className="text-xs text-gray-400 space-y-1">
                     <li>• <strong className="text-blue-300">已解鎖</strong>：擁有該稀有度的 NFT 後即可在圖鑑中查看</li>
+                    <li>• <strong className="text-purple-300">戰力範圍</strong>：英雄顯示該稀有度的戰力範圍值，實際戰力可能有所不同</li>
+                    <li>• <strong className="text-pink-300">視覺圖標</strong>：每個稀有度都有獨特的雙 Emoji 圖標來展現其特性</li>
                     <li>• <strong className="text-yellow-300">隊伍中的 NFT</strong>：已組建隊伍的英雄和聖物會顯示為"鎖定"狀態，無法單獨使用</li>
                     <li>• <strong className="text-green-300">數據同步</strong>：新鑄造或組隊的 NFT 需要 2-3 分鐘才會在圖鑑中更新</li>
                 </ul>

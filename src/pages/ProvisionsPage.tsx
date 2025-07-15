@@ -1,14 +1,16 @@
 // src/pages/ProvisionsPage.tsx (The Graph 改造版)
 
 import React, { useState, useMemo } from 'react';
-import { useAccount, useReadContract, useWriteContract, useBalance } from 'wagmi';
+import { useAccount, useReadContract, useBalance } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatEther, maxUint256 } from 'viem';
 
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { getContract } from '../config/contracts';
 import { useAppToast } from '../hooks/useAppToast';
-import { useTransactionStore } from '../stores/useTransactionStore';
+import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';
+import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
+import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
 
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -86,11 +88,12 @@ interface ProvisionsPageProps {
 const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onPurchaseSuccess }) => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
-    const { addTransaction } = useTransactionStore();
     const queryClient = useQueryClient();
 
     const [selectedPartyId, setSelectedPartyId] = useState<bigint | null>(preselectedPartyId ?? null);
     const [quantity, setQuantity] = useState<number>(1);
+    const [showProgressModal, setShowProgressModal] = useState(false);
+    const [currentTransactionType, setCurrentTransactionType] = useState<'purchase' | 'approve'>('purchase');
 
     // Move all hooks before early returns
     const { 
@@ -112,7 +115,66 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
         retry: 2,
     });
 
-    const { writeContractAsync, isPending: isTxPending } = useWriteContract();
+    // 交易進度 Hooks - 購買儲備
+    const { execute: executePurchase, progress: purchaseProgress, reset: resetPurchase } = useTransactionWithProgress({
+        onSuccess: () => {
+            showToast(`為隊伍 #${selectedPartyId} 購買 ${quantity} 個儲備成功！`, 'success');
+            queryClient.invalidateQueries({ queryKey: ['playerParties', address, chainId] });
+            queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
+            onPurchaseSuccess?.();
+            setShowProgressModal(false);
+            confirmPurchaseUpdate();
+        },
+        onError: () => {
+            rollbackPurchaseUpdate();
+        },
+        successMessage: '購買儲備成功！',
+        errorMessage: '購買儲備失敗',
+    });
+    
+    // 交易進度 Hooks - 授權
+    const { execute: executeApprove, progress: approveProgress, reset: resetApprove } = useTransactionWithProgress({
+        onSuccess: () => {
+            showToast('授權成功！現在可以購買儲備了', 'success');
+            refetchAllowance();
+            setShowProgressModal(false);
+            confirmApproveUpdate();
+        },
+        onError: () => {
+            rollbackApproveUpdate();
+        },
+        successMessage: '授權成功！',
+        errorMessage: '授權失敗',
+    });
+    
+    // 樂觀更新 - 購買儲備
+    const { optimisticUpdate: optimisticPurchaseUpdate, confirmUpdate: confirmPurchaseUpdate, rollback: rollbackPurchaseUpdate } = useOptimisticUpdate({
+        queryKey: ['playerParties', address, chainId],
+        updateFn: (oldData: any) => {
+            if (!oldData || !selectedPartyId) return oldData;
+            
+            // 更新指定隊伍的儲備數量
+            return oldData.map((party: any) => {
+                if (party.id === selectedPartyId || party.tokenId === selectedPartyId) {
+                    return {
+                        ...party,
+                        provisionsRemaining: (party.provisionsRemaining || 0n) + BigInt(quantity)
+                    };
+                }
+                return party;
+            });
+        }
+    });
+    
+    // 樂觀更新 - 授權
+    const { optimisticUpdate: optimisticApproveUpdate, confirmUpdate: confirmApproveUpdate, rollback: rollbackApproveUpdate } = useOptimisticUpdate({
+        queryKey: ['allowance'],
+        updateFn: () => maxUint256 // 立即設為最大授權額度
+    });
+    
+    // 獲取當前進度
+    const currentProgress = currentTransactionType === 'purchase' ? purchaseProgress : approveProgress;
+    const isTxPending = currentProgress.status !== 'idle' && currentProgress.status !== 'error';
 
     // Early returns after all hooks
     if (!chainId || chainId !== bsc.id) {
@@ -125,35 +187,51 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
             return showToast('錢包餘額不足', 'error');
         }
         if (needsApproval) return showToast('請先完成授權', 'error');
-
+        
+        setCurrentTransactionType('purchase');
+        setShowProgressModal(true);
+        resetPurchase();
+        
+        // 立即執行樂觀更新
+        optimisticPurchaseUpdate();
+        
         try {
-            // 直接從錢包扣款購買儲備
-            const hash = await writeContractAsync({
-                address: dungeonMasterContract.address,
-                abi: dungeonMasterContract.abi,
-                functionName: 'buyProvisions',
-                args: [selectedPartyId, BigInt(quantity)],
-            });
-            addTransaction({ hash, description: `為隊伍 #${selectedPartyId} 購買 ${quantity} 個儲備` });
-            // 成功後，手動觸發相關查詢的刷新
-            queryClient.invalidateQueries({ queryKey: ['playerParties', address, chainId] });
-            onPurchaseSuccess?.();
-        } catch (error: unknown) {
-            const e = error as { message?: string; shortMessage?: string };
-            if (!e.message?.includes('User rejected the request')) showToast(e.shortMessage || "購買失敗", "error");
+            await executePurchase(
+                {
+                    address: dungeonMasterContract.address,
+                    abi: dungeonMasterContract.abi,
+                    functionName: 'buyProvisions',
+                    args: [selectedPartyId, BigInt(quantity)]
+                },
+                `為隊伍 #${selectedPartyId} 購買 ${quantity} 個儲備`
+            );
+        } catch (error) {
+            // 錯誤已在 hook 中處理
         }
     };
     
     const handleApprove = async () => {
         if (!soulShardContract || !dungeonMasterContract) return;
+        
+        setCurrentTransactionType('approve');
+        setShowProgressModal(true);
+        resetApprove();
+        
+        // 立即執行樂觀更新
+        optimisticApproveUpdate();
+        
         try {
-            const hash = await writeContractAsync({ address: soulShardContract.address, abi: soulShardContract.abi, functionName: 'approve', args: [dungeonMasterContract.address, maxUint256] });
-            addTransaction({ hash, description: '批准儲備合約' });
-            await refetchAllowance();
-            showToast('授權成功！', 'success');
-        } catch (error: unknown) {
-            const e = error as { message?: string; shortMessage?: string };
-            if (!e.message?.includes('User rejected the request')) showToast(e.shortMessage || "授權失敗", "error");
+            await executeApprove(
+                {
+                    address: soulShardContract.address,
+                    abi: soulShardContract.abi,
+                    functionName: 'approve',
+                    args: [dungeonMasterContract.address, maxUint256]
+                },
+                '授權 DungeonMaster 合約使用 $SoulShard'
+            );
+        } catch (error) {
+            // 錯誤已在 hook 中處理
         }
     };
     
@@ -167,6 +245,12 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
 
     return (
         <div className="p-4 space-y-4">
+            <TransactionProgressModal
+                isOpen={showProgressModal}
+                onClose={() => setShowProgressModal(false)}
+                progress={currentProgress}
+                title={currentTransactionType === 'purchase' ? '購買儲備進度' : '授權進度'}
+            />
             <div>
                 <label htmlFor="party-select" className="block text-sm font-medium text-gray-300 mb-1">選擇隊伍</label>
                 <select 

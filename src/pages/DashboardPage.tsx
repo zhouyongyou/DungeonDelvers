@@ -1,14 +1,16 @@
 // src/pages/DashboardPage.tsx (The Graph 改造版)
 
-import React, { useMemo } from 'react';
-import { useAccount, useReadContract, useReadContracts, useWriteContract } from 'wagmi';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useMemo } from 'react';
+import { useAccount, useReadContract, useReadContracts } from 'wagmi';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatEther } from 'viem';
 import { getContract, contracts } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import type { Page } from '../types/page';
-import { useTransactionStore } from '../stores/useTransactionStore';
 import { useAppToast } from '../hooks/useAppToast';
+import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';
+import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
+import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
 import { Icons } from '../components/ui/icons';
 import { bsc } from 'wagmi/chains';
 import { TownBulletin } from '../components/ui/TownBulletin';
@@ -190,13 +192,47 @@ const useTaxParams = () => {
 
 const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setActivePage }) => {
     const { address, chainId } = useAccount();
-    const { addTransaction } = useTransactionStore();
     const { showToast } = useAppToast();
+    const queryClient = useQueryClient();
+    
+    const [showProgressModal, setShowProgressModal] = useState(false);
     
     const { stats, isLoading: isLoadingStats, refetch: refetchStats } = useDashboardStats();
     const { taxParams, isLoadingTaxParams, dungeonCoreContract } = useTaxParams();
     
-    const { writeContractAsync, isPending: isWithdrawing } = useWriteContract();
+    // 交易進度 Hook - 提領功能
+    const { execute: executeWithdraw, progress: withdrawProgress, reset: resetWithdraw } = useTransactionWithProgress({
+        onSuccess: () => {
+            showToast('提領成功！$SoulShard 已轉入您的錢包', 'success');
+            // 刷新儀表板數據
+            refetchStats();
+            queryClient.invalidateQueries({ queryKey: ['dashboardSimpleStats'] });
+            setShowProgressModal(false);
+            confirmWithdrawUpdate();
+        },
+        onError: () => {
+            rollbackWithdrawUpdate();
+        },
+        successMessage: '提領成功！',
+        errorMessage: '提領失敗',
+    });
+    
+    // 樂觀更新 - 提領
+    const { optimisticUpdate: optimisticWithdrawUpdate, confirmUpdate: confirmWithdrawUpdate, rollback: rollbackWithdrawUpdate } = useOptimisticUpdate({
+        queryKey: ['dashboardSimpleStats'],
+        updateFn: (oldData: any) => {
+            if (!oldData) return oldData;
+            
+            // 立即將可提領餘額設為 0
+            return {
+                ...oldData,
+                vault: {
+                    ...oldData.vault,
+                    balance: '0'
+                }
+            };
+        }
+    });
 
     const withdrawableBalance = stats.withdrawableBalance;
 
@@ -251,15 +287,25 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
         if (!chainId || chainId !== bsc.id) return;
         const playerVaultContract = getContract(chainId, 'playerVault');
         if (!playerVaultContract || withdrawableBalance === 0n) return;
+        
+        setShowProgressModal(true);
+        resetWithdraw();
+        
+        // 立即執行樂觀更新
+        optimisticWithdrawUpdate();
+        
         try {
-                        const hash = await writeContractAsync({ address: playerVaultContract?.address as `0x${string}`,
-        abi: playerVaultContract?.abi,
-        functionName: 'withdraw',
-        args: [withdrawableBalance] });
-            addTransaction({ hash, description: '從金庫提領 $SoulShard' });
-        } catch(e: unknown) { 
-            const error = e as { shortMessage?: string };
-            showToast(error.shortMessage || "提領失敗", "error"); 
+            await executeWithdraw(
+                {
+                    address: playerVaultContract.address as `0x${string}`,
+                    abi: playerVaultContract.abi,
+                    functionName: 'withdraw',
+                    args: [withdrawableBalance]
+                },
+                `從金庫提領 ${parseFloat(formatEther(withdrawableBalance)).toFixed(4)} $SoulShard`
+            );
+        } catch (error) {
+            // 錯誤已在 hook 中處理
         }
     };
 
@@ -271,6 +317,13 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
 
     return (
         <section className="space-y-8">
+            <TransactionProgressModal
+                isOpen={showProgressModal}
+                onClose={() => setShowProgressModal(false)}
+                progress={withdrawProgress}
+                title="提領進度"
+            />
+            
             <h2 className="page-title">玩家總覽中心</h2>
             
             <LocalErrorBoundary 
@@ -299,7 +352,12 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                             <h3 className="section-title text-xl">我的金庫</h3>
                             <p className="text-3xl font-bold text-teal-400">{parseFloat(formatEther(withdrawableBalance)).toFixed(4)}</p>
                             <p className="text-xs text-red-400">當前預估稅率: {currentTaxRate.toFixed(2)}%</p>
-                            <ActionButton onClick={handleWithdraw} isLoading={isWithdrawing} disabled={withdrawableBalance === 0n} className="mt-2 h-10 w-full">
+                            <ActionButton 
+                                onClick={handleWithdraw} 
+                                isLoading={withdrawProgress.status !== 'idle' && withdrawProgress.status !== 'error'} 
+                                disabled={withdrawableBalance === 0n} 
+                                className="mt-2 h-10 w-full"
+                            >
                                 全部提領
                             </ActionButton>
                         </div>

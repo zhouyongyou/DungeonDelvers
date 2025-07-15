@@ -22,6 +22,7 @@ import DungeonManager from '../components/admin/DungeonManager';
 import AltarRuleManager from '../components/admin/AltarRuleManager';
 import FundsWithdrawal from '../components/admin/FundsWithdrawal';
 import VipSettingsManager from '../components/admin/VipSettingsManager';
+import GlobalRewardSettings from '../components/admin/GlobalRewardSettings';
 
 type SupportedChainId = typeof bsc.id;
 type Address = `0x${string}`;
@@ -284,6 +285,10 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
             ))}
           </div>
         </div>
+      </AdminSection>
+
+      <AdminSection title="全局獎勵設定">
+        <GlobalRewardSettings chainId={chainId} />
       </AdminSection>
 
       <AdminSection title="地城參數管理">

@@ -5,6 +5,9 @@ import { useAccount, useWriteContract, useBalance, usePublicClient, useReadContr
 import { formatEther, maxUint256, type Abi, decodeEventLog } from 'viem';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppToast } from '../hooks/useAppToast';
+import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';
+import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
+import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
 import { getContract } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -142,18 +145,124 @@ const MintResultModal: React.FC<{ nft: AnyNft | null; onClose: () => void }> = (
 const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: typeof bsc.id }> = ({ type, options, chainId }) => {
     const { address } = useAccount();
     const { showToast } = useAppToast();
-    const { addTransaction } = useTransactionStore();
     const publicClient = usePublicClient();
     const queryClient = useQueryClient();
     
     const [quantity, setQuantity] = useState(1);
     const [paymentSource, setPaymentSource] = useState<PaymentSource>('wallet');
     const [mintingResult, setMintingResult] = useState<AnyNft | null>(null);
+    const [showProgressModal, setShowProgressModal] = useState(false);
 
     const debouncedQuantity = useDebounce(quantity, 300);
     
     const { requiredAmount, balance, needsApproval, isLoading, isError, error, platformFee, refetchAllowance } = useMintLogic(type, debouncedQuantity, paymentSource, chainId);
-    const { writeContractAsync, isPending: isMinting } = useWriteContract();
+    
+    // 樂觀更新 Hook
+    const { optimisticUpdate, confirmUpdate, rollback } = useOptimisticUpdate({
+        queryKey: ['ownedNfts', address, chainId],
+        updateFn: (oldData: any) => {
+            if (!oldData) return oldData;
+            
+            // 創建臨時 NFT 數據
+            const tempNft: AnyNft = {
+                id: BigInt(Date.now()), // 臨時 ID
+                type,
+                contractAddress: contractConfig?.address || '',
+                name: `載入中... ${type === 'hero' ? '英雄' : '聖物'}`,
+                description: '正在鏈上確認...',
+                image: '',
+                attributes: [],
+                ...(type === 'hero' ? { power: 0, rarity: 0 } : { capacity: 0, rarity: 0 })
+            };
+            
+            // 更新對應的 NFT 列表
+            return {
+                ...oldData,
+                [type === 'hero' ? 'heros' : 'relics']: [
+                    ...(oldData[type === 'hero' ? 'heros' : 'relics'] || []),
+                    tempNft
+                ]
+            };
+        }
+    });
+    
+    // 使用新的交易進度 Hook
+    const { execute: executeApprove, progress: approveProgress, reset: resetApprove } = useTransactionWithProgress({
+        onSuccess: () => {
+            refetchAllowance();
+            setShowProgressModal(false);
+        },
+        successMessage: '授權成功！',
+        errorMessage: '授權失敗',
+    });
+    
+    const { execute: executeMint, progress: mintProgress, reset: resetMint } = useTransactionWithProgress({
+        onSuccess: async (receipt) => {
+            // 確認樂觀更新
+            confirmUpdate();
+            // 處理鑄造成功邏輯
+            const mintEventName = type === 'hero' ? 'HeroMinted' : 'RelicMinted';
+            const mintLog = receipt.logs.find((log: any) => {
+                try {
+                    return decodeEventLog({ abi: contractConfig.abi, ...log }).eventName === mintEventName;
+                } catch {
+                    return false;
+                }
+            });
+            
+            if (mintLog && contractConfig) {
+                const decodedLog = decodeEventLog({ abi: contractConfig.abi, ...mintLog });
+                const tokenId = (decodedLog.args as { tokenId?: bigint }).tokenId;
+                
+                if (tokenId) {
+                    const tokenUri = await publicClient?.readContract({
+                        address: contractConfig.address,
+                        abi: contractConfig.abi,
+                        functionName: 'tokenURI',
+                        args: [tokenId]
+                    }) as string;
+
+                    const metadata = await fetchMetadata(tokenUri, tokenId.toString(), contractConfig.address);
+                    const findAttr = (trait: string, defaultValue: string | number = 0) => 
+                        metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
+                    
+                    let nftData: AnyNft;
+                    if (type === 'hero') {
+                        nftData = {
+                            ...metadata,
+                            id: tokenId,
+                            type,
+                            contractAddress: contractConfig.address,
+                            power: Number(findAttr('Power')),
+                            rarity: Number(findAttr('Rarity'))
+                        };
+                    } else {
+                        nftData = {
+                            ...metadata,
+                            id: tokenId,
+                            type,
+                            contractAddress: contractConfig.address,
+                            capacity: Number(findAttr('Capacity')),
+                            rarity: Number(findAttr('Rarity'))
+                        };
+                    }
+                    setMintingResult(nftData);
+                    queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
+                }
+            }
+            setShowProgressModal(false);
+        },
+        onError: () => {
+            // 回滾樂觀更新
+            rollback();
+        },
+        successMessage: `鑄造 ${quantity} 個${title}成功！`,
+        errorMessage: '鑄造失敗',
+    });
+    
+    // 決定使用哪個進度狀態
+    const currentProgress = needsApproval && paymentSource === 'wallet' ? approveProgress : mintProgress;
+    const isProcessing = currentProgress.status !== 'idle' && currentProgress.status !== 'error';
     
     const title = type === 'hero' ? '英雄' : '聖物';
     const contractConfig = getContract(chainId, type);
@@ -165,15 +274,22 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
 
     const handleApprove = async () => {
         if (!soulShardContract || !contractConfig) return;
+        
+        setShowProgressModal(true);
+        resetApprove();
+        
         try {
-            const hash = await writeContractAsync({ address: soulShardContract.address, abi: soulShardContract.abi, functionName: 'approve', args: [contractConfig.address, maxUint256] });
-            addTransaction({ hash, description: `批准 ${title} 合約使用代幣` });
-            await publicClient?.waitForTransactionReceipt({ hash });
-            showToast('授權成功！', 'success');
-            refetchAllowance();
-        } catch (e: unknown) { 
-            const error = e as { message?: string; shortMessage?: string };
-            if (!error.message?.includes('User rejected the request')) showToast(error.shortMessage || "授權失敗", "error"); 
+            await executeApprove(
+                {
+                    address: soulShardContract.address,
+                    abi: soulShardContract.abi,
+                    functionName: 'approve',
+                    args: [contractConfig.address, maxUint256]
+                },
+                `批准 ${title} 合約使用代幣`
+            );
+        } catch (error) {
+            // 錯誤已在 hook 中處理
         }
     };
 
@@ -183,51 +299,43 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
         if (balance < requiredAmount) return showToast(`${paymentSource === 'wallet' ? '錢包' : '金庫'}餘額不足`, 'error');
         if (paymentSource === 'wallet' && needsApproval) return showToast(`請先完成授權`, 'error');
 
+        setShowProgressModal(true);
+        resetMint();
+        
+        // 立即執行樂觀更新
+        optimisticUpdate();
+        
         try {
-            const hash = await writeContractAsync({ address: contractConfig.address, abi: contractConfig.abi as Abi, functionName: paymentSource === 'wallet' ? 'mintFromWallet' : 'mintFromVault', args: [BigInt(quantity)], value: (typeof platformFee === 'bigint' ? platformFee : 0n) * BigInt(quantity) });
-            addTransaction({ hash, description: `從${paymentSource === 'wallet' ? '錢包' : '金庫'}鑄造 ${quantity} 個${title}` });
-            const receipt = await publicClient.waitForTransactionReceipt({ hash });
-            
-            const mintEventName = type === 'hero' ? 'HeroMinted' : 'RelicMinted';
-            const mintLog = receipt.logs.find(log => { try { return decodeEventLog({ abi: contractConfig.abi, ...log }).eventName === mintEventName; } catch { return false; } });
-            
-            if (mintLog) {
-                const decodedLog = decodeEventLog({ abi: contractConfig.abi, ...mintLog });
-                const tokenId = (decodedLog.args as { tokenId?: bigint }).tokenId;
-                
-                if (tokenId) {
-                    const tokenUri = await publicClient.readContract({ 
-                        address: contractConfig.address, 
-                        abi: contractConfig.abi, 
-                        functionName: 'tokenURI', 
-                        args: [tokenId] 
-                    }) as string;
-
-                    const metadata = await fetchMetadata(tokenUri, tokenId.toString(), contractConfig.address);
-                    const findAttr = (trait: string, defaultValue: string | number = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
-                    
-                    let nftData: AnyNft;
-                    if(type === 'hero') nftData = { ...metadata, id: tokenId, type, contractAddress: contractConfig.address, power: Number(findAttr('Power')), rarity: Number(findAttr('Rarity')) };
-                    else nftData = { ...metadata, id: tokenId, type, contractAddress: contractConfig.address, capacity: Number(findAttr('Capacity')), rarity: Number(findAttr('Rarity')) };
-                    setMintingResult(nftData);
-                    queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
-                }
-            }
-        } catch (error: unknown) { 
-            const e = error as { message?: string; shortMessage?: string };
-            if (!e.message?.includes('User rejected')) showToast(e.shortMessage || "鑄造失敗", "error"); 
+            await executeMint(
+                {
+                    address: contractConfig.address,
+                    abi: contractConfig.abi as Abi,
+                    functionName: paymentSource === 'wallet' ? 'mintFromWallet' : 'mintFromVault',
+                    args: [BigInt(quantity)],
+                    value: (typeof platformFee === 'bigint' ? platformFee : 0n) * BigInt(quantity)
+                },
+                `從${paymentSource === 'wallet' ? '錢包' : '金庫'}鑄造 ${quantity} 個${title}`
+            );
+        } catch (error) {
+            // 錯誤已在 hook 中處理
         }
     };
     
-    const isButtonDisabled = !address || isLoading || isError || balance < requiredAmount || requiredAmount === 0n;
+    const isButtonDisabled = !address || isLoading || isError || balance < requiredAmount || requiredAmount === 0n || isProcessing;
 
     const actionButton = (paymentSource === 'wallet' && needsApproval)
-        ? <ActionButton onClick={handleApprove} isLoading={isMinting} className="w-48 h-12">授權</ActionButton>
-        : <ActionButton onClick={handleMint} isLoading={isMinting || isLoading} disabled={isButtonDisabled} className="w-48 h-12">{isMinting ? '請在錢包確認' : (address ? `招募 ${quantity} 個` : '請先連接錢包')}</ActionButton>;
+        ? <ActionButton onClick={handleApprove} isLoading={isProcessing} className="w-48 h-12">授權</ActionButton>
+        : <ActionButton onClick={handleMint} isLoading={isProcessing || isLoading} disabled={isButtonDisabled} className="w-48 h-12">{isProcessing ? '處理中...' : (address ? `招募 ${quantity} 個` : '請先連接錢包')}</ActionButton>;
 
     return (
         <div className="card-bg p-6 rounded-xl shadow-lg flex flex-col items-center h-full">
             <MintResultModal nft={mintingResult} onClose={() => setMintingResult(null)} />
+            <TransactionProgressModal
+                isOpen={showProgressModal}
+                onClose={() => setShowProgressModal(false)}
+                progress={currentProgress}
+                title={needsApproval && paymentSource === 'wallet' ? '授權進度' : '鑄造進度'}
+            />
             <div className="w-full h-48 bg-gray-800/50 rounded-lg mb-4 flex items-center justify-center relative overflow-hidden"><p className="text-6xl opacity-80">{type === 'hero' ? '⚔️' : '💎'}</p></div>
             <h3 className="section-title">招募{title}</h3>
             <div className="flex items-center justify-center gap-2 my-4">{options.map(q => <button key={q} onClick={() => setQuantity(q)} className={`w-12 h-12 rounded-full font-bold text-lg transition-all flex items-center justify-center border-2 ${quantity === q ? 'bg-indigo-500 text-white border-transparent scale-110' : 'bg-gray-700 hover:bg-gray-600 border-gray-600'}`}>{q}</button>)}</div>

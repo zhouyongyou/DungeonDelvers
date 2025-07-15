@@ -17,7 +17,7 @@
 # 必要的環境變數
 VITE_WALLETCONNECT_PROJECT_ID=你的WalletConnect項目ID
 VITE_ALCHEMY_KEY=你的Alchemy API金鑰（可選）
-VITE_GRAPHQL_URL=https://api.studio.thegraph.com/query/88982/dungeondelvers/v0.0.19
+VITE_GRAPHQL_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1
 VITE_SERVER_URL=https://dungeondelvers-backend.onrender.com
 ```
 

@@ -59,11 +59,54 @@ const getGradientDefs = (primaryColor: string, accentColor: string) => `
     </pattern>
 </defs>`;
 
+// ============= 戰力範圍計算 =============
+
+const getPowerRange = (rarity: number): { min: number; max: number } => {
+    // 基於稀有度的戰力範圍 [Common, Uncommon, Rare, Epic, Legendary]
+    const ranges = [
+        { min: 0, max: 0 },     // 0 - 不存在
+        { min: 25, max: 40 },   // 1 - Common (基礎值 32)
+        { min: 65, max: 85 },   // 2 - Uncommon (基礎值 75)
+        { min: 110, max: 140 }, // 3 - Rare (基礎值 125)
+        { min: 160, max: 190 }, // 4 - Epic (基礎值 175)
+        { min: 210, max: 245 }  // 5 - Legendary (基礎值 227)
+    ];
+    return ranges[Math.min(rarity, 5)] || ranges[0];
+};
+
+// ============= Emoji 選擇 =============
+
+const getHeroEmojis = (rarity: number): { main: string; secondary: string } => {
+    const emojis = [
+        { main: '⚔️', secondary: '🛡️' },      // 0/1 - Common
+        { main: '⚔️', secondary: '🛡️' },      // 1 - Common
+        { main: '🗡️', secondary: '🔰' },      // 2 - Uncommon
+        { main: '🏹', secondary: '💎' },      // 3 - Rare
+        { main: '🔥', secondary: '⭐' },      // 4 - Epic
+        { main: '⚡', secondary: '👑' }       // 5 - Legendary
+    ];
+    return emojis[Math.min(rarity, 5)] || emojis[0];
+};
+
+const getRelicEmojis = (rarity: number): { main: string; secondary: string } => {
+    const emojis = [
+        { main: '💍', secondary: '📿' },      // 0/1 - Common
+        { main: '💍', secondary: '📿' },      // 1 - Common
+        { main: '🔮', secondary: '🌟' },      // 2 - Uncommon
+        { main: '💠', secondary: '✨' },      // 3 - Rare
+        { main: '🌈', secondary: '🌠' },      // 4 - Epic
+        { main: '🪐', secondary: '🌌' }       // 5 - Legendary
+    ];
+    return emojis[Math.min(rarity, 5)] || emojis[0];
+};
+
 // ============= Hero SVG 生成器 =============
 
 export function generateHeroSVG(hero: HeroNft): string {
     const rarityValue = typeof hero.rarity === 'string' ? parseInt(hero.rarity) : hero.rarity;
     const rarityColor = getRarityColor(rarityValue);
+    const powerRange = getPowerRange(rarityValue);
+    const emojis = getHeroEmojis(rarityValue);
     
     return `${getSVGHeader()}
         ${getGlobalStyles()}
@@ -80,15 +123,17 @@ export function generateHeroSVG(hero: HeroNft): string {
         <!-- 標題區 -->
         <text x="200" y="40" text-anchor="middle" class="title">HERO #${hero.id}</text>
         
-        <!-- 中央圖像 -->
-        <g transform="translate(200, 180)" class="float">
-            <text text-anchor="middle" style="font-size: 140px;">⚔️</text>
+        <!-- 中央雙 Emoji -->
+        <g transform="translate(200, 160)" class="float">
+            <text x="-50" y="0" text-anchor="middle" style="font-size: 80px;">${emojis.main}</text>
+            <text x="50" y="0" text-anchor="middle" style="font-size: 80px;">${emojis.secondary}</text>
         </g>
         
-        <!-- 主要屬性 -->
-        <rect x="50" y="280" width="300" height="60" rx="10" fill="${rarityColor}" opacity="0.1"/>
-        <text x="200" y="305" text-anchor="middle" class="stat-label">POWER</text>
-        <text x="200" y="330" text-anchor="middle" class="stat-value">${hero.power}</text>
+        <!-- 主要屬性 - 戰力範圍 -->
+        <rect x="50" y="260" width="300" height="80" rx="10" fill="${rarityColor}" opacity="0.1"/>
+        <text x="200" y="285" text-anchor="middle" class="stat-label">POWER RANGE</text>
+        <text x="200" y="315" text-anchor="middle" class="stat-value">${powerRange.min} - ${powerRange.max}</text>
+        <text x="200" y="335" text-anchor="middle" style="font: 12px 'Cinzel', serif; fill: #9ca3af;">Current: ${hero.power}</text>
         
         <!-- 稀有度 -->
         <text x="200" y="370" text-anchor="middle" class="rarity">${getRarityStars(rarityValue)}</text>
@@ -100,6 +145,7 @@ export function generateHeroSVG(hero: HeroNft): string {
 export function generateRelicSVG(relic: RelicNft): string {
     const rarityValue = typeof relic.rarity === 'string' ? parseInt(relic.rarity) : relic.rarity;
     const rarityColor = getRarityColor(rarityValue);
+    const emojis = getRelicEmojis(rarityValue);
     
     return `${getSVGHeader()}
         ${getGlobalStyles()}
@@ -116,15 +162,17 @@ export function generateRelicSVG(relic: RelicNft): string {
         <!-- 標題區 -->
         <text x="200" y="40" text-anchor="middle" class="title">RELIC #${relic.id}</text>
         
-        <!-- 中央圖像 -->
-        <g transform="translate(200, 180)" class="float">
-            <text text-anchor="middle" style="font-size: 140px;">💎</text>
+        <!-- 中央雙 Emoji -->
+        <g transform="translate(200, 160)" class="float">
+            <text x="-50" y="0" text-anchor="middle" style="font-size: 80px;">${emojis.main}</text>
+            <text x="50" y="0" text-anchor="middle" style="font-size: 80px;">${emojis.secondary}</text>
         </g>
         
-        <!-- 主要屬性 -->
-        <rect x="50" y="280" width="300" height="60" rx="10" fill="${rarityColor}" opacity="0.1"/>
-        <text x="200" y="305" text-anchor="middle" class="stat-label">CAPACITY</text>
-        <text x="200" y="330" text-anchor="middle" class="stat-value">${relic.capacity}</text>
+        <!-- 主要屬性 - 容量 -->
+        <rect x="50" y="260" width="300" height="80" rx="10" fill="${rarityColor}" opacity="0.1"/>
+        <text x="200" y="285" text-anchor="middle" class="stat-label">CAPACITY</text>
+        <text x="200" y="315" text-anchor="middle" class="stat-value">${relic.capacity}</text>
+        <text x="200" y="335" text-anchor="middle" style="font: 12px 'Cinzel', serif; fill: #9ca3af;">Heroes Limit</text>
         
         <!-- 稀有度 -->
         <text x="200" y="370" text-anchor="middle" class="rarity">${getRarityStars(rarityValue)}</text>

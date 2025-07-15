@@ -9,6 +9,7 @@ import { nftMetadataPersistentCache } from '../cache/persistentCache';
 import { nftMetadataBatcher } from '../utils/requestBatcher';
 import { getQueryConfig, queryKeys } from '../config/queryConfig';
 import { dedupeNFTMetadata, dedupeGraphQLQuery } from '../utils/requestDeduper';
+import { validateNftMetadata } from '../utils/validateMetadata';
 import type { 
     AllNftCollections, 
     BaseNft, 
@@ -191,10 +192,29 @@ export async function fetchMetadata(
         
         const loadTime = Date.now() - startTime;
 
-        // 🔥 成功获取后立即缓存
-        await nftMetadataPersistentCache.set(cacheKey, metadata);
+        // 驗證 metadata 格式
+        const validationResult = validateNftMetadata(metadata, nftType as 'hero' | 'relic' | 'party' | 'vip');
         
-        return { ...metadata, source: 'fallback' };
+        if (!validationResult.isValid) {
+            logger.error('Metadata 格式驗證失敗', {
+                tokenId,
+                nftType,
+                errors: validationResult.errors,
+                metadata
+            });
+            // 使用 fallback 數據
+            const fallbackData = generateFallbackMetadata(nftType, tokenId);
+            await nftMetadataPersistentCache.set(cacheKey, fallbackData);
+            return { ...fallbackData, source: 'fallback-validation-failed' };
+        }
+        
+        // 使用清理後的 metadata
+        const sanitizedMetadata = validationResult.sanitizedMetadata || metadata;
+        
+        // 🔥 成功获取后立即缓存
+        await nftMetadataPersistentCache.set(cacheKey, sanitizedMetadata);
+        
+        return { ...sanitizedMetadata, source: 'fallback' };
     } catch (error) {
         const loadTime = Date.now() - Date.now();
         logger.warn(`${nftType} #${tokenId} 解析元數據時出錯 (嘗試 ${retryCount + 1}/${maxRetries + 1}, ${loadTime}ms):`, error);

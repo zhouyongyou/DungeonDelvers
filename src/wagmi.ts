@@ -1,13 +1,13 @@
-// src/wagmi.ts (簡化版)
+// src/wagmi.ts (智能 RPC 版本)
 
-import { http, createConfig } from 'wagmi';
+import { createConfig } from 'wagmi';
 import { bsc } from 'wagmi/chains';
-import { ENV } from './config/env';
+import { createSmartRpcTransport } from './config/smartRpcTransport';
 
-// 簡化的 Wagmi 設定
+// 使用智能 RPC 傳輸層
 export const wagmiConfig = createConfig({
   chains: [bsc],
   transports: {
-    [bsc.id]: http(ENV.BSC_RPC),
+    [bsc.id]: createSmartRpcTransport(),
   },
 });

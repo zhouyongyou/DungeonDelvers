@@ -42,6 +42,20 @@ const AlertTriangleIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+// ★ 新增：勾選圖示
+const CheckIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+);
+
+// ★ 新增：叉叉圖示
+const XIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>
+);
 
 const HeroIcon: React.FC<{ className?: string }> = ({ className }) => <span className={className}>🦸</span>;
 const RelicIcon: React.FC<{ className?: string }> = ({ className }) => <span className={className}>💎</span>;
@@ -70,4 +84,6 @@ export const Icons = {
     Twitter: TwitterIcon, // ★ 新增
     Copy: CopyIcon,       // ★ 新增
     AlertTriangle: AlertTriangleIcon, // ★ 新增：警告三角形圖示
+    Check: CheckIcon,     // ★ 新增：勾選圖示
+    X: XIcon,            // ★ 新增：叉叉圖示
 };

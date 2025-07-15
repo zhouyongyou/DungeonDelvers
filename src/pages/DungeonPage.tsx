@@ -1,7 +1,7 @@
 // src/pages/DungeonPage.tsx (The Graph 改造版)
 
 import React, { useState, useMemo } from 'react';
-import { useAccount, useReadContract, useReadContracts, useWriteContract } from 'wagmi';
+import { useAccount, useReadContract, useReadContracts } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatEther } from 'viem';
 // 不再需要從 nfts.ts 獲取數據
@@ -12,6 +12,9 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ActionButton } from '../components/ui/ActionButton';
 import { useAppToast } from '../hooks/useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
+import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';
+import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
+import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
 import type { Page } from '../types/page';
 import type { PartyNft } from '../types/nft';
 import { Modal } from '../components/ui/Modal';
@@ -257,18 +260,94 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
     const { setLoading } = useGlobalLoading();
     const { chainId } = useAccount();
     const { showToast } = useAppToast();
-    const { addTransaction, transactions } = useTransactionStore();
+    const { transactions } = useTransactionStore();
     const queryClient = useQueryClient();
 
     const [isProvisionModalOpen, setIsProvisionModalOpen] = useState(false);
     const [selectedPartyForProvision, setSelectedPartyForProvision] = useState<bigint | null>(null);
+    const [showProgressModal, setShowProgressModal] = useState(false);
+    const [currentAction, setCurrentAction] = useState<'expedition' | 'rest'>('expedition');
 
     // ✅ 將所有Hooks調用移到組件頂部，在任何條件語句之前
     const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
-    const { writeContractAsync, isPending: isTxPending } = useWriteContract();
 
     // ★ 核心改造：使用新的 Hook 獲取隊伍數據
     const { data: parties, isLoading: isLoadingParties, refetch: refetchParties, error: partiesError } = usePlayerParties();
+
+    // 交易進度 Hooks
+    const { execute: executeExpedition, progress: expeditionProgress, reset: resetExpedition } = useTransactionWithProgress({
+        onSuccess: () => {
+            showToast('遠征請求已發送！隊伍正在前往地下城...', 'success');
+            queryClient.invalidateQueries({ queryKey: ['playerParties'] });
+            setTimeout(() => refetchParties(), 3000);
+            setShowProgressModal(false);
+            confirmExpeditionUpdate();
+        },
+        onError: () => {
+            rollbackExpeditionUpdate();
+        },
+        successMessage: '遠征開始成功！',
+        errorMessage: '遠征請求失敗',
+    });
+
+    const { execute: executeRest, progress: restProgress, reset: resetRest } = useTransactionWithProgress({
+        onSuccess: () => {
+            showToast('隊伍開始休息，疲勞度正在恢復...', 'success');
+            queryClient.invalidateQueries({ queryKey: ['playerParties'] });
+            setTimeout(() => refetchParties(), 3000);
+            setShowProgressModal(false);
+            confirmRestUpdate();
+        },
+        onError: () => {
+            rollbackRestUpdate();
+        },
+        successMessage: '休息成功！',
+        errorMessage: '休息失敗',
+    });
+
+    // 樂觀更新 - 遠征
+    const { optimisticUpdate: optimisticExpeditionUpdate, confirmUpdate: confirmExpeditionUpdate, rollback: rollbackExpeditionUpdate } = useOptimisticUpdate({
+        queryKey: ['playerParties'],
+        updateFn: (oldData: any) => {
+            if (!oldData || !currentPartyId) return oldData;
+            
+            // 更新隊伍狀態為遠征中
+            return oldData.map((party: any) => {
+                if (party.id === currentPartyId) {
+                    return {
+                        ...party,
+                        cooldownEndsAt: BigInt(Math.floor(Date.now() / 1000) + 300), // 假設5分鐘冷卻
+                        provisionsRemaining: party.provisionsRemaining - 1n,
+                    };
+                }
+                return party;
+            });
+        }
+    });
+
+    // 樂觀更新 - 休息
+    const { optimisticUpdate: optimisticRestUpdate, confirmUpdate: confirmRestUpdate, rollback: rollbackRestUpdate } = useOptimisticUpdate({
+        queryKey: ['playerParties'],
+        updateFn: (oldData: any) => {
+            if (!oldData || !currentPartyId) return oldData;
+            
+            // 更新隊伍疲勞度
+            return oldData.map((party: any) => {
+                if (party.id === currentPartyId) {
+                    return {
+                        ...party,
+                        fatigueLevel: 0, // 休息後疲勞度歸零
+                    };
+                }
+                return party;
+            });
+        }
+    });
+
+    const [currentPartyId, setCurrentPartyId] = useState<bigint | null>(null);
+    
+    const currentProgress = currentAction === 'expedition' ? expeditionProgress : restProgress;
+    const isTxPending = currentProgress.status !== 'idle' && currentProgress.status !== 'error';
 
     // 獲取地城資訊的邏輯保持不變，因為這是全域數據
     const dungeonStorageContract = getContract(bsc.id, 'dungeonStorage');
@@ -303,57 +382,54 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
 
     const handleStartExpedition = async (partyId: bigint, dungeonId: bigint, fee: bigint) => {
         if (!dungeonMasterContract) return;
-        setLoading(true, `正在派遣隊伍 #${partyId} 遠征...`);
+        
+        setCurrentPartyId(partyId);
+        setCurrentAction('expedition');
+        setShowProgressModal(true);
+        resetExpedition();
+        
+        // 立即執行樂觀更新
+        optimisticExpeditionUpdate();
+        
         try {
-                        const hash = await writeContractAsync({ address: dungeonMasterContract?.address as `0x${string}`,
-        abi: dungeonMasterContract?.abi,
-        functionName: 'requestExpedition',
-        args: [partyId, dungeonId], value: fee });
-            addTransaction({ hash, description: `隊伍 #${partyId.toString()} 遠征地城 #${dungeonId}` });
-            
-            // 🔥 立即失效相關快取，強制重新獲取資料
-            queryClient.invalidateQueries({ queryKey: ['playerParties'] });
-            
-            // 延遲重新獲取，等待區塊鏈確認
-            setTimeout(() => {
-                refetchParties();
-            }, 3000);
-            
-        } catch (e: unknown) { 
-            const error = e as { message?: string; shortMessage?: string };
-            if (!error.message?.includes('User rejected the request')) { 
-                showToast(error.shortMessage || "遠征請求失敗", "error"); 
-            } 
-        } finally {
-            setLoading(false);
+            await executeExpedition(
+                {
+                    address: dungeonMasterContract.address as `0x${string}`,
+                    abi: dungeonMasterContract.abi,
+                    functionName: 'requestExpedition',
+                    args: [partyId, dungeonId],
+                    value: fee
+                },
+                `隊伍 #${partyId.toString()} 遠征地城 #${dungeonId}`
+            );
+        } catch (error) {
+            // 錯誤已在 hook 中處理
         }
     };
 
     const handleRest = async (partyId: bigint) => {
         if (!dungeonMasterContract) return;
-        setLoading(true, `隊伍 #${partyId} 正在休息...`);
+        
+        setCurrentPartyId(partyId);
+        setCurrentAction('rest');
+        setShowProgressModal(true);
+        resetRest();
+        
+        // 立即執行樂觀更新
+        optimisticRestUpdate();
+        
         try {
-                        const hash = await writeContractAsync({ address: dungeonMasterContract?.address as `0x${string}`,
-        abi: dungeonMasterContract?.abi,
-        functionName: 'restParty',
-        args: [partyId] });
-            addTransaction({ hash, description: `隊伍 #${partyId.toString()} 正在休息` });
-            
-            // 🔥 立即失效相關快取，強制重新獲取資料
-            queryClient.invalidateQueries({ queryKey: ['playerParties'] });
-            
-            // 延遲重新獲取，等待區塊鏈確認
-            setTimeout(() => {
-                refetchParties();
-            }, 3000);
-            
-        } catch (e: unknown) { 
-            const error = e as { message?: string; shortMessage?: string };
-            if (!error.message?.includes('User rejected the request')) { 
-                showToast(error.shortMessage || "休息失敗", "error"); 
-            } 
-        } finally {
-            setLoading(false);
+            await executeRest(
+                {
+                    address: dungeonMasterContract.address as `0x${string}`,
+                    abi: dungeonMasterContract.abi,
+                    functionName: 'restParty',
+                    args: [partyId]
+                },
+                `隊伍 #${partyId.toString()} 正在休息`
+            );
+        } catch (error) {
+            // 錯誤已在 hook 中處理
         }
     };
 
@@ -381,6 +457,12 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
 
     return (
         <section className="space-y-8">
+            <TransactionProgressModal
+                isOpen={showProgressModal}
+                onClose={() => setShowProgressModal(false)}
+                progress={currentProgress}
+                title={currentAction === 'expedition' ? '遠征進度' : '休息進度'}
+            />
             <Modal isOpen={isProvisionModalOpen} onClose={() => setIsProvisionModalOpen(false)} title="購買遠征儲備" onConfirm={() => {}} confirmText="關閉">
                 <ProvisionsPage preselectedPartyId={selectedPartyForProvision} onPurchaseSuccess={() => setIsProvisionModalOpen(false)} />
             </Modal>

@@ -83,6 +83,11 @@ const ReferralPage: React.FC = () => {
     const playerVaultContract = getContract(chainId === bsc.id ? chainId : bsc.id, 'playerVault');
     const { writeContractAsync, isPending: isSettingReferrer } = useWriteContract();
 
+    // 判斷是否已有邀請人 - 移到 useEffect 之前
+    const hasReferrer = useMemo(() => {
+        return currentReferrer && currentReferrer !== '0x0000000000000000000000000000000000000000';
+    }, [currentReferrer]);
+
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
         const ref = urlParams.get('ref');
@@ -130,10 +135,6 @@ const ReferralPage: React.FC = () => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
-
-    const hasReferrer = useMemo(() => {
-        return currentReferrer && currentReferrer !== '0x0000000000000000000000000000000000000000';
-    }, [currentReferrer]);
     
     // 僅支援主網
     if (chainId && chainId !== bsc.id) {
@@ -286,7 +287,7 @@ const ReferralPage: React.FC = () => {
                                 </div>
                                 <ActionButton 
                                     onClick={handleSetReferrer} 
-                                    isLoading={isSettingReferrer} 
+                                    isLoading={setReferrerProgress.status !== 'idle' && setReferrerProgress.status !== 'error'} 
                                     disabled={!isAddress(referrerInput)} 
                                     className="w-full sm:w-auto flex-shrink-0"
                                 >
@@ -332,7 +333,7 @@ const ReferralPage: React.FC = () => {
                                     setShowConfirmModal(false);
                                     handleSetReferrer();
                                 }}
-                                isLoading={isSettingReferrer}
+                                isLoading={setReferrerProgress.status !== 'idle' && setReferrerProgress.status !== 'error'}
                                 className="flex-1"
                             >
                                 確認綁定

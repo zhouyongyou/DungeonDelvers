@@ -38,7 +38,7 @@ NFT合約 (3個):
 
 ### **服務端點配置**
 ```
-子圖 API: https://api.studio.thegraph.com/query/115633/dungeon-delvers/1.2.9
+子圖 API: https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1
 後端服務: https://dungeon-delvers-metadata-server.onrender.com
 前端生產: https://dungeondelvers.xyz
 開發環境: http://localhost:5173

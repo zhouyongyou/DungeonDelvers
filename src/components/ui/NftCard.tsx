@@ -7,8 +7,10 @@ import { bsc } from 'wagmi/chains';
 import type { AnyNft, HeroNft, RelicNft, PartyNft, VipNft } from '../../types/nft';
 import { getRarityChineseName, getRarityColor as getRarityColorUtil } from '../../utils/rarityConverter';
 import ImageWithFallback from './ImageWithFallback';
+import { LazyImage } from './LazyImage';
 import { NftSvgDisplay } from './NftSvgDisplay';
 import { useNftDisplayMode } from '../../hooks/useNftDisplayMode';
+import { useImageOptimization } from '../../hooks/useImageOptimization';
 
 interface NftCardProps {
   nft: AnyNft;
@@ -74,6 +76,7 @@ const NftCard: React.FC<NftCardProps> = memo(({
   className = '' 
 }) => {
   const { shouldUseSvg } = useNftDisplayMode();
+  const { optimizeImageUrl } = useImageOptimization();
   // 使用新的稀有度轉換工具
   const getRarityColor = (rarity: string | number | bigint) => {
     return getRarityColorUtil(rarity);
@@ -132,15 +135,13 @@ const NftCard: React.FC<NftCardProps> = memo(({
             showFallback={false}
           />
         ) : (
-          <ImageWithFallback
-          src={nft.image}
-          alt={nft.name}
-          className={baseImageClass}
-          nftType={nft.type}
-          rarity={rarity}
-          lazy={true}
-          showRetry={true}
-        />
+          <LazyImage
+            src={optimizeImageUrl(nft.image, { width: 400, height: 400 })}
+            alt={nft.name || `${nft.type} #${nft.id}`}
+            className={baseImageClass}
+            fallback={`/images/${nft.type}/${nft.type}-${rarity}.png`}
+            placeholder="skeleton"
+          />
         )}
         {/* 只在圖片上顯示最重要的資訊 */}
         {showDetails && (

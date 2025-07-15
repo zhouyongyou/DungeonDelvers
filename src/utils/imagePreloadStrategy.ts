@@ -1,0 +1,209 @@
+// src/utils/imagePreloadStrategy.ts - 圖片預加載策略
+
+import { logger } from './logger';
+
+interface PreloadConfig {
+  priority: 'high' | 'medium' | 'low';
+  maxConcurrent: number;
+}
+
+class ImagePreloadManager {
+  private preloadQueue: Map<string, PreloadConfig> = new Map();
+  private loadingImages: Set<string> = new Set();
+  private loadedImages: Set<string> = new Set();
+
+  /**
+   * 預加載單張圖片
+   */
+  async preloadImage(url: string, config: PreloadConfig = { priority: 'medium', maxConcurrent: 3 }): Promise<void> {
+    // 如果已經加載過，直接返回
+    if (this.loadedImages.has(url)) {
+      return Promise.resolve();
+    }
+
+    // 如果正在加載中，等待
+    if (this.loadingImages.has(url)) {
+      return this.waitForImage(url);
+    }
+
+    // 檢查並發限制
+    if (this.loadingImages.size >= config.maxConcurrent) {
+      this.preloadQueue.set(url, config);
+      return this.waitForSlot().then(() => this.preloadImage(url, config));
+    }
+
+    // 開始加載
+    this.loadingImages.add(url);
+    
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      
+      img.onload = () => {
+        this.loadingImages.delete(url);
+        this.loadedImages.add(url);
+        this.processQueue();
+        resolve();
+      };
+
+      img.onerror = () => {
+        this.loadingImages.delete(url);
+        this.processQueue();
+        reject(new Error(`Failed to preload image: ${url}`));
+      };
+
+      img.src = url;
+    });
+  }
+
+  /**
+   * 批量預加載圖片
+   */
+  async preloadImages(urls: string[], config?: PreloadConfig): Promise<void[]> {
+    const promises = urls.map(url => this.preloadImage(url, config).catch(err => {
+      logger.warn('圖片預加載失敗', { url, error: err });
+      return null;
+    }));
+
+    return Promise.all(promises);
+  }
+
+  /**
+   * 等待圖片加載完成
+   */
+  private waitForImage(url: string): Promise<void> {
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (!this.loadingImages.has(url)) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 100);
+    });
+  }
+
+  /**
+   * 等待加載槽位
+   */
+  private waitForSlot(): Promise<void> {
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (this.loadingImages.size < 3) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 100);
+    });
+  }
+
+  /**
+   * 處理預加載隊列
+   */
+  private processQueue() {
+    if (this.preloadQueue.size === 0) return;
+
+    // 按優先級排序
+    const sortedQueue = Array.from(this.preloadQueue.entries()).sort((a, b) => {
+      const priorityMap = { high: 3, medium: 2, low: 1 };
+      return priorityMap[b[1].priority] - priorityMap[a[1].priority];
+    });
+
+    // 取出最高優先級的圖片
+    const [url, config] = sortedQueue[0];
+    this.preloadQueue.delete(url);
+
+    // 開始加載
+    this.preloadImage(url, config);
+  }
+
+  /**
+   * 清除快取
+   */
+  clearCache() {
+    this.loadedImages.clear();
+  }
+
+  /**
+   * 獲取統計信息
+   */
+  getStats() {
+    return {
+      loaded: this.loadedImages.size,
+      loading: this.loadingImages.size,
+      queued: this.preloadQueue.size,
+    };
+  }
+}
+
+// 創建單例
+export const imagePreloadManager = new ImagePreloadManager();
+
+/**
+ * 預加載關鍵圖片
+ */
+export async function preloadCriticalImages() {
+  const criticalImages = [
+    // Logo 和品牌圖片
+    '/images/logo.png',
+    '/images/logo-dark.png',
+    
+    // 占位圖
+    '/images/placeholder.png',
+    '/images/hero/hero-placeholder.png',
+    '/images/relic/relic-placeholder.png',
+    
+    // 常用圖標
+    '/images/icons/hero.svg',
+    '/images/icons/relic.svg',
+    '/images/icons/party.svg',
+  ];
+
+  await imagePreloadManager.preloadImages(criticalImages, { priority: 'high', maxConcurrent: 5 });
+  logger.info('關鍵圖片預加載完成');
+}
+
+/**
+ * 預加載 NFT 圖片（按稀有度）
+ */
+export async function preloadNftImagesByRarity(type: 'hero' | 'relic', rarities: number[]) {
+  const urls = rarities.map(rarity => `/images/${type}/${type}-${rarity}.png`);
+  await imagePreloadManager.preloadImages(urls, { priority: 'medium', maxConcurrent: 3 });
+}
+
+/**
+ * 智能預加載策略
+ */
+export function setupSmartPreloading() {
+  // 監聽路由變化，預加載相關圖片
+  window.addEventListener('hashchange', () => {
+    const hash = window.location.hash;
+    
+    if (hash.includes('mint')) {
+      // 預加載鑄造頁面相關圖片
+      preloadNftImagesByRarity('hero', [1, 2, 3]);
+      preloadNftImagesByRarity('relic', [1, 2, 3]);
+    } else if (hash.includes('party')) {
+      // 預加載隊伍頁面相關圖片
+      preloadNftImagesByRarity('hero', [1, 2, 3, 4, 5]);
+      preloadNftImagesByRarity('relic', [1, 2, 3, 4, 5]);
+    }
+  });
+
+  // 使用 Intersection Observer 預加載即將進入視窗的圖片
+  if ('IntersectionObserver' in window) {
+    const imageObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const img = entry.target as HTMLImageElement;
+          const src = img.dataset.src;
+          if (src && !img.src) {
+            imagePreloadManager.preloadImage(src, { priority: 'low', maxConcurrent: 2 });
+          }
+        }
+      });
+    }, {
+      rootMargin: '50px',
+    });
+
+    // 可以在這裡添加需要觀察的圖片元素
+  }
+}

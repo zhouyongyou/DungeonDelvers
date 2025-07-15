@@ -9,8 +9,8 @@ export const ENV = {
   // API 相關 - 只保留一個 GraphQL URL
   THE_GRAPH_API_URL: import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL,
   
-  // RPC 端點 - 只保留一個主要 RPC
-  BSC_RPC: import.meta.env.VITE_ALCHEMY_BSC_MAINNET_RPC_URL || 'https://bsc-dataseed1.binance.org/',
+  // RPC 端點 - 移除，改用 rpc.ts 中的安全配置
+  // BSC_RPC: 已棄用，請使用 getRpcUrl() from './rpc'
   
   // 主網設定
   MAINNET_URL: import.meta.env.VITE_MAINNET_URL || "https://dungeondelvers.xyz",
