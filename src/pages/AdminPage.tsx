@@ -153,27 +153,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     }
   }, [chainId, contractsToRead, address, currentAddressMap]);
   
-  // 額外的調試信息 - 檢查參數合約
-  useEffect(() => {
-    if (import.meta.env.DEV && parameterContracts.length > 0) {
-      logger.info('=== 參數合約配置 ===');
-      logger.info(`參數合約數量: ${parameterContracts.length}`);
-      parameterContracts.forEach((contract, index) => {
-        logger.info(`參數合約 ${index}: ${contract.address}.${contract.functionName}`);
-      });
-    }
-  }, [parameterContracts]);
-  
-  // 調試信息 - 檢查 vault 合約
-  useEffect(() => {
-    if (import.meta.env.DEV && vaultContracts.length > 0) {
-      logger.info('=== Vault 合約配置 ===');
-      logger.info(`Vault 合約數量: ${vaultContracts.length}`);
-      vaultContracts.forEach((contract, index) => {
-        logger.info(`Vault 合約 ${index}: ${contract.address}.${contract.functionName}`);
-      });
-    }
-  }, [vaultContracts]);
+  // 調試信息將在 parameterContracts 和 vaultContracts 定義之後添加
   
   const envAddressMap: Record<string, { name: ContractName, address?: Address }> = useMemo(() => {
     if (!setupConfig || !Array.isArray(setupConfig) || !chainId) return {};
@@ -316,6 +296,28 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       retryOnMount: true          // 允許掛載時重試
     }
   });
+
+  // 額外的調試信息 - 檢查參數合約
+  useEffect(() => {
+    if (import.meta.env.DEV && parameterContracts.length > 0) {
+      logger.info('=== 參數合約配置 ===');
+      logger.info(`參數合約數量: ${parameterContracts.length}`);
+      parameterContracts.forEach((contract, index) => {
+        logger.info(`參數合約 ${index}: ${contract.address}.${contract.functionName}`);
+      });
+    }
+  }, [parameterContracts]);
+  
+  // 調試信息 - 檢查 vault 合約
+  useEffect(() => {
+    if (import.meta.env.DEV && vaultContracts.length > 0) {
+      logger.info('=== Vault 合約配置 ===');
+      logger.info(`Vault 合約數量: ${vaultContracts.length}`);
+      vaultContracts.forEach((contract, index) => {
+        logger.info(`Vault 合約 ${index}: ${contract.address}.${contract.functionName}`);
+      });
+    }
+  }, [vaultContracts]);
 
   const handleSet = async (key: string, targetContract: NonNullable<ReturnType<typeof getContract>>, functionName: string) => {
     const newAddress = inputs[key];

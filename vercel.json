@@ -2,6 +2,9 @@
   "functions": {
     "api/metadata/[...params].ts": {
       "maxDuration": 10
+    },
+    "api/rpc.ts": {
+      "maxDuration": 30
     }
   },
   "headers": [
