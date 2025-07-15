@@ -287,7 +287,7 @@ const ReferralPage: React.FC = () => {
                                 </div>
                                 <ActionButton 
                                     onClick={handleSetReferrer} 
-                                    isLoading={setReferrerProgress.status !== 'idle' && setReferrerProgress.status !== 'error'} 
+                                    isLoading={isSettingReferrer} 
                                     disabled={!isAddress(referrerInput)} 
                                     className="w-full sm:w-auto flex-shrink-0"
                                 >

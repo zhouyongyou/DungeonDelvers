@@ -1,6 +1,6 @@
 // src/pages/AdminPage.tsx
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
 import { useMonitoredReadContracts } from '../hooks/useMonitoredContract';
 import { useQueryClient } from '@tanstack/react-query';
@@ -45,6 +45,22 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [isBatchSetting, setIsBatchSetting] = useState(false);
   const [pendingTx, setPendingTx] = useState<string | null>(null);
+  
+  // 懶加載狀態 - 追蹤哪些區塊應該加載數據
+  const [loadedSections, setLoadedSections] = useState<Record<string, boolean>>({
+    contractCenter: true, // 合約串接中心默認展開
+    globalReward: false,
+    dungeonParams: false,
+    altarRules: false,
+    vipSettings: false,
+    corePrice: false,
+    platformFee: false,
+    taxSystem: false,
+    gameParams: false,
+    oracle: false,
+    contractControl: false,
+    rpcMonitor: false,
+  });
 
   // 管理員頁面初始化時清理 Watch
   useEffect(() => {
@@ -102,7 +118,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     contractName: 'adminSettings',
     batchName: 'adminContractsBatch',
     query: { 
-      enabled: !!chainId && Array.isArray(contractsToRead) && contractsToRead.length > 0,
+      enabled: !!chainId && Array.isArray(contractsToRead) && contractsToRead.length > 0 && loadedSections.contractCenter,
       staleTime: 1000 * 60 * 30, // 30分鐘緩存
       gcTime: 1000 * 60 * 60,    // 60分鐘
       refetchOnWindowFocus: false,
@@ -202,7 +218,8 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     contractName: 'adminParameters',
     batchName: 'adminParametersBatch',
     query: { 
-      enabled: Array.isArray(parameterContracts) && parameterContracts.length > 0,
+      enabled: Array.isArray(parameterContracts) && parameterContracts.length > 0 && 
+        (loadedSections.corePrice || loadedSections.platformFee || loadedSections.taxSystem || loadedSections.gameParams || loadedSections.oracle),
       staleTime: 1000 * 60 * 30, // 30分鐘緩存
       gcTime: 1000 * 60 * 60,    // 60分鐘
       refetchOnWindowFocus: false,
@@ -237,7 +254,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     contractName: 'playerVault',
     batchName: 'vaultParametersBatch',
     query: { 
-      enabled: !!playerVaultContract && !!playerVaultContract.address && Array.isArray(vaultContracts) && vaultContracts.length > 0,
+      enabled: !!playerVaultContract && !!playerVaultContract.address && Array.isArray(vaultContracts) && vaultContracts.length > 0 && loadedSections.taxSystem,
       staleTime: 1000 * 60 * 30, // 30分鐘緩存
       gcTime: 1000 * 60 * 60,    // 60分鐘
       refetchOnWindowFocus: false,
@@ -301,26 +318,29 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   };
   
   const ownerAddress = currentAddressMap.owner;
-  if (isLoadingSettings || isLoadingParams || isLoadingVaultParams) {
+  
+  // 只在第一次加載合約串接中心時顯示全屏加載
+  if (loadedSections.contractCenter && isLoadingSettings && !ownerAddress) {
     return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
   }
 
-  // 優化權限檢查邏輯 - 允許開發者地址和合約擁有者訪問，如果載入中則顯示載入狀態
+  // 優化權限檢查邏輯 - 允許開發者地址和合約擁有者訪問
   const isDeveloper = address?.toLowerCase() === DEVELOPER_ADDRESS.toLowerCase();
   const isOwner = ownerAddress && ownerAddress.toLowerCase() === address?.toLowerCase();
   
-  // 如果還在載入中，顯示載入狀態而不是權限錯誤
-  if (isLoadingSettings && !ownerAddress) {
-    return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
-  }
-  
-  if (!isDeveloper && !isOwner) {
+  // 如果沒有權限，顯示錯誤
+  if (!isDeveloper && !isOwner && ownerAddress) {
     return <EmptyState message={`權限不足，僅合約擁有者可訪問。當前擁有者: ${ownerAddress ? `${ownerAddress.substring(0, 6)}...${ownerAddress.substring(ownerAddress.length - 4)}` : '載入中...'}`} />;
   }
 
   return (
     <>
-      <AdminSection title="合約串接中心">
+      <AdminSection 
+        title="合約串接中心"
+        defaultExpanded={true}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, contractCenter: true }))}
+        isLoading={isLoadingSettings && loadedSections.contractCenter}
+      >
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <p className="text-gray-300 text-sm max-w-2xl">此頁面用於在合約部署後，將各個模組的地址設定到正確的位置。請依序填入所有已部署的合約地址，然後點擊「全部設定」，或逐一進行設定。</p>
           <div className="flex-shrink-0 flex flex-col md:flex-row gap-2 w-full md:w-auto">
@@ -384,23 +404,44 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         </div>
       </AdminSection>
 
-      <AdminSection title="全局獎勵設定">
+      <AdminSection 
+        title="全局獎勵設定"
+        defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, globalReward: true }))}
+      >
         <GlobalRewardSettings chainId={chainId} />
       </AdminSection>
 
-      <AdminSection title="地城參數管理">
+      <AdminSection 
+        title="地城參數管理"
+        defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, dungeonParams: true }))}
+      >
         <DungeonManager chainId={chainId} />
       </AdminSection>
       
-      <AdminSection title="升星祭壇規則管理">
+      <AdminSection 
+        title="升星祭壇規則管理"
+        defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, altarRules: true }))}
+      >
         <AltarRuleManager chainId={chainId} />
       </AdminSection>
       
-      <AdminSection title="VIP 質押設定管理">
+      <AdminSection 
+        title="VIP 質押設定管理"
+        defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, vipSettings: true }))}
+      >
         <VipSettingsManager chainId={chainId} />
       </AdminSection>
       
-      <AdminSection title="核心價格管理 (USD)">
+      <AdminSection 
+        title="核心價格管理 (USD)"
+        defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, corePrice: true }))}
+        isLoading={isLoadingParams && loadedSections.corePrice}
+      >
         {parameterConfig.filter(p => p && p.unit === 'USD').map((p) => {
           const { key, setter, ...rest } = p;
           const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
@@ -417,7 +458,12 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         })}
       </AdminSection>
 
-      <AdminSection title="平台費用管理 (BNB)">
+      <AdminSection 
+        title="平台費用管理 (BNB)"
+        defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, platformFee: true }))}
+        isLoading={isLoadingParams && loadedSections.platformFee}
+      >
         {parameterConfig.filter(p => p && p.unit === 'BNB').map((p) => {
           const { key, setter, ...rest } = p;
           const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
@@ -434,7 +480,12 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         })}
       </AdminSection>
 
-      <AdminSection title="稅務與提現系統">
+      <AdminSection 
+        title="稅務與提現系統"
+        defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, taxSystem: true }))}
+        isLoading={(isLoadingParams || isLoadingVaultParams) && loadedSections.taxSystem}
+      >
         {parameterConfig.filter(p => p && ['commissionRate'].includes(p.key)).map((p) => {
           const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
           const currentValue = params && paramIndex >= 0 ? params[paramIndex]?.result : undefined;
@@ -486,7 +537,12 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         </div>
       </AdminSection>
 
-      <AdminSection title="遊戲機制參數">
+      <AdminSection 
+        title="遊戲機制參數"
+        defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, gameParams: true }))}
+        isLoading={isLoadingParams && loadedSections.gameParams}
+      >
         {parameterConfig.filter(p => p && ['restDivisor', 'vipCooldown', 'globalRewardMultiplier'].includes(p.key)).map((p) => {
           const { key, setter, ...rest } = p;
           const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
@@ -503,7 +559,12 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         })}
       </AdminSection>
 
-      <AdminSection title="Oracle 設定">
+      <AdminSection 
+        title="Oracle 設定"
+        defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, oracle: true }))}
+        isLoading={isLoadingParams && loadedSections.oracle}
+      >
         {parameterConfig.filter(p => p && ['twapPeriod'].includes(p.key)).map((p) => {
           const { key, setter, ...rest } = p;
           const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
@@ -520,7 +581,11 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         })}
       </AdminSection>
 
-      <AdminSection title="合約控制">
+      <AdminSection 
+        title="合約控制"
+        defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, contractControl: true }))}
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-4">
             <h4 className="text-lg font-semibold">合約暫停/恢復</h4>
@@ -588,7 +653,11 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         </div>
       </AdminSection>
 
-      <AdminSection title="RPC 監控系統">
+      <AdminSection 
+        title="RPC 監控系統"
+        defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, rpcMonitor: true }))}
+      >
         <RpcMonitoringPanel />
       </AdminSection>
     </>

@@ -149,7 +149,7 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                                             <div class="text-center">
                                                 <div class="text-6xl mb-4">👤</div>
                                                 <div class="text-xl font-bold text-white">玩家檔案</div>
-                                                <div class="text-sm text-gray-400">Profile #{tokenId?.toString() || 'N/A'}</div>
+                                                <div class="text-sm text-gray-400">Profile #${tokenId?.toString() || 'N/A'}</div>
                                             </div>
                                         </div>
                                     `;

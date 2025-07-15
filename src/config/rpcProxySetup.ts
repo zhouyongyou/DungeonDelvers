@@ -54,12 +54,18 @@ export async function checkRpcProxy(): Promise<boolean> {
     }
     
     const data = await response.json();
-    const isHealthy = data.status === 'ok' || data.summary?.healthy > 0;
+    // 更新健康檢查邏輯 - 檢查是否有活躍節點
+    const hasActiveNodes = data.nodes?.some((node: any) => node.status === 'active');
+    const isProxyEnabled = data.proxyEnabled === true;
+    const isHealthy = isProxyEnabled && hasActiveNodes;
     
     if (isHealthy) {
-      logger.info('✅ RPC 代理健康狀態良好');
+      logger.info('✅ RPC 代理健康狀態良好', {
+        activeNodes: data.nodes?.filter((n: any) => n.status === 'active').length,
+        total: data.summary?.total
+      });
     } else {
-      logger.warn('⚠️ RPC 代理狀態異常');
+      logger.warn('⚠️ RPC 代理狀態異常', data);
     }
     
     return isHealthy;
