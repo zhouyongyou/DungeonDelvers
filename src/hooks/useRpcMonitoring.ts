@@ -1,8 +1,10 @@
 // src/hooks/useRpcMonitoring.ts - RPC 監控相關 Hook
 
 import { useState, useEffect, useCallback } from 'react';
-import { rpcMonitor, RpcStats, PerformanceInsight } from '../utils/rpcMonitor';
-import { rpcAnalytics, CacheRecommendation, OptimizationSuggestion } from '../utils/rpcAnalytics';
+import { rpcMonitor } from '../utils/rpcMonitor';
+import type { RpcStats, PerformanceInsight } from '../utils/rpcMonitor';
+import { rpcAnalytics } from '../utils/rpcAnalytics';
+import type { CacheRecommendation, OptimizationSuggestion } from '../utils/rpcAnalytics';
 
 // RPC 監控狀態 Hook
 export const useRpcMonitoring = (updateInterval: number = 5000) => {

@@ -17,7 +17,9 @@ import { usePrefetchOnHover } from './hooks/usePagePrefetch';
 import { MobileNavigation } from './components/mobile/MobileNavigation';
 import { useMobileOptimization } from './hooks/useMobileOptimization';
 import { RpcStatusMonitor } from './components/debug/RpcStatusMonitor';
+import PerformanceDashboard from './components/debug/PerformanceDashboard';
 import { preloadCriticalImages, setupSmartPreloading } from './utils/imagePreloadStrategy';
+import { usePagePerformance } from './utils/performanceMonitor';
 
 // 動態導入所有頁面
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -65,6 +67,9 @@ function App() {
   
   // 這個 Hook 會在背景監聽鏈上事件，並自動更新相關數據
   useContractEvents();
+  
+  // 性能監控
+  usePagePerformance(activePage);
 
   useEffect(() => {
     const handleHashChange = () => setActivePage(getPageFromHash());
@@ -147,6 +152,8 @@ function App() {
             <TransactionWatcher />
             {/* RPC 狀態監控（開發環境） */}
             <RpcStatusMonitor />
+            {/* 性能監控儀表板（開發環境） */}
+            <PerformanceDashboard />
             {/* 移動端底部安全區域 */}
             {isMobile && <div className="h-16" />}
           </div>

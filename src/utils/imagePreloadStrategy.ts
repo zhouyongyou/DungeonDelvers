@@ -1,6 +1,7 @@
 // src/utils/imagePreloadStrategy.ts - 圖片預加載策略
 
 import { logger } from './logger';
+import { performanceMonitor } from './performanceMonitor';
 
 interface PreloadConfig {
   priority: 'high' | 'medium' | 'low';
@@ -34,11 +35,21 @@ class ImagePreloadManager {
 
     // 開始加載
     this.loadingImages.add(url);
+    const startTime = performance.now();
     
     return new Promise((resolve, reject) => {
       const img = new Image();
       
       img.onload = () => {
+        const loadTime = performance.now() - startTime;
+        performanceMonitor.recordMetric({
+          name: 'image-load',
+          value: loadTime,
+          timestamp: Date.now(),
+          category: 'load',
+          unit: 'ms',
+        });
+        
         this.loadingImages.delete(url);
         this.loadedImages.add(url);
         this.processQueue();
@@ -46,6 +57,15 @@ class ImagePreloadManager {
       };
 
       img.onerror = () => {
+        const loadTime = performance.now() - startTime;
+        performanceMonitor.recordMetric({
+          name: 'image-load-error',
+          value: loadTime,
+          timestamp: Date.now(),
+          category: 'load',
+          unit: 'ms',
+        });
+        
         this.loadingImages.delete(url);
         this.processQueue();
         reject(new Error(`Failed to preload image: ${url}`));

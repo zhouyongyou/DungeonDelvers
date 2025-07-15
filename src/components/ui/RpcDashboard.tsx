@@ -1,7 +1,8 @@
 // src/components/ui/RpcDashboard.tsx - RPC 監控用戶儀表板
 
 import React, { useState, useEffect } from 'react';
-import { rpcMonitor, RpcStats, PerformanceInsight } from '../../utils/rpcMonitor';
+import { rpcMonitor } from '../../utils/rpcMonitor';
+import type { RpcStats, PerformanceInsight } from '../../utils/rpcMonitor';
 import { rpcAnalytics } from '../../utils/rpcAnalytics';
 import { ActionButton } from './ActionButton';
 import { LoadingSpinner } from './LoadingSpinner';

@@ -83,12 +83,12 @@ const AddressSettingRow: React.FC<AddressSettingRowProps> = ({
       
       <div className="flex gap-2 pt-2">
         <div className="flex-1">
-          <label htmlFor={`address-setting-${title.replace(/\s+/g, '-')}`} className="sr-only">
+          <label htmlFor={`address-setting-${(title || 'unknown').replace(/\s+/g, '-')}`} className="sr-only">
             {title} 合約地址
           </label>
           <input
-            id={`address-setting-${title.replace(/\s+/g, '-')}`}
-            name={`address-setting-${title.replace(/\s+/g, '-')}`}
+            id={`address-setting-${(title || 'unknown').replace(/\s+/g, '-')}`}
+            name={`address-setting-${(title || 'unknown').replace(/\s+/g, '-')}`}
             type="text"
             value={inputValue}
             onChange={(e) => onInputChange(e.target.value)}

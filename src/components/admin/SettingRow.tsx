@@ -30,6 +30,11 @@ const SettingRow: React.FC<SettingRowProps> = ({
   unit = '無',
   placeholders = ['輸入新值']
 }) => {
+  // 防護：確保 label 有值
+  if (!label) {
+    console.warn('SettingRow: label is undefined or null');
+    return null;
+  }
   const [inputValues, setInputValues] = useState<string[]>(
     new Array(placeholders.length).fill('')
   );
@@ -123,16 +128,20 @@ const SettingRow: React.FC<SettingRowProps> = ({
         當前值: <span className="text-yellow-400">{displayValue}</span>
       </div>
       <div className="flex flex-col sm:flex-row gap-2 md:col-span-1">
-        {inputValues.map((val: unknown, index: number) => (
-          <div key={index} className="flex-1">
-            <label htmlFor={`setting-${label.replace(/\s+/g, '-')}-${index}`} className="sr-only">
-              {placeholders[index]}
-            </label>
-            <input
-              id={`setting-${label.replace(/\s+/g, '-')}-${index}`}
-              name={`setting-${label.replace(/\s+/g, '-')}-${index}`}
+        {inputValues.map((val: unknown, index: number) => {
+          const safeLabel = label || 'unknown';
+          const labelId = `setting-${safeLabel.replace(/\s+/g, '-')}-${index}`;
+          
+          return (
+            <div key={index} className="flex-1">
+              <label htmlFor={labelId} className="sr-only">
+                {placeholders[index]}
+              </label>
+              <input
+                id={labelId}
+                name={labelId}
               type="text"
-              value={val}
+              value={val as string}
               onChange={(e) => {
                 const newValues = [...inputValues];
                 newValues[index] = e.target.value;
@@ -142,7 +151,8 @@ const SettingRow: React.FC<SettingRowProps> = ({
               placeholder={placeholders[index]}
             />
           </div>
-        ))}
+          );
+        })}
         <ActionButton
           onClick={handleUpdate}
           isLoading={isPending}

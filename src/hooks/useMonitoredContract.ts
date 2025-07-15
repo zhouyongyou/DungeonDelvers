@@ -1,8 +1,10 @@
 // src/hooks/useMonitoredContract.ts - 帶監控的合約 Hook 包裝器
 
 import { useReadContract, useReadContracts, useWriteContract } from 'wagmi';
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { rpcMonitor } from '../utils/rpcMonitor';
+import { logger } from '../utils/logger';
+import { getOptimizedQueryConfig, shouldEnableWatch, watchManager } from '../config/watchConfig';
 
 // 獲取當前頁面名稱
 const getCurrentPageName = (): string => {
@@ -20,7 +22,14 @@ export function useMonitoredReadContract<T = any>(
 ) {
   const { contractName, functionName, ...readConfig } = config;
   
-  const result = useReadContract(readConfig);
+  // 使用智能配置
+  const optimizedConfig = getOptimizedQueryConfig({
+    ...readConfig,
+    functionName,
+    watch: shouldEnableWatch(functionName),
+  });
+  
+  const result = useReadContract(optimizedConfig);
   const pageName = getCurrentPageName();
 
   // 監控請求 - 只在實際發生網絡請求時記錄
@@ -63,13 +72,51 @@ export function useMonitoredReadContracts<T = any>(
 ) {
   const { contractName, batchName, ...readConfig } = config;
   
-  const result = useReadContracts(readConfig);
+  // 優化合約配置 - 過濾無效合約
+  const optimizedConfig = useMemo(() => {
+    if (!readConfig.contracts) return readConfig;
+    
+    const validContracts = readConfig.contracts.filter(contract => 
+      contract && 
+      contract.address && 
+      contract.address !== '0x' && 
+      contract.address !== '0x0000000000000000000000000000000000000000' &&
+      contract.functionName &&
+      contract.abi
+    );
+
+    // 使用智能配置
+    const baseConfig = {
+      ...readConfig,
+      contracts: validContracts,
+      watch: shouldEnableWatch(),
+    };
+
+    const optimized = getOptimizedQueryConfig(baseConfig);
+    
+    return {
+      ...optimized,
+      query: {
+        ...optimized.query,
+        enabled: (optimized.query?.enabled !== false) && validContracts.length > 0,
+        // 添加請求去重
+        queryKey: [
+          'monitored-read-contracts',
+          contractName,
+          batchName,
+          validContracts.map(c => `${c.address}:${c.functionName}:${JSON.stringify(c.args || [])}`).join('|')
+        ],
+      }
+    };
+  }, [readConfig, contractName, batchName]);
+  
+  const result = useReadContracts(optimizedConfig);
   const pageName = getCurrentPageName();
 
   // 監控批量請求 - 只在實際發生網絡請求時記錄
   useEffect(() => {
-    if (config.contracts && config.contracts.length > 0 && result.isLoading) {
-      const requestIds = config.contracts.map((contract, index) => {
+    if (optimizedConfig.contracts && optimizedConfig.contracts.length > 0 && result.isLoading) {
+      const requestIds = optimizedConfig.contracts.map((contract, index) => {
         if (contract && contract.address && contract.functionName) {
           return rpcMonitor.startRequest(
             contract.address,
@@ -98,7 +145,18 @@ export function useMonitoredReadContracts<T = any>(
         }
       };
     }
-  }, [result.isLoading, config.contracts?.length]);
+  }, [result.isLoading, optimizedConfig.contracts?.length]);
+
+  // 添加性能監控
+  useEffect(() => {
+    if (optimizedConfig.contracts && optimizedConfig.contracts.length > 10) {
+      logger.warn(`⚠️ 大量合約請求 (${optimizedConfig.contracts.length}):`, {
+        batchName,
+        contractName,
+        page: pageName
+      });
+    }
+  }, [optimizedConfig.contracts?.length, batchName, contractName, pageName]);
 
   return result;
 }

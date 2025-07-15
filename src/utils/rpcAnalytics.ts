@@ -30,7 +30,7 @@ interface AnalyticsResult {
 }
 
 // 緩存策略建議
-export interface CacheRecommendation {
+interface CacheRecommendation {
   queryKey: string;
   recommendedStaleTime: number;
   recommendedGcTime: number;
@@ -39,7 +39,7 @@ export interface CacheRecommendation {
 }
 
 // 優化建議
-export interface OptimizationSuggestion {
+interface OptimizationSuggestion {
   type: 'cache' | 'batch' | 'reduce' | 'retry' | 'timeout';
   title: string;
   description: string;

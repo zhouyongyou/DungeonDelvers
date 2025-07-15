@@ -8,7 +8,7 @@ import { useAppToast } from '../../hooks/useAppToast';
 import { useTransactionStore } from '../../stores/useTransactionStore';
 import { ActionButton } from '../ui/ActionButton';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
-import SettingRow from './SettingRow';
+import SimpleSettingRow from './SimpleSettingRow';
 import type { SupportedChainId } from '../../types';
 
 interface GlobalRewardSettingsProps {
@@ -107,7 +107,7 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
         </p>
       </div>
 
-      <SettingRow
+      <SimpleSettingRow
         title="全局獎勵倍率"
         description="控制所有地下城獎勵的最終倍率 (1000 = 100%)"
         currentValue={currentValues.globalRewardMultiplier ? 
@@ -121,7 +121,7 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
         inputType="number"
       />
 
-      <SettingRow
+      <SimpleSettingRow
         title="補給品價格 (USD)"
         description="每個補給品的 USD 價格"
         currentValue={currentValues.provisionPriceUSD ? 
@@ -135,7 +135,7 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
         inputType="number"
       />
 
-      <SettingRow
+      <SimpleSettingRow
         title="探索費用 (BNB)"
         description="每次探索需要支付的 BNB 費用"
         currentValue={currentValues.explorationFee ? 
@@ -150,7 +150,7 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
         step="0.0001"
       />
 
-      <SettingRow
+      <SimpleSettingRow
         title="休息成本除數"
         description="休息成本 = 隊伍戰力 ÷ 此除數"
         currentValue={currentValues.restCostPowerDivisor?.toString() || '載入中...'}

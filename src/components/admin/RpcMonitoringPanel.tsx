@@ -7,8 +7,7 @@ import { ActionButton } from '../ui/ActionButton';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import RpcDashboard from '../ui/RpcDashboard';
 import AdminSection from './AdminSection';
-import { CacheRecommendation, OptimizationSuggestion } from '../../utils/rpcAnalytics';
-import { productionMonitoring, ProductionReport } from '../../config/productionMonitoring';
+import type { CacheRecommendation, OptimizationSuggestion } from '../../utils/rpcAnalytics';
 import { rpcDiagnostics } from '../../utils/rpcMonitorFix';
 import { useAppToast } from '../../hooks/useAppToast';
 
@@ -23,7 +22,7 @@ const RpcMonitoringPanel: React.FC = () => {
     generatePerformanceReport 
   } = useRpcAnalytics();
   const { realtimeStats, requestHistory } = useRpcRealTimeMonitoring();
-  const { alerts, thresholds, setThresholds, clearAllAlerts } = useRpcAlerts();
+  const { alerts, thresholds, setThresholds, clearAllAlerts, removeAlert } = useRpcAlerts();
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'analytics' | 'health' | 'alerts' | 'settings' | 'diagnostics'>('dashboard');
   const [cacheRecommendations, setCacheRecommendations] = useState<CacheRecommendation[]>([]);

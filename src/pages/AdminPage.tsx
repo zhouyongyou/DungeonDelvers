@@ -15,6 +15,7 @@ import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { bsc } from 'wagmi/chains';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { getOptimizedQueryConfig } from '../config/rpcOptimization';
+import { watchManager } from '../config/watchConfig';
 
 // Import newly created admin components
 import AdminSection from '../components/admin/AdminSection';
@@ -45,6 +46,15 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   const [isBatchSetting, setIsBatchSetting] = useState(false);
   const [pendingTx, setPendingTx] = useState<string | null>(null);
 
+  // 管理員頁面初始化時清理 Watch
+  useEffect(() => {
+    watchManager.clearAll();
+    showToast('管理員模式已啟用，Watch 監聽已優化', 'info');
+    return () => {
+      // 離開管理員頁面時不需要特別處理，因為其他頁面會重新註冊需要的 Watch
+    };
+  }, [showToast]);
+
   const setupConfig = useMemo(() => {
     const createSetting = (key: string, title: string, target: ContractName, setter: string, value: ContractName, getter: string) => ({ key, title, targetContractName: target, setterFunctionName: setter, valueToSetContractName: value, getterFunctionName: getter });
     return [
@@ -71,15 +81,19 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   }, []);
 
   const contractsToRead = useMemo(() => {
+    if (!chainId || !setupConfig) return [];
+    
     const coreContract = getContract(chainId, 'dungeonCore');
     const configs = setupConfig.map(c => {
       const contract = getContract(chainId, c.targetContractName);
-      if (!contract) return null;
+      if (!contract || !contract.address) return null;
       return { ...contract, functionName: c.getterFunctionName };
     });
-    if (coreContract) {
+    
+    if (coreContract && coreContract.address) {
       configs.unshift({ ...coreContract, functionName: 'owner' });
     }
+    
     return configs.filter((c): c is NonNullable<typeof c> => c !== null && !!c.address);
   }, [chainId, setupConfig]);
 
@@ -88,26 +102,38 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     contractName: 'adminSettings',
     batchName: 'adminContractsBatch',
     query: { 
-      enabled: !!chainId && contractsToRead.length > 0,
-      ...getOptimizedQueryConfig('contractSettings'),
-      refetchInterval: false, // 禁用自動刷新
+      enabled: !!chainId && Array.isArray(contractsToRead) && contractsToRead.length > 0,
+      staleTime: 1000 * 60 * 30, // 30分鐘緩存
+      gcTime: 1000 * 60 * 60,    // 60分鐘
+      refetchOnWindowFocus: false,
+      refetchInterval: false,     // 禁用自動刷新
+      retry: 1,                   // 減少重試
+      retryDelay: 5000,          // 增加重試延遲
     },
   });
 
   const currentAddressMap: Record<string, Address | undefined> = useMemo(() => {
-    if (!readResults || !Array.isArray(readResults)) return {};
+    if (!readResults || !Array.isArray(readResults) || !setupConfig || !Array.isArray(setupConfig)) return {};
+    
     const owner = readResults[0]?.result as Address | undefined;
     const settings = setupConfig.reduce((acc, config, index) => {
-      acc[config.key] = readResults[index + 1]?.result as Address | undefined;
+      if (config && config.key && readResults[index + 1]) {
+        acc[config.key] = readResults[index + 1]?.result as Address | undefined;
+      }
       return acc;
     }, {} as Record<string, Address | undefined>);
+    
     return { owner, ...settings };
   }, [readResults, setupConfig]);
   
   const envAddressMap: Record<string, { name: ContractName, address?: Address }> = useMemo(() => {
+    if (!setupConfig || !Array.isArray(setupConfig) || !chainId) return {};
+    
     const getAddr = (name: ContractName) => ({ name, address: contractConfigs[chainId]?.[name]?.address });
     return setupConfig.reduce((acc, config) => {
-      acc[config.key] = getAddr(config.valueToSetContractName);
+      if (config && config.key && config.valueToSetContractName) {
+        acc[config.key] = getAddr(config.valueToSetContractName);
+      }
       return acc;
     }, {} as Record<string, { name: ContractName, address?: Address }>);
   }, [chainId, setupConfig]);
@@ -123,6 +149,8 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   };
   
   const parameterConfig = useMemo((): ParameterConfigItem[] => {
+    if (!chainId) return [];
+    
     const contracts = {
       hero: getContract(chainId, 'hero'),
       relic: getContract(chainId, 'relic'),
@@ -132,6 +160,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       vipStaking: getContract(chainId, 'vipStaking'),
       oracle: getContract(chainId, 'oracle'),
     };
+    
     const config = [
       // 鑄造價格設定
       { key: 'heroMintPrice', label: "英雄鑄造價", contract: contracts.hero, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] },
@@ -155,11 +184,17 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       // Oracle 設定
       { key: 'twapPeriod', label: "Oracle TWAP 週期", contract: contracts.oracle, getter: 'twapPeriod', setter: 'setTwapPeriod', unit: '無', placeholders: ['新週期 (秒)'] },
     ];
-    return config.filter((c) => !!c.contract && !!c.contract.address) as ParameterConfigItem[];
+    
+    return config.filter((c) => {
+      return c && c.contract && c.contract.address && c.contract.address !== '0x0000000000000000000000000000000000000000';
+    }) as ParameterConfigItem[];
   }, [chainId]);
 
   const parameterContracts = useMemo(() => {
-    return parameterConfig.map(p => ({ ...p.contract, functionName: p.getter }));
+    if (!parameterConfig || !Array.isArray(parameterConfig) || parameterConfig.length === 0) return [];
+    return parameterConfig
+      .filter(p => p && p.contract && p.contract.address && p.getter)
+      .map(p => ({ ...p.contract, functionName: p.getter }));
   }, [parameterConfig]);
 
   const { data: params, isLoading: isLoadingParams } = useMonitoredReadContracts({
@@ -167,24 +202,34 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     contractName: 'adminParameters',
     batchName: 'adminParametersBatch',
     query: { 
-      enabled: parameterContracts.length > 0,
-      ...getOptimizedQueryConfig('contractParameters'),
-      refetchInterval: false, // 禁用自動刷新
+      enabled: Array.isArray(parameterContracts) && parameterContracts.length > 0,
+      staleTime: 1000 * 60 * 30, // 30分鐘緩存
+      gcTime: 1000 * 60 * 60,    // 60分鐘
+      refetchOnWindowFocus: false,
+      refetchInterval: false,     // 禁用自動刷新
+      retry: 1,                   // 減少重試
+      retryDelay: 5000,          // 增加重試延遲
     }
   });
 
   // 讀取 PlayerVault 的稅務參數
   const playerVaultContract = getContract(chainId, 'playerVault');
   const vaultContracts = useMemo(() => {
-    if (!playerVaultContract) return [];
-    return [
-      { ...playerVaultContract, functionName: 'largeWithdrawThresholdUSD' as const },
-      { ...playerVaultContract, functionName: 'smallWithdrawThresholdUSD' as const },
-      { ...playerVaultContract, functionName: 'standardInitialRate' as const },
-      { ...playerVaultContract, functionName: 'largeWithdrawInitialRate' as const },
-      { ...playerVaultContract, functionName: 'decreaseRatePerPeriod' as const },
-      { ...playerVaultContract, functionName: 'periodDuration' as const },
+    if (!playerVaultContract || !playerVaultContract.address) return [];
+    
+    const vaultFunctions = [
+      'largeWithdrawThresholdUSD',
+      'smallWithdrawThresholdUSD', 
+      'standardInitialRate',
+      'largeWithdrawInitialRate',
+      'decreaseRatePerPeriod',
+      'periodDuration'
     ];
+    
+    return vaultFunctions.map(functionName => ({
+      ...playerVaultContract,
+      functionName: functionName as const
+    }));
   }, [playerVaultContract]);
 
   const { data: vaultParams, isLoading: isLoadingVaultParams } = useMonitoredReadContracts({
@@ -192,9 +237,13 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     contractName: 'playerVault',
     batchName: 'vaultParametersBatch',
     query: { 
-      enabled: !!playerVaultContract && vaultContracts.length > 0,
-      ...getOptimizedQueryConfig('adminSettings'),
-      refetchInterval: false, // 禁用自動刷新
+      enabled: !!playerVaultContract && !!playerVaultContract.address && Array.isArray(vaultContracts) && vaultContracts.length > 0,
+      staleTime: 1000 * 60 * 30, // 30分鐘緩存
+      gcTime: 1000 * 60 * 60,    // 60分鐘
+      refetchOnWindowFocus: false,
+      refetchInterval: false,     // 禁用自動刷新
+      retry: 1,                   // 減少重試
+      retryDelay: 5000,          // 增加重試延遲
     }
   });
 
@@ -282,7 +331,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4">
           <div className="space-y-4">
             <h4 className="text-xl font-semibold text-center">總機設定 (DungeonCore)</h4>
-            {setupConfig.slice(0, 9).map(config => (
+            {setupConfig && setupConfig.slice(0, 9).map(config => (
               <AddressSettingRow 
                 key={config.key} 
                 title={config.title} 
@@ -294,14 +343,21 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                 isLoading={isLoadingSettings} 
                 inputValue={inputs[config.key] || ''} 
                 onInputChange={(val) => setInputs(prev => ({ ...prev, [config.key]: val }))} 
-                onSet={() => handleSet(config.key, getContract(chainId, config.targetContractName)!, config.setterFunctionName)} 
+                onSet={() => {
+                  const contract = getContract(chainId, config.targetContractName);
+                  if (contract && contract.address) {
+                    handleSet(config.key, contract, config.setterFunctionName);
+                  } else {
+                    showToast('合約地址無效', 'error');
+                  }
+                }} 
                 isSetting={pendingTx === config.key} 
               />
             ))}
           </div>
           <div className="space-y-4">
             <h4 className="text-xl font-semibold text-center">各模組回連設定</h4>
-            {setupConfig.slice(9).map(config => (
+            {setupConfig && setupConfig.slice(9).map(config => (
               <AddressSettingRow 
                 key={config.key} 
                 title={config.title} 
@@ -313,7 +369,14 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                 isLoading={isLoadingSettings} 
                 inputValue={inputs[config.key] || ''} 
                 onInputChange={(val) => setInputs(prev => ({ ...prev, [config.key]: val }))} 
-                onSet={() => handleSet(config.key, getContract(chainId, config.targetContractName)!, config.setterFunctionName)} 
+                onSet={() => {
+                  const contract = getContract(chainId, config.targetContractName);
+                  if (contract && contract.address) {
+                    handleSet(config.key, contract, config.setterFunctionName);
+                  } else {
+                    showToast('合約地址無效', 'error');
+                  }
+                }} 
                 isSetting={pendingTx === config.key} 
               />
             ))}
@@ -338,15 +401,16 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       </AdminSection>
       
       <AdminSection title="核心價格管理 (USD)">
-        {parameterConfig.filter(p => p.unit === 'USD').map((p) => {
+        {parameterConfig.filter(p => p && p.unit === 'USD').map((p) => {
           const { key, setter, ...rest } = p;
+          const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
           return (
             <SettingRow
               key={key}
               {...rest}
               functionName={setter}
               readSource={`${p.contract.address}.${p.getter}()`}
-              currentValue={params?.[parameterConfig.findIndex(pc => pc.key === p.key)]?.result}
+              currentValue={params && paramIndex >= 0 ? params[paramIndex]?.result : undefined}
               isLoading={isLoadingParams}
             />
           );
@@ -354,15 +418,16 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       </AdminSection>
 
       <AdminSection title="平台費用管理 (BNB)">
-        {parameterConfig.filter(p => p.unit === 'BNB').map((p) => {
+        {parameterConfig.filter(p => p && p.unit === 'BNB').map((p) => {
           const { key, setter, ...rest } = p;
+          const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
           return (
             <SettingRow
               key={key}
               {...rest}
               functionName={setter}
               readSource={`${p.contract.address}.${p.getter}()`}
-              currentValue={params?.[parameterConfig.findIndex(pc => pc.key === p.key)]?.result}
+              currentValue={params && paramIndex >= 0 ? params[paramIndex]?.result : undefined}
               isLoading={isLoadingParams}
             />
           );
@@ -370,9 +435,9 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       </AdminSection>
 
       <AdminSection title="稅務與提現系統">
-        {parameterConfig.filter(p => ['commissionRate'].includes(p.key)).map((p) => {
-          const paramIndex = parameterConfig.findIndex(pc => pc.key === p.key);
-          const currentValue = params?.[paramIndex]?.result;
+        {parameterConfig.filter(p => p && ['commissionRate'].includes(p.key)).map((p) => {
+          const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
+          const currentValue = params && paramIndex >= 0 ? params[paramIndex]?.result : undefined;
           const { key, setter, ...rest } = p;
           return (
             <SettingRow
@@ -422,15 +487,16 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       </AdminSection>
 
       <AdminSection title="遊戲機制參數">
-        {parameterConfig.filter(p => ['restDivisor', 'vipCooldown', 'globalRewardMultiplier'].includes(p.key)).map((p) => {
+        {parameterConfig.filter(p => p && ['restDivisor', 'vipCooldown', 'globalRewardMultiplier'].includes(p.key)).map((p) => {
           const { key, setter, ...rest } = p;
+          const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
           return (
             <SettingRow
               key={key}
               {...rest}
               functionName={setter}
               readSource={`${p.contract.address}.${p.getter}()`}
-              currentValue={params?.[parameterConfig.findIndex(pc => pc.key === p.key)]?.result}
+              currentValue={params && paramIndex >= 0 ? params[paramIndex]?.result : undefined}
               isLoading={isLoadingParams}
             />
           );
@@ -438,15 +504,16 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       </AdminSection>
 
       <AdminSection title="Oracle 設定">
-        {parameterConfig.filter(p => ['twapPeriod'].includes(p.key)).map((p) => {
+        {parameterConfig.filter(p => p && ['twapPeriod'].includes(p.key)).map((p) => {
           const { key, setter, ...rest } = p;
+          const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
           return (
             <SettingRow
               key={key}
               {...rest}
               functionName={setter}
               readSource={`${p.contract.address}.${p.getter}()`}
-              currentValue={params?.[parameterConfig.findIndex(pc => pc.key === p.key)]?.result}
+              currentValue={params && paramIndex >= 0 ? params[paramIndex]?.result : undefined}
               isLoading={isLoadingParams}
             />
           );
@@ -460,7 +527,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
             <div className="space-y-2">
               {['hero', 'relic', 'party', 'dungeonMaster', 'vipStaking'].map(contractName => {
                 const contract = getContract(chainId, contractName);
-                if (!contract) return null;
+                if (!contract || !contract.address) return null;
                 return (
                   <div key={contractName} className="flex gap-2">
                     <ActionButton 
@@ -477,9 +544,9 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                           // 🔄 立即失效合約狀態相關快取
                           queryClient.invalidateQueries({ queryKey: ['contract-status'] });
                           queryClient.invalidateQueries({ queryKey: ['admin-contracts'] });
-                        } catch (e) {
-                          if (!e.message?.includes('User rejected')) {
-                            showToast(`暫停 ${contractName} 失敗: ${e.shortMessage}`, 'error');
+                        } catch (e: any) {
+                          if (!e?.message?.includes('User rejected')) {
+                            showToast(`暫停 ${contractName} 失敗: ${e?.shortMessage || e?.message || '未知錯誤'}`, 'error');
                           }
                         }
                       }}
@@ -501,9 +568,9 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                           // 🔄 立即失效合約狀態相關快取
                           queryClient.invalidateQueries({ queryKey: ['contract-status'] });
                           queryClient.invalidateQueries({ queryKey: ['admin-contracts'] });
-                        } catch (e) {
-                          if (!e.message?.includes('User rejected')) {
-                            showToast(`恢復 ${contractName} 失敗: ${e.shortMessage}`, 'error');
+                        } catch (e: any) {
+                          if (!e?.message?.includes('User rejected')) {
+                            showToast(`恢復 ${contractName} 失敗: ${e?.shortMessage || e?.message || '未知錯誤'}`, 'error');
                           }
                         }
                       }}
