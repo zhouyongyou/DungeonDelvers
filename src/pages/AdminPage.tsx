@@ -126,8 +126,8 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       gcTime: 1000 * 60 * 60,    // 60分鐘
       refetchOnWindowFocus: false,
       refetchInterval: false,     // 禁用自動刷新
-      retry: 1,                   // 減少重試
-      retryDelay: 5000,          // 增加重試延遲
+      retry: false,               // 完全禁用重試以避免重複錯誤
+      retryOnMount: false,        // 禁用掛載時重試
     },
   });
 
@@ -234,8 +234,8 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       gcTime: 1000 * 60 * 60,    // 60分鐘
       refetchOnWindowFocus: false,
       refetchInterval: false,     // 禁用自動刷新
-      retry: 1,                   // 減少重試
-      retryDelay: 5000,          // 增加重試延遲
+      retry: false,               // 完全禁用重試以避免重複錯誤
+      retryOnMount: false,        // 禁用掛載時重試
     }
   });
 
@@ -269,8 +269,8 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       gcTime: 1000 * 60 * 60,    // 60分鐘
       refetchOnWindowFocus: false,
       refetchInterval: false,     // 禁用自動刷新
-      retry: 1,                   // 減少重試
-      retryDelay: 5000,          // 增加重試延遲
+      retry: false,               // 完全禁用重試以避免重複錯誤
+      retryOnMount: false,        // 禁用掛載時重試
     }
   });
 
@@ -329,11 +329,19 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   
   const ownerAddress = currentAddressMap.owner;
   
-  // 錯誤處理
-  if (settingsError) {
-    showToast(`讀取合約設定失敗: ${settingsError.message || '未知錯誤'}`, 'error');
-    logger.error('讀取管理員設定失敗:', settingsError);
-  }
+  // 錯誤處理 - 使用 useEffect 避免重複觸發
+  const [hasShownError, setHasShownError] = useState(false);
+  useEffect(() => {
+    if (settingsError && !hasShownError) {
+      showToast(`讀取合約設定失敗: ${settingsError.message || '未知錯誤'}`, 'error');
+      logger.debug('讀取管理員設定失敗:', settingsError);
+      setHasShownError(true);
+    }
+    // 清理錯誤狀態
+    if (!settingsError && hasShownError) {
+      setHasShownError(false);
+    }
+  }, [settingsError, hasShownError, showToast]);
 
   // 只在第一次加載合約串接中心時顯示全屏加載
   if (loadedSections.contractCenter && isLoadingSettings && !ownerAddress) {
