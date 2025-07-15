@@ -20,11 +20,13 @@ export const BSC_PUBLIC_RPCS = [
  * 優先使用後端代理，其次使用公共節點
  */
 export function getRpcUrl(): string {
-  // 檢查是否有後端 RPC 代理
+  // 檢查是否啟用 RPC 代理
+  const useProxy = import.meta.env.VITE_USE_RPC_PROXY === 'true';
   const metadataServer = import.meta.env.VITE_METADATA_SERVER_URL;
-  if (metadataServer) {
-    // 未來實現：使用後端 RPC 代理
-    // return `${metadataServer}/api/rpc`;
+  
+  if (useProxy && metadataServer) {
+    logger.info('🔄 使用後端 RPC 代理:', metadataServer);
+    return `${metadataServer}/api/rpc`;
   }
 
   // 檢查是否有不安全的 Alchemy URL（應該移除）
@@ -56,6 +58,14 @@ export function getPublicRpc(): string {
  */
 export async function testRpcConnection(rpcUrl: string): Promise<boolean> {
   try {
+    // 如果是後端代理，使用代理專用的測試方法
+    if (rpcUrl.includes('/api/rpc')) {
+      const response = await fetch(rpcUrl.replace('/api/rpc', '/api/rpc/status'));
+      const data = await response.json();
+      return data.summary?.healthy > 0;
+    }
+    
+    // 直接 RPC 測試
     const response = await fetch(rpcUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

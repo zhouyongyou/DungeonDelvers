@@ -148,7 +148,7 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
     const publicClient = usePublicClient();
     const queryClient = useQueryClient();
     
-    // 定義 title 變數，避免 TDZ 錯誤
+    // 定義 title 變數，避免 TDZ 錯誤 - 必須在所有使用它的 hooks 之前
     const title = type === 'hero' ? '英雄' : '聖物';
     
     const [quantity, setQuantity] = useState(1);
