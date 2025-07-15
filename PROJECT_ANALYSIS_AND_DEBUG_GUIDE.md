@@ -171,7 +171,7 @@ curl -s https://dungeon-delvers-metadata-server.onrender.com/health | jq .
 #### **步驟 1.2: 驗證子圖同步狀態**
 ```bash
 # 檢查子圖最新區塊
-curl -X POST https://api.studio.thegraph.com/query/115633/dungeon-delvers/1.2.9 \
+curl -X POST https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1 \
   -H "Content-Type: application/json" \
   -d '{
     "query": "{ _meta { block { number } } }"
@@ -602,7 +602,7 @@ curl -f https://dungeon-delvers-metadata-server.onrender.com/health || echo "❌
 
 # 2. 測試子圖連接
 echo "2. 測試子圖連接..."
-curl -X POST https://api.studio.thegraph.com/query/115633/dungeon-delvers/1.2.9 \
+curl -X POST https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1 \
   -H "Content-Type: application/json" \
   -d '{"query":"{ _meta { block { number } } }"}' || echo "❌ 子圖連接失敗"
 

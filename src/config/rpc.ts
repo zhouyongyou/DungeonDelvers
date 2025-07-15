@@ -13,7 +13,6 @@ export const BSC_PUBLIC_RPCS = [
   'https://bsc-dataseed4.binance.org/',
   'https://bsc.publicnode.com',
   'https://binance.llamarpc.com',
-  'https://bsc-rpc.gateway.pokt.network',
   'https://rpc.ankr.com/bsc',
 ] as const;
 
