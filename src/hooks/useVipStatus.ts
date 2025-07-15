@@ -95,7 +95,12 @@ export const useVipStatus = () => {
         contractVipLevel,
         contractTaxReduction,
         cooldownPeriod
-    ] = useMemo(() => vipData?.map(d => d.result) ?? [], [vipData]);
+    ] = useMemo(() => {
+        if (!vipData || !Array.isArray(vipData)) {
+            return [undefined, undefined, undefined, undefined, undefined, undefined];
+        }
+        return vipData.map(d => d?.result);
+    }, [vipData]);
 
     const stakedAmount = useMemo(() => (stakeInfo as readonly [bigint, bigint])?.[0] ?? 0n, [stakeInfo]);
     const tokenId = useMemo(() => (stakeInfo as readonly [bigint, bigint])?.[1], [stakeInfo]);

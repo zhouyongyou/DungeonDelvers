@@ -211,7 +211,7 @@ const UpgradeInfoCard: React.FC<{ rule: { materialsRequired: number; nativeFee: 
 // =================================================================
 
 const AltarPage: React.FC = () => {
-    const { chainId } = useAccount();
+    const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
     const publicClient = usePublicClient();
     const queryClient = useQueryClient();
