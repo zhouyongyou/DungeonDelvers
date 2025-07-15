@@ -1,15 +1,31 @@
-# RPC 節點安全配置指南
+# 🔐 RPC 安全配置指南
 
-## 問題說明
-當前前端直接使用包含 API Key 的 RPC URL 是不安全的：
-```
-VITE_ALCHEMY_BSC_MAINNET_RPC_URL="https://bnb-mainnet.g.alchemy.com/v2/YOUR_API_KEY"
+## 📋 概述
+
+本指南說明如何安全地配置 Alchemy 等私人 RPC 節點，避免在前端暴露 API Key。
+
+## 🚨 安全問題
+
+### ❌ **錯誤做法**
+```bash
+# 前端環境變數 (.env) - 絕對不要這樣做！
+VITE_BSC_MAINNET_RPC_URL="https://bnb-mainnet.g.alchemy.com/v2/3lmTWjUVbFylAurhdU-rSUefTC-P4tKf"
 ```
 
-這個 Key 會被暴露在前端代碼中，任何人都可以：
-- 盜用你的 API 配額
-- 追蹤你的 API 使用模式
-- 可能造成額外費用
+**問題**：
+- API Key 會被暴露在前端代碼中
+- 任何人都可以查看和盜用你的 API Key
+- 可能導致 API 配額被惡意消耗
+
+### ✅ **正確做法**
+```bash
+# 後端環境變數 (metadata-server/.env) - 正確做法
+BSC_MAINNET_RPC_URL="https://bnb-mainnet.g.alchemy.com/v2/3lmTWjUVbFylAurhdU-rSUefTC-P4tKf"
+
+# 前端環境變數 (.env) - 啟用代理
+VITE_USE_RPC_PROXY=true
+VITE_METADATA_SERVER_URL=https://dungeon-delvers-metadata-server.onrender.com
+```
 
 ## 解決方案
 

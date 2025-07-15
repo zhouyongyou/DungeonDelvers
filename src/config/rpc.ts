@@ -32,9 +32,12 @@ export function getRpcUrl(): string {
   // 檢查是否有不安全的 Alchemy URL（應該移除）
   const alchemyUrl = import.meta.env.VITE_ALCHEMY_BSC_MAINNET_RPC_URL;
   if (alchemyUrl) {
-    logger.warn('⚠️ 警告：檢測到前端使用私有 RPC URL，這是不安全的！請參考 RPC_SECURITY_GUIDE.md');
-    // 暫時返回，但應該盡快移除
-    return alchemyUrl;
+    logger.error('🚨 安全警告：檢測到前端使用私有 RPC URL！');
+    logger.error('🔐 請將 RPC URL 移動到後端代理，並設置 VITE_USE_RPC_PROXY=true');
+    logger.error('📖 參考 RPC_SECURITY_GUIDE.md 進行安全配置');
+    
+    // 強制使用公共節點，避免洩漏 API Key
+    logger.warn('⚠️ 自動切換到公共 RPC 節點以保護 API Key');
   }
 
   // 使用公共 RPC 節點
