@@ -47,10 +47,17 @@ function getAlchemyKeys(): string[] {
 }
 
 /**
- * 獲取 RPC URL（支持 key 輪換）
- * 優先使用 Alchemy，否則使用公共節點
+ * 獲取 RPC URL
+ * 生產環境使用 API 代理，開發環境使用本地 key 或公共節點
  */
 function getRpcUrl(): string {
+  // 生產環境：使用 API 代理路由
+  if (import.meta.env.PROD) {
+    logger.info('🔐 使用安全的 RPC 代理');
+    return '/api/rpc';
+  }
+  
+  // 開發環境：檢查本地 key
   const alchemyKeys = getAlchemyKeys();
   
   if (alchemyKeys.length > 0) {
@@ -58,7 +65,7 @@ function getRpcUrl(): string {
     const key = alchemyKeys[currentKeyIndex % alchemyKeys.length];
     currentKeyIndex++;
     
-    logger.info(`🔑 使用 Alchemy RPC 節點 (Key ${(currentKeyIndex - 1) % alchemyKeys.length + 1}/${alchemyKeys.length})`);
+    logger.info(`🔑 使用本地 Alchemy RPC 節點 (Key ${(currentKeyIndex - 1) % alchemyKeys.length + 1}/${alchemyKeys.length})`);
     return `https://bnb-mainnet.g.alchemy.com/v2/${key}`;
   }
   
@@ -73,7 +80,8 @@ function getRpcUrl(): string {
  */
 export function createSmartRpcTransport(): Transport {
   const primaryRpcUrl = getRpcUrl();
-  const isUsingAlchemy = primaryRpcUrl.includes('alchemy.com');
+  const isUsingProxy = primaryRpcUrl === '/api/rpc';
+  const isUsingAlchemy = primaryRpcUrl.includes('alchemy.com') || isUsingProxy;
   
   return custom({
     async request({ method, params }) {
@@ -98,11 +106,17 @@ export function createSmartRpcTransport(): Transport {
           } else {
             // 只記錄重要的方法，不記錄 filter 相關的頻繁請求
             if (!method.includes('filter') && !method.includes('blockNumber')) {
-              logger.debug(`📡 RPC 請求: ${method} 使用 ${isUsingAlchemy ? 'Alchemy' : '公共'}節點`);
+              const nodeType = isUsingProxy ? '代理' : (isUsingAlchemy ? 'Alchemy' : '公共');
+              logger.debug(`📡 RPC 請求: ${method} 使用 ${nodeType}節點`);
             }
           }
           
-          const response = await fetch(primaryRpcUrl, {
+          // 處理代理路由的相對路徑
+          const fetchUrl = isUsingProxy 
+            ? `${window.location.origin}${primaryRpcUrl}`
+            : primaryRpcUrl;
+            
+          const response = await fetch(fetchUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
