@@ -9,7 +9,7 @@
 ### ❌ **錯誤做法**
 ```bash
 # 前端環境變數 (.env) - 絕對不要這樣做！
-VITE_BSC_MAINNET_RPC_URL="https://bnb-mainnet.g.alchemy.com/v2/3lmTWjUVbFylAurhdU-rSUefTC-P4tKf"
+VITE_BSC_MAINNET_RPC_URL="https://bnb-mainnet.g.alchemy.com/v2/YOUR_API_KEY"
 ```
 
 **問題**：
@@ -20,7 +20,7 @@ VITE_BSC_MAINNET_RPC_URL="https://bnb-mainnet.g.alchemy.com/v2/3lmTWjUVbFylAurhd
 ### ✅ **正確做法**
 ```bash
 # 後端環境變數 (metadata-server/.env) - 正確做法
-BSC_MAINNET_RPC_URL="https://bnb-mainnet.g.alchemy.com/v2/3lmTWjUVbFylAurhdU-rSUefTC-P4tKf"
+BSC_MAINNET_RPC_URL="https://bnb-mainnet.g.alchemy.com/v2/YOUR_API_KEY"
 
 # 前端環境變數 (.env) - 啟用代理
 VITE_USE_RPC_PROXY=true
