@@ -31,7 +31,7 @@ import AltarRuleManager from '../components/admin/AltarRuleManager';
 import FundsWithdrawal from '../components/admin/FundsWithdrawal';
 import VipSettingsManager from '../components/admin/VipSettingsManager';
 import GlobalRewardSettings from '../components/admin/GlobalRewardSettings';
-import RpcMonitoringPanel from '../components/admin/RpcMonitoringPanel';
+// import RpcMonitoringPanel from '../components/admin/RpcMonitoringPanel'; // Removed RPC monitoring
 
 type SupportedChainId = typeof bsc.id;
 type Address = `0x${string}`;
@@ -660,9 +660,11 @@ const AdminPageOptimizedContent: React.FC<{ chainId: SupportedChainId }> = ({ ch
         </div>
       </AdminSection>
 
+      {/* RPC Monitoring Panel - DISABLED
       <AdminSection title="RPC 監控系統">
         <RpcMonitoringPanel />
       </AdminSection>
+      */}
     </>
   );
 };

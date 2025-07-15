@@ -2,7 +2,7 @@
 
 import { custom, type Transport } from 'viem';
 import { logger } from '../utils/logger';
-import { rpcMonitor } from '../utils/rpcMonitor';
+// import { rpcMonitor } from '../utils/rpcMonitor'; // Removed RPC monitoring
 
 // 公共 BSC RPC 節點列表（作為後備）
 const PUBLIC_BSC_RPCS = [
@@ -80,15 +80,15 @@ export function createSmartRpcTransport(): Transport {
       let lastError: any;
       const maxRetries = isUsingAlchemy ? 3 : 1; // Alchemy 重試 3 次，公共節點不重試
       
-      // 開始監控
-      const requestId = rpcMonitor.startRequest(
-        isUsingAlchemy ? 'alchemy' : 'public_rpc',
-        method as string,
-        params as any[],
-        'wagmi_transport',
-        'system',
-        method as string
-      );
+      // RPC monitoring disabled
+      // const requestId = rpcMonitor.startRequest(
+      //   isUsingAlchemy ? 'alchemy' : 'public_rpc',
+      //   method as string,
+      //   params as any[],
+      //   'wagmi_transport',
+      //   'system',
+      //   method as string
+      // );
       
       // 嘗試主要 RPC
       for (let i = 0; i < maxRetries; i++) {
@@ -125,8 +125,8 @@ export function createSmartRpcTransport(): Transport {
             throw new Error(data.error.message || 'RPC error');
           }
           
-          // 監控成功
-          rpcMonitor.completeRequest(requestId, data.result);
+          // RPC monitoring disabled
+          // rpcMonitor.completeRequest(requestId, data.result);
           
           return data.result;
         } catch (error) {
@@ -165,8 +165,8 @@ export function createSmartRpcTransport(): Transport {
             
             if (data.error) continue;
             
-            // 監控成功（使用公共節點）
-            rpcMonitor.completeRequest(requestId, data.result);
+            // RPC monitoring disabled
+            // rpcMonitor.completeRequest(requestId, data.result);
             logger.info('✅ 公共節點請求成功');
             
             return data.result;
@@ -177,8 +177,8 @@ export function createSmartRpcTransport(): Transport {
         }
       }
       
-      // 監控失敗
-      rpcMonitor.completeRequest(requestId, undefined, lastError?.message);
+      // RPC monitoring disabled
+      // rpcMonitor.completeRequest(requestId, undefined, lastError?.message);
       
       // 所有嘗試都失敗
       throw new Error(`所有 RPC 請求失敗: ${lastError?.message || '未知錯誤'}`);

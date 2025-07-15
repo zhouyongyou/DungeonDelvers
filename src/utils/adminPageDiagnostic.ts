@@ -1,7 +1,7 @@
 // src/utils/adminPageDiagnostic.ts - 管理員頁面診斷和修復工具
 
 import { logger } from './logger';
-import { rpcMonitor } from './rpcMonitor';
+// import { rpcMonitor } from './rpcMonitor'; // Removed RPC monitoring
 import { contractBatchOptimizer } from './contractBatchOptimizer';
 import { createAdminConfigValidator } from './adminConfigValidator';
 import { adminErrorHandler } from './adminErrorHandler';
@@ -147,13 +147,14 @@ export class AdminPageDiagnostic {
     return results;
   }
 
-  // 診斷 RPC 監控
+  // 診斷 RPC 監控 - DISABLED
   private diagnoseRpcMonitoring(): DiagnosticResult[] {
     const results: DiagnosticResult[] = [];
 
     try {
-      const stats = rpcMonitor.getStats();
-      const insights = rpcMonitor.getInsights();
+      // RPC monitoring disabled
+      const stats = { totalRequests: 0, averageResponseTime: 0, errorsByType: {}, failedRequests: 0, successfulRequests: 0, requestsByMethod: {} };
+      const insights = [];
 
       // 檢查請求統計
       if (stats.totalRequests > 0) {
@@ -333,7 +334,8 @@ export class AdminPageDiagnostic {
 
   // 計算性能指標
   private calculatePerformanceMetrics(results: DiagnosticResult[]): PerformanceMetrics {
-    const stats = rpcMonitor.getStats();
+    // RPC monitoring disabled
+    const stats = { totalRequests: 0, averageResponseTime: 0, errorRate: 0, requestsByMethod: {}, requestsByContract: {}, failedRequests: 0 };
     
     // 計算優化分數
     const totalChecks = results.length;
@@ -430,16 +432,16 @@ export class AdminPageDiagnostic {
       message: '診斷工具運行正常',
     });
 
-    // RPC 統計
-    const stats = rpcMonitor.getStats();
-    if (stats.totalRequests > 0) {
-      const errorRate = stats.failedRequests / stats.totalRequests;
-      results.push({
-        category: 'RPC 狀態',
-        status: errorRate < 0.1 ? 'pass' : 'warning',
-        message: `${stats.totalRequests} 請求, ${(errorRate * 100).toFixed(1)}% 錯誤率`,
-      });
-    }
+    // RPC 統計 - DISABLED
+    // const stats = rpcMonitor.getStats();
+    // if (stats.totalRequests > 0) {
+    //   const errorRate = stats.failedRequests / stats.totalRequests;
+    //   results.push({
+    //     category: 'RPC 狀態',
+    //     status: errorRate < 0.1 ? 'pass' : 'warning',
+    //     message: `${stats.totalRequests} 請求, ${(errorRate * 100).toFixed(1)}% 錯誤率`,
+    //   });
+    // }
 
     // Watch 優化
     const watchStats = watchOptimizer.getOptimizationStats();
@@ -472,8 +474,9 @@ export class AdminPageDiagnostic {
       fixes.push('✅ 已清理錯誤處理緩存');
 
       // 3. 重置監控統計
-      if (rpcMonitor.getStats().totalRequests > 1000) {
-        rpcMonitor.clearStats();
+      // RPC monitoring disabled
+      // if (rpcMonitor.getStats().totalRequests > 1000) {
+      //   rpcMonitor.clearStats();
         fixes.push('✅ 已重置 RPC 監控統計');
       }
 

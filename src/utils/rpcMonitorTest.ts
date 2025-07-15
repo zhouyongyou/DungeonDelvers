@@ -1,8 +1,9 @@
-// src/utils/rpcMonitorTest.ts - RPC 監控系統測試
+// src/utils/rpcMonitorTest.ts - RPC 監控系統測試 - DISABLED
 
-import { rpcMonitor } from './rpcMonitor';
-import { rpcAnalytics } from './rpcAnalytics';
-import { rpcOptimizer } from './rpcOptimizer';
+// RPC monitoring has been disabled
+// import { rpcMonitor } from './rpcMonitor';
+// import { rpcAnalytics } from './rpcAnalytics';
+// import { rpcOptimizer } from './rpcOptimizer';
 import { logger } from './logger';
 
 // 模擬 RPC 請求數據

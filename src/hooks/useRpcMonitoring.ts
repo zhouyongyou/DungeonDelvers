@@ -1,10 +1,52 @@
 // src/hooks/useRpcMonitoring.ts - RPC 監控相關 Hook
 
 import { useState, useEffect, useCallback } from 'react';
-import { rpcMonitor } from '../utils/rpcMonitor';
-import type { RpcStats, PerformanceInsight } from '../utils/rpcMonitor';
-import { rpcAnalytics } from '../utils/rpcAnalytics';
-import type { CacheRecommendation, OptimizationSuggestion } from '../utils/rpcAnalytics';
+// import { rpcMonitor } from '../utils/rpcMonitor'; // Removed RPC monitoring
+// import type { RpcStats, PerformanceInsight } from '../utils/rpcMonitor';
+
+// Mock types for disabled RPC monitoring
+type RpcStats = {
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  totalDuration: number;
+  averageResponseTime: number;
+  requestsByMethod: Record<string, number>;
+  requestsByContract: Record<string, number>;
+  requestsByPage: Record<string, number>;
+  errorsByType: Record<string, number>;
+  hourlyRequests: number[];
+  lastUpdated: number;
+};
+
+type PerformanceInsight = {
+  type: 'warning' | 'error' | 'info';
+  title: string;
+  description: string;
+  suggestion: string;
+  priority: 'high' | 'medium' | 'low';
+  timestamp: number;
+};
+// import { rpcAnalytics } from '../utils/rpcAnalytics'; // Removed RPC monitoring
+// import type { CacheRecommendation, OptimizationSuggestion } from '../utils/rpcAnalytics';
+
+// Mock types for disabled RPC analytics
+type CacheRecommendation = {
+  queryKey: string;
+  reason: string;
+  priority: 'high' | 'medium' | 'low';
+  recommendedStaleTime: number;
+  recommendedGcTime: number;
+};
+
+type OptimizationSuggestion = {
+  type: string;
+  title: string;
+  description: string;
+  implementation: string;
+  expectedImpact: string;
+  difficulty: string;
+};
 
 // RPC 監控狀態 Hook
 export const useRpcMonitoring = (updateInterval: number = 5000) => {
@@ -13,8 +55,21 @@ export const useRpcMonitoring = (updateInterval: number = 5000) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const updateData = useCallback(() => {
-    setStats(rpcMonitor.getStats());
-    setInsights(rpcMonitor.getInsights());
+    // RPC monitoring disabled - return mock data
+    setStats({
+      totalRequests: 0,
+      successfulRequests: 0,
+      failedRequests: 0,
+      totalDuration: 0,
+      averageResponseTime: 0,
+      requestsByMethod: {},
+      requestsByContract: {},
+      requestsByPage: {},
+      errorsByType: {},
+      hourlyRequests: new Array(24).fill(0),
+      lastUpdated: Date.now(),
+    });
+    setInsights([]);
     setIsLoading(false);
   }, []);
 
@@ -25,12 +80,13 @@ export const useRpcMonitoring = (updateInterval: number = 5000) => {
   }, [updateData, updateInterval]);
 
   const clearStats = useCallback(() => {
-    rpcMonitor.clearStats();
+    // RPC monitoring disabled
     updateData();
   }, [updateData]);
 
   const exportStats = useCallback(() => {
-    return rpcMonitor.exportStats();
+    // RPC monitoring disabled
+    return JSON.stringify({ disabled: true, message: 'RPC monitoring has been disabled' }, null, 2);
   }, []);
 
   return {
@@ -50,8 +106,8 @@ export const useRpcAnalytics = () => {
   const generateReport = useCallback(async () => {
     setIsAnalyzing(true);
     try {
-      const report = rpcAnalytics.generateReport();
-      return report;
+      // RPC analytics disabled
+      return { disabled: true, message: 'RPC analytics has been disabled' };
     } finally {
       setIsAnalyzing(false);
     }
@@ -60,8 +116,8 @@ export const useRpcAnalytics = () => {
   const getCacheRecommendations = useCallback(async (): Promise<CacheRecommendation[]> => {
     setIsAnalyzing(true);
     try {
-      const recommendations = rpcAnalytics.generateCacheRecommendations();
-      return recommendations;
+      // RPC analytics disabled
+      return [];
     } finally {
       setIsAnalyzing(false);
     }
@@ -70,8 +126,8 @@ export const useRpcAnalytics = () => {
   const getOptimizationSuggestions = useCallback(async (): Promise<OptimizationSuggestion[]> => {
     setIsAnalyzing(true);
     try {
-      const suggestions = rpcAnalytics.generateOptimizationSuggestions();
-      return suggestions;
+      // RPC analytics disabled
+      return [];
     } finally {
       setIsAnalyzing(false);
     }
@@ -80,8 +136,8 @@ export const useRpcAnalytics = () => {
   const detectBottlenecks = useCallback(async () => {
     setIsAnalyzing(true);
     try {
-      const bottlenecks = rpcAnalytics.detectBottlenecks();
-      return bottlenecks;
+      // RPC analytics disabled
+      return [];
     } finally {
       setIsAnalyzing(false);
     }
@@ -90,8 +146,8 @@ export const useRpcAnalytics = () => {
   const generatePerformanceReport = useCallback(async (): Promise<string> => {
     setIsAnalyzing(true);
     try {
-      const report = rpcAnalytics.generatePerformanceReport();
-      return report;
+      // RPC analytics disabled
+      return 'RPC performance monitoring has been disabled.';
     } finally {
       setIsAnalyzing(false);
     }
@@ -113,8 +169,8 @@ export const useRpcPageStats = (pageName: string) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const updatePageStats = useCallback(() => {
-    const stats = rpcMonitor.getPageStats(pageName);
-    setPageStats(stats);
+    // RPC monitoring disabled
+    setPageStats({ totalRequests: 0 });
     setIsLoading(false);
   }, [pageName]);
 
@@ -137,8 +193,8 @@ export const useRpcContractStats = (contractName: string) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const updateContractStats = useCallback(() => {
-    const stats = rpcMonitor.getContractStats(contractName);
-    setContractStats(stats);
+    // RPC monitoring disabled
+    setContractStats({ totalRequests: 0 });
     setIsLoading(false);
   }, [contractName]);
 
@@ -168,8 +224,9 @@ export const useRpcRealTimeMonitoring = () => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const stats = rpcMonitor.getStats();
-      const history = rpcMonitor.getRequestHistory(60); // 最近60個請求
+      // RPC monitoring disabled
+      const stats = { averageResponseTime: 0, totalRequests: 0, failedRequests: 0 };
+      const history = []; // 最近60個請求
       
       // 計算每秒請求數
       const now = Date.now();
@@ -240,8 +297,9 @@ export const useRpcAlerts = () => {
   // 監控閾值
   useEffect(() => {
     const interval = setInterval(() => {
-      const stats = rpcMonitor.getStats();
-      const history = rpcMonitor.getRequestHistory(60);
+      // RPC monitoring disabled
+      const stats = { averageResponseTime: 0, totalRequests: 0, failedRequests: 0 };
+      const history = [];
       
       // 檢查請求頻率
       const now = Date.now();
@@ -301,8 +359,8 @@ export const useRpcOptimization = () => {
   const updateOptimizationSettings = useCallback((settings: Partial<typeof optimizationSettings>) => {
     setOptimizationSettings(prev => ({ ...prev, ...settings }));
     
-    // 應用設置到監控器
-    rpcMonitor.setEnabled(settings.enableMonitoring ?? optimizationSettings.enableMonitoring);
+    // RPC monitoring disabled - settings not applied
+    // rpcMonitor.setEnabled(settings.enableMonitoring ?? optimizationSettings.enableMonitoring);
   }, [optimizationSettings]);
 
   const applyOptimizationSettings = useCallback(() => {

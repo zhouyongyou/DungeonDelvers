@@ -1,7 +1,12 @@
 // src/utils/rpcAnalytics.ts - RPC 分析和統計工具
 
-import { rpcMonitor } from './rpcMonitor';
-import type { RpcRequest, RpcStats, PerformanceInsight } from './rpcMonitor';
+// import { rpcMonitor } from './rpcMonitor'; // Removed RPC monitoring
+// import type { RpcRequest, RpcStats, PerformanceInsight } from './rpcMonitor';
+
+// Mock types for disabled RPC monitoring
+type RpcRequest = any;
+type RpcStats = any;
+type PerformanceInsight = any;
 import { logger } from './logger';
 
 // 分析結果接口
@@ -49,24 +54,38 @@ interface OptimizationSuggestion {
 }
 
 class RpcAnalytics {
-  // 生成完整的分析報告
+  // 生成完整的分析報告 - RPC monitoring disabled
   generateReport(): AnalyticsResult {
-    const stats = rpcMonitor.getStats();
-    const requestHistory = rpcMonitor.getRequestHistory(500);
-    const insights = rpcMonitor.getInsights();
-
+    // RPC monitoring disabled - return mock data
     return {
-      summary: this.generateSummary(stats, requestHistory),
-      performance: this.analyzePerformance(requestHistory),
-      usage: this.analyzeUsage(stats, requestHistory),
-      insights: insights,
-      recommendations: this.generateRecommendations(stats, requestHistory),
+      summary: {
+        totalRequests: 0,
+        successRate: 100,
+        averageResponseTime: 0,
+        errorRate: 0,
+        topErrors: [],
+      },
+      performance: {
+        slowestRequests: [],
+        fastestRequests: [],
+        responseTimeDistribution: [],
+        performanceGrade: 'A',
+      },
+      usage: {
+        topMethods: [],
+        topContracts: [],
+        topPages: [],
+        hourlyDistribution: new Array(24).fill(0),
+      },
+      insights: [],
+      recommendations: ['RPC monitoring has been disabled'],
     };
   }
 
-  // 生成緩存建議
+  // 生成緩存建議 - RPC monitoring disabled
   generateCacheRecommendations(): CacheRecommendation[] {
-    const requestHistory = rpcMonitor.getRequestHistory(200);
+    // RPC monitoring disabled
+    return [];
     const recommendations: CacheRecommendation[] = [];
 
     // 按合約和方法分組
@@ -115,10 +134,10 @@ class RpcAnalytics {
     });
   }
 
-  // 生成優化建議
+  // 生成優化建議 - RPC monitoring disabled
   generateOptimizationSuggestions(): OptimizationSuggestion[] {
-    const stats = rpcMonitor.getStats();
-    const requestHistory = rpcMonitor.getRequestHistory(200);
+    // RPC monitoring disabled
+    return [];
     const suggestions: OptimizationSuggestion[] = [];
 
     // 分析重複請求
@@ -176,10 +195,10 @@ class RpcAnalytics {
     return suggestions;
   }
 
-  // 檢測性能瓶頸
+  // 檢測性能瓶頸 - RPC monitoring disabled
   detectBottlenecks(): Array<{ type: string; description: string; impact: string }> {
-    const stats = rpcMonitor.getStats();
-    const requestHistory = rpcMonitor.getRequestHistory(100);
+    // RPC monitoring disabled
+    return [];
     const bottlenecks: Array<{ type: string; description: string; impact: string }> = [];
 
     // 高頻請求頁面
@@ -224,10 +243,8 @@ class RpcAnalytics {
 
   // 生成性能報告
   generatePerformanceReport(): string {
-    const report = this.generateReport();
-    const cacheRecommendations = this.generateCacheRecommendations();
-    const optimizationSuggestions = this.generateOptimizationSuggestions();
-    const bottlenecks = this.detectBottlenecks();
+    // RPC monitoring disabled
+    return 'RPC performance monitoring has been disabled.';
 
     const reportLines = [
       '🔍 RPC 性能分析報告',

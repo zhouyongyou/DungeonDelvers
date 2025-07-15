@@ -1,7 +1,7 @@
 // src/utils/rpcOptimizer.ts - RPC 性能優化器
 
-import { rpcMonitor } from './rpcMonitor';
-import { rpcAnalytics } from './rpcAnalytics';
+// import { rpcMonitor } from './rpcMonitor'; // Removed RPC monitoring
+// import { rpcAnalytics } from './rpcAnalytics'; // Removed RPC monitoring
 import { logger } from './logger';
 
 // 優化規則接口
@@ -105,8 +105,9 @@ class RpcOptimizer {
     if (!this.isEnabled) return;
 
     try {
-      const stats = rpcMonitor.getStats();
-      const history = rpcMonitor.getRequestHistory(100);
+      // RPC monitoring disabled
+      const stats = { totalRequests: 0, averageResponseTime: 0, failedRequests: 0, requestsByMethod: {} };
+      const history = [];
 
       for (const rule of this.rules) {
         if (rule.check(stats, history)) {
@@ -258,8 +259,9 @@ class RpcOptimizer {
     retryConfig: Record<string, any>;
     batchConfig: Record<string, any>;
   } {
-    const stats = rpcMonitor.getStats();
-    const history = rpcMonitor.getRequestHistory(200);
+    // RPC monitoring disabled
+    const stats = { totalRequests: 0, averageResponseTime: 0, failedRequests: 0, requestsByMethod: {} };
+    const history = [];
 
     return {
       cacheConfig: this.generateCacheConfig(stats, history),

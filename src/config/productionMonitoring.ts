@@ -1,7 +1,7 @@
 // src/config/productionMonitoring.ts - 生產環境 RPC 監控配置
 
-import { rpcMonitor } from '../utils/rpcMonitor';
-import { rpcAnalytics } from '../utils/rpcAnalytics';
+// import { rpcMonitor } from '../utils/rpcMonitor'; // Removed RPC monitoring
+// import { rpcAnalytics } from '../utils/rpcAnalytics'; // Removed RPC monitoring
 import { logger } from '../utils/logger';
 
 // 生產環境監控配置
@@ -62,11 +62,12 @@ export interface ProductionReport {
   }>;
 }
 
-// 生成生產環境報告
+// 生成生產環境報告 - RPC monitoring disabled
 export async function generateProductionReport(): Promise<ProductionReport> {
-  const stats = rpcMonitor.getStats();
-  const insights = rpcMonitor.getInsights();
-  const analyticsReport = rpcAnalytics.generateReport();
+  // RPC monitoring disabled - return mock data
+  const stats = { totalRequests: 0, failedRequests: 0, successfulRequests: 0, averageResponseTime: 0, requestsByMethod: {}, requestsByContract: {} };
+  const insights = [];
+  const analyticsReport = { disabled: true };
   
   // 估算成本（基於 Alchemy 定價）
   const costEstimate = calculateRpcCost(stats.totalRequests);

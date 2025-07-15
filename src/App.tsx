@@ -16,7 +16,7 @@ import { GlobalLoadingProvider } from './components/core/GlobalLoadingProvider';
 import { usePrefetchOnHover } from './hooks/usePagePrefetch';
 import { MobileNavigation } from './components/mobile/MobileNavigation';
 import { useMobileOptimization } from './hooks/useMobileOptimization';
-import { RpcStatusMonitor } from './components/debug/RpcStatusMonitor';
+// import { RpcStatusMonitor } from './components/debug/RpcStatusMonitor'; // Removed RPC monitoring
 import PerformanceDashboard from './components/debug/PerformanceDashboard';
 import { preloadCriticalImages, setupSmartPreloading } from './utils/imagePreloadStrategy';
 import { usePagePerformance } from './utils/performanceMonitor';
@@ -153,8 +153,8 @@ function App() {
             )}
             {/* 這個元件負責在背景追蹤已發送交易的狀態 */}
             <TransactionWatcher />
-            {/* RPC 狀態監控（開發環境） */}
-            <RpcStatusMonitor />
+            {/* RPC 狀態監控（開發環境） - DISABLED */}
+            {/* <RpcStatusMonitor /> */}
             {/* 性能監控儀表板（開發環境） */}
             <PerformanceDashboard />
             {/* 移動端底部安全區域 */}

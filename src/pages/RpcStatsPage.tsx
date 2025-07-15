@@ -1,33 +1,25 @@
-// src/pages/RpcStatsPage.tsx - 獨立的 RPC 統計頁面
+// src/pages/RpcStatsPage.tsx - 獨立的 RPC 統計頁面 - DISABLED
 
-import React, { useState, useEffect } from 'react';
-import { useRpcMonitoring, useRpcAnalytics } from '../hooks/useRpcMonitoring';
-import { rpcOptimizer, AutoOptimization } from '../utils/rpcOptimizer';
-import RpcDashboard from '../components/ui/RpcDashboard';
-import { ActionButton } from '../components/ui/ActionButton';
-import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import React from 'react';
+// import { useRpcMonitoring, useRpcAnalytics } from '../hooks/useRpcMonitoring'; // Removed RPC monitoring
+// import { rpcOptimizer, AutoOptimization } from '../utils/rpcOptimizer';
+// import RpcDashboard from '../components/ui/RpcDashboard';
+// import { ActionButton } from '../components/ui/ActionButton';
+// import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
-import { useAppToast } from '../hooks/useAppToast';
+// import { useAppToast } from '../hooks/useAppToast';
 
 const RpcStatsPage: React.FC = () => {
-  const { stats, insights, isLoading, clearStats, exportStats } = useRpcMonitoring();
-  const { 
-    isAnalyzing, 
-    generatePerformanceReport, 
-    getCacheRecommendations,
-    getOptimizationSuggestions 
-  } = useRpcAnalytics();
-  const { showToast } = useAppToast();
+  // RPC monitoring has been disabled
+  return (
+    <EmptyState
+      title="RPC Monitoring Disabled"
+      description="The RPC monitoring system has been removed to reduce overhead since direct Alchemy connections are now being used."
+    />
+  );
+};
 
-  const [optimizations, setOptimizations] = useState<AutoOptimization[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'optimizations' | 'analysis'>('overview');
-  const [reportData, setReportData] = useState<string>('');
-
-  // 定期更新優化建議
-  useEffect(() => {
-    const updateOptimizations = () => {
-      setOptimizations(rpcOptimizer.getOptimizations());
-    };
+/* Rest of the component code has been disabled due to RPC monitoring removal
 
     updateOptimizations();
     const interval = setInterval(updateOptimizations, 10000); // 每10秒更新
@@ -307,5 +299,7 @@ const RpcStatsPage: React.FC = () => {
     </div>
   );
 };
+
+*/
 
 export default RpcStatsPage;

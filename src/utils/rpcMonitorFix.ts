@@ -1,6 +1,6 @@
 // src/utils/rpcMonitorFix.ts - RPC 監控修復工具
 
-import { rpcMonitor } from './rpcMonitor';
+// import { rpcMonitor } from './rpcMonitor'; // Removed RPC monitoring
 import { logger } from './logger';
 
 /**
@@ -58,10 +58,10 @@ export class RpcMonitorDiagnostics {
   startDiagnostics() {
     this.interceptFetch();
     
-    // 監聽 rpcMonitor 的統計
+    // RPC monitoring disabled
     setInterval(() => {
-      const stats = rpcMonitor.getStats();
-      this.monitoredRequestCount = stats.totalRequests;
+      // const stats = rpcMonitor.getStats();
+      this.monitoredRequestCount = 0;
       
       // 比較差異
       const discrepancy = this.monitoredRequestCount - this.realRequestCount;
@@ -80,7 +80,8 @@ export class RpcMonitorDiagnostics {
    * 獲取診斷報告
    */
   getDiagnosticsReport() {
-    const stats = rpcMonitor.getStats();
+    // RPC monitoring disabled
+    const stats = { totalRequests: 0, successfulRequests: 0, failedRequests: 0, averageResponseTime: 0, requestsByMethod: {} };
     const recentRequests = Array.from(this.interceptedRequests.values()).slice(-20);
     
     return {
@@ -146,7 +147,8 @@ export class RpcMonitorDiagnostics {
     this.realRequestCount = 0;
     this.monitoredRequestCount = 0;
     this.interceptedRequests.clear();
-    rpcMonitor.clearStats();
+    // RPC monitoring disabled
+    // rpcMonitor.clearStats();
   }
 }
 

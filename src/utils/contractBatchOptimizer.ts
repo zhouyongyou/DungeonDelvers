@@ -1,7 +1,7 @@
 // src/utils/contractBatchOptimizer.ts - 合約批處理優化器
 
 import { type UseReadContractsConfig } from 'wagmi';
-import { rpcMonitor } from './rpcMonitor';
+// import { rpcMonitor } from './rpcMonitor'; // Removed RPC monitoring
 import { logger } from './logger';
 import { BATCH_REQUEST_CONFIG, DEDUP_CONFIG } from '../config/rpcOptimization';
 

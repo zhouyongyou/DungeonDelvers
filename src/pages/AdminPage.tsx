@@ -29,7 +29,7 @@ import AltarRuleManager from '../components/admin/AltarRuleManager';
 import FundsWithdrawal from '../components/admin/FundsWithdrawal';
 import VipSettingsManager from '../components/admin/VipSettingsManager';
 import GlobalRewardSettings from '../components/admin/GlobalRewardSettings';
-import RpcMonitoringPanel from '../components/admin/RpcMonitoringPanel';
+// import RpcMonitoringPanel from '../components/admin/RpcMonitoringPanel'; // Removed RPC monitoring
 
 type SupportedChainId = typeof bsc.id;
 type Address = `0x${string}`;
@@ -116,7 +116,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   }, [chainId, setupConfig]);
 
 
-  const { data: readResults, isLoading: isLoadingSettings, error: settingsError } = useMonitoredReadContracts({
+  const { data: readResults, isLoading: isLoadingSettings, error: settingsError, refetch: refetchSettings } = useMonitoredReadContracts({
     contracts: contractsToRead,
     contractName: 'adminSettings',
     batchName: 'adminContractsBatch',
@@ -126,8 +126,9 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       gcTime: 1000 * 60 * 60,    // 60分鐘
       refetchOnWindowFocus: false,
       refetchInterval: false,     // 禁用自動刷新
-      retry: false,               // 完全禁用重試以避免重複錯誤
-      retryOnMount: false,        // 禁用掛載時重試
+      retry: 2,                   // 允許合理的重試次數
+      retryDelay: 1000,           // 重試延遲 1 秒
+      retryOnMount: true          // 允許掛載時重試
     },
   });
 
@@ -151,6 +152,28 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       AdminPageDebugger.runFullDiagnostics(chainId, contractsToRead, address, currentAddressMap.owner);
     }
   }, [chainId, contractsToRead, address, currentAddressMap]);
+  
+  // 額外的調試信息 - 檢查參數合約
+  useEffect(() => {
+    if (import.meta.env.DEV && parameterContracts.length > 0) {
+      logger.info('=== 參數合約配置 ===');
+      logger.info(`參數合約數量: ${parameterContracts.length}`);
+      parameterContracts.forEach((contract, index) => {
+        logger.info(`參數合約 ${index}: ${contract.address}.${contract.functionName}`);
+      });
+    }
+  }, [parameterContracts]);
+  
+  // 調試信息 - 檢查 vault 合約
+  useEffect(() => {
+    if (import.meta.env.DEV && vaultContracts.length > 0) {
+      logger.info('=== Vault 合約配置 ===');
+      logger.info(`Vault 合約數量: ${vaultContracts.length}`);
+      vaultContracts.forEach((contract, index) => {
+        logger.info(`Vault 合約 ${index}: ${contract.address}.${contract.functionName}`);
+      });
+    }
+  }, [vaultContracts]);
   
   const envAddressMap: Record<string, { name: ContractName, address?: Address }> = useMemo(() => {
     if (!setupConfig || !Array.isArray(setupConfig) || !chainId) return {};
@@ -217,13 +240,25 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   }, [chainId]);
 
   const parameterContracts = useMemo(() => {
-    if (!parameterConfig || !Array.isArray(parameterConfig) || parameterConfig.length === 0) return [];
-    return parameterConfig
-      .filter(p => p && p.contract && p.contract.address && p.getter)
+    if (!parameterConfig || !Array.isArray(parameterConfig) || parameterConfig.length === 0) {
+      logger.warn('參數配置為空或無效');
+      return [];
+    }
+    const contracts = parameterConfig
+      .filter(p => {
+        const isValid = p && p.contract && p.contract.address && p.getter;
+        if (!isValid) {
+          logger.warn(`參數配置無效: ${p?.key || 'unknown'}`);
+        }
+        return isValid;
+      })
       .map(p => ({ ...p.contract, functionName: p.getter }));
+    
+    logger.info(`過濾後的參數合約數量: ${contracts.length}/${parameterConfig.length}`);
+    return contracts;
   }, [parameterConfig]);
 
-  const { data: params, isLoading: isLoadingParams } = useMonitoredReadContracts({
+  const { data: params, isLoading: isLoadingParams, error: paramsError, refetch: refetchParams } = useMonitoredReadContracts({
     contracts: parameterContracts,
     contractName: 'adminParameters',
     batchName: 'adminParametersBatch',
@@ -234,15 +269,19 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       gcTime: 1000 * 60 * 60,    // 60分鐘
       refetchOnWindowFocus: false,
       refetchInterval: false,     // 禁用自動刷新
-      retry: false,               // 完全禁用重試以避免重複錯誤
-      retryOnMount: false,        // 禁用掛載時重試
+      retry: 2,                   // 允許合理的重試次數
+      retryDelay: 1000,           // 重試延遲 1 秒
+      retryOnMount: true          // 允許掛載時重試
     }
   });
 
   // 讀取 PlayerVault 的稅務參數
   const playerVaultContract = getContract(chainId, 'playerVault');
   const vaultContracts = useMemo(() => {
-    if (!playerVaultContract || !playerVaultContract.address) return [];
+    if (!playerVaultContract || !playerVaultContract.address) {
+      logger.warn('PlayerVault 合約未配置或地址無效');
+      return [];
+    }
     
     const vaultFunctions = [
       'largeWithdrawThresholdUSD',
@@ -253,13 +292,16 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       'periodDuration'
     ];
     
-    return vaultFunctions.map(functionName => ({
+    const contracts = vaultFunctions.map(functionName => ({
       ...playerVaultContract,
       functionName: functionName as const
     }));
+    
+    logger.info(`Vault 合約配置完成: ${contracts.length} 個函數`);
+    return contracts;
   }, [playerVaultContract]);
 
-  const { data: vaultParams, isLoading: isLoadingVaultParams } = useMonitoredReadContracts({
+  const { data: vaultParams, isLoading: isLoadingVaultParams, error: vaultParamsError, refetch: refetchVaultParams } = useMonitoredReadContracts({
     contracts: vaultContracts,
     contractName: 'playerVault',
     batchName: 'vaultParametersBatch',
@@ -269,8 +311,9 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       gcTime: 1000 * 60 * 60,    // 60分鐘
       refetchOnWindowFocus: false,
       refetchInterval: false,     // 禁用自動刷新
-      retry: false,               // 完全禁用重試以避免重複錯誤
-      retryOnMount: false,        // 禁用掛載時重試
+      retry: 2,                   // 允許合理的重試次數
+      retryDelay: 1000,           // 重試延遲 1 秒
+      retryOnMount: true          // 允許掛載時重試
     }
   });
 
@@ -330,18 +373,40 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   const ownerAddress = currentAddressMap.owner;
   
   // 錯誤處理 - 使用 useEffect 避免重複觸發
-  const [hasShownError, setHasShownError] = useState(false);
+  const [hasShownError, setHasShownError] = useState<{ settings?: boolean; params?: boolean; vault?: boolean }>({});
+  
   useEffect(() => {
-    if (settingsError && !hasShownError) {
+    if (settingsError && !hasShownError.settings) {
       showToast(`讀取合約設定失敗: ${settingsError.message || '未知錯誤'}`, 'error');
       logger.debug('讀取管理員設定失敗:', settingsError);
-      setHasShownError(true);
+      setHasShownError(prev => ({ ...prev, settings: true }));
     }
-    // 清理錯誤狀態
-    if (!settingsError && hasShownError) {
-      setHasShownError(false);
+    if (!settingsError && hasShownError.settings) {
+      setHasShownError(prev => ({ ...prev, settings: false }));
     }
-  }, [settingsError, hasShownError, showToast]);
+  }, [settingsError, hasShownError.settings, showToast]);
+  
+  useEffect(() => {
+    if (paramsError && !hasShownError.params) {
+      showToast(`讀取參數設定失敗: ${paramsError.message || '未知錯誤'}`, 'error');
+      logger.debug('讀取參數設定失敗:', paramsError);
+      setHasShownError(prev => ({ ...prev, params: true }));
+    }
+    if (!paramsError && hasShownError.params) {
+      setHasShownError(prev => ({ ...prev, params: false }));
+    }
+  }, [paramsError, hasShownError.params, showToast]);
+  
+  useEffect(() => {
+    if (vaultParamsError && !hasShownError.vault) {
+      showToast(`讀取稅務參數失敗: ${vaultParamsError.message || '未知錯誤'}`, 'error');
+      logger.debug('讀取稅務參數失敗:', vaultParamsError);
+      setHasShownError(prev => ({ ...prev, vault: true }));
+    }
+    if (!vaultParamsError && hasShownError.vault) {
+      setHasShownError(prev => ({ ...prev, vault: false }));
+    }
+  }, [vaultParamsError, hasShownError.vault, showToast]);
 
   // 只在第一次加載合約串接中心時顯示全屏加載
   if (loadedSections.contractCenter && isLoadingSettings && !ownerAddress) {
@@ -465,6 +530,14 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         defaultExpanded={false}
         onExpand={() => setLoadedSections(prev => ({ ...prev, corePrice: true }))}
         isLoading={isLoadingParams && loadedSections.corePrice}
+        headerActions={paramsError && import.meta.env.DEV ? (
+          <button
+            onClick={() => refetchParams()}
+            className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            重新載入
+          </button>
+        ) : undefined}
       >
         {parameterConfig.filter(p => p && p.unit === 'USD').map((p) => {
           const { key, setter, ...rest } = p;
@@ -677,6 +750,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         </div>
       </AdminSection>
 
+      {/* RPC Monitoring Panel - DISABLED
       <AdminSection 
         title="RPC 監控系統"
         defaultExpanded={false}
@@ -684,6 +758,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       >
         <RpcMonitoringPanel />
       </AdminSection>
+      */}
     </>
   );
 };
@@ -695,7 +770,19 @@ const AdminPage: React.FC = () => {
   return (
     <ErrorBoundary>
       <section className="space-y-8">
-        <h2 className="page-title">超級管理控制台</h2>
+        <div className="flex justify-between items-center">
+          <h2 className="page-title">超級管理控制台</h2>
+          {import.meta.env.DEV && (
+            <button
+              onClick={() => {
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+            >
+              強制刷新頁面
+            </button>
+          )}
+        </div>
         {isSupportedChain(chainId) ? (
           <AdminPageContent chainId={chainId} />
         ) : (

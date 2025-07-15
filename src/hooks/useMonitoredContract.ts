@@ -2,7 +2,7 @@
 
 import { useReadContract, useReadContracts, useWriteContract } from 'wagmi';
 import { useEffect, useCallback, useMemo } from 'react';
-import { rpcMonitor } from '../utils/rpcMonitor';
+// import { rpcMonitor } from '../utils/rpcMonitor'; // Removed RPC monitoring
 import { logger } from '../utils/logger';
 import { getOptimizedQueryConfig, shouldEnableWatch, watchManager } from '../config/watchConfig';
 
@@ -30,36 +30,9 @@ export function useMonitoredReadContract<T = any>(
   });
   
   const result = useReadContract(optimizedConfig);
-  const pageName = getCurrentPageName();
-
-  // 監控請求 - 只在實際發生網絡請求時記錄
-  useEffect(() => {
-    if (config.address && config.functionName && result.isLoading) {
-      const requestId = rpcMonitor.startRequest(
-        config.address,
-        String(config.functionName),
-        config.args || [],
-        pageName,
-        contractName,
-        functionName
-      );
-
-      // 監控結果
-      const monitorResult = () => {
-        if (result.error) {
-          rpcMonitor.completeRequest(requestId, undefined, result.error.message);
-        } else if (result.data !== undefined && !result.isLoading) {
-          rpcMonitor.completeRequest(requestId, result.data);
-        }
-      };
-
-      // 當請求完成時記錄結果
-      return () => {
-        monitorResult();
-      };
-    }
-  }, [result.isLoading, config.address, config.functionName]);
-
+  
+  // RPC monitoring removed - hook now just passes through to useReadContract
+  
   return result;
 }
 
@@ -111,125 +84,41 @@ export function useMonitoredReadContracts<T = any>(
   }, [readConfig, contractName, batchName]);
   
   const result = useReadContracts(optimizedConfig);
-  const pageName = getCurrentPageName();
-
-  // 監控批量請求 - 只在實際發生網絡請求時記錄
-  useEffect(() => {
-    if (optimizedConfig.contracts && optimizedConfig.contracts.length > 0 && result.isLoading) {
-      const requestIds = optimizedConfig.contracts.map((contract, index) => {
-        if (contract && contract.address && contract.functionName) {
-          return rpcMonitor.startRequest(
-            contract.address,
-            String(contract.functionName),
-            contract.args || [],
-            pageName,
-            contractName || 'unknown',
-            `${batchName || 'batch'}_${index}`
-          );
-        }
-        return null;
-      }).filter(Boolean);
-
-      // 當請求完成時記錄結果
-      return () => {
-        if (result.error) {
-          requestIds.forEach(id => {
-            if (id) rpcMonitor.completeRequest(id, undefined, result.error?.message);
-          });
-        } else if (result.data && !result.isLoading) {
-          requestIds.forEach((id, index) => {
-            if (id && result.data && result.data[index]) {
-              rpcMonitor.completeRequest(id, result.data[index]);
-            }
-          });
-        }
-      };
-    }
-  }, [result.isLoading, optimizedConfig.contracts?.length]);
-
-  // 添加性能監控
+  
+  // RPC monitoring removed - hook now just passes through to useReadContracts
+  // Performance warning still enabled
   useEffect(() => {
     if (optimizedConfig.contracts && optimizedConfig.contracts.length > 10) {
       logger.warn(`⚠️ 大量合約請求 (${optimizedConfig.contracts.length}):`, {
         batchName,
         contractName,
-        page: pageName
+        page: getCurrentPageName()
       });
     }
-  }, [optimizedConfig.contracts?.length, batchName, contractName, pageName]);
+  }, [optimizedConfig.contracts?.length, batchName, contractName]);
 
   return result;
 }
 
-// 監控版本的 useWriteContract
+// 監控版本的 useWriteContract - RPC monitoring removed
 export function useMonitoredWriteContract() {
   const writeContract = useWriteContract();
-  const pageName = getCurrentPageName();
-
-  const writeContractAsync = useCallback(async (config: any) => {
-    const requestId = rpcMonitor.startRequest(
-      config.address,
-      String(config.functionName),
-      config.args || [],
-      pageName,
-      'contract_write',
-      String(config.functionName)
-    );
-
-    try {
-      const result = await writeContract.writeContractAsync(config);
-      rpcMonitor.completeRequest(requestId, result);
-      return result;
-    } catch (error) {
-      rpcMonitor.completeRequest(requestId, undefined, error.message);
-      throw error;
-    }
-  }, [writeContract.writeContractAsync, pageName]);
-
-  return {
-    ...writeContract,
-    writeContractAsync,
-  };
+  
+  // RPC monitoring removed - hook now just passes through to useWriteContract
+  return writeContract;
 }
 
-// 為現有 hooks 添加監控的高階組件
+// 為現有 hooks 添加監控的高階組件 - RPC monitoring removed
 export function withRpcMonitoring<T extends any[]>(
   hook: (...args: T) => any,
   hookName: string,
   contractName?: string
 ) {
-  return function (...args: T) {
-    const result = hook(...args);
-    const pageName = getCurrentPageName();
-
-    // 監控 hook 的使用
-    useEffect(() => {
-      const requestId = rpcMonitor.startRequest(
-        'hook_call',
-        hookName,
-        args,
-        pageName,
-        contractName || 'custom_hook',
-        hookName
-      );
-
-      if (result?.error) {
-        rpcMonitor.completeRequest(requestId, undefined, result.error.message);
-      } else if (result?.data !== undefined) {
-        rpcMonitor.completeRequest(requestId, result.data);
-      } else {
-        // 對於沒有明確 data/error 結構的 hook，延遲監控
-        setTimeout(() => {
-          rpcMonitor.completeRequest(requestId, result);
-        }, 100);
-      }
-    }, [result, hookName, pageName]);
-
-    return result;
-  };
+  // RPC monitoring removed - now just passes through to the original hook
+  return hook;
 }
 
-// 智能重試包裝器
+// 智能重試包裝器 - RPC monitoring removed
 export function useSmartRetry<T>(
   queryFn: () => Promise<T>,
   options: {
@@ -239,12 +128,10 @@ export function useSmartRetry<T>(
     functionName?: string;
   } = {}
 ) {
-  const { maxRetries = 3, retryDelay = 1000, contractName, functionName } = options;
-  const pageName = getCurrentPageName();
+  const { maxRetries = 3, retryDelay = 1000 } = options;
 
   const executeWithRetry = useCallback(async (): Promise<T> => {
     let lastError: any;
-    let requestId: string | null = null;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
@@ -252,27 +139,10 @@ export function useSmartRetry<T>(
           await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
         }
 
-        requestId = rpcMonitor.startRequest(
-          'smart_retry',
-          functionName || 'unknown',
-          [],
-          pageName,
-          contractName || 'unknown',
-          functionName || 'unknown'
-        );
-
-        if (attempt > 0) {
-          rpcMonitor.recordRetry(requestId);
-        }
-
         const result = await queryFn();
-        rpcMonitor.completeRequest(requestId, result);
         return result;
       } catch (error) {
         lastError = error;
-        if (requestId) {
-          rpcMonitor.completeRequest(requestId, undefined, error.message);
-        }
         
         if (attempt === maxRetries) {
           throw error;
@@ -281,15 +151,13 @@ export function useSmartRetry<T>(
     }
 
     throw lastError;
-  }, [queryFn, maxRetries, retryDelay, contractName, functionName, pageName]);
+  }, [queryFn, maxRetries, retryDelay]);
 
   return { executeWithRetry };
 }
 
-// 批量請求優化器
+// 批量請求優化器 - RPC monitoring removed
 export function useBatchOptimizer() {
-  const pageName = getCurrentPageName();
-
   const executeBatch = useCallback(async (
     requests: Array<{
       fn: () => Promise<any>;
@@ -298,27 +166,13 @@ export function useBatchOptimizer() {
       functionName?: string;
     }>
   ) => {
-    const batchId = `batch_${Date.now()}`;
-    const requestIds = requests.map(req => 
-      rpcMonitor.startRequest(
-        batchId,
-        req.functionName || 'batch_item',
-        [],
-        pageName,
-        req.contractName || 'batch',
-        req.functionName || req.key
-      )
-    );
-
     try {
       const results = await Promise.all(
-        requests.map(async (req, index) => {
+        requests.map(async (req) => {
           try {
             const result = await req.fn();
-            rpcMonitor.completeRequest(requestIds[index], result);
             return { success: true, data: result, key: req.key };
           } catch (error) {
-            rpcMonitor.completeRequest(requestIds[index], undefined, error.message);
             return { success: false, error, key: req.key };
           }
         })
@@ -326,17 +180,14 @@ export function useBatchOptimizer() {
 
       return results;
     } catch (error) {
-      requestIds.forEach(id => 
-        rpcMonitor.completeRequest(id, undefined, error.message)
-      );
       throw error;
     }
-  }, [pageName]);
+  }, []);
 
   return { executeBatch };
 }
 
-// 緩存優化的 hook
+// 緩存優化的 hook - RPC monitoring removed
 export function useOptimizedQuery<T>(
   queryKey: string,
   queryFn: () => Promise<T>,
@@ -347,28 +198,14 @@ export function useOptimizedQuery<T>(
     functionName?: string;
   } = {}
 ) {
-  const { contractName, functionName, ...cacheOptions } = options;
-  const pageName = getCurrentPageName();
-
   const executeQuery = useCallback(async (): Promise<T> => {
-    const requestId = rpcMonitor.startRequest(
-      'optimized_query',
-      functionName || queryKey,
-      [],
-      pageName,
-      contractName || 'optimized',
-      functionName || queryKey
-    );
-
     try {
       const result = await queryFn();
-      rpcMonitor.completeRequest(requestId, result);
       return result;
     } catch (error) {
-      rpcMonitor.completeRequest(requestId, undefined, error.message);
       throw error;
     }
-  }, [queryFn, queryKey, contractName, functionName, pageName]);
+  }, [queryFn]);
 
   return { executeQuery };
 }

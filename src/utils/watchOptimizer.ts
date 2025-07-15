@@ -1,7 +1,7 @@
 // src/utils/watchOptimizer.ts - Watch 監聽優化器
 
 import { logger } from './logger';
-import { rpcMonitor } from './rpcMonitor';
+// import { rpcMonitor } from './rpcMonitor'; // Removed RPC monitoring
 
 // 監聽配置接口
 interface WatchConfig {
@@ -264,23 +264,24 @@ class PollingOptimizer {
         await callback();
         const duration = Date.now() - startTime;
         
-        // 記錄性能
-        rpcMonitor.completeRequest(
-          `polling_${key}`,
-          { success: true, duration },
-          undefined
-        );
+        // RPC monitoring disabled
+        // rpcMonitor.completeRequest(
+        //   `polling_${key}`,
+        //   { success: true, duration },
+        //   undefined
+        // );
 
         if (duration > 5000) {
           logger.warn(`輪詢執行時間過長: ${key}, 耗時: ${duration}ms`);
         }
       } catch (error) {
         logger.error(`輪詢執行失敗: ${key}`, error);
-        rpcMonitor.completeRequest(
-          `polling_${key}`,
-          undefined,
-          error.message
-        );
+        // RPC monitoring disabled
+        // rpcMonitor.completeRequest(
+        //   `polling_${key}`,
+        //   undefined,
+        //   error.message
+        // );
       }
     }, adjustedInterval);
 

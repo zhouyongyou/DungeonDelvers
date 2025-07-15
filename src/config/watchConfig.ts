@@ -150,7 +150,7 @@ export function getOptimizedQueryConfig(baseConfig: any = {}): any {
       refetchOnReconnect: watchConfig.enabled,
       
       // 錯誤處理
-      retry: watchConfig.enabled ? 2 : 1,
+      retry: watchConfig.enabled ? 2 : 2,  // 即使 watch 禁用也允許 2 次重試
       retryDelay: watchConfig.enabled ? 1000 : 2000,
     },
   };

@@ -1,11 +1,11 @@
-// src/components/ui/RpcDashboard.tsx - RPC 監控用戶儀表板
+// src/components/ui/RpcDashboard.tsx - RPC 監控用戶儀表板 - DISABLED
 
-import React, { useState, useEffect } from 'react';
-import { rpcMonitor } from '../../utils/rpcMonitor';
-import type { RpcStats, PerformanceInsight } from '../../utils/rpcMonitor';
-import { rpcAnalytics } from '../../utils/rpcAnalytics';
-import { ActionButton } from './ActionButton';
-import { LoadingSpinner } from './LoadingSpinner';
+import React from 'react';
+// import { rpcMonitor } from '../../utils/rpcMonitor'; // Removed RPC monitoring
+// import type { RpcStats, PerformanceInsight } from '../../utils/rpcMonitor';
+// import { rpcAnalytics } from '../../utils/rpcAnalytics';
+// import { ActionButton } from './ActionButton';
+// import { LoadingSpinner } from './LoadingSpinner';
 
 interface RpcDashboardProps {
   className?: string;
@@ -18,24 +18,13 @@ const RpcDashboard: React.FC<RpcDashboardProps> = ({
   showExportButton = true,
   compact = false 
 }) => {
-  const [stats, setStats] = useState<RpcStats | null>(null);
-  const [insights, setInsights] = useState<PerformanceInsight[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'performance' | 'usage' | 'insights'>('overview');
-
-  // 定期更新統計數據
-  useEffect(() => {
-    const updateStats = () => {
-      setStats(rpcMonitor.getStats());
-      setInsights(rpcMonitor.getInsights());
-      setIsLoading(false);
-    };
-
-    updateStats();
-    const interval = setInterval(updateStats, 5000); // 每5秒更新
-
-    return () => clearInterval(interval);
-  }, []);
+  // RPC monitoring has been disabled
+  return (
+    <div className={`bg-gray-800 p-4 rounded-lg ${className}`}>
+      <p className="text-gray-400 text-center">RPC monitoring has been disabled</p>
+    </div>
+  );
+};
 
   // 導出統計數據
   const handleExport = () => {
@@ -399,5 +388,7 @@ const RpcDashboard: React.FC<RpcDashboardProps> = ({
     </div>
   );
 };
+
+/* Rest of the component code has been disabled due to RPC monitoring removal */
 
 export default RpcDashboard;

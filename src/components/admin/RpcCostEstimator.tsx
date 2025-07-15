@@ -1,9 +1,9 @@
-// src/components/admin/RpcCostEstimator.tsx - RPC 成本估算組件
+// src/components/admin/RpcCostEstimator.tsx - RPC 成本估算組件 - DISABLED
 
-import React, { useState, useEffect } from 'react';
-import { useRpcMonitoring } from '../../hooks/useRpcMonitoring';
-import { ActionButton } from '../ui/ActionButton';
-import { LoadingSpinner } from '../ui/LoadingSpinner';
+import React from 'react';
+// import { useRpcMonitoring } from '../../hooks/useRpcMonitoring'; // Removed RPC monitoring
+// import { ActionButton } from '../ui/ActionButton';
+// import { LoadingSpinner } from '../ui/LoadingSpinner';
 
 // Alchemy 定價計劃
 const ALCHEMY_PRICING = {
@@ -85,14 +85,15 @@ interface CostBreakdown {
 }
 
 const RpcCostEstimator: React.FC = () => {
-  const { stats, isLoading } = useRpcMonitoring();
-  const [timeRange, setTimeRange] = useState<'day' | 'week' | 'month'>('day');
-  const [breakdown, setBreakdown] = useState<CostBreakdown | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<keyof typeof ALCHEMY_PRICING>('free');
+  // RPC monitoring has been disabled
+  return (
+    <div className="bg-gray-800 p-4 rounded-lg">
+      <p className="text-gray-400 text-center">RPC cost estimation has been disabled</p>
+    </div>
+  );
+};
 
-  // 計算成本明細
-  useEffect(() => {
-    if (!stats) return;
+/* Rest of the component code has been disabled due to RPC monitoring removal
 
     const calculateBreakdown = () => {
       // 計算計算單位
@@ -393,5 +394,7 @@ const RpcCostEstimator: React.FC = () => {
     </div>
   );
 };
+
+*/
 
 export default RpcCostEstimator;

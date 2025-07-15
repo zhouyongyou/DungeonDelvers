@@ -1,7 +1,7 @@
 // src/utils/adminErrorHandler.ts - 管理員頁面錯誤處理和回退機制
 
 import { logger } from './logger';
-import { rpcMonitor } from './rpcMonitor';
+// import { rpcMonitor } from './rpcMonitor'; // Removed RPC monitoring
 
 // 錯誤類型枚舉
 export enum AdminErrorType {
@@ -287,12 +287,12 @@ export class AdminErrorHandler {
       this.errorHistory.shift();
     }
 
-    // 記錄到監控系統
-    rpcMonitor.completeRequest(
-      `error_${Date.now()}`,
-      undefined,
-      `${errorType}: ${adminError.message}`
-    );
+    // RPC monitoring disabled
+    // rpcMonitor.completeRequest(
+    //   `error_${Date.now()}`,
+    //   undefined,
+    //   `${errorType}: ${adminError.message}`
+    // );
 
     logger.error('管理員錯誤:', adminError);
     
