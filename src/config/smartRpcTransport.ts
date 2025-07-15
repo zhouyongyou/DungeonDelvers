@@ -60,68 +60,24 @@ export function createSmartRpcTransport(): Transport {
           
           return data.result;
         } catch (error) {
-          logger.error('RPC 代理請求失敗，回退到公共節點:', error);
+          logger.error('RPC 代理請求失敗:', error);
           lastError = error;
           // 監控失敗
           rpcMonitor.completeRequest(requestId, undefined, error.message);
-          // 如果代理失敗，回退到公共節點
-        }
-      }
-      
-      // 使用公共節點
-      for (let i = 0; i < maxRetries; i++) {
-        // 獲取最快的健康節點
-        const rpcUrl = rpcHealthManager.getFastestHealthyNode();
-        
-        if (!rpcUrl) {
-          throw new Error('沒有可用的 RPC 節點');
-        }
-        
-        try {
-          logger.debug(`RPC 請求: ${method} 使用節點: ${rpcUrl}`);
           
-          const response = await fetch(rpcUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              jsonrpc: '2.0',
-              method,
-              params,
-              id: Date.now(),
-            }),
-          });
-          
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          
-          const data = await response.json();
-          
-          if (data.error) {
-            throw new Error(data.error.message || 'RPC error');
-          }
-          
-          // 成功，報告節點健康
-          rpcHealthManager.reportSuccess(rpcUrl);
-          
-          return data.result;
-        } catch (error) {
-          logger.warn(`RPC 請求失敗 (嘗試 ${i + 1}/${maxRetries}):`, error);
-          lastError = error;
-          
-          // 報告節點失敗
-          rpcHealthManager.reportFailure(rpcUrl);
-          
-          // 如果還有重試機會，短暫延遲
+          // 如果是網路錯誤，重試代理而不是回退到公共節點
           if (i < maxRetries - 1) {
-            await new Promise(resolve => setTimeout(resolve, 500));
+            logger.info(`重試 RPC 代理請求 (${i + 2}/${maxRetries})...`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // 指數退避
+            continue;
           }
         }
       }
       
-      throw lastError || new Error('RPC 請求失敗');
+      // 如果代理完全失敗，拋出錯誤而不是使用公共節點
+      throw new Error(`RPC 代理請求失敗: ${lastError?.message || '未知錯誤'}`);
+      
+      /* 移除公共節點回退邏輯 - 完全依賴 RPC 代理 */
     },
     
     retryCount: 3,
