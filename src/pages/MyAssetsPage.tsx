@@ -423,7 +423,13 @@ const MyAssetsPageContent: React.FC = () => {
         address: partyContract?.address as `0x${string}`,
         abi: partyContract?.abi,
         functionName: 'platformFee',
-        query: { enabled: !!partyContract }
+        query: { 
+            enabled: !!partyContract,
+            staleTime: 1000 * 60 * 30, // 30分鐘 - 平台費用變更頻率低
+            gcTime: 1000 * 60 * 60,    // 60分鐘
+            refetchOnWindowFocus: false,
+            retry: 2,
+        }
     });
 
     // 交易進度 Hooks - 英雄授權
@@ -560,7 +566,13 @@ const MyAssetsPageContent: React.FC = () => {
         abi: heroContract?.abi,
         functionName: 'isApprovedForAll',
         args: [address!, partyContract!.address],
-        query: { enabled: !!address && !!heroContract && !!partyContract }
+        query: { 
+            enabled: !!address && !!heroContract && !!partyContract,
+            staleTime: 1000 * 60 * 5, // 5分鐘 - 授權狀態需要較新
+            gcTime: 1000 * 60 * 15,   // 15分鐘
+            refetchOnWindowFocus: false,
+            retry: 2,
+        }
     });
 
     const { data: isRelicAuthorized } = useReadContract({
@@ -568,7 +580,13 @@ const MyAssetsPageContent: React.FC = () => {
         abi: relicContract?.abi,
         functionName: 'isApprovedForAll',
         args: [address!, partyContract!.address],
-        query: { enabled: !!address && !!relicContract && !!partyContract }
+        query: { 
+            enabled: !!address && !!relicContract && !!partyContract,
+            staleTime: 1000 * 60 * 5, // 5分鐘 - 授權狀態需要較新
+            gcTime: 1000 * 60 * 15,   // 15分鐘
+            refetchOnWindowFocus: false,
+            retry: 2,
+        }
     });
 
     const { availableHeroes, availableRelics } = useMemo(() => {

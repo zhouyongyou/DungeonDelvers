@@ -1,6 +1,7 @@
 // src/hooks/useVipStatus.ts (修正後)
 
 import { useAccount, useReadContract, useBalance, useReadContracts } from 'wagmi';
+import { useMonitoredReadContracts } from './useMonitoredContract';
 import { useMemo, useEffect } from 'react';
 import { bsc } from 'wagmi/chains';
 import { getContract } from '../config/contracts';
@@ -50,10 +51,21 @@ export const useVipStatus = () => {
     const oracleContract = useMemo(() => isSupportedChain ? getContract(chainId, 'oracle') : null, [chainId, isSupportedChain]);
 
     // 讀取鏈上數據
-    const { data: soulShardBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useBalance({ address, token: soulShardContract?.address, query: { enabled: !!address && !!soulShardContract } });
+    const { data: soulShardBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useBalance({ 
+        address, 
+        token: soulShardContract?.address, 
+        query: { 
+            enabled: !!address && !!soulShardContract,
+            // 🔄 餘額查詢快取配置
+            staleTime: 1000 * 60 * 2, // 2分鐘 - 餘額需要較新的數據
+            gcTime: 1000 * 60 * 10,   // 10分鐘
+            refetchOnWindowFocus: false,
+            retry: 2,
+        }
+    });
     
     // ★ 核心修正 #1: 使用合約方法獲取 VIP 等級和稅率減免（增強錯誤處理）
-    const { data: vipData, isLoading: isLoadingVipData, error: vipDataError, refetch: refetchVipData } = useReadContracts({
+    const { data: vipData, isLoading: isLoadingVipData, error: vipDataError, refetch: refetchVipData } = useMonitoredReadContracts({
         contracts: [
             { ...vipStakingContract, functionName: 'userStakes', args: [address!] },
             { ...vipStakingContract, functionName: 'unstakeQueue', args: [address!] },
@@ -62,8 +74,14 @@ export const useVipStatus = () => {
             { ...vipStakingContract, functionName: 'getVipTaxReduction', args: [address!] },
             { ...vipStakingContract, functionName: 'unstakeCooldown' }, // 添加冷卻期讀取
         ],
+        contractName: 'vipStaking',
+        batchName: 'vipStatusBatch',
         query: { 
             enabled: !!address && !!vipStakingContract && !!soulShardContract && !!vipStakingContract?.address && isSupportedChain,
+            // 🔄 VIP 數據快取配置
+            staleTime: 1000 * 60 * 10, // 10分鐘 - VIP 狀態變更不頻繁
+            gcTime: 1000 * 60 * 30,    // 30分鐘
+            refetchOnWindowFocus: false, // 避免切換視窗時重新請求
             retry: 3,
             retryDelay: (attemptIndex) => Math.min(3000 * 2 ** attemptIndex, 30000), // 更慢的重試：3秒、6秒、12秒，最多30秒
             throwOnError: false, // 防止錯誤導致頁面崩潰
@@ -123,7 +141,12 @@ export const useVipStatus = () => {
         functionName: 'getAmountOut',
         args: [soulShardContract?.address as `0x${string}`, stakedAmount],
         query: { 
-            enabled: !!oracleContract && !!soulShardContract && (stakedAmount > 0n)
+            enabled: !!oracleContract && !!soulShardContract && (stakedAmount > 0n),
+            // 🔄 Oracle 價格查詢快取配置
+            staleTime: 1000 * 60 * 5, // 5分鐘 - 價格數據需要較新
+            gcTime: 1000 * 60 * 15,   // 15分鐘
+            refetchOnWindowFocus: false,
+            retry: 2,
         }
     });
 

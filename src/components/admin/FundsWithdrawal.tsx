@@ -37,7 +37,13 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
 
   const { data: balances } = useBalance({
     address: balanceQueries[0]?.address as `0x${string}`,
-    chainId
+    chainId,
+    query: {
+      staleTime: 1000 * 60 * 5, // 5分鐘 - 合約餘額需要較新的數據
+      gcTime: 1000 * 60 * 15,   // 15分鐘
+      refetchOnWindowFocus: false,
+      retry: 2,
+    }
   });
 
   const handleWithdrawSoulShard = async (contractName: string, label: string) => {

@@ -28,7 +28,13 @@ const VipSettingsManager: React.FC<VipSettingsManagerProps> = ({ chainId }) => {
     address: vipContract?.address as `0x${string}`,
     abi: vipContract?.abi,
     functionName: 'unstakeCooldown',
-    query: { enabled: !!vipContract }
+    query: { 
+      enabled: !!vipContract,
+      staleTime: 1000 * 60 * 20, // 20分鐘 - VIP 冷卻期設定很少變更
+      gcTime: 1000 * 60 * 60,    // 60分鐘
+      refetchOnWindowFocus: false,
+      retry: 2,
+    }
   });
 
   // 格式化顯示當前冷卻期

@@ -32,7 +32,11 @@ const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, 
         functionName: 'getVipLevel',
         args: [address!],
     query: { 
-      enabled: !!address && !!vipStakingContract && chainId === bsc.id
+      enabled: !!address && !!vipStakingContract && chainId === bsc.id,
+      staleTime: 1000 * 60 * 10, // 10分鐘 - VIP 等級變更不頻繁
+      gcTime: 1000 * 60 * 30,    // 30分鐘
+      refetchOnWindowFocus: false,
+      retry: 2,
     }
   });
   

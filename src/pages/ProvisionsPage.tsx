@@ -35,7 +35,13 @@ const useProvisionsLogic = (quantity: number) => {
                 address: dungeonMasterContract?.address as `0x${string}`,
         abi: dungeonMasterContract?.abi,
         functionName: 'provisionPriceUSD',
-        query: { enabled: !!dungeonMasterContract },
+        query: { 
+            enabled: !!dungeonMasterContract,
+            staleTime: 1000 * 60 * 30, // 30分鐘 - 儲備價格變更頻率低
+            gcTime: 1000 * 60 * 60,    // 60分鐘
+            refetchOnWindowFocus: false,
+            retry: 2,
+        },
     });
 
     // 計算所需的 SoulShard 數量
@@ -44,7 +50,13 @@ const useProvisionsLogic = (quantity: number) => {
         abi: dungeonCoreContract?.abi,
         functionName: 'getSoulShardAmountForUSD',
         args: [typeof provisionPriceUSD === 'bigint' ? provisionPriceUSD * BigInt(quantity) : 0n],
-        query: { enabled: !!dungeonCoreContract && typeof provisionPriceUSD === 'bigint' && quantity > 0 },
+        query: { 
+            enabled: !!dungeonCoreContract && typeof provisionPriceUSD === 'bigint' && quantity > 0,
+            staleTime: 1000 * 60 * 5, // 5分鐘 - 價格轉換需要較新的數據
+            gcTime: 1000 * 60 * 15,   // 15分鐘
+            refetchOnWindowFocus: false,
+            retry: 2,
+        },
     });
 
     // 獲取錢包餘額
@@ -56,7 +68,13 @@ const useProvisionsLogic = (quantity: number) => {
         abi: soulShardContract?.abi,
         functionName: 'allowance',
         args: [address!, dungeonMasterContract?.address],
-        query: { enabled: !!address && !!soulShardContract && !!dungeonMasterContract },
+        query: { 
+            enabled: !!address && !!soulShardContract && !!dungeonMasterContract,
+            staleTime: 1000 * 60 * 5, // 5分鐘 - 授權額度需要較新的數據
+            gcTime: 1000 * 60 * 15,   // 15分鐘
+            refetchOnWindowFocus: false,
+            retry: 2,
+        },
     });
 
     // 判斷是否需要授權

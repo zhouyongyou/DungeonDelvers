@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { useWriteContract } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import type { Abi } from 'viem';
+import { useQueryClient } from '@tanstack/react-query';
 import { getContract } from '../../config/contracts';
 import { useAppToast } from '../../hooks/useAppToast';
 import { ActionButton } from '../ui/ActionButton';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
+import { invalidationStrategies } from '../../config/queryConfig';
 
 interface SettingRowProps {
   label: string;
@@ -33,6 +35,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
   );
   const { showToast } = useAppToast();
   const { writeContractAsync, isPending } = useWriteContract();
+  const queryClient = useQueryClient();
 
   const handleUpdate = async () => {
     if (inputValues.some(v => !v)) return;
@@ -56,6 +59,42 @@ const SettingRow: React.FC<SettingRowProps> = ({
       });
       
       showToast(`${label} 更新成功！`, 'success');
+      
+      // 🔄 立即失效相關快取 - 根據參數類型決定失效策略
+      const parameterType = label.toLowerCase();
+      
+      if (parameterType.includes('price') || parameterType.includes('價格')) {
+        // 如果是價格相關，立即失效價格快取
+        queryClient.invalidateQueries({ queryKey: ['price-data'] });
+        queryClient.invalidateQueries({ queryKey: ['mint-prices'] });
+        queryClient.invalidateQueries({ queryKey: ['admin-parameters'] });
+        
+        // 特別處理：失效所有與價格相關的查詢
+        queryClient.invalidateQueries({ 
+          predicate: (query) => {
+            const key = query.queryKey;
+            return Array.isArray(key) && key.some(k => 
+              typeof k === 'string' && (
+                k.includes('price') || 
+                k.includes('Price') || 
+                k.includes('mint') || 
+                k.includes('required')
+              )
+            );
+          }
+        });
+      } else if (parameterType.includes('fee') || parameterType.includes('費用')) {
+        // 如果是費用相關，立即失效費用快取
+        queryClient.invalidateQueries({ queryKey: ['platform-fees'] });
+        queryClient.invalidateQueries({ queryKey: ['admin-parameters'] });
+      } else if (parameterType.includes('tax') || parameterType.includes('稅')) {
+        // 如果是稅務相關，立即失效稅務快取
+        queryClient.invalidateQueries({ queryKey: ['tax-system'] });
+        queryClient.invalidateQueries({ queryKey: ['tax-params'] });
+      } else {
+        // 通用管理員參數更新
+        invalidationStrategies.onAdminParameterChanged(queryClient, parameterType);
+      }
     } catch (e: unknown) {
       const error = e as { shortMessage?: string };
       showToast(error.shortMessage || "更新失敗", "error");

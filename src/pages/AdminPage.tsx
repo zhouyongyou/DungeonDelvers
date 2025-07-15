@@ -2,6 +2,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
+import { useMonitoredReadContracts } from '../hooks/useMonitoredContract';
+import { useQueryClient } from '@tanstack/react-query';
 import { formatEther, isAddress } from 'viem';
 type ContractName = keyof typeof import('../config/contracts').contracts[typeof bsc.id];
 import { getContract, contracts as contractConfigs } from '../config/contracts';
@@ -23,6 +25,7 @@ import AltarRuleManager from '../components/admin/AltarRuleManager';
 import FundsWithdrawal from '../components/admin/FundsWithdrawal';
 import VipSettingsManager from '../components/admin/VipSettingsManager';
 import GlobalRewardSettings from '../components/admin/GlobalRewardSettings';
+import RpcMonitoringPanel from '../components/admin/RpcMonitoringPanel';
 
 type SupportedChainId = typeof bsc.id;
 type Address = `0x${string}`;
@@ -35,6 +38,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   const { showToast } = useAppToast();
   const { addTransaction } = useTransactionStore();
   const { writeContractAsync } = useWriteContract();
+  const queryClient = useQueryClient();
   
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [isBatchSetting, setIsBatchSetting] = useState(false);
@@ -78,9 +82,17 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     return configs.filter((c): c is NonNullable<typeof c> => c !== null && !!c.address);
   }, [chainId, setupConfig]);
 
-  const { data: readResults, isLoading: isLoadingSettings } = useReadContracts({
+  const { data: readResults, isLoading: isLoadingSettings } = useMonitoredReadContracts({
     contracts: contractsToRead,
-    query: { enabled: !!chainId && contractsToRead.length > 0 },
+    contractName: 'adminSettings',
+    batchName: 'adminContractsBatch',
+    query: { 
+      enabled: !!chainId && contractsToRead.length > 0,
+      staleTime: 1000 * 60 * 10, // 10分鐘 - 合約設定不會頻繁變更
+      gcTime: 1000 * 60 * 30,    // 30分鐘 - 保持快取更久
+      refetchOnWindowFocus: false, // 避免切換視窗時重新請求
+      retry: 2, // 減少重試次數
+    },
   });
 
   const currentAddressMap: Record<string, Address | undefined> = useMemo(() => {
@@ -151,9 +163,17 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     return parameterConfig.map(p => ({ ...p.contract, functionName: p.getter }));
   }, [parameterConfig]);
 
-  const { data: params, isLoading: isLoadingParams } = useReadContracts({
+  const { data: params, isLoading: isLoadingParams } = useMonitoredReadContracts({
     contracts: parameterContracts,
-    query: { enabled: parameterContracts.length > 0 }
+    contractName: 'adminParameters',
+    batchName: 'adminParametersBatch',
+    query: { 
+      enabled: parameterContracts.length > 0,
+      staleTime: 1000 * 60 * 15, // 15分鐘 - 參數設定變更頻率低
+      gcTime: 1000 * 60 * 45,    // 45分鐘 - 保持快取更久
+      refetchOnWindowFocus: false, // 避免切換視窗時重新請求
+      retry: 2, // 減少重試次數
+    }
   });
 
   // 讀取 PlayerVault 的稅務參數
@@ -170,9 +190,17 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     ];
   }, [playerVaultContract]);
 
-  const { data: vaultParams, isLoading: isLoadingVaultParams } = useReadContracts({
+  const { data: vaultParams, isLoading: isLoadingVaultParams } = useMonitoredReadContracts({
     contracts: vaultContracts,
-    query: { enabled: !!playerVaultContract && vaultContracts.length > 0 }
+    contractName: 'playerVault',
+    batchName: 'vaultParametersBatch',
+    query: { 
+      enabled: !!playerVaultContract && vaultContracts.length > 0,
+      staleTime: 1000 * 60 * 20, // 20分鐘 - 稅務參數很少變更
+      gcTime: 1000 * 60 * 60,    // 60分鐘 - 保持快取更久
+      refetchOnWindowFocus: false, // 避免切換視窗時重新請求
+      retry: 2, // 減少重試次數
+    }
   });
 
   const handleSet = async (key: string, targetContract: NonNullable<ReturnType<typeof getContract>>, functionName: string) => {
@@ -183,6 +211,11 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       const hash = await writeContractAsync({ address: targetContract.address, abi: targetContract.abi, functionName: functionName as any, args: [newAddress] });
       addTransaction({ hash, description: `管理員設定: ${key}` });
       showToast(`${key} 設定交易已送出`, 'success');
+      
+      // 🔄 立即失效相關快取
+      queryClient.invalidateQueries({ queryKey: ['admin-contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['contract-addresses'] });
     } catch (e: unknown) {
       const error = e as { message?: string; shortMessage?: string };
       if (!error.message?.includes('User rejected')) { showToast(error.shortMessage || `設定 ${key} 失敗`, 'error'); }
@@ -207,6 +240,12 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     }
     setIsBatchSetting(false);
     showToast('批次設定流程已完成！', 'success');
+    
+    // 🔄 批次設定完成後立即失效所有管理員相關快取
+    queryClient.invalidateQueries({ queryKey: ['admin-contracts'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-parameters'] });
+    queryClient.invalidateQueries({ queryKey: ['contract-addresses'] });
   };
   
   const handleFillFromEnv = () => {
@@ -439,6 +478,10 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                           });
                           addTransaction({ hash, description: `暫停 ${contractName} 合約` });
                           showToast(`${contractName} 合約已暫停`, 'success');
+                          
+                          // 🔄 立即失效合約狀態相關快取
+                          queryClient.invalidateQueries({ queryKey: ['contract-status'] });
+                          queryClient.invalidateQueries({ queryKey: ['admin-contracts'] });
                         } catch (e) {
                           if (!e.message?.includes('User rejected')) {
                             showToast(`暫停 ${contractName} 失敗: ${e.shortMessage}`, 'error');
@@ -459,6 +502,10 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                           });
                           addTransaction({ hash, description: `恢復 ${contractName} 合約` });
                           showToast(`${contractName} 合約已恢復`, 'success');
+                          
+                          // 🔄 立即失效合約狀態相關快取
+                          queryClient.invalidateQueries({ queryKey: ['contract-status'] });
+                          queryClient.invalidateQueries({ queryKey: ['admin-contracts'] });
                         } catch (e) {
                           if (!e.message?.includes('User rejected')) {
                             showToast(`恢復 ${contractName} 失敗: ${e.shortMessage}`, 'error');
@@ -477,6 +524,10 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
           
           <FundsWithdrawal chainId={chainId} />
         </div>
+      </AdminSection>
+
+      <AdminSection title="RPC 監控系統">
+        <RpcMonitoringPanel />
       </AdminSection>
     </>
   );

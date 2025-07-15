@@ -77,7 +77,13 @@ const usePlayerProfile = (targetAddress: Address | undefined) => {
         abi: playerProfileContract?.abi,
         functionName: 'tokenURI',
         args: [tokenId!],
-        query: { enabled: !!tokenId && !!playerProfileContract },
+        query: { 
+            enabled: !!tokenId && !!playerProfileContract,
+            staleTime: 1000 * 60 * 30, // 30分鐘 - 個人檔案 tokenURI 相對穩定
+            gcTime: 1000 * 60 * 60 * 2, // 2小時
+            refetchOnWindowFocus: false,
+            retry: 2,
+        },
     });
 
     return {

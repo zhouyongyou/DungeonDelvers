@@ -27,7 +27,13 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
       functionName: 'upgradeRules',
       args: [i + 1]
     })),
-    query: { enabled: !!altarContract }
+    query: { 
+      enabled: !!altarContract,
+      staleTime: 1000 * 60 * 15, // 15分鐘 - 升星祭壇規則很少變更
+      gcTime: 1000 * 60 * 45,    // 45分鐘
+      refetchOnWindowFocus: false,
+      retry: 2,
+    }
   });
 
   const [ruleInputs, setRuleInputs] = useState<Record<number, {

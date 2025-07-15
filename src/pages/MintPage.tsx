@@ -47,19 +47,36 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     // ★★★【核心優化】★★★
     // 直接呼叫 Hero/Relic 合約的 getRequiredSoulShardAmount 函式。
     // 這個函式內部會處理所有 USD 到 SoulShard 的轉換，將兩次鏈上讀取合併為一次。
-    const { data: requiredAmount, isLoading: isLoadingPrice, isError, error } = useReadContract({
+    const { data: requiredAmount, isLoading: isLoadingPrice, isError, error, refetch: refetchPrice } = useReadContract({
         address: contractConfig?.address,
         abi: contractConfig?.abi,
         functionName: 'getRequiredSoulShardAmount',
         args: [BigInt(quantity)],
-        query: { enabled: !!contractConfig && quantity > 0 },
+        query: { 
+            enabled: !!contractConfig && quantity > 0,
+            staleTime: 1000 * 60 * 2, // 2分鐘 - 縮短快取時間，平衡性能與準確性
+            gcTime: 1000 * 60 * 10,   // 10分鐘
+            refetchOnWindowFocus: false,
+            retry: 2,
+            // 🔄 價格查詢失敗時的重試策略
+            retryDelay: (attemptIndex) => {
+                // 第一次重試立即執行，第二次重試等待1秒
+                return attemptIndex === 0 ? 0 : 1000;
+            },
+        },
     });
     
-    // 平台費用 (platformFee) 的讀取保持不變
+    // 平台費用 (platformFee) 的讀取
     const { data: platformFee, isLoading: isLoadingFee } = useReadContract({
         address: contractConfig?.address,
         abi: contractConfig?.abi,
         functionName: 'platformFee',
+        query: {
+            staleTime: 1000 * 60 * 30, // 30分鐘 - 平台費用變更頻率很低
+            gcTime: 1000 * 60 * 60,    // 60分鐘
+            refetchOnWindowFocus: false,
+            retry: 2,
+        },
     });
 
     // 獲取錢包和金庫餘額的邏輯保持不變
@@ -69,17 +86,29 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
         abi: playerVaultContract?.abi,
         functionName: 'playerInfo',
         args: [address!],
-        query: { enabled: !!address && !!playerVaultContract }
+        query: { 
+            enabled: !!address && !!playerVaultContract,
+            staleTime: 1000 * 60 * 2, // 2分鐘 - 金庫餘額需要較新
+            gcTime: 1000 * 60 * 10,   // 10分鐘
+            refetchOnWindowFocus: false,
+            retry: 2,
+        }
     });
     const vaultBalance = useMemo(() => (vaultInfo && Array.isArray(vaultInfo) ? vaultInfo[0] : 0n), [vaultInfo]);
 
-    // 獲取授權狀態的邏輯保持不變
+    // 獲取授權狀態的邏輯
     const { data: allowance, refetch: refetchAllowance } = useReadContract({
         address: soulShardContract?.address,
         abi: soulShardContract?.abi,
         functionName: 'allowance',
         args: [address!, contractConfig?.address as `0x${string}`],
-        query: { enabled: !!address && !!contractConfig && paymentSource === 'wallet' },
+        query: { 
+            enabled: !!address && !!contractConfig && paymentSource === 'wallet',
+            staleTime: 1000 * 60 * 5, // 5分鐘 - 授權狀態需要較新
+            gcTime: 1000 * 60 * 15,   // 15分鐘
+            refetchOnWindowFocus: false,
+            retry: 2,
+        },
     });
 
     const finalRequiredAmount = requiredAmount ?? 0n;
@@ -300,6 +329,39 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
         if (isError) return showToast('價格讀取失敗，無法鑄造', 'error');
         if (balance < requiredAmount) return showToast(`${paymentSource === 'wallet' ? '錢包' : '金庫'}餘額不足`, 'error');
         if (paymentSource === 'wallet' && needsApproval) return showToast(`請先完成授權`, 'error');
+
+        // 🔄 混合策略：鑄造前即時價格檢查
+        showToast('正在驗證最新價格...', 'info');
+        
+        try {
+            // 重新獲取最新價格
+            const { data: latestPrice } = await refetchPrice();
+            
+            if (latestPrice && latestPrice !== requiredAmount) {
+                // 價格已經改變，提示用戶
+                const priceChangePercentage = ((Number(latestPrice) - Number(requiredAmount)) / Number(requiredAmount) * 100).toFixed(1);
+                const priceDirection = Number(latestPrice) > Number(requiredAmount) ? '上漲' : '下跌';
+                
+                showToast(
+                    `價格已更新！${priceDirection} ${Math.abs(Number(priceChangePercentage))}%\n新價格：${formatEther(latestPrice)} SoulShard`, 
+                    'warning'
+                );
+                
+                // 檢查新價格下的餘額是否足夠
+                if (balance < latestPrice) {
+                    return showToast(`價格已調整，${paymentSource === 'wallet' ? '錢包' : '金庫'}餘額不足`, 'error');
+                }
+                
+                // 給用戶一點時間看到價格更新訊息
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+            
+            showToast('價格驗證完成，開始鑄造...', 'success');
+        } catch (error) {
+            console.error('價格驗證失敗:', error);
+            showToast('無法驗證最新價格，請稍後再試', 'error');
+            return;
+        }
 
         setShowProgressModal(true);
         resetMint();

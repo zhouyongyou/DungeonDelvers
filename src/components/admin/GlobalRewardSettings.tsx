@@ -49,7 +49,13 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
         functionName: 'restCostPowerDivisor'
       }
     ],
-    query: { enabled: !!dungeonMasterContract }
+    query: { 
+      enabled: !!dungeonMasterContract,
+      staleTime: 1000 * 60 * 15, // 15分鐘 - 全局獎勵參數變更頻率低
+      gcTime: 1000 * 60 * 45,    // 45分鐘
+      refetchOnWindowFocus: false,
+      retry: 2,
+    }
   });
 
   const currentValues = useMemo(() => ({
