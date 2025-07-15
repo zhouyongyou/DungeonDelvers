@@ -11,8 +11,8 @@ export const BSC_PUBLIC_RPCS = [
   'https://bsc-dataseed2.binance.org/', 
   'https://bsc-dataseed3.binance.org/',
   'https://bsc-dataseed4.binance.org/',
-  'https://binance.llamarpc.com',
-  'https://rpc.ankr.com/bsc',
+  'https://bsc.publicnode.com',
+  'https://1rpc.io/bnb',
 ] as const;
 
 /**
