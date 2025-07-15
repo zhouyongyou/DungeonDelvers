@@ -2,6 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 防止 CLS (Cumulative Layout Shift) 的全局樣式 */
+@layer base {
+  /* 預設圖片行為以防止 CLS */
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+  
+  /* 確保 aspect-ratio 被正確應用 */
+  [style*="aspect-ratio"] {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  /* 減少動畫造成的佈局偏移 */
+  * {
+    transform-box: border-box;
+  }
+  
+  /* GPU 加速優化 */
+  .transform-gpu {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+  
+  /* 預設字體載入行為 */
+  body {
+    font-display: swap;
+  }
+}
+
 /* 移動端優化樣式 */
 @layer base {
   /* 防止 iOS 橡皮筋效果 */

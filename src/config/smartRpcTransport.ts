@@ -1,14 +1,13 @@
 // src/config/smartRpcTransport.ts - 智能 RPC 傳輸層
 
 import { custom, type Transport } from 'viem';
-import { rpcHealthManager } from '../utils/rpcHealthCheck';
 import { logger } from '../utils/logger';
 import { getRpcConfig, buildRpcUrl } from './rpcProxySetup';
 import { rpcMonitor } from '../utils/rpcMonitor';
 
 /**
  * 創建智能 RPC 傳輸層
- * 支持自動故障轉移和健康檢查
+ * 僅使用 RPC 代理，不再使用公共節點
  */
 export function createSmartRpcTransport(): Transport {
   return custom({

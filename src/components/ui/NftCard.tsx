@@ -50,7 +50,7 @@ const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, 
       <ImageWithFallback
         src={fallbackImage} 
         alt={nft.name || `VIP #${nft.id.toString()}`} 
-        className="w-full h-full object-cover bg-gray-700 transition-transform duration-300 hover:scale-110"
+        className="w-full h-full object-cover bg-gray-700"
         nftType="vip"
         rarity={1}
         lazy={true}
@@ -114,7 +114,7 @@ const NftCard: React.FC<NftCardProps> = memo(({
     }
 
     // 其他類型NFT的通用處理 - 使用增強的圖片組件
-    const baseImageClass = "w-full h-full object-cover rounded-lg transition-transform duration-300 hover:scale-110";
+    const baseImageClass = "w-full h-full object-cover rounded-lg";
     
     // 獲取 NFT 稀有度用於智能回退 - 修正稀有度獲取邏輯
     let rarity: number = 1;
@@ -130,7 +130,7 @@ const NftCard: React.FC<NftCardProps> = memo(({
     }
     
     return (
-      <div className="relative w-full h-full">
+      <div className="relative w-full h-full overflow-hidden rounded-lg">
         {renderSyncStatus()}
         {shouldUseSvg() ? (
           <NftSvgDisplay 
@@ -145,6 +145,9 @@ const NftCard: React.FC<NftCardProps> = memo(({
             className={baseImageClass}
             fallback={`/images/${nft.type}/${nft.type}-${rarity}.png`}
             placeholder="skeleton"
+            width={400}
+            height={400}
+            aspectRatio="1/1"
           />
         )}
         {/* 只在圖片上顯示最重要的資訊 */}
@@ -219,7 +222,7 @@ const NftCard: React.FC<NftCardProps> = memo(({
       className={`
         bg-gray-800 rounded-xl overflow-hidden border-2 transition-all duration-200 cursor-pointer
         ${selected ? 'border-blue-500 shadow-lg shadow-blue-500/25' : 'border-gray-700 hover:border-gray-600'}
-        ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:scale-105'}
+        ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg transform-gpu hover:scale-105'}
         ${className}
       `}
       onClick={disabled ? undefined : onClick}

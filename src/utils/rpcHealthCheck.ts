@@ -171,10 +171,10 @@ class RpcHealthManager {
 // 創建單例
 export const rpcHealthManager = new RpcHealthManager();
 
-// 開始健康檢查
-if (typeof window !== 'undefined') {
-  rpcHealthManager.startHealthCheck();
-}
+// 禁用自動健康檢查 - 現在只使用 RPC 代理
+// if (typeof window !== 'undefined') {
+//   rpcHealthManager.startHealthCheck();
+// }
 
 /**
  * 智能 RPC 請求包裝器

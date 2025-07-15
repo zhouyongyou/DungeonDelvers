@@ -12,6 +12,9 @@ interface LazyImageProps {
   onLoad?: () => void;
   onError?: () => void;
   eager?: boolean; // 是否立即加載
+  width?: number;
+  height?: number;
+  aspectRatio?: string; // 例如 "1/1", "16/9"
 }
 
 export const LazyImage: React.FC<LazyImageProps> = ({
@@ -23,6 +26,9 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   onLoad,
   onError,
   eager = false,
+  width,
+  height,
+  aspectRatio = '1/1',
 }) => {
   const [imageSrc, setImageSrc] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
@@ -104,8 +110,17 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     }
   };
 
+  // 計算容器樣式以預留空間
+  const containerStyle: React.CSSProperties = {
+    aspectRatio: aspectRatio,
+  };
+
   return (
-    <div ref={containerRef} className="relative">
+    <div 
+      ref={containerRef} 
+      className="relative overflow-hidden"
+      style={containerStyle}
+    >
       {isLoading && renderPlaceholder()}
       
       {imageSrc && (
@@ -116,11 +131,19 @@ export const LazyImage: React.FC<LazyImageProps> = ({
           className={`${className} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
           loading="lazy"
           decoding="async"
+          width={width}
+          height={height}
+          style={{ 
+            display: 'block',
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover'
+          }}
         />
       )}
 
       {hasError && (
-        <div className={`${className} bg-gray-800 flex items-center justify-center`}>
+        <div className={`${className} absolute inset-0 bg-gray-800 flex items-center justify-center`}>
           <div className="text-center text-gray-500">
             <svg
               className="w-8 h-8 mx-auto mb-2"
