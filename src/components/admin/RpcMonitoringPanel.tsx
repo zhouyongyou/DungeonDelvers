@@ -8,6 +8,7 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import RpcDashboard from '../ui/RpcDashboard';
 import AdminSection from './AdminSection';
 import { CacheRecommendation, OptimizationSuggestion } from '../../utils/rpcAnalytics';
+import { productionMonitoring, ProductionReport } from '../../config/productionMonitoring';
 
 const RpcMonitoringPanel: React.FC = () => {
   const { stats, insights, isLoading, clearStats, exportStats } = useRpcMonitoring();

@@ -14,9 +14,13 @@ import { ExpeditionProvider } from './contexts/ExpeditionContext';
 import App from './App';
 import { defaultQueryErrorHandler } from './config/queryConfig';
 import { filterIrrelevantErrors } from './utils/errorFilter';
+import { initializeRpcConfig } from './config/rpcProxySetup';
 
 // 過濾不相關的錯誤（如瀏覽器擴充功能）
 filterIrrelevantErrors();
+
+// 初始化 RPC 配置
+initializeRpcConfig();
 
 // 優化的 QueryClient 配置
 const queryClient = new QueryClient({
