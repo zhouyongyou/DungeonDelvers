@@ -1,6 +1,7 @@
 // src/utils/rpcAnalytics.ts - RPC 分析和統計工具
 
-import { rpcMonitor, RpcRequest, RpcStats, PerformanceInsight } from './rpcMonitor';
+import { rpcMonitor } from './rpcMonitor';
+import type { RpcRequest, RpcStats, PerformanceInsight } from './rpcMonitor';
 import { logger } from './logger';
 
 // 分析結果接口
