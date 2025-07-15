@@ -47,16 +47,42 @@ export function useMonitoredReadContracts<T = any>(
   
   // 優化合約配置 - 過濾無效合約
   const optimizedConfig = useMemo(() => {
-    if (!readConfig.contracts) return readConfig;
+    if (!readConfig.contracts) {
+      logger.debug('useMonitoredReadContracts: contracts 未定義');
+      return readConfig;
+    }
     
-    const validContracts = readConfig.contracts.filter(contract => 
-      contract && 
-      contract.address && 
-      contract.address !== '0x' && 
-      contract.address !== '0x0000000000000000000000000000000000000000' &&
-      contract.functionName &&
-      contract.abi
-    );
+    if (!Array.isArray(readConfig.contracts)) {
+      logger.error('useMonitoredReadContracts: contracts 不是數組', { 
+        contracts: readConfig.contracts,
+        type: typeof readConfig.contracts
+      });
+      return { ...readConfig, contracts: [] };
+    }
+    
+    logger.debug('useMonitoredReadContracts: 開始過濾合約', { 
+      contractCount: readConfig.contracts.length 
+    });
+    
+    const validContracts = readConfig.contracts.filter(contract => {
+      const isValid = contract && 
+        contract.address && 
+        contract.address !== '0x' && 
+        contract.address !== '0x0000000000000000000000000000000000000000' &&
+        contract.functionName &&
+        contract.abi;
+      
+      if (!isValid) {
+        logger.debug('無效合約過濾:', { 
+          contract,
+          hasAddress: !!contract?.address,
+          hasFunction: !!contract?.functionName,
+          hasAbi: !!contract?.abi
+        });
+      }
+      
+      return isValid;
+    });
 
     // 使用智能配置
     const baseConfig = {
@@ -83,7 +109,18 @@ export function useMonitoredReadContracts<T = any>(
     };
   }, [readConfig, contractName, batchName]);
   
-  const result = useReadContracts(optimizedConfig);
+  let result;
+  try {
+    result = useReadContracts(optimizedConfig);
+  } catch (error) {
+    logger.error('useReadContracts 調用失敗:', error);
+    result = {
+      data: undefined,
+      isLoading: false,
+      error: error,
+      refetch: () => Promise.resolve({ data: undefined })
+    };
+  }
   
   // RPC monitoring removed - hook now just passes through to useReadContracts
   // Performance warning still enabled

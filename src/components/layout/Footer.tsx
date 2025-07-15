@@ -151,7 +151,9 @@ export const Footer: React.FC = () => {
             </span>
           </span>
           <span className="hidden md:inline-block truncate">
-            當前節點: {rpcStatus.endpoint}
+            {rpcStatus.endpoint !== '未知端點' && rpcStatus.endpoint !== '正在檢測...' && rpcStatus.endpoint !== '錢包未連接' && rpcStatus.endpoint !== '不支援的網路' ? 
+              `節點: ${rpcStatus.endpoint}` : ''
+            }
           </span>
           <span>
             狀態: <span className={`${statusColor}`}>●</span> {statusText}

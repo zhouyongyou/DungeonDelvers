@@ -5,7 +5,7 @@ import { useAccount } from 'wagmi';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { EmptyState } from './components/ui/EmptyState';
-import { useContractEvents } from './hooks/useContractEvents.optimized';
+// import { useContractEvents } from './hooks/useContractEvents.optimized'; // Disabled for admin optimization
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import type { Page } from './types/page';
 import { TransactionWatcher } from './components/core/TransactionWatcher';

@@ -333,7 +333,7 @@ const ReferralPage: React.FC = () => {
                                     setShowConfirmModal(false);
                                     handleSetReferrer();
                                 }}
-                                isLoading={setReferrerProgress.status !== 'idle' && setReferrerProgress.status !== 'error'}
+                                isLoading={isSettingReferrer}
                                 className="flex-1"
                             >
                                 確認綁定

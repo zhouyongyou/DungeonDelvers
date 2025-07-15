@@ -137,6 +137,8 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
         staleTime: 1000 * 30,
         retry: 2,
         retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 5000),
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: true,
     });
 };
 

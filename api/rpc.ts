@@ -1,7 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 
-// BSC Mainnet Chain ID
-const BSC_CHAIN_ID = '0x38'; // 56 in hex
+// BSC Mainnet Chain ID - kept for reference
+// const BSC_CHAIN_ID = '0x38'; // 56 in hex
 
 // 獲取 Alchemy API Keys
 function getAlchemyKeys(): string[] {
@@ -28,7 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // 設置 CORS 頭
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, cache-control');
 
   // 處理 OPTIONS 請求
   if (req.method === 'OPTIONS') {

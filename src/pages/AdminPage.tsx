@@ -161,12 +161,31 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   }, [chainId, setupConfig]);
 
 
+  // 安全的合約讀取配置
+  const safeContractsToRead = useMemo(() => {
+    if (!contractsToRead || !Array.isArray(contractsToRead)) return [];
+    
+    return contractsToRead.map(contract => {
+      if (!contract || !contract.address || !contract.functionName || !contract.abi) {
+        logger.warn('發現無效合約配置:', contract);
+        return null;
+      }
+      
+      return {
+        address: contract.address,
+        abi: contract.abi,
+        functionName: contract.functionName,
+        args: contract.args || []
+      };
+    }).filter(Boolean);
+  }, [contractsToRead]);
+
   const { data: readResults, isLoading: isLoadingSettings, error: settingsError, refetch: refetchSettings } = useMonitoredReadContracts({
-    contracts: contractsToRead,
+    contracts: safeContractsToRead,
     contractName: 'adminSettings',
     batchName: 'adminContractsBatch',
     query: { 
-      enabled: !!chainId && Array.isArray(contractsToRead) && contractsToRead.length > 0 && loadedSections.contractCenter,
+      enabled: !!chainId && Array.isArray(safeContractsToRead) && safeContractsToRead.length > 0 && loadedSections.contractCenter,
       staleTime: 1000 * 60 * 30, // 30分鐘緩存
       gcTime: 1000 * 60 * 60,    // 60分鐘
       refetchOnWindowFocus: false,
@@ -879,6 +898,43 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
 const AdminPage: React.FC = () => {
   const { chainId } = useAccount();
   const isSupportedChain = (id: number | undefined): id is SupportedChainId => id === bsc.id;
+  
+  // 添加全局錯誤邊界
+  const [hasError, setHasError] = useState(false);
+  
+  useEffect(() => {
+    const handleError = (error: ErrorEvent) => {
+      if (error.message.includes('Cannot read properties of undefined')) {
+        logger.error('全局錯誤捕獲:', {
+          message: error.message,
+          filename: error.filename,
+          lineno: error.lineno,
+          colno: error.colno,
+          stack: error.error?.stack
+        });
+        setHasError(true);
+      }
+    };
+    
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+  
+  if (hasError) {
+    return (
+      <div className="text-center mt-8">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <strong>錯誤：</strong>管理頁面遇到錯誤，請重新整理頁面或聯繫開發者
+        </div>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        >
+          重新整理頁面
+        </button>
+      </div>
+    );
+  }
 
   return (
     <ErrorBoundary>
