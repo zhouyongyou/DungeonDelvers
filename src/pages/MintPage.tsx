@@ -148,6 +148,9 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
     const publicClient = usePublicClient();
     const queryClient = useQueryClient();
     
+    // 定義 title 變數，避免 TDZ 錯誤
+    const title = type === 'hero' ? '英雄' : '聖物';
+    
     const [quantity, setQuantity] = useState(1);
     const [paymentSource, setPaymentSource] = useState<PaymentSource>('wallet');
     const [mintingResult, setMintingResult] = useState<AnyNft | null>(null);
@@ -264,7 +267,6 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
     const currentProgress = needsApproval && paymentSource === 'wallet' ? approveProgress : mintProgress;
     const isProcessing = currentProgress.status !== 'idle' && currentProgress.status !== 'error';
     
-    const title = type === 'hero' ? '英雄' : '聖物';
     const contractConfig = getContract(chainId, type);
     const soulShardContract = getContract(chainId, 'soulShard');
 
