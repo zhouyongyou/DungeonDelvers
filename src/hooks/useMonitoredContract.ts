@@ -23,9 +23,9 @@ export function useMonitoredReadContract<T = any>(
   const result = useReadContract(readConfig);
   const pageName = getCurrentPageName();
 
-  // 監控請求
+  // 監控請求 - 只在實際發生網絡請求時記錄
   useEffect(() => {
-    if (config.address && config.functionName) {
+    if (config.address && config.functionName && result.isLoading) {
       const requestId = rpcMonitor.startRequest(
         config.address,
         String(config.functionName),
@@ -39,14 +39,17 @@ export function useMonitoredReadContract<T = any>(
       const monitorResult = () => {
         if (result.error) {
           rpcMonitor.completeRequest(requestId, undefined, result.error.message);
-        } else if (result.data !== undefined) {
+        } else if (result.data !== undefined && !result.isLoading) {
           rpcMonitor.completeRequest(requestId, result.data);
         }
       };
 
-      monitorResult();
+      // 當請求完成時記錄結果
+      return () => {
+        monitorResult();
+      };
     }
-  }, [result.data, result.error, config.address, config.functionName, contractName, functionName, pageName]);
+  }, [result.isLoading, config.address, config.functionName]);
 
   return result;
 }
@@ -63,9 +66,9 @@ export function useMonitoredReadContracts<T = any>(
   const result = useReadContracts(readConfig);
   const pageName = getCurrentPageName();
 
-  // 監控批量請求
+  // 監控批量請求 - 只在實際發生網絡請求時記錄
   useEffect(() => {
-    if (config.contracts && config.contracts.length > 0) {
+    if (config.contracts && config.contracts.length > 0 && result.isLoading) {
       const requestIds = config.contracts.map((contract, index) => {
         if (contract && contract.address && contract.functionName) {
           return rpcMonitor.startRequest(
@@ -80,13 +83,13 @@ export function useMonitoredReadContracts<T = any>(
         return null;
       }).filter(Boolean);
 
-      // 監控結果
-      const monitorResults = () => {
+      // 當請求完成時記錄結果
+      return () => {
         if (result.error) {
           requestIds.forEach(id => {
             if (id) rpcMonitor.completeRequest(id, undefined, result.error?.message);
           });
-        } else if (result.data) {
+        } else if (result.data && !result.isLoading) {
           requestIds.forEach((id, index) => {
             if (id && result.data && result.data[index]) {
               rpcMonitor.completeRequest(id, result.data[index]);
@@ -94,10 +97,8 @@ export function useMonitoredReadContracts<T = any>(
           });
         }
       };
-
-      monitorResults();
     }
-  }, [result.data, result.error, config.contracts, contractName, batchName, pageName]);
+  }, [result.isLoading, config.contracts?.length]);
 
   return result;
 }

@@ -9,8 +9,11 @@ import RpcDashboard from '../ui/RpcDashboard';
 import AdminSection from './AdminSection';
 import { CacheRecommendation, OptimizationSuggestion } from '../../utils/rpcAnalytics';
 import { productionMonitoring, ProductionReport } from '../../config/productionMonitoring';
+import { rpcDiagnostics } from '../../utils/rpcMonitorFix';
+import { useAppToast } from '../../hooks/useAppToast';
 
 const RpcMonitoringPanel: React.FC = () => {
+  const { showToast } = useAppToast();
   const { stats, insights, isLoading, clearStats, exportStats } = useRpcMonitoring();
   const { 
     isAnalyzing, 
@@ -22,7 +25,7 @@ const RpcMonitoringPanel: React.FC = () => {
   const { realtimeStats, requestHistory } = useRpcRealTimeMonitoring();
   const { alerts, thresholds, setThresholds, clearAllAlerts } = useRpcAlerts();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'analytics' | 'health' | 'alerts' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'analytics' | 'health' | 'alerts' | 'settings' | 'diagnostics'>('dashboard');
   const [cacheRecommendations, setCacheRecommendations] = useState<CacheRecommendation[]>([]);
   const [optimizationSuggestions, setOptimizationSuggestions] = useState<OptimizationSuggestion[]>([]);
   const [bottlenecks, setBottlenecks] = useState<Array<{ type: string; description: string; impact: string }>>([]);
@@ -180,6 +183,7 @@ const RpcMonitoringPanel: React.FC = () => {
             { key: 'analytics', label: '分析報告' },
             { key: 'health', label: '節點健康' },
             { key: 'alerts', label: '警報系統' },
+            { key: 'diagnostics', label: '診斷工具' },
             { key: 'settings', label: '設置' },
           ].map(tab => (
             <button
@@ -460,6 +464,51 @@ const RpcMonitoringPanel: React.FC = () => {
               )}
             </AdminSection>
           </div>
+        )}
+
+        {activeTab === 'diagnostics' && (
+          <AdminSection title="RPC 診斷工具">
+            <div className="space-y-6">
+              <div className="p-4 bg-gray-700 rounded-lg">
+                <h4 className="font-semibold text-white mb-4">監控準確性診斷</h4>
+                <div className="space-y-4">
+                  <ActionButton
+                    onClick={() => {
+                      const report = rpcDiagnostics.getDiagnosticsReport();
+                      console.log('診斷報告:', report);
+                      showToast('診斷報告已輸出到控制台', 'info');
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    生成診斷報告
+                  </ActionButton>
+                  
+                  <ActionButton
+                    onClick={() => {
+                      rpcDiagnostics.reset();
+                      showToast('診斷數據已重置', 'success');
+                    }}
+                    className="bg-yellow-600 hover:bg-yellow-700"
+                  >
+                    重置診斷數據
+                  </ActionButton>
+                  
+                  <div className="mt-4 p-3 bg-gray-800 rounded">
+                    <p className="text-sm text-gray-300">
+                      診斷工具會比較前端監控統計和實際網絡請求的差異，幫助識別監控系統的問題。
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-4 bg-gray-700 rounded-lg">
+                <h4 className="font-semibold text-white mb-4">實時診斷數據</h4>
+                <div id="diagnostics-realtime" className="space-y-2 text-sm">
+                  <p className="text-gray-300">診斷數據將在這裡顯示...</p>
+                </div>
+              </div>
+            </div>
+          </AdminSection>
         )}
 
         {activeTab === 'settings' && (

@@ -20,9 +20,9 @@ type DecodedLogWithArgs = {
 
 // ★★★ 網路優化：自適應輪詢間隔，根據用戶活動調整 ★★★
 const POLLING_INTERVALS = {
-  active: 8_000,    // 用戶活躍時：8秒
-  idle: 20_000,     // 用戶閒置時：20秒  
-  background: 60_000, // 頁面背景時：60秒
+  active: 30_000,    // 用戶活躍時：30秒
+  idle: 60_000,     // 用戶閒置時：60秒  
+  background: 300_000, // 頁面背景時：5分鐘
 } as const;
 
 // 用戶活動狀態檢測 Hook
