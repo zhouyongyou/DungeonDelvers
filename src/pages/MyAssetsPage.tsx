@@ -16,6 +16,7 @@ import { formatEther } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useGlobalLoading } from '../components/core/GlobalLoadingProvider';
+import { logger } from '../utils/logger';
 
 // =================================================================
 // Section: 子元件 (TeamBuilder) - 優化版
@@ -294,10 +295,19 @@ const MyAssetsPageContent: React.FC = () => {
     const { data: nfts, isLoading, refetch, error } = useQuery({
         queryKey: ['ownedNfts', address, chainId],
         queryFn: async () => {
+            logger.debug('開始載入 NFT 資產', { address, chainId });
             setLoading(true, '載入您的 NFT 資產...');
             try {
                 const result = await fetchAllOwnedNfts(address!, chainId!);
+                logger.debug('NFT 資產載入成功', { 
+                    heroes: result.heros.length, 
+                    relics: result.relics.length, 
+                    parties: result.parties.length 
+                });
                 return result;
+            } catch (err) {
+                logger.error('載入 NFT 資產失敗', err);
+                throw err;
             } finally {
                 setLoading(false);
             }
@@ -389,6 +399,7 @@ const MyAssetsPageContent: React.FC = () => {
 
     const handleAuthorizeHero = async () => {
         if (!heroContract || !partyContract) return;
+        logger.debug('開始授權英雄合約', { heroContract: heroContract.address, partyContract: partyContract.address });
         setIsAuthorizing(true);
         try {
             const hash = await writeContractAsync({ 
@@ -397,11 +408,13 @@ const MyAssetsPageContent: React.FC = () => {
                 functionName: 'setApprovalForAll',
                 args: [partyContract.address, true as any] 
             });
+            logger.info('英雄授權交易已發送', { hash });
             addTransaction({ hash, description: '授權隊伍合約使用英雄' });
             showToast('英雄授權成功！請等待約 30 秒後可創建隊伍', 'success');
             
             // 延遲刷新授權狀態
             setTimeout(() => {
+                logger.debug('刷新英雄授權狀態');
                 queryClient.invalidateQueries({ queryKey: ['isApprovedForAll'] });
             }, 30000);
             

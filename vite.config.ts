@@ -10,7 +10,7 @@ export default defineConfig({
     // 🔥 新增：包大小分析工具
     visualizer({
       filename: 'dist/stats.html',
-      open: true,
+      open: false, // 改為 false，避免干擾開發服務器
       gzipSize: true,
       brotliSize: true
     })
@@ -120,11 +120,8 @@ export default defineConfig({
     // 🔥 新增：HMR 優化
     hmr: {
       overlay: false // 減少開發環境錯誤覆蓋的干擾
-    },
-    // 🔥 修復：設置正確的 MIME 類型
-    headers: {
-      'Content-Type': 'application/javascript'
     }
+    // 移除 headers 設置，讓 Vite 自動處理 MIME 類型
   },
   
   // 🔥 新增：依賴預構建優化

@@ -11,6 +11,7 @@ import { isAddress, formatEther } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Icons } from '../components/ui/icons';
+import { logger } from '../utils/logger';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取 Hook
@@ -70,6 +71,8 @@ const ReferralPage: React.FC = () => {
 
     const [referrerInput, setReferrerInput] = useState('');
     const [copied, setCopied] = useState(false);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [autoDetectedRef, setAutoDetectedRef] = useState<string | null>(null);
 
     // ★ 核心改造：使用新的 Hook 獲取數據
     const { data: referralData, isLoading } = useReferralData();
@@ -85,8 +88,16 @@ const ReferralPage: React.FC = () => {
         const ref = urlParams.get('ref');
         if (ref && isAddress(ref)) {
             setReferrerInput(ref);
+            logger.debug('檢測到推薦連結', { ref });
+            
+            // 如果用戶已連接錢包且沒有邀請人，自動顯示確認彈窗
+            if (address && !hasReferrer && ref.toLowerCase() !== address.toLowerCase()) {
+                setAutoDetectedRef(ref);
+                setShowConfirmModal(true);
+                logger.info('自動顯示推薦確認彈窗', { ref, userAddress: address });
+            }
         }
-    }, []);
+    }, [address, hasReferrer]);
 
     const handleSetReferrer = async () => {
         if (!isAddress(referrerInput)) return showToast('請輸入有效的錢包地址', 'error');
@@ -286,6 +297,50 @@ const ReferralPage: React.FC = () => {
                     )
                 )}
             </div>
+
+            {/* 自動推薦確認彈窗 */}
+            {showConfirmModal && autoDetectedRef && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-gray-900 rounded-2xl p-6 max-w-md w-full border border-gray-700">
+                        <h3 className="text-xl font-bold text-white mb-4">確認綁定邀請人</h3>
+                        <div className="space-y-4">
+                            <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-500/30">
+                                <p className="text-sm text-blue-300 mb-2">檢測到推薦連結</p>
+                                <p className="font-mono text-xs text-gray-400 break-all">{autoDetectedRef}</p>
+                            </div>
+                            <p className="text-gray-300">
+                                您是否要將此地址設為您的邀請人？綁定後無法更改。
+                            </p>
+                            <ul className="text-xs text-gray-400 space-y-1">
+                                <li>• 邀請人將獲得您提領時 5% 的佣金</li>
+                                <li>• 不會影響您的收益</li>
+                                <li>• 綁定關係永久有效</li>
+                            </ul>
+                        </div>
+                        <div className="flex gap-3 mt-6">
+                            <ActionButton
+                                onClick={() => {
+                                    setShowConfirmModal(false);
+                                    setAutoDetectedRef(null);
+                                }}
+                                className="flex-1 bg-gray-700 hover:bg-gray-600"
+                            >
+                                取消
+                            </ActionButton>
+                            <ActionButton
+                                onClick={() => {
+                                    setShowConfirmModal(false);
+                                    handleSetReferrer();
+                                }}
+                                isLoading={isSettingReferrer}
+                                className="flex-1"
+                            >
+                                確認綁定
+                            </ActionButton>
+                        </div>
+                    </div>
+                </div>
+            )}
         </section>
     );
 };

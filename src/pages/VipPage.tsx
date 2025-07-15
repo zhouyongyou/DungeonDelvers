@@ -362,47 +362,47 @@ const VipPageContent: React.FC = () => {
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 1</span>
                             <span className="text-yellow-400">$100+ USD 質押價值</span>
-                            <span className="text-green-400">50 BP (0.5%) 稅率減免</span>
+                            <span className="text-green-400">0.5% 稅率減免</span>
                         </div>
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 2</span>
                             <span className="text-yellow-400">$400+ USD 質押價值</span>
-                            <span className="text-green-400">100 BP (1%) 稅率減免</span>
+                            <span className="text-green-400">1% 稅率減免</span>
                         </div>
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 3</span>
                             <span className="text-yellow-400">$900+ USD 質押價值</span>
-                            <span className="text-green-400">150 BP (1.5%) 稅率減免</span>
+                            <span className="text-green-400">1.5% 稅率減免</span>
                         </div>
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 4</span>
                             <span className="text-yellow-400">$1,600+ USD 質押價值</span>
-                            <span className="text-green-400">200 BP (2%) 稅率減免</span>
+                            <span className="text-green-400">2% 稅率減免</span>
                         </div>
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 5</span>
                             <span className="text-yellow-400">$2,500+ USD 質押價值</span>
-                            <span className="text-green-400">250 BP (2.5%) 稅率減免</span>
+                            <span className="text-green-400">2.5% 稅率減免</span>
                         </div>
                     </div>
                     <div className="space-y-2">
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 10</span>
                             <span className="text-yellow-400">$10,000+ USD 質押價值</span>
-                            <span className="text-green-400">500 BP (5%) 稅率減免</span>
+                            <span className="text-green-400">5% 稅率減免</span>
                         </div>
                         <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 20</span>
                             <span className="text-yellow-400">$40,000+ USD 質押價值</span>
-                            <span className="text-green-400">1000 BP (10%) 稅率減免</span>
+                            <span className="text-green-400">10% 稅率減免</span>
                         </div>
                         <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded">
                             <p className="text-xs text-blue-300 mb-2">
-                                💡 <strong>稅率減免</strong>適用於從玩家金庫提取代幣時的手續費 (BP = 基點，1 BP = 0.01%)
+                                💡 <strong>稅率減免</strong>適用於從玩家金庫提取代幣時的手續費
                             </p>
                             <p className="text-xs text-green-300">
                                 ✅ <strong>等級計算</strong>：VIP等級 = √(USD價值/100)，平滑成長無上限<br/>
-                                🔢 <strong>稅率公式</strong>：每個VIP等級減免50基點 (0.5%)
+                                🔢 <strong>稅率公式</strong>：每個VIP等級減免 0.5%
                             </p>
                         </div>
                     </div>
@@ -436,7 +436,7 @@ const VipPageContent: React.FC = () => {
                             <div>
                                 <div className="text-sm text-gray-400">稅率減免</div>
                                 <div className="font-bold text-2xl text-green-400">
-                                    {isLoading ? '...' : `${Number(taxReduction)} BP (${(Number(taxReduction) / 10000 * 100).toFixed(1)}%)`}
+                                    {isLoading ? '...' : `${(Number(taxReduction) / 10000 * 100).toFixed(1)}%`}
                                 </div>
                             </div>
                         </div>
