@@ -60,13 +60,22 @@ function getRpcUrl(): string {
   // 開發環境：檢查本地 key
   const alchemyKeys = getAlchemyKeys();
   
+  logger.debug('開發環境 RPC 配置:', { 
+    alchemyKeysCount: alchemyKeys.length,
+    alchemyKeys: alchemyKeys.map(k => k ? `${k.substring(0, 10)}...` : 'undefined')
+  });
+  
   if (alchemyKeys.length > 0) {
-    // 使用輪換機制選擇 key
+    // 驗證 key 的完整性
     const key = alchemyKeys[currentKeyIndex % alchemyKeys.length];
-    currentKeyIndex++;
-    
-    logger.info(`🔑 使用本地 Alchemy RPC 節點 (Key ${(currentKeyIndex - 1) % alchemyKeys.length + 1}/${alchemyKeys.length})`);
-    return `https://bnb-mainnet.g.alchemy.com/v2/${key}`;
+    if (key && key.length > 20) {
+      currentKeyIndex++;
+      
+      logger.info(`🔑 使用本地 Alchemy RPC 節點 (Key ${(currentKeyIndex - 1) % alchemyKeys.length + 1}/${alchemyKeys.length})`);
+      return `https://bnb-mainnet.g.alchemy.com/v2/${key}`;
+    } else {
+      logger.warn('⚠️ Alchemy key 不完整，使用公共 RPC 節點');
+    }
   }
   
   // 沒有 Alchemy key 時使用公共節點
@@ -144,7 +153,17 @@ export function createSmartRpcTransport(): Transport {
           
           return data.result;
         } catch (error) {
-          logger.error(`RPC 請求失敗 (${isUsingAlchemy ? 'Alchemy' : '公共節點'}):`, error);
+          const errorDetails = {
+            message: error.message,
+            url: fetchUrl,
+            method,
+            attempt: i + 1,
+            maxRetries,
+            isUsingAlchemy,
+            isUsingProxy
+          };
+          
+          logger.error(`RPC 請求失敗 (${isUsingProxy ? '代理' : isUsingAlchemy ? 'Alchemy' : '公共節點'}):`, errorDetails);
           lastError = error;
           
           if (i < maxRetries - 1) {

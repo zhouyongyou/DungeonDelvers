@@ -478,14 +478,26 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   
   useEffect(() => {
     if (settingsError && !hasShownError.settings) {
-      showToast(`讀取合約設定失敗: ${settingsError.message || '未知錯誤'}`, 'error');
-      logger.debug('讀取管理員設定失敗:', settingsError);
+      // 詳細錯誤信息
+      const errorMessage = settingsError.message || '未知錯誤';
+      const errorStack = settingsError.stack || '無堆疊信息';
+      
+      logger.error('讀取管理員設定失敗詳細信息:', {
+        message: errorMessage,
+        stack: errorStack,
+        contractsToReadLength: contractsToRead?.length,
+        contractsToReadContent: contractsToRead?.map(c => `${c.address}:${c.functionName}`),
+        chainId,
+        error: settingsError
+      });
+      
+      showToast(`讀取合約設定失敗: ${errorMessage}`, 'error');
       setHasShownError(prev => ({ ...prev, settings: true }));
     }
     if (!settingsError && hasShownError.settings) {
       setHasShownError(prev => ({ ...prev, settings: false }));
     }
-  }, [settingsError, hasShownError.settings, showToast]);
+  }, [settingsError, hasShownError.settings, showToast, contractsToRead, chainId]);
   
   useEffect(() => {
     if (paramsError && !hasShownError.params) {
