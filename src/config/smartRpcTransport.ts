@@ -96,7 +96,10 @@ export function createSmartRpcTransport(): Transport {
           if (i > 0) {
             logger.info(`🔄 RPC 重試 ${i + 1}/${maxRetries}: ${method}`);
           } else {
-            logger.info(`📡 RPC 請求: ${method} 使用 ${isUsingAlchemy ? 'Alchemy' : '公共'}節點`);
+            // 只記錄重要的方法，不記錄 filter 相關的頻繁請求
+            if (!method.includes('filter') && !method.includes('blockNumber')) {
+              logger.debug(`📡 RPC 請求: ${method} 使用 ${isUsingAlchemy ? 'Alchemy' : '公共'}節點`);
+            }
           }
           
           const response = await fetch(primaryRpcUrl, {

@@ -115,12 +115,6 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     return configs.filter((c): c is NonNullable<typeof c> => c !== null && !!c.address);
   }, [chainId, setupConfig]);
 
-  // 診斷模式：在開發環境中執行診斷
-  useEffect(() => {
-    if (import.meta.env.DEV && contractsToRead.length > 0) {
-      AdminPageDebugger.runFullDiagnostics(chainId, contractsToRead, address, currentAddressMap.owner);
-    }
-  }, [chainId, contractsToRead, address, currentAddressMap.owner]);
 
   const { data: readResults, isLoading: isLoadingSettings, error: settingsError } = useMonitoredReadContracts({
     contracts: contractsToRead,
@@ -150,6 +144,13 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     
     return { owner, ...settings };
   }, [readResults, setupConfig]);
+  
+  // 診斷模式：在開發環境中執行診斷（移到 currentAddressMap 定義之後）
+  useEffect(() => {
+    if (import.meta.env.DEV && contractsToRead.length > 0 && currentAddressMap) {
+      AdminPageDebugger.runFullDiagnostics(chainId, contractsToRead, address, currentAddressMap.owner);
+    }
+  }, [chainId, contractsToRead, address, currentAddressMap]);
   
   const envAddressMap: Record<string, { name: ContractName, address?: Address }> = useMemo(() => {
     if (!setupConfig || !Array.isArray(setupConfig) || !chainId) return {};

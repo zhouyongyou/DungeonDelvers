@@ -66,8 +66,9 @@ function App() {
   const { isConnected } = useAccount();
   const { isMobile } = useMobileOptimization();
   
-  // 這個 Hook 會在背景監聽鏈上事件，並自動更新相關數據
-  useContractEvents();
+  // 暫時禁用事件監聽以減少 RPC 請求
+  // TODO: 優化事件監聽邏輯，只在需要的頁面啟用
+  // useContractEvents();
   
   // 性能監控
   usePagePerformance(activePage);

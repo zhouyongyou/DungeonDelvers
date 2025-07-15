@@ -49,7 +49,8 @@ export const logger = {
   },
   
   debug: (message: string, data?: unknown) => {
-    if (import.meta.env.DEV) {
+    // 只在明確開啟 DEBUG 模式時顯示
+    if (import.meta.env.DEV && import.meta.env.VITE_DEBUG === 'true') {
       console.log(`[DEBUG] ${message}`, data || '');
     }
   }
