@@ -79,61 +79,85 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   }, [showToast]);
 
   const setupConfig = useMemo(() => {
-    const createSetting = (key: string, title: string, target: ContractName, setter: string, value: ContractName, getter: string) => ({ key, title, targetContractName: target, setterFunctionName: setter, valueToSetContractName: value, getterFunctionName: getter });
-    return [
-      createSetting('oracle', '設定價格預言機', 'dungeonCore', 'setOracle', 'oracle', 'oracleAddress'),
-      createSetting('playerVault', '設定玩家金庫', 'dungeonCore', 'setPlayerVault', 'playerVault', 'playerVaultAddress'),
-      createSetting('dungeonMaster', '設定地城主', 'dungeonCore', 'setDungeonMaster', 'dungeonMaster', 'dungeonMasterAddress'),
-      createSetting('altar', '設定升星祭壇', 'dungeonCore', 'setAltarOfAscension', 'altarOfAscension', 'altarOfAscensionAddress'),
-      createSetting('playerProfile', '設定玩家檔案', 'dungeonCore', 'setPlayerProfile', 'playerProfile', 'playerProfileAddress'),
-      createSetting('vip', '設定VIP質押', 'dungeonCore', 'setVipStaking', 'vipStaking', 'vipStakingAddress'),
-      createSetting('hero', '註冊英雄合約', 'dungeonCore', 'setHeroContract', 'hero', 'heroContractAddress'),
-      createSetting('relic', '註冊聖物合約', 'dungeonCore', 'setRelicContract', 'relic', 'relicContractAddress'),
-      createSetting('party', '註冊隊伍合約', 'dungeonCore', 'setPartyContract', 'party', 'partyContractAddress'),
-      createSetting('dungeonCoreForHero', '在 Hero 中設定總機', 'hero', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
-      createSetting('dungeonCoreForRelic', '在 Relic 中設定總機', 'relic', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
-      createSetting('dungeonCoreForParty', '在 Party 中設定總機', 'party', 'setDungeonCore', 'dungeonCore', 'dungeonCoreContract'),
-      createSetting('dungeonCoreForDM', '在 DungeonMaster 中設定總機', 'dungeonMaster', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
-      // 暫時移除 dungeonStorage 相關設定，因為合約配置中沒有這個合約
-      // createSetting('storageForDM', '在 DungeonMaster 中設定儲存', 'dungeonMaster', 'setDungeonStorage', 'dungeonStorage', 'dungeonStorage'),
-      // createSetting('logicForStorage', '在 DungeonStorage 中授權邏輯', 'dungeonStorage', 'setLogicContract', 'dungeonMaster', 'logicContract'),
-      createSetting('dungeonCoreForProfile', '在 PlayerProfile 中設定總機', 'playerProfile', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
-      createSetting('dungeonCoreForVip', '在 VIPStaking 中設定總機', 'vipStaking', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
-      createSetting('dungeonCoreForAltar', '在 Altar 中設定總機', 'altarOfAscension', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
-    ];
+    try {
+      const createSetting = (key: string, title: string, target: ContractName, setter: string, value: ContractName, getter: string) => ({ key, title, targetContractName: target, setterFunctionName: setter, valueToSetContractName: value, getterFunctionName: getter });
+      
+      const config = [
+        createSetting('oracle', '設定價格預言機', 'dungeonCore', 'setOracle', 'oracle', 'oracleAddress'),
+        createSetting('playerVault', '設定玩家金庫', 'dungeonCore', 'setPlayerVault', 'playerVault', 'playerVaultAddress'),
+        createSetting('dungeonMaster', '設定地城主', 'dungeonCore', 'setDungeonMaster', 'dungeonMaster', 'dungeonMasterAddress'),
+        createSetting('altar', '設定升星祭壇', 'dungeonCore', 'setAltarOfAscension', 'altarOfAscension', 'altarOfAscensionAddress'),
+        createSetting('playerProfile', '設定玩家檔案', 'dungeonCore', 'setPlayerProfile', 'playerProfile', 'playerProfileAddress'),
+        createSetting('vip', '設定VIP質押', 'dungeonCore', 'setVipStaking', 'vipStaking', 'vipStakingAddress'),
+        createSetting('hero', '註冊英雄合約', 'dungeonCore', 'setHeroContract', 'hero', 'heroContractAddress'),
+        createSetting('relic', '註冊聖物合約', 'dungeonCore', 'setRelicContract', 'relic', 'relicContractAddress'),
+        createSetting('party', '註冊隊伍合約', 'dungeonCore', 'setPartyContract', 'party', 'partyContractAddress'),
+        createSetting('dungeonCoreForHero', '在 Hero 中設定總機', 'hero', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
+        createSetting('dungeonCoreForRelic', '在 Relic 中設定總機', 'relic', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
+        createSetting('dungeonCoreForParty', '在 Party 中設定總機', 'party', 'setDungeonCore', 'dungeonCore', 'dungeonCoreContract'),
+        createSetting('dungeonCoreForDM', '在 DungeonMaster 中設定總機', 'dungeonMaster', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
+        // 暫時移除 dungeonStorage 相關設定，因為合約配置中沒有這個合約
+        // createSetting('storageForDM', '在 DungeonMaster 中設定儲存', 'dungeonMaster', 'setDungeonStorage', 'dungeonStorage', 'dungeonStorage'),
+        // createSetting('logicForStorage', '在 DungeonStorage 中授權邏輯', 'dungeonStorage', 'setLogicContract', 'dungeonMaster', 'logicContract'),
+        createSetting('dungeonCoreForProfile', '在 PlayerProfile 中設定總機', 'playerProfile', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
+        createSetting('dungeonCoreForVip', '在 VIPStaking 中設定總機', 'vipStaking', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
+        createSetting('dungeonCoreForAltar', '在 Altar 中設定總機', 'altarOfAscension', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
+      ];
+      
+      logger.debug('setupConfig 創建成功', { configCount: config.length });
+      return config;
+    } catch (error) {
+      logger.error('setupConfig 創建失敗:', error);
+      return [];
+    }
   }, []);
 
   const contractsToRead = useMemo(() => {
-    if (!chainId || !setupConfig) {
-      logger.debug('contractsToRead: 基礎數據不完整', { chainId, setupConfig: setupConfig ? 'exists' : 'undefined' });
-      return [];
-    }
-    
-    const coreContract = getContract(chainId, 'dungeonCore');
-    if (!coreContract || !coreContract.address) {
-      logger.warn('DungeonCore 合約未找到或地址無效', { chainId, coreContract });
-      return [];
-    }
-    
-    const configs = setupConfig.map(c => {
-      const contract = getContract(chainId, c.targetContractName);
-      if (!contract || !contract.address) {
-        logger.warn(`合約未找到: ${c.targetContractName}`, { chainId, contract });
-        return null;
+    try {
+      if (!chainId || !setupConfig || !Array.isArray(setupConfig) || setupConfig.length === 0) {
+        logger.debug('contractsToRead: 基礎數據不完整', { 
+          chainId, 
+          setupConfig: setupConfig ? 'exists' : 'undefined',
+          isArray: Array.isArray(setupConfig),
+          length: setupConfig?.length
+        });
+        return [];
       }
-      return { ...contract, functionName: c.getterFunctionName };
-    });
-    
-    configs.unshift({ ...coreContract, functionName: 'owner' });
-    
-    const filteredConfigs = configs.filter((c): c is NonNullable<typeof c> => c !== null && !!c.address);
-    logger.debug('contractsToRead 計算完成', { 
-      totalConfigs: configs.length,
-      filteredConfigs: filteredConfigs.length,
-      chainId
-    });
-    
-    return filteredConfigs;
+      
+      const coreContract = getContract(chainId, 'dungeonCore');
+      if (!coreContract || !coreContract.address) {
+        logger.warn('DungeonCore 合約未找到或地址無效', { chainId, coreContract });
+        return [];
+      }
+      
+      const configs = setupConfig.map(c => {
+        if (!c || !c.targetContractName || !c.getterFunctionName) {
+          logger.warn('無效的配置項:', c);
+          return null;
+        }
+        
+        const contract = getContract(chainId, c.targetContractName);
+        if (!contract || !contract.address) {
+          logger.warn(`合約未找到: ${c.targetContractName}`, { chainId, contract });
+          return null;
+        }
+        return { ...contract, functionName: c.getterFunctionName };
+      });
+      
+      configs.unshift({ ...coreContract, functionName: 'owner' });
+      
+      const filteredConfigs = configs.filter((c): c is NonNullable<typeof c> => c !== null && !!c.address);
+      logger.debug('contractsToRead 計算完成', { 
+        totalConfigs: configs.length,
+        filteredConfigs: filteredConfigs.length,
+        chainId
+      });
+      
+      return filteredConfigs;
+    } catch (error) {
+      logger.error('contractsToRead 計算失敗:', error);
+      return [];
+    }
   }, [chainId, setupConfig]);
 
 
@@ -154,26 +178,32 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   });
 
   const currentAddressMap: Record<string, Address | undefined> = useMemo(() => {
-    if (!readResults || !Array.isArray(readResults) || !setupConfig || !Array.isArray(setupConfig)) {
-      logger.debug('currentAddressMap: 數據不完整', { 
-        readResults: readResults ? 'exists' : 'undefined',
-        readResultsLength: readResults?.length,
-        setupConfig: setupConfig ? 'exists' : 'undefined',
-        setupConfigLength: setupConfig?.length
-      });
+    try {
+      if (!readResults || !Array.isArray(readResults) || readResults.length === 0 || 
+          !setupConfig || !Array.isArray(setupConfig) || setupConfig.length === 0) {
+        logger.debug('currentAddressMap: 數據不完整', { 
+          readResults: readResults ? 'exists' : 'undefined',
+          readResultsLength: readResults?.length,
+          setupConfig: setupConfig ? 'exists' : 'undefined',
+          setupConfigLength: setupConfig?.length
+        });
+        return {};
+      }
+      
+      const owner = readResults[0]?.result as Address | undefined;
+      const settings = setupConfig.reduce((acc, config, index) => {
+        if (config && config.key && readResults[index + 1] && readResults[index + 1].result) {
+          acc[config.key] = readResults[index + 1].result as Address | undefined;
+        }
+        return acc;
+      }, {} as Record<string, Address | undefined>);
+      
+      logger.debug('currentAddressMap 計算完成', { owner, settingsCount: Object.keys(settings).length });
+      return { owner, ...settings };
+    } catch (error) {
+      logger.error('currentAddressMap 計算失敗:', error);
       return {};
     }
-    
-    const owner = readResults[0]?.result as Address | undefined;
-    const settings = setupConfig.reduce((acc, config, index) => {
-      if (config && config.key && readResults[index + 1]) {
-        acc[config.key] = readResults[index + 1]?.result as Address | undefined;
-      }
-      return acc;
-    }, {} as Record<string, Address | undefined>);
-    
-    logger.debug('currentAddressMap 計算完成', { owner, settingsCount: Object.keys(settings).length });
-    return { owner, ...settings };
   }, [readResults, setupConfig]);
   
   // 診斷模式：在開發環境中執行診斷（移到 currentAddressMap 定義之後）
@@ -208,17 +238,27 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   };
   
   const parameterConfig = useMemo((): ParameterConfigItem[] => {
-    if (!chainId) return [];
-    
-    const contracts = {
-      hero: getContract(chainId, 'hero'),
-      relic: getContract(chainId, 'relic'),
-      party: getContract(chainId, 'party'),
-      dungeonMaster: getContract(chainId, 'dungeonMaster'),
-      playerVault: getContract(chainId, 'playerVault'),
-      vipStaking: getContract(chainId, 'vipStaking'),
-      oracle: getContract(chainId, 'oracle'),
-    };
+    try {
+      if (!chainId) {
+        logger.debug('parameterConfig: chainId 未設定');
+        return [];
+      }
+      
+      const contracts = {
+        hero: getContract(chainId, 'hero'),
+        relic: getContract(chainId, 'relic'),
+        party: getContract(chainId, 'party'),
+        dungeonMaster: getContract(chainId, 'dungeonMaster'),
+        playerVault: getContract(chainId, 'playerVault'),
+        vipStaking: getContract(chainId, 'vipStaking'),
+        oracle: getContract(chainId, 'oracle'),
+      };
+      
+      // 檢查關鍵合約是否存在
+      const missingContracts = Object.entries(contracts).filter(([_, contract]) => !contract || !contract.address);
+      if (missingContracts.length > 0) {
+        logger.warn('部分合約缺失:', missingContracts.map(([name]) => name));
+      }
     
     const config = [
       // 鑄造價格設定
@@ -244,28 +284,49 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       { key: 'twapPeriod', label: "Oracle TWAP 週期", contract: contracts.oracle, getter: 'twapPeriod', setter: 'setTwapPeriod', unit: '無', placeholders: ['新週期 (秒)'] },
     ];
     
-    return config.filter((c) => {
-      return c && c.contract && c.contract.address && c.contract.address !== '0x0000000000000000000000000000000000000000';
-    }) as ParameterConfigItem[];
+      const filteredConfig = config.filter((c) => {
+        return c && c.contract && c.contract.address && c.contract.address !== '0x0000000000000000000000000000000000000000';
+      }) as ParameterConfigItem[];
+      
+      logger.debug('parameterConfig 計算完成', { 
+        totalConfig: config.length,
+        filteredConfig: filteredConfig.length
+      });
+      
+      return filteredConfig;
+    } catch (error) {
+      logger.error('parameterConfig 計算失敗:', error);
+      return [];
+    }
   }, [chainId]);
 
   const parameterContracts = useMemo(() => {
-    if (!parameterConfig || !Array.isArray(parameterConfig) || parameterConfig.length === 0) {
-      logger.warn('參數配置為空或無效');
+    try {
+      if (!parameterConfig || !Array.isArray(parameterConfig) || parameterConfig.length === 0) {
+        logger.warn('參數配置為空或無效', { 
+          parameterConfig: parameterConfig ? 'exists' : 'undefined',
+          isArray: Array.isArray(parameterConfig),
+          length: parameterConfig?.length
+        });
+        return [];
+      }
+      
+      const contracts = parameterConfig
+        .filter(p => {
+          const isValid = p && p.contract && p.contract.address && p.getter;
+          if (!isValid) {
+            logger.warn(`參數配置無效: ${p?.key || 'unknown'}`, p);
+          }
+          return isValid;
+        })
+        .map(p => ({ ...p.contract, functionName: p.getter }));
+      
+      logger.info(`過濾後的參數合約數量: ${contracts.length}/${parameterConfig.length}`);
+      return contracts;
+    } catch (error) {
+      logger.error('parameterContracts 計算失敗:', error);
       return [];
     }
-    const contracts = parameterConfig
-      .filter(p => {
-        const isValid = p && p.contract && p.contract.address && p.getter;
-        if (!isValid) {
-          logger.warn(`參數配置無效: ${p?.key || 'unknown'}`);
-        }
-        return isValid;
-      })
-      .map(p => ({ ...p.contract, functionName: p.getter }));
-    
-    logger.info(`過濾後的參數合約數量: ${contracts.length}/${parameterConfig.length}`);
-    return contracts;
   }, [parameterConfig]);
 
   const { data: params, isLoading: isLoadingParams, error: paramsError, refetch: refetchParams } = useMonitoredReadContracts({
@@ -288,27 +349,35 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   // 讀取 PlayerVault 的稅務參數
   const playerVaultContract = getContract(chainId, 'playerVault');
   const vaultContracts = useMemo(() => {
-    if (!playerVaultContract || !playerVaultContract.address) {
-      logger.warn('PlayerVault 合約未配置或地址無效');
+    try {
+      if (!playerVaultContract || !playerVaultContract.address) {
+        logger.warn('PlayerVault 合約未配置或地址無效', { 
+          playerVaultContract: playerVaultContract ? 'exists' : 'undefined',
+          address: playerVaultContract?.address
+        });
+        return [];
+      }
+      
+      const vaultFunctions = [
+        'largeWithdrawThresholdUSD',
+        'smallWithdrawThresholdUSD', 
+        'standardInitialRate',
+        'largeWithdrawInitialRate',
+        'decreaseRatePerPeriod',
+        'periodDuration'
+      ];
+      
+      const contracts = vaultFunctions.map(functionName => ({
+        ...playerVaultContract,
+        functionName: functionName as const
+      }));
+      
+      logger.info(`Vault 合約配置完成: ${contracts.length} 個函數`);
+      return contracts;
+    } catch (error) {
+      logger.error('vaultContracts 計算失敗:', error);
       return [];
     }
-    
-    const vaultFunctions = [
-      'largeWithdrawThresholdUSD',
-      'smallWithdrawThresholdUSD', 
-      'standardInitialRate',
-      'largeWithdrawInitialRate',
-      'decreaseRatePerPeriod',
-      'periodDuration'
-    ];
-    
-    const contracts = vaultFunctions.map(functionName => ({
-      ...playerVaultContract,
-      functionName: functionName as const
-    }));
-    
-    logger.info(`Vault 合約配置完成: ${contracts.length} 個函數`);
-    return contracts;
   }, [playerVaultContract]);
 
   const { data: vaultParams, isLoading: isLoadingVaultParams, error: vaultParamsError, refetch: refetchVaultParams } = useMonitoredReadContracts({
@@ -472,7 +541,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4">
           <div className="space-y-4">
             <h4 className="text-xl font-semibold text-center">總機設定 (DungeonCore)</h4>
-            {setupConfig && setupConfig.slice(0, 9).map(config => (
+            {setupConfig && Array.isArray(setupConfig) && setupConfig.slice(0, 9).map(config => (
               <AddressSettingRow 
                 key={config.key} 
                 title={config.title} 
@@ -498,7 +567,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
           </div>
           <div className="space-y-4">
             <h4 className="text-xl font-semibold text-center">各模組回連設定</h4>
-            {setupConfig && setupConfig.slice(9).map(config => (
+            {setupConfig && Array.isArray(setupConfig) && setupConfig.slice(9).map(config => (
               <AddressSettingRow 
                 key={config.key} 
                 title={config.title} 
@@ -571,7 +640,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
           </button>
         ) : undefined}
       >
-        {parameterConfig.filter(p => p && p.unit === 'USD').map((p) => {
+        {parameterConfig && Array.isArray(parameterConfig) && parameterConfig.filter(p => p && p.unit === 'USD').map((p) => {
           const { key, setter, ...rest } = p;
           const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
           return (
@@ -593,7 +662,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         onExpand={() => setLoadedSections(prev => ({ ...prev, platformFee: true }))}
         isLoading={isLoadingParams && loadedSections.platformFee}
       >
-        {parameterConfig.filter(p => p && p.unit === 'BNB').map((p) => {
+        {parameterConfig && Array.isArray(parameterConfig) && parameterConfig.filter(p => p && p.unit === 'BNB').map((p) => {
           const { key, setter, ...rest } = p;
           const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
           return (
@@ -615,7 +684,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         onExpand={() => setLoadedSections(prev => ({ ...prev, taxSystem: true }))}
         isLoading={(isLoadingParams || isLoadingVaultParams) && loadedSections.taxSystem}
       >
-        {parameterConfig.filter(p => p && ['commissionRate'].includes(p.key)).map((p) => {
+        {parameterConfig && Array.isArray(parameterConfig) && parameterConfig.filter(p => p && ['commissionRate'].includes(p.key)).map((p) => {
           const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
           const currentValue = params && paramIndex >= 0 ? params[paramIndex]?.result : undefined;
           const { key, setter, ...rest } = p;
@@ -672,7 +741,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         onExpand={() => setLoadedSections(prev => ({ ...prev, gameParams: true }))}
         isLoading={isLoadingParams && loadedSections.gameParams}
       >
-        {parameterConfig.filter(p => p && ['restDivisor', 'vipCooldown', 'globalRewardMultiplier'].includes(p.key)).map((p) => {
+        {parameterConfig && Array.isArray(parameterConfig) && parameterConfig.filter(p => p && ['restDivisor', 'vipCooldown', 'globalRewardMultiplier'].includes(p.key)).map((p) => {
           const { key, setter, ...rest } = p;
           const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
           return (
@@ -694,7 +763,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         onExpand={() => setLoadedSections(prev => ({ ...prev, oracle: true }))}
         isLoading={isLoadingParams && loadedSections.oracle}
       >
-        {parameterConfig.filter(p => p && ['twapPeriod'].includes(p.key)).map((p) => {
+        {parameterConfig && Array.isArray(parameterConfig) && parameterConfig.filter(p => p && ['twapPeriod'].includes(p.key)).map((p) => {
           const { key, setter, ...rest } = p;
           const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
           return (
