@@ -15,10 +15,12 @@
 在 Vercel Dashboard 中設置以下環境變量（**不要**使用 `VITE_` 前綴）：
 
 ```
-ALCHEMY_KEY=你的主要key
-ALCHEMY_API_KEY_1=備用key1
-ALCHEMY_API_KEY_2=備用key2
-...
+ALCHEMY_KEY=3lmTWjUVbFylAurhdU-rSUefTC-P4tKf
+ALCHEMY_API_KEY_1=3lmTWjUVbFylAurhdU-rSUefTC-P4tKf
+ALCHEMY_API_KEY_2=tiPlQVTwx4_2P98Pl7hb-LfzaTyi5HOn
+ALCHEMY_API_KEY_3=QzXiHWkNRovjd_EeDRqVfR9rApUDiXRp
+ALCHEMY_API_KEY_4=fB2BrBD6zFEhc6YoWxwuP5UQJ_ee-99M
+# 不要使用 ALCHEMY_API_KEY_5，它不完整
 ```
 
 ### 2. 本地開發
