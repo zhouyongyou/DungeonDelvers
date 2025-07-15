@@ -476,3 +476,6 @@ export type {
   CacheRecommendation, 
   OptimizationSuggestion 
 };
+
+// 也導出類本身
+export { RpcAnalytics };

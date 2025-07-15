@@ -91,6 +91,8 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       staleTime: 1000 * 60 * 10, // 10分鐘 - 合約設定不會頻繁變更
       gcTime: 1000 * 60 * 30,    // 30分鐘 - 保持快取更久
       refetchOnWindowFocus: false, // 避免切換視窗時重新請求
+      refetchOnMount: false, // 避免組件重新掛載時重新請求
+      refetchInterval: false, // 禁用自動刷新
       retry: 2, // 減少重試次數
     },
   });
@@ -172,6 +174,8 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       staleTime: 1000 * 60 * 15, // 15分鐘 - 參數設定變更頻率低
       gcTime: 1000 * 60 * 45,    // 45分鐘 - 保持快取更久
       refetchOnWindowFocus: false, // 避免切換視窗時重新請求
+      refetchOnMount: false, // 避免組件重新掛載時重新請求
+      refetchInterval: false, // 禁用自動刷新
       retry: 2, // 減少重試次數
     }
   });
@@ -199,6 +203,8 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       staleTime: 1000 * 60 * 20, // 20分鐘 - 稅務參數很少變更
       gcTime: 1000 * 60 * 60,    // 60分鐘 - 保持快取更久
       refetchOnWindowFocus: false, // 避免切換視窗時重新請求
+      refetchOnMount: false, // 避免組件重新掛載時重新請求
+      refetchInterval: false, // 禁用自動刷新
       retry: 2, // 減少重試次數
     }
   });

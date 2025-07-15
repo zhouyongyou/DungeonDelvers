@@ -447,7 +447,7 @@ const RpcMonitoringPanel: React.FC = () => {
                         </div>
                         <button
                           onClick={() => {
-                            setAlerts(prev => prev.filter(a => a.id !== alert.id));
+                            removeAlert(alert.id);
                           }}
                           className="text-gray-400 hover:text-white ml-4"
                         >
