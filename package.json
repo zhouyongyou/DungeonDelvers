@@ -33,11 +33,16 @@
     "build:server": "tsc src/api/*.ts --outDir dist/api --module commonjs",
     "start:server": "node server/metadata-api.js",
     "dev:server": "nodemon server/metadata-api.js",
-    "ts:quick-fix:dry": "node scripts/quick-fix-any-patterns.mjs --dry-run"
+    "ts:quick-fix:dry": "node scripts/quick-fix-any-patterns.mjs --dry-run",
+    "rpc:test": "node -r dotenv/config test-rpc-proxy.cjs",
+    "rpc:test-manual": "node -r dotenv/config manual-rpc-test.cjs",
+    "rpc:test-curl": "./test-rpc-curl.sh",
+    "rpc:check-env": "node -r dotenv/config test-env-vars.cjs"
   },
   "dependencies": {
     "@apollo/client": "^3.8.8",
     "@tanstack/react-query": "^5.8.4",
+    "dotenv": "^17.2.0",
     "graphql": "^16.8.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

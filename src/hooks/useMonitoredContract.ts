@@ -111,7 +111,18 @@ export function useMonitoredReadContracts<T = any>(
   
   let result;
   try {
-    result = useReadContracts(optimizedConfig);
+    // 額外的防護：確保 contracts 是有效的數組
+    if (!optimizedConfig.contracts || !Array.isArray(optimizedConfig.contracts) || optimizedConfig.contracts.length === 0) {
+      logger.debug('useMonitoredReadContracts: 合約數組為空或無效，返回空結果');
+      result = {
+        data: undefined,
+        isLoading: false,
+        error: null,
+        refetch: () => Promise.resolve({ data: undefined })
+      };
+    } else {
+      result = useReadContracts(optimizedConfig);
+    }
   } catch (error) {
     logger.error('useReadContracts 調用失敗:', error);
     result = {

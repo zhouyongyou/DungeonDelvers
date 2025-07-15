@@ -1,0 +1,94 @@
+{
+  "timestamp": "2025-07-15T17:17:01.536Z",
+  "summary": {
+    "totalTests": 11,
+    "passed": 11,
+    "failed": 0,
+    "warnings": 1
+  },
+  "results": [
+    {
+      "test": "dev_server",
+      "status": "success",
+      "details": {
+        "httpCode": "200"
+      }
+    },
+    {
+      "test": "file_check",
+      "file": "src/pages/AdminPage.tsx",
+      "status": "success",
+      "issues": [
+        {
+          "type": "pattern",
+          "message": "讀取 undefined 屬性",
+          "count": 1,
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "test": "file_check",
+      "file": "src/pages/ReferralPage.tsx",
+      "status": "success",
+      "issues": []
+    },
+    {
+      "test": "file_check",
+      "file": "src/pages/AltarPage.tsx",
+      "status": "success",
+      "issues": []
+    },
+    {
+      "test": "file_check",
+      "file": "src/pages/MyAssetsPage.tsx",
+      "status": "success",
+      "issues": []
+    },
+    {
+      "test": "file_check",
+      "file": "src/components/layout/Footer.tsx",
+      "status": "success",
+      "issues": []
+    },
+    {
+      "test": "file_check",
+      "file": "api/rpc.ts",
+      "status": "success",
+      "issues": []
+    },
+    {
+      "test": "file_check",
+      "file": "src/config/smartRpcTransport.ts",
+      "status": "success",
+      "issues": []
+    },
+    {
+      "test": "typescript_check",
+      "status": "success",
+      "details": {
+        "stdout": "\n> dungeon-delvers-react@0.0.0 type-check\n> tsc --noEmit\n\n",
+        "stderr": ""
+      }
+    },
+    {
+      "test": "environment_config",
+      "status": "success",
+      "details": {
+        "envVarsCount": 35,
+        "criticalVarsPresent": 2
+      }
+    },
+    {
+      "test": "build_process",
+      "status": "success",
+      "buildTime": 6408,
+      "details": {
+        "stdout": "\n> dungeon-delvers-react@0.0.0 build\n> tsc && vite build\n\nvite v5.4.19 building for production...\ntransforming...\n✓ 4054 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                                 5.97 kB │ gzip:  3.01 kB\ndist/images/FOUR-logo4-C-gH2DwO.png            58.99 kB\ndist/images/win_screen_500x500-Dc3iv2oW.png   107.92 kB\ndist/images/lose_screen_500x500-D65wGO9A.png  118.18 kB\ndist/assets/index-D-sGrJip.css                 57.15 kB │ gzip:  9.47 kB\ndist/js/ui-vendor-DbpEg3FL.js                   0.81 kB │ gzip:  0.48 kB\ndist/js/cdn-lSnJ3UeF.js                         1.41 kB │ gzip:  0.83 kB\ndist/js/DebugContractPage-CGTw68Qx.js           2.28 kB │ gzip:  0.95 kB\ndist/js/pages-profile-HAuJBn2o.js              33.17 kB │ gzip: 10.84 kB\ndist/js/pages-game-B91d_0do.js                 44.96 kB │ gzip: 14.37 kB\ndist/js/index-CQWYHe68.js                      50.75 kB │ gzip: 19.22 kB\ndist/js/pages-misc-D_podJN6.js                 52.48 kB │ gzip: 16.52 kB\ndist/js/react-vendor-Bz3rmKJE.js              139.46 kB │ gzip: 44.77 kB\ndist/js/apollo-vendor-6XSufMPO.js             155.79 kB │ gzip: 45.32 kB\ndist/js/pages-core-kPgavi1l.js                206.31 kB │ gzip: 42.00 kB\ndist/js/web3-vendor-BOE-sHv7.js               302.98 kB │ gzip: 92.39 kB\n✓ built in 5.85s\n",
+        "stderr": "node_modules/ox/_esm/core/internal/cursor.js (2:21): A comment\n\n\"/*#__PURE__*/\"\n\nin \"node_modules/ox/_esm/core/internal/cursor.js\" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.\nnode_modules/ox/_esm/core/Address.js (6:21): A comment\n\n\"/*#__PURE__*/\"\n\nin \"node_modules/ox/_esm/core/Address.js\" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.\nnode_modules/@walletconnect/utils/node_modules/ox/_esm/core/internal/cursor.js (2:21): A comment\n\n\"/*#__PURE__*/\"\n\nin \"node_modules/@walletconnect/utils/node_modules/ox/_esm/core/internal/cursor.js\" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.\nnode_modules/@walletconnect/utils/node_modules/ox/_esm/core/Address.js (6:21): A comment\n\n\"/*#__PURE__*/\"\n\nin \"node_modules/@walletconnect/utils/node_modules/ox/_esm/core/Address.js\" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.\nnode_modules/@reown/appkit/node_modules/ox/_esm/core/Address.js (6:21): A comment\n\n\"/*#__PURE__*/\"\n\nin \"node_modules/@reown/appkit/node_modules/ox/_esm/core/Address.js\" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.\nnode_modules/@reown/appkit/node_modules/ox/_esm/core/internal/cursor.js (2:21): A comment\n\n\"/*#__PURE__*/\"\n\nin \"node_modules/@reown/appkit/node_modules/ox/_esm/core/internal/cursor.js\" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.\nnode_modules/@reown/appkit-controllers/node_modules/ox/_esm/core/internal/cursor.js (2:21): A comment\n\n\"/*#__PURE__*/\"\n\nin \"node_modules/@reown/appkit-controllers/node_modules/ox/_esm/core/internal/cursor.js\" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.\nnode_modules/@reown/appkit-controllers/node_modules/ox/_esm/core/Address.js (6:21): A comment\n\n\"/*#__PURE__*/\"\n\nin \"node_modules/@reown/appkit-controllers/node_modules/ox/_esm/core/Address.js\" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.\n",
+        "distFiles": 123
+      }
+    }
+  ],
+  "recommendations": []
+}
