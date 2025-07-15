@@ -25,11 +25,6 @@ function getAlchemyKeys(): string[] {
 let currentKeyIndex = 0;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // 只允許 POST 請求
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
   // 設置 CORS 頭
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -38,6 +33,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // 處理 OPTIONS 請求
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
+  }
+
+  // 只允許 POST 請求
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {

@@ -4,6 +4,7 @@
   "description": "Dynamic NFT metadata API for Dungeon Delvers",
   "type": "module",
   "dependencies": {
+    "@vercel/node": "^5.3.5",
     "viem": "^2.7.9"
   }
-} 
+}
