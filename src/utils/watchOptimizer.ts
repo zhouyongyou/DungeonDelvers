@@ -258,6 +258,8 @@ class PollingOptimizer {
     // 根據優先級調整間隔
     const adjustedInterval = this.adjustIntervalByPriority(interval, priority);
 
+    // TEMP_DISABLED: 暫時禁用輪詢以避免 RPC 過載
+    /*
     const pollingId = setInterval(async () => {
       try {
         const startTime = Date.now();
@@ -284,6 +286,10 @@ class PollingOptimizer {
         // );
       }
     }, adjustedInterval);
+    */
+    
+    // 暫時返回一個模擬的 pollingId 來維持原有邏輯
+    const pollingId = null;
 
     this.pollingIntervals.set(key, pollingId);
     logger.debug(`創建優化輪詢: ${key}, 間隔: ${adjustedInterval}ms`);

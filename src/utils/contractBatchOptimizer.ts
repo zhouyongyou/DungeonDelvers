@@ -179,12 +179,17 @@ export class ContractBatchOptimizer {
       logger.debug('⏳ 跳過重複請求:', requestKey);
       return new Promise((resolve) => {
         // 等待當前請求完成
+        // TEMP_DISABLED: 暫時禁用請求檢查輪詢以避免 RPC 過載
+        /*
         const checkInterval = setInterval(() => {
           if (!this.activeRequests.has(requestKey)) {
             clearInterval(checkInterval);
             resolve(null);
           }
         }, 100);
+        */
+        // 直接解析以避免無限等待
+        resolve(null);
       });
     }
 

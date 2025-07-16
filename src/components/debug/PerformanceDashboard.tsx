@@ -28,10 +28,9 @@ const PerformanceDashboard: React.FC = () => {
     // 初始載入
     updateStats();
 
-    // 每 5 秒更新一次
-    const interval = setInterval(updateStats, 5000);
-
-    return () => clearInterval(interval);
+    // TEMP_DISABLED: 暫時禁用性能監控更新輪詢以避免 RPC 過載
+    // const interval = setInterval(updateStats, 5000);
+    // return () => clearInterval(interval);
   }, []);
 
   // 只在開發環境顯示

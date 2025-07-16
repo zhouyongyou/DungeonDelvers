@@ -75,8 +75,9 @@ export const useRpcMonitoring = (updateInterval: number = 5000) => {
 
   useEffect(() => {
     updateData();
-    const interval = setInterval(updateData, updateInterval);
-    return () => clearInterval(interval);
+    // TEMP_DISABLED: 暫時禁用輪詢以避免 RPC 過載
+    // const interval = setInterval(updateData, updateInterval);
+    // return () => clearInterval(interval);
   }, [updateData, updateInterval]);
 
   const clearStats = useCallback(() => {
@@ -176,8 +177,9 @@ export const useRpcPageStats = (pageName: string) => {
 
   useEffect(() => {
     updatePageStats();
-    const interval = setInterval(updatePageStats, 10000); // 每10秒更新
-    return () => clearInterval(interval);
+    // TEMP_DISABLED: 暫時禁用輪詢以避免 RPC 過載
+    // const interval = setInterval(updatePageStats, 10000); // 每10秒更新
+    // return () => clearInterval(interval);
   }, [updatePageStats]);
 
   return {
@@ -200,8 +202,9 @@ export const useRpcContractStats = (contractName: string) => {
 
   useEffect(() => {
     updateContractStats();
-    const interval = setInterval(updateContractStats, 10000); // 每10秒更新
-    return () => clearInterval(interval);
+    // TEMP_DISABLED: 暫時禁用輪詢以避免 RPC 過載
+    // const interval = setInterval(updateContractStats, 10000); // 每10秒更新
+    // return () => clearInterval(interval);
   }, [updateContractStats]);
 
   return {
@@ -223,6 +226,8 @@ export const useRpcRealTimeMonitoring = () => {
   const [requestHistory, setRequestHistory] = useState<number[]>([]);
 
   useEffect(() => {
+    // TEMP_DISABLED: 暫時禁用實時監控輪詢以避免 RPC 過載
+    /* 
     const interval = setInterval(() => {
       // RPC monitoring disabled
       const stats = { averageResponseTime: 0, totalRequests: 0, failedRequests: 0 };
@@ -253,6 +258,7 @@ export const useRpcRealTimeMonitoring = () => {
     }, 1000);
 
     return () => clearInterval(interval);
+    */
   }, []);
 
   return {
@@ -296,6 +302,8 @@ export const useRpcAlerts = () => {
 
   // 監控閾值
   useEffect(() => {
+    // TEMP_DISABLED: 暫時禁用閾值監控輪詢以避免 RPC 過載
+    /*
     const interval = setInterval(() => {
       // RPC monitoring disabled
       const stats = { averageResponseTime: 0, totalRequests: 0, failedRequests: 0 };
@@ -335,6 +343,7 @@ export const useRpcAlerts = () => {
     }, 30000); // 每30秒檢查一次
 
     return () => clearInterval(interval);
+    */
   }, [thresholds, addAlert]);
 
   return {

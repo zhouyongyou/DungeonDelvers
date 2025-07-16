@@ -177,7 +177,8 @@ export const getPageSpecificQueryConfig = (pageName: string) => {
 
 // 緩存清理策略
 export const setupCacheCleanup = (queryClient: QueryClient) => {
-  // 定期清理過期緩存
+  // TEMP_DISABLED: 暫時禁用定期緩存清理以避免 RPC 過載
+  /*
   const cleanupInterval = setInterval(() => {
     queryClient.getQueryCache().clear();
     performanceMonitor.recordMetric({
@@ -188,6 +189,7 @@ export const setupCacheCleanup = (queryClient: QueryClient) => {
       unit: 'ms',
     });
   }, 1000 * 60 * 30); // 30分鐘清理一次
+  */
   
   // 監聽頁面可見性變化
   const handleVisibilityChange = () => {
@@ -200,7 +202,8 @@ export const setupCacheCleanup = (queryClient: QueryClient) => {
   document.addEventListener('visibilitychange', handleVisibilityChange);
   
   return () => {
-    clearInterval(cleanupInterval);
+    // TEMP_DISABLED: 暫時禁用的清理間隔已移除
+    // clearInterval(cleanupInterval);
     document.removeEventListener('visibilitychange', handleVisibilityChange);
   };
 };

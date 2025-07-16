@@ -368,9 +368,12 @@ class RpcMonitor {
 
   // 私有方法：定期分析
   private setupPeriodicAnalysis(): void {
+    // TEMP_DISABLED: 暫時禁用定期分析以避免 RPC 過載
+    /*
     setInterval(() => {
       this.performPeriodicAnalysis();
     }, 60000); // 每分鐘分析一次
+    */
   }
 
   // 私有方法：執行定期分析

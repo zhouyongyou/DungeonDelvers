@@ -87,9 +87,12 @@ class RpcOptimizer {
   private startOptimizationEngine(): void {
     if (this.optimizationInterval) return;
 
+    // TEMP_DISABLED: 暫時禁用優化引擎輪詢以避免 RPC 過載
+    /*
     this.optimizationInterval = setInterval(() => {
       this.runOptimizationCheck();
     }, 60000); // 每分鐘檢查一次
+    */
   }
 
   // 停止優化引擎

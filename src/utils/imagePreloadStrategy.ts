@@ -92,12 +92,17 @@ class ImagePreloadManager {
    */
   private waitForImage(url: string): Promise<void> {
     return new Promise((resolve) => {
+      // TEMP_DISABLED: 暫時禁用圖片加載檢查輪詢以避免 RPC 過載
+      /*
       const checkInterval = setInterval(() => {
         if (!this.loadingImages.has(url)) {
           clearInterval(checkInterval);
           resolve();
         }
       }, 100);
+      */
+      // 直接解析以避免無限等待
+      resolve();
     });
   }
 
@@ -106,12 +111,17 @@ class ImagePreloadManager {
    */
   private waitForSlot(): Promise<void> {
     return new Promise((resolve) => {
+      // TEMP_DISABLED: 暫時禁用加載槽位檢查輪詢以避免 RPC 過載
+      /*
       const checkInterval = setInterval(() => {
         if (this.loadingImages.size < 3) {
           clearInterval(checkInterval);
           resolve();
         }
       }, 100);
+      */
+      // 直接解析以避免無限等待
+      resolve();
     });
   }
 

@@ -41,10 +41,12 @@ class RpcHealthManager {
     // 立即執行一次檢查
     this.performHealthCheck();
 
-    // 定期檢查
+    // TEMP_DISABLED: 暫時禁用健康檢查輪詢以避免 RPC 過載
+    /*
     this.checkInterval = setInterval(() => {
       this.performHealthCheck();
     }, this.CHECK_INTERVAL);
+    */
   }
 
   /**

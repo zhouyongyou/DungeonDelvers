@@ -479,13 +479,15 @@ class RpcAnalytics {
 // 創建全局實例
 export const rpcAnalytics = new RpcAnalytics();
 
-// 開發環境下定期輸出分析報告
+// TEMP_DISABLED: 暫時禁用開發環境定期分析報告以避免 RPC 過載
+/*
 if (import.meta.env.DEV) {
   setInterval(() => {
     const report = rpcAnalytics.generatePerformanceReport();
     logger.info('📊 RPC 性能報告:\n' + report);
   }, 300000); // 每5分鐘
 }
+*/
 
 // 導出類型
 export type { 

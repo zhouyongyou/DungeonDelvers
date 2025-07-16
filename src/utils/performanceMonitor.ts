@@ -346,10 +346,12 @@ export function usePagePerformance(pageName: string) {
     // 測量頁面加載時間
     performanceMonitor.measurePageLoad(pageName);
 
-    // 定期測量內存使用
+    // TEMP_DISABLED: 暫時禁用內存監控輪詢以避免 RPC 過載
+    /*
     const memoryInterval = setInterval(() => {
       performanceMonitor.measureMemoryUsage();
     }, 30000); // 30秒
+    */
 
     return () => {
       clearInterval(memoryInterval);

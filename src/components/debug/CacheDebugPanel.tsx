@@ -31,8 +31,9 @@ export const CacheDebugPanel: React.FC = () => {
   useEffect(() => {
     if (isOpen) {
       refreshStats();
-      const interval = setInterval(refreshStats, 2000); // 每2秒刷新
-      return () => clearInterval(interval);
+      // TEMP_DISABLED: 暫時禁用緩存統計刷新輪詢以避免 RPC 過載
+      // const interval = setInterval(refreshStats, 2000); // 每2秒刷新
+      // return () => clearInterval(interval);
     }
   }, [isOpen]);
 

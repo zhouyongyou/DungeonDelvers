@@ -49,7 +49,7 @@ export function useMonitoredReadContracts<T = any>(
   const optimizedConfig = useMemo(() => {
     if (!readConfig.contracts) {
       logger.debug('useMonitoredReadContracts: contracts 未定義');
-      return readConfig;
+      return { ...readConfig, contracts: [] };
     }
     
     if (!Array.isArray(readConfig.contracts)) {

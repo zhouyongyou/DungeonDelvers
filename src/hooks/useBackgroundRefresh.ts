@@ -51,8 +51,8 @@ export function useBackgroundRefresh(config: BackgroundRefreshConfig) {
     // Initial refresh after a short delay
     const initialTimer = setTimeout(refresh, 5000);
 
-    // Set up interval
-    intervalRef.current = setInterval(refresh, interval);
+    // TEMP_DISABLED: 暫時禁用背景刷新輪詢以避免 RPC 過載
+    // intervalRef.current = setInterval(refresh, interval);
 
     return () => {
       clearTimeout(initialTimer);

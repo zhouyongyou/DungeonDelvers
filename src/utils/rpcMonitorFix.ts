@@ -58,6 +58,8 @@ export class RpcMonitorDiagnostics {
   startDiagnostics() {
     this.interceptFetch();
     
+    // TEMP_DISABLED: 暫時禁用診斷輪詢以避免 RPC 過載
+    /*
     // RPC monitoring disabled
     setInterval(() => {
       // const stats = rpcMonitor.getStats();
@@ -74,6 +76,7 @@ export class RpcMonitorDiagnostics {
         });
       }
     }, 5000);
+    */
   }
 
   /**
@@ -162,10 +165,13 @@ if (import.meta.env.DEV) {
     rpcDiagnostics.startDiagnostics();
     logger.info('🔧 RPC 診斷工具已啟動');
     
+    // TEMP_DISABLED: 暫時禁用診斷報告輪詢以避免 RPC 過載
+    /*
     // 每分鐘輸出診斷報告
     setInterval(() => {
       const report = rpcDiagnostics.getDiagnosticsReport();
       logger.info('📊 RPC 診斷報告:', report);
     }, 60000);
+    */
   }, 5000);
 }

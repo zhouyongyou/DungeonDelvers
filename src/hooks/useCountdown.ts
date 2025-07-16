@@ -11,9 +11,13 @@ export const useCountdown = (targetTimestamp: number) => {
     const [now, setNow] = useState(Date.now() / 1000);
 
     useEffect(() => {
-        // 每秒更新一次當前時間
+        // TEMP_DISABLED: 暫時禁用倒數計時器以避免 RPC 過載
+        /*
         const interval = setInterval(() => setNow(Date.now() / 1000), 1000);
         return () => clearInterval(interval);
+        */
+        // 只設置一次當前時間
+        setNow(Date.now() / 1000);
     }, []);
 
     const secondsRemaining = Math.max(0, targetTimestamp - now);

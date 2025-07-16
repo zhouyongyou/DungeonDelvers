@@ -12,8 +12,8 @@ export class RequestDeduper {
   constructor(ttl: number = 5000) {
     this.requestTTL = ttl;
     
-    // 定期清理過期的請求
-    setInterval(() => this.cleanup(), 60000); // 每分鐘清理一次
+    // TEMP_DISABLED: 暫時禁用定期清理以避免 RPC 過載
+    // setInterval(() => this.cleanup(), 60000); // 每分鐘清理一次
   }
 
   async execute<T>(

@@ -125,7 +125,8 @@ class RpcRequestDeduper {
 // 創建全局實例
 export const rpcRequestDeduper = new RpcRequestDeduper();
 
-// 在開發環境下定期輸出統計
+// TEMP_DISABLED: 暫時禁用開發環境統計輪詢以避免 RPC 過載
+/*
 if (import.meta.env.DEV) {
   setInterval(() => {
     const stats = rpcRequestDeduper.getStats();
@@ -134,3 +135,4 @@ if (import.meta.env.DEV) {
     }
   }, 10000); // 每10秒
 }
+*/

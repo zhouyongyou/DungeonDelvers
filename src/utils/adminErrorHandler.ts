@@ -201,6 +201,8 @@ class FallbackDataManager {
 
   // 定期清理過期數據
   startCleanup(): void {
+    // TEMP_DISABLED: 暫時禁用定期清理以避免 RPC 過載
+    /*
     setInterval(() => {
       const now = Date.now();
       for (const [key, cached] of this.fallbackCache.entries()) {
@@ -209,6 +211,7 @@ class FallbackDataManager {
         }
       }
     }, 60000); // 每分鐘清理一次
+    */
   }
 }
 

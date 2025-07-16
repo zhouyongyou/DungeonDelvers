@@ -169,10 +169,12 @@ class ProductionMonitoringService {
     // 立即生成一次報告
     this.sendReport();
     
-    // 設置定期報告
+    // TEMP_DISABLED: 暫時禁用定期報告以避免 RPC 過載
+    /*
     this.reportingInterval = setInterval(() => {
       this.sendReport();
     }, this.config.reportingInterval);
+    */
   }
   
   // 停止監控服務

@@ -230,44 +230,36 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     };
   }, []);
 
-  // 臨時禁用自動查詢，使用手動觸發模式
-  const [manualLoadTrigger, setManualLoadTrigger] = useState(false);
+  // 使用自動查詢，但增強防護機制
   const [readResults, setReadResults] = useState<any>(undefined);
   const [isLoadingSettings, setIsLoadingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState<any>(null);
   
-  // 手動觸發查詢的函數
-  const refetchSettings = useCallback(async () => {
-    if (!contractsReadEnabled) {
-      logger.warn('合約讀取條件不滿足，跳過查詢');
-      return { data: undefined };
+  // 使用 useMonitoredReadContracts 進行管理員設定查詢
+  const { data: contractsReadResult, isLoading: isLoadingContracts, error: contractsReadError } = useMonitoredReadContracts({
+    contracts: safeContractsToRead,
+    contractName: 'adminSettings',
+    batchName: 'adminSettingsBatch',
+    query: {
+      enabled: contractsReadEnabled,
+      staleTime: 1000 * 60 * 10, // 10分鐘緩存
+      gcTime: 1000 * 60 * 30,    // 30分鐘
+      refetchOnWindowFocus: false,
+      refetchInterval: false,     // 禁用自動刷新
+      retry: 1,                   // 減少重試次數
+      retryDelay: 2000,           // 增加重試延遲
+      retryOnMount: false         // 禁用掛載時重試
     }
-    
-    setIsLoadingSettings(true);
-    setSettingsError(null);
-    
-    try {
-      logger.info('手動觸發管理員設定查詢');
-      // 這裡暫時返回模擬數據，避免 useMonitoredReadContracts 的問題
-      const mockResults = safeContractsToRead.map(() => ({ result: '0x0000000000000000000000000000000000000000' }));
-      setReadResults(mockResults);
-      return { data: mockResults };
-    } catch (error) {
-      logger.error('手動查詢失敗:', error);
-      setSettingsError(error);
-      return { data: undefined };
-    } finally {
-      setIsLoadingSettings(false);
-    }
-  }, [contractsReadEnabled, safeContractsToRead]);
-
-  // 初始化時觸發一次查詢
+  });
+  
+  // 同步查詢結果
   useEffect(() => {
-    if (contractsReadEnabled && !manualLoadTrigger) {
-      setManualLoadTrigger(true);
-      refetchSettings();
-    }
-  }, [contractsReadEnabled, manualLoadTrigger, refetchSettings]);
+    setReadResults(contractsReadResult);
+    setIsLoadingSettings(isLoadingContracts);
+    setSettingsError(contractsReadError);
+  }, [contractsReadResult, isLoadingContracts, contractsReadError]);
+
+  // 移除手動觸發邏輯，使用自動查詢
 
   const currentAddressMap: Record<string, Address | undefined> = useMemo(() => {
     try {

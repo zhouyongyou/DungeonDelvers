@@ -38,8 +38,9 @@ const RpcMonitoringPanel: React.FC = () => {
     };
 
     updateNodeStats();
-    const interval = setInterval(updateNodeStats, 30000); // 每30秒更新
-    return () => clearInterval(interval);
+    // TEMP_DISABLED: 暫時禁用節點狀態更新輪詢以避免 RPC 過載
+    // const interval = setInterval(updateNodeStats, 30000); // 每30秒更新
+    // return () => clearInterval(interval);
   }, []);
 
   // 生成分析報告

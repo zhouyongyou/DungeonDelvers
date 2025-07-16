@@ -116,8 +116,9 @@ export const Footer: React.FC = () => {
     };
 
     checkRpcHealth();
-    const intervalId = setInterval(checkRpcHealth, 15000);
-    return () => clearInterval(intervalId);
+    // 暫時禁用定期健康檢查，避免 RPC 過載
+    // const intervalId = setInterval(checkRpcHealth, 15000);
+    // return () => clearInterval(intervalId);
   }, [client]);
 
   const getStatusIndicator = () => {
