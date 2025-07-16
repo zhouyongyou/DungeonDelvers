@@ -235,20 +235,22 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   const [isLoadingSettings, setIsLoadingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState<any>(null);
   
-  // 使用 useMonitoredReadContracts 進行管理員設定查詢
+  // 恢復合約讀取功能，使用優化配置避免過載
   const { data: contractsReadResult, isLoading: isLoadingContracts, error: contractsReadError } = useMonitoredReadContracts({
     contracts: safeContractsToRead,
     contractName: 'adminSettings',
     batchName: 'adminSettingsBatch',
     query: {
       enabled: contractsReadEnabled,
-      staleTime: 1000 * 60 * 10, // 10分鐘緩存
-      gcTime: 1000 * 60 * 30,    // 30分鐘
-      refetchOnWindowFocus: false,
-      refetchInterval: false,     // 禁用自動刷新
-      retry: 1,                   // 減少重試次數
-      retryDelay: 2000,           // 增加重試延遲
-      retryOnMount: false         // 禁用掛載時重試
+      staleTime: 1000 * 60 * 30,     // 30分鐘緩存，減少重複請求
+      gcTime: 1000 * 60 * 60,        // 60分鐘垃圾回收
+      refetchOnWindowFocus: false,    // 禁用窗口聚焦刷新
+      refetchInterval: false,         // 禁用自動刷新
+      retry: 1,                       // 只重試一次
+      retryDelay: 3000,               // 3秒重試延遲
+      retryOnMount: false,            // 禁用掛載時重試
+      structuralSharing: false,       // 禁用結構共享，減少計算開銷
+      refetchOnReconnect: false       // 禁用重連時刷新
     }
   });
   
@@ -413,6 +415,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     }
   }, [parameterConfig]);
 
+  // 恢復參數合約讀取，使用分批策略減少單次請求量
   const { data: params, isLoading: isLoadingParams, error: paramsError, refetch: refetchParams } = useMonitoredReadContracts({
     contracts: parameterContracts,
     contractName: 'adminParameters',
@@ -420,13 +423,15 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     query: { 
       enabled: Array.isArray(parameterContracts) && parameterContracts.length > 0 && 
         (loadedSections.corePrice || loadedSections.platformFee || loadedSections.taxSystem || loadedSections.gameParams || loadedSections.oracle),
-      staleTime: 1000 * 60 * 30, // 30分鐘緩存
-      gcTime: 1000 * 60 * 60,    // 60分鐘
+      staleTime: 1000 * 60 * 45,     // 45分鐘緩存
+      gcTime: 1000 * 60 * 90,        // 90分鐘垃圾回收
       refetchOnWindowFocus: false,
-      refetchInterval: false,     // 禁用自動刷新
-      retry: 2,                   // 允許合理的重試次數
-      retryDelay: 1000,           // 重試延遲 1 秒
-      retryOnMount: true          // 允許掛載時重試
+      refetchInterval: false,
+      retry: 1,
+      retryDelay: 4000,               // 4秒重試延遲
+      retryOnMount: false,
+      structuralSharing: false,
+      refetchOnReconnect: false
     }
   });
 
@@ -464,19 +469,22 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     }
   }, [playerVaultContract]);
 
+  // 恢復 Vault 參數讀取，使用延遲載入策略
   const { data: vaultParams, isLoading: isLoadingVaultParams, error: vaultParamsError, refetch: refetchVaultParams } = useMonitoredReadContracts({
     contracts: vaultContracts,
     contractName: 'playerVault',
     batchName: 'vaultParametersBatch',
     query: { 
       enabled: !!playerVaultContract && !!playerVaultContract.address && Array.isArray(vaultContracts) && vaultContracts.length > 0 && loadedSections.taxSystem,
-      staleTime: 1000 * 60 * 30, // 30分鐘緩存
-      gcTime: 1000 * 60 * 60,    // 60分鐘
+      staleTime: 1000 * 60 * 60,     // 60分鐘緩存
+      gcTime: 1000 * 60 * 120,       // 120分鐘垃圾回收
       refetchOnWindowFocus: false,
-      refetchInterval: false,     // 禁用自動刷新
-      retry: 2,                   // 允許合理的重試次數
-      retryDelay: 1000,           // 重試延遲 1 秒
-      retryOnMount: true          // 允許掛載時重試
+      refetchInterval: false,
+      retry: 1,
+      retryDelay: 5000,               // 5秒重試延遲
+      retryOnMount: false,
+      structuralSharing: false,
+      refetchOnReconnect: false
     }
   });
 

@@ -10,6 +10,8 @@ const PUBLIC_BSC_RPCS = [
   'https://bsc-dataseed2.binance.org/',
   'https://bsc-dataseed3.binance.org/',
   'https://bsc-dataseed4.binance.org/',
+  'https://rpc.ankr.com/bsc',
+  'https://bsc-rpc.publicnode.com',
 ];
 
 // 輪換索引
@@ -51,10 +53,12 @@ function getAlchemyKeys(): string[] {
  * 生產環境使用 API 代理，開發環境使用本地 key 或公共節點
  */
 function getRpcUrl(): string {
-  // 生產環境：使用 API 代理路由
+  // 緊急回退：暫時在生產環境也使用公共 RPC 節點，避免 API 代理 500 錯誤
   if (import.meta.env.PROD) {
-    logger.info('🔐 使用安全的 RPC 代理');
-    return '/api/rpc';
+    logger.warn('🚨 緊急模式：生產環境使用公共 RPC 節點，跳過代理');
+    // 使用輪換策略，分散請求到不同節點
+    const rpcIndex = currentKeyIndex++ % PUBLIC_BSC_RPCS.length;
+    return PUBLIC_BSC_RPCS[rpcIndex];
   }
   
   // 開發環境：檢查本地 key
@@ -95,7 +99,7 @@ export function createSmartRpcTransport(): Transport {
   return custom({
     async request({ method, params }) {
       let lastError: any;
-      const maxRetries = isUsingAlchemy ? 3 : 1; // Alchemy 重試 3 次，公共節點不重試
+      const maxRetries = isUsingAlchemy ? 3 : 2; // Alchemy 重試 3 次，公共節點重試 2 次
       
       // RPC monitoring disabled
       // const requestId = rpcMonitor.startRequest(
