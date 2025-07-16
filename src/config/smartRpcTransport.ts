@@ -1,8 +1,15 @@
-// src/config/smartRpcTransport.ts - 直接 RPC 傳輸層
+// src/config/smartRpcTransport.ts - 混合 RPC 傳輸層
 
 import { custom, type Transport } from 'viem';
 import { logger } from '../utils/logger';
-// import { rpcMonitor } from '../utils/rpcMonitor'; // Removed RPC monitoring
+
+// 請求類型分類
+export enum RequestType {
+  HISTORICAL = 'HISTORICAL',   // 歷史數據，優先使用子圖
+  REALTIME = 'REALTIME',      // 實時數據，使用公開節點
+  SENSITIVE = 'SENSITIVE',    // 敏感操作，使用代理節點
+  BATCH = 'BATCH'            // 批量查詢，使用子圖或代理
+}
 
 // 公共 BSC RPC 節點列表（作為後備）
 const PUBLIC_BSC_RPCS = [
@@ -16,32 +23,71 @@ const PUBLIC_BSC_RPCS = [
 
 // 輪換索引
 let currentKeyIndex = 0;
+let currentProxyKeyIndex = 0;
 
 /**
- * 獲取所有可用的 Alchemy API keys
+ * 分類請求類型
  */
-function getAlchemyKeys(): string[] {
+function categorizeRequest(method: string): RequestType {
+  // 歷史數據類請求 - 適合子圖
+  if (method.includes('getLogs') || 
+      method.includes('getBlockByNumber') ||
+      method.includes('getTransactionReceipt')) {
+    return RequestType.HISTORICAL;
+  }
+  
+  // 敏感操作 - 必須使用代理
+  if (method.includes('sendTransaction') || 
+      method.includes('sendRawTransaction') ||
+      method.includes('personal_')) {
+    return RequestType.SENSITIVE;
+  }
+  
+  // 批量查詢 - 優先子圖或代理
+  if (method === 'eth_call' && Array.isArray(arguments[1]) && arguments[1].length > 3) {
+    return RequestType.BATCH;
+  }
+  
+  // 其他都是實時查詢
+  return RequestType.REALTIME;
+}
+
+/**
+ * 獲取公開的 Alchemy key（可以暴露）
+ */
+function getPublicAlchemyKey(): string | null {
+  // 優先使用專門的公開 key
+  if (import.meta.env.VITE_ALCHEMY_KEY_PUBLIC) {
+    return import.meta.env.VITE_ALCHEMY_KEY_PUBLIC;
+  }
+  
+  // 向後兼容：使用第一個 key 作為公開 key
+  if (import.meta.env.VITE_ALCHEMY_KEY) {
+    return import.meta.env.VITE_ALCHEMY_KEY;
+  }
+  
+  if (import.meta.env.VITE_ALCHEMY_KEY_1) {
+    return import.meta.env.VITE_ALCHEMY_KEY_1;
+  }
+  
+  return null;
+}
+
+/**
+ * 獲取需要代理保護的 Alchemy keys
+ */
+function getProxyAlchemyKeys(): string[] {
   const keys: string[] = [];
   
-  // 本地開發環境 - 支持單個或多個 key
-  if (import.meta.env.VITE_ALCHEMY_KEY) {
-    keys.push(import.meta.env.VITE_ALCHEMY_KEY);
-  }
-  
-  // 檢查多個 VITE_ALCHEMY_KEY_N（本地開發）
-  for (let i = 1; i <= 5; i++) {
-    const key = import.meta.env[`VITE_ALCHEMY_KEY_${i}`];
-    if (key) keys.push(key);
-  }
-  
-  // Vercel 環境 - 檢查 ALCHEMY_KEY 和 ALCHEMY_API_KEY_N
-  if (import.meta.env.ALCHEMY_KEY) {
-    keys.push(import.meta.env.ALCHEMY_KEY);
-  }
-  
-  for (let i = 1; i <= 5; i++) {
-    const key = import.meta.env[`ALCHEMY_API_KEY_${i}`];
-    if (key) keys.push(key);
+  // 收集需要保護的 keys (2-5)
+  for (let i = 2; i <= 5; i++) {
+    // 本地環境變數
+    const viteKey = import.meta.env[`VITE_ALCHEMY_KEY_${i}`];
+    if (viteKey) keys.push(viteKey);
+    
+    // Vercel 環境變數
+    const vercelKey = import.meta.env[`ALCHEMY_API_KEY_${i}`];
+    if (vercelKey) keys.push(vercelKey);
   }
   
   // 去重
@@ -49,68 +95,97 @@ function getAlchemyKeys(): string[] {
 }
 
 /**
- * 獲取 RPC URL
- * 根據環境配置決定使用策略：
- * 1. 如果配置了 VITE_USE_RPC_PROXY=true，使用 API 代理
- * 2. 如果有 Alchemy key，直接使用
- * 3. 否則使用公共節點
+ * 根據請求類型獲取合適的 RPC URL
  */
-function getRpcUrl(): string {
-  // 緊急禁用 RPC 代理，直接使用公共節點
-  const useRpcProxy = false; // 強制禁用代理
-  
-  // 生產環境且啟用代理
-  if (import.meta.env.PROD && useRpcProxy) {
-    logger.info('🔒 生產環境：使用 API RPC 代理');
-    return '/api/rpc';
-  }
-  
-  // 生產環境緊急回退到公共節點
-  if (import.meta.env.PROD) {
-    logger.warn('🚨 緊急模式：生產環境使用公共 RPC 節點');
-    const rpcIndex = currentKeyIndex++ % PUBLIC_BSC_RPCS.length;
-    return PUBLIC_BSC_RPCS[rpcIndex];
-  }
-  
-  // 檢查本地 Alchemy key（開發環境或未啟用代理的生產環境）
-  const alchemyKeys = getAlchemyKeys();
-  
-  logger.debug('開發環境 RPC 配置:', { 
-    alchemyKeysCount: alchemyKeys.length,
-    alchemyKeys: alchemyKeys.map(k => k ? `${k.substring(0, 10)}...` : 'undefined')
-  });
-  
-  if (alchemyKeys.length > 0) {
-    // 驗證 key 的完整性
-    const key = alchemyKeys[currentKeyIndex % alchemyKeys.length];
-    if (key && key.length > 20) {
-      currentKeyIndex++;
-      
-      logger.info(`🔑 使用本地 Alchemy RPC 節點 (Key ${(currentKeyIndex - 1) % alchemyKeys.length + 1}/${alchemyKeys.length})`);
-      return `https://bnb-mainnet.g.alchemy.com/v2/${key}`;
-    } else {
-      logger.warn('⚠️ Alchemy key 不完整，使用公共 RPC 節點');
+function getRpcUrl(requestType: RequestType): string {
+  // 開發環境：優先使用所有可用的 keys
+  if (!import.meta.env.PROD) {
+    const publicKey = getPublicAlchemyKey();
+    if (publicKey && publicKey.length > 20) {
+      logger.debug('🔑 開發環境：使用 Alchemy 節點');
+      return `https://bnb-mainnet.g.alchemy.com/v2/${publicKey}`;
     }
   }
   
-  // 沒有 Alchemy key 時使用公共節點
-  logger.warn('⚠️ 未配置 Alchemy key，使用公共 RPC 節點');
-  return PUBLIC_BSC_RPCS[0];
+  // 生產環境：根據請求類型選擇
+  switch (requestType) {
+    case RequestType.HISTORICAL:
+    case RequestType.BATCH:
+      // 歷史數據和批量查詢優先使用代理（保護流量）
+      if (import.meta.env.PROD && getProxyAlchemyKeys().length > 0) {
+        logger.debug('🔒 使用 RPC 代理處理批量請求');
+        return '/api/rpc';
+      }
+      break;
+      
+    case RequestType.SENSITIVE:
+      // 敏感操作必須使用代理
+      if (import.meta.env.PROD) {
+        logger.info('🔐 敏感操作：使用 RPC 代理');
+        return '/api/rpc';
+      }
+      break;
+      
+    case RequestType.REALTIME:
+      // 實時查詢優先使用公開節點
+      const publicKey = getPublicAlchemyKey();
+      if (publicKey && publicKey.length > 20) {
+        logger.debug('⚡ 實時查詢：使用公開 Alchemy 節點');
+        return `https://bnb-mainnet.g.alchemy.com/v2/${publicKey}`;
+      }
+      break;
+  }
+  
+  // 降級到公共節點
+  logger.warn('⚠️ 降級使用公共 RPC 節點');
+  const rpcIndex = currentKeyIndex++ % PUBLIC_BSC_RPCS.length;
+  return PUBLIC_BSC_RPCS[rpcIndex];
 }
 
 /**
- * 創建直接 RPC 傳輸層
- * 優先使用 Alchemy，公共節點作為後備
+ * 檢查是否應該使用子圖
+ */
+function shouldUseSubgraph(method: string, params: any[]): boolean {
+  // 管理頁面的批量參數讀取特別適合子圖
+  if (method === 'eth_call' && params[0]?.data?.startsWith('0x')) {
+    const selector = params[0].data.slice(0, 10);
+    // 常見的只讀方法選擇器
+    const readOnlySelectors = [
+      '0x06fdde03', // name()
+      '0x95d89b41', // symbol()
+      '0x313ce567', // decimals()
+      '0x70a08231', // balanceOf(address)
+      '0xdd62ed3e', // allowance(address,address)
+      '0x18160ddd', // totalSupply()
+    ];
+    return readOnlySelectors.includes(selector);
+  }
+  return false;
+}
+
+/**
+ * 創建混合 RPC 傳輸層
+ * 根據請求類型智能選擇數據源
  */
 export function createSmartRpcTransport(): Transport {
-  const primaryRpcUrl = getRpcUrl();
-  const isUsingProxy = primaryRpcUrl === '/api/rpc';
-  const isUsingAlchemy = primaryRpcUrl.includes('alchemy.com') || isUsingProxy;
-  
   return custom({
     async request({ method, params }) {
       let lastError: any;
-      const maxRetries = isUsingAlchemy ? 3 : 2; // Alchemy 重試 3 次，公共節點重試 2 次
+      
+      // 分類請求類型
+      const requestType = categorizeRequest(method as string);
+      
+      // 檢查是否應該使用子圖（未來實施）
+      if (shouldUseSubgraph(method as string, params as any[])) {
+        logger.debug('📊 此請求適合使用子圖（待實施）');
+        // TODO: 實施子圖查詢邏輯
+      }
+      
+      // 獲取適合的 RPC URL
+      const primaryRpcUrl = getRpcUrl(requestType);
+      const isUsingProxy = primaryRpcUrl === '/api/rpc';
+      const isUsingAlchemy = primaryRpcUrl.includes('alchemy.com') || isUsingProxy;
+      const maxRetries = isUsingAlchemy ? 3 : 2;
       
       // RPC monitoring disabled
       // const requestId = rpcMonitor.startRequest(
