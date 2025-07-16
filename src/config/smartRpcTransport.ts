@@ -50,18 +50,29 @@ function getAlchemyKeys(): string[] {
 
 /**
  * 獲取 RPC URL
- * 生產環境使用 API 代理，開發環境使用本地 key 或公共節點
+ * 根據環境配置決定使用策略：
+ * 1. 如果配置了 VITE_USE_RPC_PROXY=true，使用 API 代理
+ * 2. 如果有 Alchemy key，直接使用
+ * 3. 否則使用公共節點
  */
 function getRpcUrl(): string {
-  // 緊急回退：暫時在生產環境也使用公共 RPC 節點，避免 API 代理 500 錯誤
+  // 緊急禁用 RPC 代理，直接使用公共節點
+  const useRpcProxy = false; // 強制禁用代理
+  
+  // 生產環境且啟用代理
+  if (import.meta.env.PROD && useRpcProxy) {
+    logger.info('🔒 生產環境：使用 API RPC 代理');
+    return '/api/rpc';
+  }
+  
+  // 生產環境緊急回退到公共節點
   if (import.meta.env.PROD) {
-    logger.warn('🚨 緊急模式：生產環境使用公共 RPC 節點，跳過代理');
-    // 使用輪換策略，分散請求到不同節點
+    logger.warn('🚨 緊急模式：生產環境使用公共 RPC 節點');
     const rpcIndex = currentKeyIndex++ % PUBLIC_BSC_RPCS.length;
     return PUBLIC_BSC_RPCS[rpcIndex];
   }
   
-  // 開發環境：檢查本地 key
+  // 檢查本地 Alchemy key（開發環境或未啟用代理的生產環境）
   const alchemyKeys = getAlchemyKeys();
   
   logger.debug('開發環境 RPC 配置:', { 
