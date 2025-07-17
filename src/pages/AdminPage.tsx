@@ -2,9 +2,10 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
-import { useMonitoredReadContracts } from '../hooks/useMonitoredContract';
-import { useSafeMultipleReads } from '../hooks/useSafeMultipleReads';
-import { useAdminContracts } from '../hooks/useAdminContracts';
+// 移除循環依賴的 hooks
+// import { useMonitoredReadContracts } from '../hooks/useMonitoredContract';
+// import { useSafeMultipleReads } from '../hooks/useSafeMultipleReads';
+// import { useAdminContracts } from '../hooks/useAdminContracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatEther, isAddress } from 'viem';
 type ContractName = keyof typeof import('../config/contracts').contracts[typeof bsc.id];
@@ -16,9 +17,10 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { bsc } from 'wagmi/chains';
 import { useTransactionStore } from '../stores/useTransactionStore';
-import { getOptimizedQueryConfig } from '../config/rpcOptimization';
-import { watchManager } from '../config/watchConfig';
-import { AdminPageDebugger } from '../utils/adminPageDebugger';
+// 移除RPC監控相關的imports
+// import { getOptimizedQueryConfig } from '../config/rpcOptimization';
+// import { watchManager } from '../config/watchConfig';
+// import { AdminPageDebugger } from '../utils/adminPageDebugger';
 import { logger } from '../utils/logger';
 
 // Import newly created admin components
@@ -31,7 +33,7 @@ import AltarRuleManager from '../components/admin/AltarRuleManager';
 import FundsWithdrawal from '../components/admin/FundsWithdrawal';
 import VipSettingsManager from '../components/admin/VipSettingsManager';
 import GlobalRewardSettings from '../components/admin/GlobalRewardSettings';
-// import RpcMonitoringPanel from '../components/admin/RpcMonitoringPanel'; // Removed RPC monitoring
+// RPC監控已移除以解決循環依賴問題
 import { ContractHealthCheck } from '../components/admin/ContractHealthCheck';
 import { validateContract, getSafeContract } from '../utils/contractValidator';
 import ProvisionsDiagnosticPanel from '../components/admin/ProvisionsDiagnosticPanel';
@@ -72,18 +74,15 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     gameParams: false,
     oracle: false,
     contractControl: false,
-    rpcMonitor: false,
+    // rpcMonitor: false, // 移除RPC監控
     provisionsDiagnostic: false,
   });
 
-  // 管理員頁面初始化時清理 Watch
-  useEffect(() => {
-    watchManager.clearAll();
-    // 移除 toast 通知以減少重新渲染
-    return () => {
-      // 離開管理員頁面時不需要特別處理，因為其他頁面會重新註冊需要的 Watch
-    };
-  }, []); // 只在組件首次掛載時執行一次
+  // 移除 watchManager 相關代碼以解決循環依賴
+  // useEffect(() => {
+  //   watchManager.clearAll();
+  //   return () => {};
+  // }, []);
 
   // 將 setupConfig 移到組件外部，避免每次渲染都重新創建
   const setupConfig = useMemo(() => {
@@ -202,7 +201,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         logger.error('捕獲到 undefined.length 錯誤:', {
           message: errorMessage,
           stack: args[1]?.stack,
-          context: 'AdminPage useMonitoredReadContracts'
+          context: 'AdminPage useReadContracts'
         });
         // 不阻止正常的錯誤輸出
       }
@@ -219,34 +218,21 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   // const [isLoadingContracts, setIsLoadingContracts] = useState(false);
   // const [contractsReadError, setContractsReadError] = useState<any>(null);
   
-  // 使用備用的單獨合約讀取方案
-  const { data: adminContractsResult, isLoading: isLoadingAdminContracts, error: adminContractsError } = useAdminContracts(
-    safeContractsToRead.filter(c => c && c.address && c.abi && c.functionName)
-  );
-
-  // 嘗試使用批量讀取，如果失敗則使用備用方案
-  const { data: batchResult, isLoading: isLoadingBatch, error: batchError } = useMonitoredReadContracts({
+  // 直接使用 wagmi 的 useReadContracts，移除循環依賴
+  const { data: contractsReadResult, isLoading: isLoadingContracts, error: contractsReadError } = useReadContracts({
     contracts: safeContractsToRead,
-    contractName: 'adminSettings',
-    batchName: 'adminSettingsBatch',
     query: {
-      enabled: contractsReadEnabled && !adminContractsResult, // 只在備用方案未完成時啟用
+      enabled: contractsReadEnabled,
       staleTime: 1000 * 60 * 30,
       gcTime: 1000 * 60 * 60,
       refetchOnWindowFocus: false,
       refetchInterval: false,
-      retry: 0, // 不重試，直接使用備用方案
+      retry: 1,
       retryDelay: 3000,
-      retryOnMount: false,
       structuralSharing: false,
       refetchOnReconnect: false
     }
   });
-
-  // 選擇使用哪個結果
-  const contractsReadResult = batchResult || adminContractsResult;
-  const isLoadingContracts = isLoadingBatch || isLoadingAdminContracts;
-  const contractsReadError = batchError || adminContractsError;
   
   // 移除會導致無限循環的 useEffect
   // 直接使用 contractsReadResult、isLoadingContracts 和 contractsReadError
@@ -399,8 +385,11 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     }
   }, [parameterConfig]);
 
-  // 使用安全的批量讀取方法
-  const { data: params, isLoading: isLoadingParams, error: paramsError, refetch: refetchParams } = useSafeMultipleReads(parameterContracts);
+  // 直接使用 wagmi 的 useReadContracts，移除循環依賴
+  const { data: params, isLoading: isLoadingParams, error: paramsError, refetch: refetchParams } = useReadContracts({
+    contracts: parameterContracts,
+    query: { enabled: loadedSections.gameParams }
+  });
 
   // 讀取 PlayerVault 的稅務參數
   const playerVaultContract = getContract(chainId, 'playerVault');
@@ -436,11 +425,11 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     }
   }, [playerVaultContract]);
 
-  // 使用安全的批量讀取 Vault 參數
-  const { data: vaultParams, isLoading: isLoadingVaultParams, error: vaultParamsError, refetch: refetchVaultParams } = useSafeMultipleReads(
-    vaultContracts,
-    { enabled: loadedSections.taxSystem }
-  );
+  // 直接使用 wagmi 的 useReadContracts，移除循環依賴
+  const { data: vaultParams, isLoading: isLoadingVaultParams, error: vaultParamsError, refetch: refetchVaultParams } = useReadContracts({
+    contracts: vaultContracts,
+    query: { enabled: loadedSections.taxSystem }
+  });
 
   // 保留必要的調試信息，但使用 useCallback 穩定引用
   const logParameterContracts = useCallback(() => {
@@ -585,57 +574,37 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   // 錯誤處理 - 使用 useCallback 和 useRef 避免重複觸發
   const [hasShownError, setHasShownError] = useState<{ settings?: boolean; params?: boolean; vault?: boolean }>({});
   
-  // 使用 useCallback 穩定錯誤處理函數引用
-  const handleSettingsError = useCallback((error: any) => {
-    if (error && !hasShownError.settings) {
-      const errorMessage = error.message || '未知錯誤';
-      logger.error('讀取管理員設定失敗詳細信息:', {
-        message: errorMessage,
-        stack: error.stack || '無堆疊信息',
-        contractsToReadLength: contractsToRead?.length,
-        chainId,
-        error
-      });
-      
+  // 簡化錯誤處理，避免循環依賴
+  useEffect(() => {
+    if (contractsReadError && !hasShownError.settings) {
+      const errorMessage = contractsReadError.message || '未知錯誤';
+      logger.error('讀取管理員設定失敗:', { errorMessage, chainId });
       showToast(`讀取合約設定失敗: ${errorMessage}`, 'error');
       setHasShownError(prev => ({ ...prev, settings: true }));
-    } else if (!error && hasShownError.settings) {
+    } else if (!contractsReadError && hasShownError.settings) {
       setHasShownError(prev => ({ ...prev, settings: false }));
     }
-  }, [hasShownError.settings, showToast, contractsToRead?.length, chainId]);
+  }, [contractsReadError, hasShownError.settings, showToast, chainId]);
   
-  const handleParamsError = useCallback((error: any) => {
-    if (error && !hasShownError.params) {
-      showToast(`讀取參數設定失敗: ${error.message || '未知錯誤'}`, 'error');
-      logger.debug('讀取參數設定失敗:', error);
+  useEffect(() => {
+    if (paramsError && !hasShownError.params) {
+      showToast(`讀取參數設定失敗: ${paramsError.message || '未知錯誤'}`, 'error');
+      logger.debug('讀取參數設定失敗:', paramsError);
       setHasShownError(prev => ({ ...prev, params: true }));
-    } else if (!error && hasShownError.params) {
+    } else if (!paramsError && hasShownError.params) {
       setHasShownError(prev => ({ ...prev, params: false }));
     }
-  }, [hasShownError.params, showToast]);
+  }, [paramsError, hasShownError.params, showToast]);
   
-  const handleVaultError = useCallback((error: any) => {
-    if (error && !hasShownError.vault) {
-      showToast(`讀取稅務參數失敗: ${error.message || '未知錯誤'}`, 'error');
-      logger.debug('讀取稅務參數失敗:', error);
+  useEffect(() => {
+    if (vaultParamsError && !hasShownError.vault) {
+      showToast(`讀取稅務參數失敗: ${vaultParamsError.message || '未知錯誤'}`, 'error');
+      logger.debug('讀取稅務參數失敗:', vaultParamsError);
       setHasShownError(prev => ({ ...prev, vault: true }));
-    } else if (!error && hasShownError.vault) {
+    } else if (!vaultParamsError && hasShownError.vault) {
       setHasShownError(prev => ({ ...prev, vault: false }));
     }
-  }, [hasShownError.vault, showToast]);
-  
-  // 使用穩定的錯誤處理函數
-  useEffect(() => {
-    handleSettingsError(contractsReadError);
-  }, [contractsReadError, handleSettingsError]);
-  
-  useEffect(() => {
-    handleParamsError(paramsError);
-  }, [paramsError, handleParamsError]);
-  
-  useEffect(() => {
-    handleVaultError(vaultParamsError);
-  }, [vaultParamsError, handleVaultError]);
+  }, [vaultParamsError, hasShownError.vault, showToast]);
 
   // 添加詳細的合約讀取診斷
   useEffect(() => {

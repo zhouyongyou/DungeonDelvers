@@ -1,0 +1,109 @@
+{
+  "version": "V2",
+  "deploymentDate": "2025-01-17",
+  "network": "bsc",
+  "chainId": 56,
+  "deploymentRecord": "/Users/sotadic/Documents/DungeonDelversContracts/DEPLOYMENT_RECORD_2025-01-17_V2.md",
+  
+  "contracts": {
+    "core": {
+      "dungeonCore": {
+        "address": "0xd03d3D7456ba3B52E6E0112eBc2494dB1cB34524",
+        "startBlock": 54356767,
+        "abi": "./abis/DungeonCore.json"
+      },
+      "oracle": {
+        "address": "0xD7e41690270Cc4f06F13eF47764F030CC4411904",
+        "startBlock": 54356767,
+        "abi": "./abis/Oracle.json"
+      },
+      "dungeonStorage": {
+        "address": "0x85Fe26dF31903A522e78eb7C853DeA7b6CF7eFa6",
+        "startBlock": 54356767,
+        "abi": "./abis/DungeonStorage.json"
+      },
+      "playerVault": {
+        "address": "0x67CEecf8BE748dFd77D90D87a376Bd745B7c3c62",
+        "startBlock": 54356767,
+        "abi": "./abis/PlayerVault.json"
+      }
+    },
+    
+    "nfts": {
+      "hero": {
+        "address": "0xB882915F4fD4C3773e0e8eeBB65088CB584A0Bdf",
+        "startBlock": 54356767,
+        "abi": "./abis/Hero.json"
+      },
+      "relic": {
+        "address": "0x41cb97b903547C4190D66E818A64b7b37DE005c0",
+        "startBlock": 54356767,
+        "abi": "./abis/Relic.json"
+      },
+      "party": {
+        "address": "0x075F68Ab40A55CB4341A7dF5CFdB873696502dd0",
+        "startBlock": 54356767,
+        "abi": "./abis/Party.json"
+      }
+    },
+    
+    "game": {
+      "dungeonMaster": {
+        "address": "0xd13250E0F0766006816d7AfE95EaEEc5e215d082",
+        "startBlock": 54356767,
+        "abi": "./abis/DungeonMasterV2.json",
+        "version": "V2",
+        "note": "Removed party ownership restrictions"
+      },
+      "altarOfAscension": {
+        "address": "0xdf87881b48b51380CE47Bf6B54930ef1e07471F0",
+        "startBlock": 54356767,
+        "abi": "./abis/AltarOfAscension.json"
+      },
+      "playerProfile": {
+        "address": "0x7f5D359bC65F0aB07f7A874C2efF72752Fb294e5",
+        "startBlock": 54356767,
+        "abi": "./abis/PlayerProfile.json"
+      }
+    },
+    
+    "tokens": {
+      "soulShard": {
+        "address": "0xc88dAD283Ac209D77Bfe452807d378615AB8B94a",
+        "startBlock": 54356767,
+        "abi": "./abis/SoulShard.json"
+      },
+      "vipStaking": {
+        "address": "0x8D7Eb405247C9AD0373D398C5F63E88421ba7b49",
+        "startBlock": 54356767,
+        "abi": "./abis/VIPStaking.json"
+      }
+    }
+  },
+  
+  "external": {
+    "usdToken": "0x7C67Af4EBC6651c95dF78De11cfe325660d935FE",
+    "liquidityPool": "0x737c5b0430d5aeb104680460179aaa38608b6169"
+  },
+  
+  "developer": {
+    "address": "0x10925A7138649C7E1794CE646182eeb5BF8ba647"
+  },
+  
+  "rpc": {
+    "publicNodes": [
+      "https://bsc-dataseed1.binance.org/",
+      "https://bsc-dataseed2.binance.org/"
+    ]
+  },
+  
+  "subgraph": {
+    "endpoint": "https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.5",
+    "deployment": "dungeon-delvers",
+    "version": "v2.0.5"
+  },
+  
+  "metadata": {
+    "server": "https://dungeon-delvers-metadata-server.onrender.com"
+  }
+}
