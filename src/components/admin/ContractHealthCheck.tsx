@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { getContract } from '../../config/contracts';
 import { validateAdminContracts } from '../../utils/contractValidator';
-import { AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Icons } from '../ui/icons';
 import { bsc } from 'wagmi/chains';
 
 export const ContractHealthCheck: React.FC = () => {
@@ -32,7 +32,7 @@ export const ContractHealthCheck: React.FC = () => {
     return (
       <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4 mb-6">
         <div className="flex items-center gap-2">
-          <CheckCircle className="w-5 h-5 text-green-400" />
+          <Icons.Check className="w-5 h-5 text-green-400" />
           <span className="text-green-300 font-medium">所有合約配置正常</span>
         </div>
       </div>
@@ -42,7 +42,7 @@ export const ContractHealthCheck: React.FC = () => {
   return (
     <div className="bg-gray-800 rounded-lg p-4 mb-6 space-y-4">
       <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-        <AlertCircle className="w-5 h-5 text-yellow-400" />
+        <Icons.AlertTriangle className="w-5 h-5 text-yellow-400" />
         合約健康檢查
       </h3>
 
@@ -52,7 +52,7 @@ export const ContractHealthCheck: React.FC = () => {
           <ul className="space-y-1">
             {healthCheck.errors.map((error, index) => (
               <li key={index} className="flex items-start gap-2 text-sm">
-                <XCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                <Icons.X className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
                 <span className="text-red-300">{error}</span>
               </li>
             ))}
@@ -66,7 +66,7 @@ export const ContractHealthCheck: React.FC = () => {
           <ul className="space-y-1">
             {healthCheck.warnings.map((warning, index) => (
               <li key={index} className="flex items-start gap-2 text-sm">
-                <AlertCircle className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
+                <Icons.AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
                 <span className="text-yellow-300">{warning}</span>
               </li>
             ))}

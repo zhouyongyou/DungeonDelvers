@@ -127,3 +127,46 @@ export function getSafeContract(
   
   return contract;
 }
+
+/**
+ * Checks which contracts support specific functions
+ */
+export function getContractCapabilities(
+  contracts: Record<string, ContractConfig | null | undefined>
+): Record<string, {
+  supportsPause: boolean;
+  supportsWithdrawSoulShard: boolean;
+  supportsWithdrawBNB: boolean;
+  supportedWithdrawBNBFunctions: string[];
+}> {
+  const capabilities: Record<string, any> = {};
+  
+  for (const [name, contract] of Object.entries(contracts)) {
+    if (!contract?.abi) {
+      capabilities[name] = {
+        supportsPause: false,
+        supportsWithdrawSoulShard: false,
+        supportsWithdrawBNB: false,
+        supportedWithdrawBNBFunctions: []
+      };
+      continue;
+    }
+    
+    const abi = contract.abi;
+    const supportsPause = hasFunctionInABI(abi, 'pause') && hasFunctionInABI(abi, 'unpause');
+    const supportsWithdrawSoulShard = hasFunctionInABI(abi, 'withdrawSoulShard');
+    
+    // Check various BNB withdrawal function names
+    const bnbFunctions = ['withdrawBNB', 'withdraw', 'withdrawETH', 'withdrawFunds', 'withdrawNative'];
+    const supportedWithdrawBNBFunctions = bnbFunctions.filter(func => hasFunctionInABI(abi, func));
+    
+    capabilities[name] = {
+      supportsPause,
+      supportsWithdrawSoulShard,
+      supportsWithdrawBNB: supportedWithdrawBNBFunctions.length > 0,
+      supportedWithdrawBNBFunctions
+    };
+  }
+  
+  return capabilities;
+}

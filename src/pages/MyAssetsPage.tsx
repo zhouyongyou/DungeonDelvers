@@ -553,11 +553,11 @@ const MyAssetsPageContent: React.FC = () => {
                 attributes: [],
                 contractAddress: partyContract?.address ?? '0x',
                 type: 'party',
-                totalPower: currentPartyData.heroIds.length * 100n, // 估算值
+                totalPower: BigInt(currentPartyData.heroIds.length) * 100n, // 估算值
                 totalCapacity: BigInt(currentPartyData.heroIds.length),
                 heroIds: currentPartyData.heroIds,
                 relicIds: currentPartyData.relicIds,
-                partyRarity: '1',
+                partyRarity: 1,
             };
             
             // 更新可用英雄和聖物列表（移除已選擇的）

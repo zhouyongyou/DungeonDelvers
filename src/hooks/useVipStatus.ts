@@ -266,51 +266,23 @@ export const useVipStatus = () => {
 
     const pendingUnstakeAmount = useMemo(() => {
         const amount = (unstakeQueue as readonly [bigint, bigint])?.[0] ?? 0n;
-        if (import.meta.env.DEV && unstakeQueue) {
-            logger.debug('unstakeQueue 解析:', { 
-                rawData: unstakeQueue, 
-                amount: amount.toString(),
-                isArray: Array.isArray(unstakeQueue)
-            });
-        }
         return amount;
     }, [unstakeQueue]);
     
     const unstakeAvailableAt = useMemo(() => {
         const timestamp = (unstakeQueue as readonly [bigint, bigint])?.[1] ?? 0n;
         const timestampNumber = Number(timestamp);
-        if (import.meta.env.DEV && unstakeQueue) {
-            logger.debug('unstakeAvailableAt 解析:', { 
-                rawTimestamp: timestamp.toString(),
-                timestampNumber,
-                currentTime: Date.now() / 1000,
-                isInFuture: timestampNumber > Date.now() / 1000
-            });
-        }
         return timestampNumber;
     }, [unstakeQueue]);
 
     const { isOver: isCooldownOver, formatted: countdown } = useCountdown(unstakeAvailableAt);
 
-    // ★ 核心修正 #3: 添加錯誤處理和調試信息
+    // 錯誤處理
     useEffect(() => {
         if (vipDataError) {
-            logger.error('🚨 VIP數據讀取錯誤:', vipDataError);
+            logger.error('VIP數據讀取錯誤:', vipDataError);
         }
-        if (vipData) {
-            logger.debug('🎯 VIP狀態數據:', {
-                address,
-                stakedAmount: stakedAmount.toString(),
-                contractVipLevel: contractVipLevel?.toString(),
-                contractTaxReduction: contractTaxReduction?.toString(),
-                finalVipLevel: vipLevel,
-                finalTaxReduction: taxReduction.toString(),
-                contractAddress: vipStakingContract?.address,
-                dataSource: contractVipLevel !== undefined ? 'contract' : 'fallback',
-                stakedValueUSD: stakedValueUSD?.toString()
-            });
-        }
-    }, [vipData, vipDataError, address, stakedAmount, vipLevel, taxReduction, vipStakingContract?.address, stakedValueUSD]);
+    }, [vipDataError]);
 
     const refetchAll = async () => {
         try {
@@ -345,6 +317,7 @@ export const useVipStatus = () => {
         vipLevel,
         taxReduction,
         pendingUnstakeAmount,
+        unstakeAvailableAt,
         isCooldownOver,
         countdown,
         allowance: allowance ?? 0n,

@@ -56,7 +56,8 @@ const GET_PLAYER_ASSETS_QUERY = `
         partyRarity
         contractAddress
         heroIds
-        relicIds
+        # NOTE: relicIds 欄位被暫時移除，因為子圖 schema 中 Party 實體沒有此欄位
+        # TODO: 需要在子圖中添加 relicIds 欄位並重新部署
         createdAt
       }
       vip { 
@@ -557,6 +558,12 @@ async function parseNfts<T extends AssetWithTokenId>(
             attributes: [] as NftAttribute[]
         };
 
+        // 安全檢查：確保 tokenId 存在且有效
+        if (!asset.tokenId || asset.tokenId === '') {
+            logger.warn('跳過無效的 tokenId:', { asset, type });
+            return null;
+        }
+
         const baseNft = {
             ...baseMetadata,
             id: BigInt(asset.tokenId),
@@ -621,7 +628,7 @@ async function parseNfts<T extends AssetWithTokenId>(
                     totalPower: BigInt(partyAsset.totalPower), 
                     totalCapacity: BigInt(partyAsset.totalCapacity), 
                     heroIds: partyAsset.heroIds ? partyAsset.heroIds.map((id) => BigInt(id)) : [], 
-                    relicIds: partyAsset.relicIds ? partyAsset.relicIds.map((id) => BigInt(id)) : [], 
+                    relicIds: [], // 暫時設為空陣列，等待子圖修復後恢復 
                     partyRarity: Number(partyAsset.partyRarity),
                     attributes: [
                         { trait_type: 'Total Power', value: Number(partyAsset.totalPower) },

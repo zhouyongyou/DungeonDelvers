@@ -51,12 +51,8 @@ const GET_PLAYER_PARTIES_QUERY = `
         totalCapacity
         partyRarity
         heroIds
-        heros {
-          id
-          tokenId
-          power
-          rarity
-        }
+        contractAddress
+        createdAt
       }
     }
   }
@@ -100,8 +96,19 @@ const usePlayerParties = () => {
             
             // 使用 GraphQL 資料
             if (graphqlResponse.status === 'fulfilled' && graphqlResponse.value?.ok) {
-                const { data } = await graphqlResponse.value.json();
-                parties = data?.player?.parties || [];
+                const response = await graphqlResponse.value.json();
+                logger.debug('地城頁面查詢結果:', response);
+                
+                if (response.errors) {
+                    logger.error('GraphQL 查詢錯誤:', response.errors);
+                    return [];
+                }
+                
+                parties = response.data?.player?.parties || [];
+                logger.info(`地城頁面找到 ${parties.length} 個隊伍`);
+            } else {
+                logger.error('GraphQL 請求失敗:', graphqlResponse);
+                return [];
             }
             
             // 將資料轉換為前端格式
@@ -117,7 +124,7 @@ const usePlayerParties = () => {
                 type: 'party',
                 totalPower: BigInt(p.totalPower || '0'),
                 totalCapacity: BigInt(p.totalCapacity || '0'),
-                heroIds: (p.heros || []).map((h: { tokenId: string }) => BigInt(h.tokenId)),
+                heroIds: (p.heroIds || []).map((id: string) => BigInt(id)),
                 relicIds: [], // 聖物數據需要從其他查詢獲取
                 partyRarity: Number(p.partyRarity || 1),
                 // 這些數據需要從合約讀取，不在子圖中
