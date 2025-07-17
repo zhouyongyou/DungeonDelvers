@@ -27,7 +27,7 @@ const GET_DASHBOARD_STATS_QUERY = `
   query GetDashboardStats($owner: ID!) {
     player(id: $owner) {
       id
-      heroes {
+      heros {
         id
       }
       relics {

@@ -144,8 +144,9 @@ const GET_PLAYER_BASIC_INFO_QUERY = `
 
 const PlayerSearchQuery: React.FC = () => {
     const [submittedAddress, setSubmittedAddress] = useState<string | null>(null);
+    const [showSyncWarning, setShowSyncWarning] = useState(false);
     
-    const { data, isLoading, isError, error } = useQuery({
+    const { data, isLoading, isError, error, refetch } = useQuery({
         queryKey: ['explorer', 'player', submittedAddress],
         queryFn: async () => {
             if (!submittedAddress) return null;
@@ -182,10 +183,33 @@ const PlayerSearchQuery: React.FC = () => {
         
         return (
             <>
+                {/* 同步提示 */}
+                {showSyncWarning && (
+                    <div className="mb-3 p-2 bg-yellow-900/30 border border-yellow-600/50 rounded text-xs text-yellow-400">
+                        ⚠️ 數據可能有延遲，子圖同步需要時間。
+                        <button 
+                            onClick={() => {
+                                refetch();
+                                setShowSyncWarning(false);
+                            }}
+                            className="ml-2 underline hover:text-yellow-300"
+                        >
+                            重新查詢
+                        </button>
+                    </div>
+                )}
+                
                 <p><b>玩家地址:</b> <span className="font-mono text-xs break-all">{data.id}</span></p>
                 <p><b>擁有英雄:</b> {data.heros?.length || 0} 個 {totalHeroPower > 0 && `(總戰力: ${totalHeroPower})`}</p>
                 <p><b>擁有聖物:</b> {data.relics?.length || 0} 個 {totalRelicCapacity > 0 && `(總容量: ${totalRelicCapacity})`}</p>
                 <p><b>擁有隊伍:</b> {data.parties?.length || 0} 個 {totalPartyPower > 0 && `(總戰力: ${totalPartyPower})`}</p>
+                
+                {/* 如果剛鑄造可能沒同步 */}
+                {(data.relics?.length === 0 || data.heros?.length === 0) && (
+                    <p className="text-xs text-gray-500 mt-2">
+                        如果您剛鑄造 NFT，請等待 1-2 分鐘讓子圖同步。
+                    </p>
+                )}
                 
                 {data.heros && data.heros.length > 0 && (
                     <div className="mt-2">
@@ -263,7 +287,20 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
     const renderResult = () => {
         if (!submittedId) return <p className="text-gray-500">請輸入 ID 進行查詢。</p>;
         if (isError) return <p className="text-red-500">查詢失敗: {(error as Error).message}</p>;
-        if (!data) return <p className="text-red-500">查無此 ID 的資料。</p>;
+        if (!data) {
+            // 針對聖物添加特別提示
+            if (type === 'relic') {
+                return (
+                    <div className="space-y-2">
+                        <p className="text-red-500">查無此 ID 的資料。</p>
+                        <p className="text-yellow-500 text-xs">
+                            ⚠️ 注意：子圖可能正在同步聖物數據。如果您剛鑄造聖物，請等待 2-3 分鐘後再試。
+                        </p>
+                    </div>
+                );
+            }
+            return <p className="text-red-500">查無此 ID 的資料。</p>;
+        }
 
         
         return (

@@ -281,7 +281,12 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
                         };
                     }
                     setMintingResult(nftData);
+                    // 清理多個相關快取，確保數據更新
                     queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
+                    queryClient.invalidateQueries({ queryKey: ['dashboardSimpleStats'] });
+                    queryClient.invalidateQueries({ queryKey: ['explorer'] });
+                    // 提示用戶數據同步
+                    showToast('鑄造成功！數據同步可能需要 1-2 分鐘', 'success');
                 }
             }
             setShowProgressModal(false);

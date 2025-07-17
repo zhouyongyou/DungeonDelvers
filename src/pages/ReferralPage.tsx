@@ -38,7 +38,7 @@ const GET_REFERRER_INFO_QUERY = `
   query GetReferrerInfo($address: ID!) {
     player(id: $address) {
       id
-      heroes {
+      heros {
         id
       }
       parties {
@@ -295,7 +295,7 @@ ${referralLink}
                                     <div className="bg-black/20 p-3 rounded-lg">
                                         <p className="text-gray-400 text-sm">擁有英雄</p>
                                         <p className="text-2xl font-bold text-white">
-                                            {referrerInfo.heroes?.length || 0}
+                                            {referrerInfo.heros?.length || 0}
                                         </p>
                                     </div>
                                     <div className="bg-black/20 p-3 rounded-lg">

@@ -51,7 +51,7 @@ const GET_PLAYER_PARTIES_QUERY = `
         totalCapacity
         partyRarity
         heroIds
-        heroes {
+        heros {
           id
           tokenId
           power
@@ -117,7 +117,7 @@ const usePlayerParties = () => {
                 type: 'party',
                 totalPower: BigInt(p.totalPower || '0'),
                 totalCapacity: BigInt(p.totalCapacity || '0'),
-                heroIds: (p.heroes || []).map((h: { tokenId: string }) => BigInt(h.tokenId)),
+                heroIds: (p.heros || []).map((h: { tokenId: string }) => BigInt(h.tokenId)),
                 relicIds: [], // 聖物數據需要從其他查詢獲取
                 partyRarity: Number(p.partyRarity || 1),
                 // 這些數據需要從合約讀取，不在子圖中

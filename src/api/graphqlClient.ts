@@ -19,7 +19,7 @@ export const PLAYER_FRAGMENTS = {
   `,
   assets: `
     fragment PlayerAssets on Player {
-      heroes {
+      heros {
         id
         tokenId
         power
@@ -83,7 +83,7 @@ const cacheConfig = new InMemoryCache({
         // Computed field: total NFT count
         totalNftCount: {
           read(_, { readField }) {
-            const heroes = readField('heroes') as any[] || [];
+            const heroes = readField('heros') as any[] || [];
             const relics = readField('relics') as any[] || [];
             const parties = readField('parties') as any[] || [];
             return heroes.length + relics.length + parties.length;
