@@ -56,6 +56,7 @@ const GET_PLAYER_ASSETS_QUERY = `
         partyRarity
         contractAddress
         heroIds
+        relicIds
         createdAt
       }
       vip { 
@@ -511,8 +512,8 @@ interface PartyAsset extends AssetWithTokenId {
     totalPower: string | number | bigint;
     totalCapacity: string | number | bigint;
     partyRarity: string | number | bigint;
-          heros?: Array<{ tokenId: string | number | bigint }>;
-    relics?: Array<{ tokenId: string | number | bigint }>;
+    heroIds?: Array<string | number | bigint>;
+    relicIds?: Array<string | number | bigint>;
 }
 
 interface VipAsset extends AssetWithTokenId {
@@ -619,8 +620,8 @@ async function parseNfts<T extends AssetWithTokenId>(
                     type, 
                     totalPower: BigInt(partyAsset.totalPower), 
                     totalCapacity: BigInt(partyAsset.totalCapacity), 
-                    heroIds: partyAsset.heros ? partyAsset.heros.map((h) => BigInt(h.tokenId)) : [], 
-                    relicIds: partyAsset.relics ? partyAsset.relics.map((r) => BigInt(r.tokenId)) : [], 
+                    heroIds: partyAsset.heroIds ? partyAsset.heroIds.map((id) => BigInt(id)) : [], 
+                    relicIds: partyAsset.relicIds ? partyAsset.relicIds.map((id) => BigInt(id)) : [], 
                     partyRarity: Number(partyAsset.partyRarity),
                     attributes: [
                         { trait_type: 'Total Power', value: Number(partyAsset.totalPower) },

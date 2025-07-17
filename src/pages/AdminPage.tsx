@@ -32,12 +32,17 @@ import FundsWithdrawal from '../components/admin/FundsWithdrawal';
 import VipSettingsManager from '../components/admin/VipSettingsManager';
 import GlobalRewardSettings from '../components/admin/GlobalRewardSettings';
 // import RpcMonitoringPanel from '../components/admin/RpcMonitoringPanel'; // Removed RPC monitoring
+import { ContractHealthCheck } from '../components/admin/ContractHealthCheck';
+import { validateContract, getSafeContract } from '../utils/contractValidator';
 
 type SupportedChainId = typeof bsc.id;
 type Address = `0x${string}`;
 
-// 開發者地址常量
-const DEVELOPER_ADDRESS = import.meta.env.VITE_DEVELOPER_ADDRESS || '0x10925A7138649C7E1794CE646182eeb5BF8ba647';
+// 開發者地址從環境變數讀取
+const DEVELOPER_ADDRESS = import.meta.env.VITE_DEVELOPER_ADDRESS;
+if (!DEVELOPER_ADDRESS) {
+  logger.warn('開發者地址未在環境變數中設定 (VITE_DEVELOPER_ADDRESS)');
+}
 
 const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) => {
   const { address } = useAccount();
@@ -349,34 +354,39 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         oracle: getContract(chainId, 'oracle'),
       };
       
-      // 檢查關鍵合約是否存在
-      const missingContracts = Object.entries(contracts).filter(([_, contract]) => !contract || !contract.address);
-      if (missingContracts.length > 0) {
-        logger.warn('部分合約缺失:', missingContracts.map(([name]) => name));
+      // 驗證所有合約
+      const validatedContracts: Record<string, NonNullable<ReturnType<typeof getContract>>> = {};
+      for (const [name, contract] of Object.entries(contracts)) {
+        const validation = validateContract(name, contract);
+        if (validation.isValid && contract) {
+          validatedContracts[name] = contract;
+        } else {
+          logger.warn(`合約 ${name} 驗證失敗:`, validation.errors);
+        }
       }
     
     const config = [
       // 鑄造價格設定
-      { key: 'heroMintPrice', label: "英雄鑄造價", contract: contracts.hero, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] },
-      { key: 'relicMintPrice', label: "聖物鑄造價", contract: contracts.relic, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] },
-      { key: 'provisionPrice', label: "儲備購買價", contract: contracts.dungeonMaster, getter: 'provisionPriceUSD', setter: 'setProvisionPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] },
+      { key: 'heroMintPrice', label: "英雄鑄造價", contract: validatedContracts.hero, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] },
+      { key: 'relicMintPrice', label: "聖物鑄造價", contract: validatedContracts.relic, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] },
+      { key: 'provisionPrice', label: "儲備購買價", contract: validatedContracts.dungeonMaster, getter: 'provisionPriceUSD', setter: 'setProvisionPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] },
       
       // 平台費用設定
-      { key: 'heroFee', label: "英雄平台費", contract: contracts.hero, getter: 'platformFee', setter: 'setPlatformFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
-      { key: 'relicFee', label: "聖物平台費", contract: contracts.relic, getter: 'platformFee', setter: 'setPlatformFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
-      { key: 'partyFee', label: "隊伍平台費", contract: contracts.party, getter: 'platformFee', setter: 'setPlatformFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
-      { key: 'explorationFee', label: "遠征探索費", contract: contracts.dungeonMaster, getter: 'explorationFee', setter: 'setExplorationFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
+      { key: 'heroFee', label: "英雄平台費", contract: validatedContracts.hero, getter: 'platformFee', setter: 'setPlatformFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
+      { key: 'relicFee', label: "聖物平台費", contract: validatedContracts.relic, getter: 'platformFee', setter: 'setPlatformFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
+      { key: 'partyFee', label: "隊伍平台費", contract: validatedContracts.party, getter: 'platformFee', setter: 'setPlatformFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
+      { key: 'explorationFee', label: "遠征探索費", contract: validatedContracts.dungeonMaster, getter: 'explorationFee', setter: 'setExplorationFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
       
       // 遊戲機制參數
-      { key: 'restDivisor', label: "休息成本係數", contract: contracts.dungeonMaster, getter: 'restCostPowerDivisor', setter: 'setRestCostPowerDivisor', unit: '無', placeholders: ['新係數 (戰力/USD)'] },
-      { key: 'vipCooldown', label: "VIP 取消質押冷卻 (秒)", contract: contracts.vipStaking, getter: 'unstakeCooldown', setter: 'setUnstakeCooldown', unit: '無', placeholders: ['新冷卻時間 (秒)'] },
-      { key: 'globalRewardMultiplier', label: "全域獎勵倍率", contract: contracts.dungeonMaster, getter: 'globalRewardMultiplier', setter: 'setGlobalRewardMultiplier', unit: '‱', placeholders: ['新倍率 (1000=100%)'] },
+      { key: 'restDivisor', label: "休息成本係數", contract: validatedContracts.dungeonMaster, getter: 'restCostPowerDivisor', setter: 'setRestCostPowerDivisor', unit: '無', placeholders: ['新係數 (戰力/USD)'] },
+      { key: 'vipCooldown', label: "VIP 取消質押冷卻 (秒)", contract: validatedContracts.vipStaking, getter: 'unstakeCooldown', setter: 'setUnstakeCooldown', unit: '無', placeholders: ['新冷卻時間 (秒)'] },
+      { key: 'globalRewardMultiplier', label: "全域獎勵倍率", contract: validatedContracts.dungeonMaster, getter: 'globalRewardMultiplier', setter: 'setGlobalRewardMultiplier', unit: '‱', placeholders: ['新倍率 (1000=100%)'] },
       
       // 稅務與提現系統
-      { key: 'commissionRate', label: "邀請佣金率", contract: contracts.playerVault, getter: 'commissionRate', setter: 'setCommissionRate', unit: '‱', placeholders: ['新佣金率 (萬分位)'] },
+      { key: 'commissionRate', label: "邀請佣金率", contract: validatedContracts.playerVault, getter: 'commissionRate', setter: 'setCommissionRate', unit: '‱', placeholders: ['新佣金率 (萬分位)'] },
       
       // Oracle 設定
-      { key: 'twapPeriod', label: "Oracle TWAP 週期", contract: contracts.oracle, getter: 'twapPeriod', setter: 'setTwapPeriod', unit: '無', placeholders: ['新週期 (秒)'] },
+      { key: 'twapPeriod', label: "Oracle TWAP 週期", contract: validatedContracts.oracle, getter: 'twapPeriod', setter: 'setTwapPeriod', unit: '無', placeholders: ['新週期 (秒)'] },
     ];
     
       const filteredConfig = config.filter((c) => {
@@ -662,6 +672,9 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
 
   return (
     <>
+      {/* Contract Health Check */}
+      <ContractHealthCheck />
+      
       <AdminSection 
         title="合約串接中心"
         defaultExpanded={true}

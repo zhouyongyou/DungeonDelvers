@@ -61,8 +61,6 @@ type Relic @entity(immutable: false) {
   rarity: Int!
   " 儲備容量 "
   capacity: Int!
-  " 當前儲備數量 "
-  currentProvisions: Int!
   " 創建時間戳 "
   createdAt: BigInt!
   " 最後升級時間戳 "

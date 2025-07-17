@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { NftCard } from './NftCard';
 import { ActionButton } from './ActionButton';
-import type { AnyNft } from '../../types/nft';
+import { PartyDetailsModal } from './PartyDetailsModal';
+import type { AnyNft, PartyNft } from '../../types/nft';
 
 interface OptimizedNftGridProps {
   nfts: AnyNft[];
@@ -14,6 +15,8 @@ export const OptimizedNftGrid: React.FC<OptimizedNftGridProps> = ({
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedParty, setSelectedParty] = useState<PartyNft | null>(null);
+  const [showPartyDetails, setShowPartyDetails] = useState(false);
 
   const totalPages = Math.ceil(nfts.length / pageSize);
   
@@ -42,6 +45,13 @@ export const OptimizedNftGrid: React.FC<OptimizedNftGridProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleNftClick = (nft: AnyNft) => {
+    if (nft.type === 'party') {
+      setSelectedParty(nft as PartyNft);
+      setShowPartyDetails(true);
+    }
+  };
+
   if (nfts.length === 0) {
     return null;
   }
@@ -61,7 +71,11 @@ export const OptimizedNftGrid: React.FC<OptimizedNftGridProps> = ({
       <div className={`transition-opacity duration-300 ${isLoading ? 'opacity-50' : 'opacity-100'}`}>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {currentNfts.map(nft => (
-            <NftCard key={`${nft.type}-${nft.id.toString()}`} nft={nft} />
+            <NftCard 
+              key={`${nft.type}-${nft.id.toString()}`} 
+              nft={nft}
+              onClick={() => handleNftClick(nft)}
+            />
           ))}
         </div>
       </div>
@@ -122,6 +136,16 @@ export const OptimizedNftGrid: React.FC<OptimizedNftGridProps> = ({
           </p>
         </div>
       )}
+
+      {/* Party Details Modal */}
+      <PartyDetailsModal
+        party={selectedParty}
+        isOpen={showPartyDetails}
+        onClose={() => {
+          setShowPartyDetails(false);
+          setSelectedParty(null);
+        }}
+      />
     </div>
   );
 };
