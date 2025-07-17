@@ -17,9 +17,9 @@ import { bsc } from 'wagmi/chains';
 // 這個 Hook 用於獲取所有可能的 NFT 種類，用於展示，它只在客戶端運行一次。
 const useAllPossibleNfts = () => useQuery({
     queryKey: ['allPossibleNfts'],
-    queryFn: async (): Promise<{ heros: HeroNft[], relics: RelicNft[] }> => {
+    queryFn: async (): Promise<{ heroes: HeroNft[], relics: RelicNft[] }> => {
         const rarities = [1, 2, 3, 4, 5];
-        const heros: HeroNft[] = [];
+        const heroes: HeroNft[] = [];
         const relics: RelicNft[] = [];
         const getPowerByRarity = (r: number) => [0, 32, 75, 125, 175, 227][r] || 0;
         const getCapacityByRarity = (r: number) => [0, 1, 2, 3, 4, 5][r] || 0;
@@ -29,7 +29,7 @@ const useAllPossibleNfts = () => useQuery({
         for (const r of rarities) {
             const heroPower = getPowerByRarity(r);
             const relicCapacity = getCapacityByRarity(r);
-            heros.push({ 
+            heroes.push({ 
                 id: BigInt(r), 
                 name: `${rarityNames[r]} Hero`, 
                 description: `${rarityNames[r]} 英雄，戰力 ${heroPower}`,
@@ -61,7 +61,7 @@ const useAllPossibleNfts = () => useQuery({
             });
         }
         
-        return { heros, relics };
+        return { heroes, relics };
     },
     staleTime: Infinity, // 這些數據是靜態的，不需要重新獲取
 });
@@ -84,7 +84,7 @@ const useOwnedCodexIdentifiers = () => {
                         query GetOwnedRarities($owner: ID!) {
                             player(id: $owner) {
                                 id
-                                heros {
+                                heroes {
                                     id
                                     rarity
                                 }
@@ -109,11 +109,11 @@ const useOwnedCodexIdentifiers = () => {
             }
             
             const data = json?.data;
-            const heros = data?.player?.heros || [];
+            const heroes = data?.player?.heroes || [];
             const relics = data?.player?.relics || [];
             
             const ownedHeroRarities = new Set<number>(
-                heros.map((h: { rarity: number }) => Number(h.rarity)).filter((r: number) => !isNaN(r))
+                heroes.map((h: { rarity: number }) => Number(h.rarity)).filter((r: number) => !isNaN(r))
             );
             const ownedRelicRarities = new Set<number>(
                 relics.map((r: { rarity: number }) => Number(r.rarity)).filter((r: number) => !isNaN(r))
@@ -187,7 +187,7 @@ const CodexPage: React.FC = () => {
                             <span>英雄圖鑑</span>
                         </h3>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                            {allPossibleNfts.heros.map((nft, index) => {
+                            {allPossibleNfts.heroes.map((nft, index) => {
                                 const isUnlocked = getIsUnlocked(nft);
                                 return (
                                     <div key={`hero-${index}`} className={`transition-all duration-500 ${isUnlocked ? 'opacity-100' : 'opacity-50 grayscale'}`}>

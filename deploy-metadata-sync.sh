@@ -98,7 +98,7 @@ update_contract_config() {
   },
   "services": {
     "subgraph": {
-      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1",
+      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.2",
       "id": "dungeon-delvers"
     },
     "metadataServer": {
@@ -311,7 +311,7 @@ main() {
     echo -e "${GREEN}============================================${NC}"
     echo -e "${GREEN}前端: http://localhost:5173${NC}"
     echo -e "${GREEN}後端API: http://localhost:3001${NC}"
-    echo -e "${GREEN}子圖: https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1${NC}"
+    echo -e "${GREEN}子圖: https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.2${NC}"
     echo ""
     echo -e "${YELLOW}📝 接下來請檢查：${NC}"
     echo -e "${YELLOW}1. VIP等級和稅率減免是否正確顯示${NC}"

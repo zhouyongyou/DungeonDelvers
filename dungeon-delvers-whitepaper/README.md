@@ -2,7 +2,7 @@
 
 <figure><img src=".gitbook/assets/logo-192x192.png" alt=""><figcaption></figcaption></figure>
 
-_最後更新時間: 2025年7月_
+_最後更新時間: 2025年7月17日_
 
 #### 歡迎來到 Dungeon Delvers 的新紀元
 

@@ -92,6 +92,10 @@ type Party @entity(immutable: false) {
   heroes: [Hero!]!
   " 總戰力 "
   totalPower: BigInt!
+  " 總容量 (基於聖物) "
+  totalCapacity: BigInt!
+  " 隊伍稀有度 (1-5) "
+  partyRarity: Int!
   " 創建時間戳 "
   createdAt: BigInt!
   " 最後更新時間戳 (配置英雄或改名) "

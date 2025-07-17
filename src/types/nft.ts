@@ -78,7 +78,7 @@ export type NftType = AnyNft['type'];
  * 這個型別用於定義 API 回傳的、已分類的所有 NFT 集合。
  */
 export interface AllNftCollections {
-  heros: HeroNft[];
+  heroes: HeroNft[];
   relics: RelicNft[];
   parties: PartyNft[];
   vipCards: VipNft[]; 

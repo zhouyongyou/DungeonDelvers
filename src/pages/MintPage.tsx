@@ -210,8 +210,8 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
             // 更新對應的 NFT 列表
             return {
                 ...oldData,
-                [type === 'hero' ? 'heros' : 'relics']: [
-                    ...(oldData[type === 'hero' ? 'heros' : 'relics'] || []),
+                [type === 'hero' ? 'heroes' : 'relics']: [
+                    ...(oldData[type === 'hero' ? 'heroes' : 'relics'] || []),
                     tempNft
                 ]
             };

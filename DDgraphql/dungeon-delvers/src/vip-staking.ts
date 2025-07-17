@@ -7,14 +7,15 @@ import { BigInt, log } from "@graphprotocol/graph-ts"
 export function handleStaked(event: Staked): void {
     const player = getOrCreatePlayer(event.params.user)
     
-    const vipId = event.params.user.toHexString()
+    const vipId = event.params.user
     let vip = VIP.load(vipId)
     if (!vip) {
         vip = new VIP(vipId)
-        vip.player = player.id
-        vip.tokenId = event.params.tokenId
+        vip.owner = player.id
         vip.stakedAmount = BigInt.fromI32(0)
-        vip.level = 0 // Level is calculated off-chain
+        vip.stakedAt = event.block.timestamp
+        vip.isUnlocking = false
+        vip.createdAt = event.block.timestamp
     }
 
     vip.stakedAmount = vip.stakedAmount.plus(event.params.amount)
@@ -25,7 +26,7 @@ export function handleStaked(event: Staked): void {
 }
 
 export function handleUnstakeRequested(event: UnstakeRequested): void {
-    const vipId = event.params.user.toHexString()
+    const vipId = event.params.user
     const vip = VIP.load(vipId)
     if (vip) {
         vip.stakedAmount = vip.stakedAmount.minus(event.params.amount)
@@ -36,7 +37,7 @@ export function handleUnstakeRequested(event: UnstakeRequested): void {
         }
         vip.save()
     } else {
-        log.warning("Unstake handled for a VIP that doesn't exist: {}", [vipId])
+        log.warning("Unstake handled for a VIP that doesn't exist: {}", [vipId.toHexString()])
     }
 }
 
@@ -46,17 +47,19 @@ export function handleVipTransfer(event: Transfer): void {
     }
 
     const player = getOrCreatePlayer(event.params.to)
-    const vipId = event.params.to.toHexString()
+    const vipId = event.params.to
 
     let vip = VIP.load(vipId)
     if (!vip) {
         vip = new VIP(vipId)
-        vip.player = player.id
+        vip.owner = player.id
         vip.stakedAmount = BigInt.fromI32(0)
-        vip.level = 0
+        vip.stakedAt = event.block.timestamp
+        vip.isUnlocking = false
+        vip.createdAt = event.block.timestamp
     }
 
-    vip.tokenId = event.params.tokenId
+    vip.lastUpdatedAt = event.block.timestamp
     vip.save()
 
     player.vip = vip.id

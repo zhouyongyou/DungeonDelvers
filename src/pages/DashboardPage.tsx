@@ -27,7 +27,7 @@ const GET_DASHBOARD_STATS_QUERY = `
   query GetDashboardStats($owner: ID!) {
     player(id: $owner) {
       id
-      heros {
+      heroes {
         id
       }
       relics {
@@ -64,7 +64,7 @@ const useDashboardStats = () => {
                     player(id: $owner) {
                         id
                         profile { level }
-                        vault { balance }
+                        vault { pendingRewards }
                     }
                 }
             `;
@@ -113,7 +113,7 @@ const useDashboardStats = () => {
     const stats = useMemo(() => {
         return {
             level: data?.profile?.level ? Number(data.profile.level) : 1,
-            withdrawableBalance: data?.vault?.balance ? BigInt(data.vault.balance) : 0n,
+            withdrawableBalance: data?.vault?.pendingRewards ? BigInt(data.vault.pendingRewards) : 0n,
         };
     }, [data]);
 
@@ -228,7 +228,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                 ...oldData,
                 vault: {
                     ...oldData.vault,
-                    balance: '0'
+                    pendingRewards: '0'
                 }
             };
         }

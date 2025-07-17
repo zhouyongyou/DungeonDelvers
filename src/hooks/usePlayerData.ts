@@ -20,14 +20,14 @@ export interface PlayerData {
     achievementPoints: number;
   };
   assets?: {
-    heros: any[];
+    heroes: any[];
     relics: any[];
     parties: any[];
   };
   vault?: {
-    balance: string;
-    cumulativeDeposits: string;
-    cumulativeWithdrawals: string;
+    pendingRewards: string;
+    claimedRewards: string;
+    totalProvisionSpent: string;
   };
   vip?: {
     id: string;
@@ -102,7 +102,7 @@ export function usePlayerData(options: PlayerDataOptions = {}) {
         queryClient.setQueryData(
           queryKeys.ownedNfts(address!, 56), // BSC chainId
           {
-            heros: data.assets.heros,
+            heroes: data.assets.heroes,
             relics: data.assets.relics,
             parties: data.assets.parties,
             vipCards: data.vip ? [data.vip] : [],
@@ -186,9 +186,9 @@ function transformPlayerData(rawData: any): PlayerData {
     };
   }
 
-  if (rawData.heros || rawData.relics || rawData.parties) {
+  if (rawData.heroes || rawData.relics || rawData.parties) {
     transformed.assets = {
-      heros: rawData.heros || [],
+      heroes: rawData.heroes || [],
       relics: rawData.relics || [],
       parties: rawData.parties || [],
     };
@@ -196,9 +196,9 @@ function transformPlayerData(rawData: any): PlayerData {
 
   if (rawData.vault) {
     transformed.vault = {
-      balance: rawData.vault.balance || '0',
-      cumulativeDeposits: rawData.vault.cumulativeDeposits || '0',
-      cumulativeWithdrawals: rawData.vault.cumulativeWithdrawals || '0',
+      pendingRewards: rawData.vault.pendingRewards || '0',
+      claimedRewards: rawData.vault.claimedRewards || '0',
+      totalProvisionSpent: rawData.vault.totalProvisionSpent || '0',
     };
   }
 
@@ -213,14 +213,14 @@ function transformPlayerData(rawData: any): PlayerData {
 
   // Add computed fields
   if (transformed.vault && transformed.vip) {
-    const vaultBalance = BigInt(transformed.vault.balance);
+    const pendingRewards = BigInt(transformed.vault.pendingRewards);
     const stakedAmount = BigInt(transformed.vip.stakedAmount);
-    transformed.totalAssetValue = (vaultBalance + stakedAmount).toString();
+    transformed.totalAssetValue = (pendingRewards + stakedAmount).toString();
   }
 
   if (transformed.assets) {
     transformed.totalNftCount = 
-      transformed.assets.heros.length + 
+      transformed.assets.heroes.length + 
       transformed.assets.relics.length + 
       transformed.assets.parties.length;
   }
@@ -238,14 +238,14 @@ function createEmptyPlayerData(address: string): PlayerData {
       achievementPoints: 0,
     },
     assets: {
-      heros: [],
+      heroes: [],
       relics: [],
       parties: [],
     },
     vault: {
-      balance: '0',
-      cumulativeDeposits: '0',
-      cumulativeWithdrawals: '0',
+      pendingRewards: '0',
+      claimedRewards: '0',
+      totalProvisionSpent: '0',
     },
     totalAssetValue: '0',
     totalNftCount: 0,

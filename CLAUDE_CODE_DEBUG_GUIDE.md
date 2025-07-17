@@ -73,7 +73,7 @@ DungeonDelvers 是一個複雜的 Web3 RPG 遊戲，包含：
 curl https://dungeon-delvers-metadata-server.onrender.com/health
 
 # 檢查子圖狀態  
-curl -X POST https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1 \
+curl -X POST https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.2 \
   -H "Content-Type: application/json" \
   -d '{"query":"{ _meta { block { number } } }"}'
 ```

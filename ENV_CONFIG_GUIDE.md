@@ -8,10 +8,10 @@
 VITE_BSC_RPC=https://bsc-dataseed1.binance.org/
 
 # The Graph Settings
-VITE_THEGRAPH_API_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1
-VITE_THE_GRAPH_API_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1
-VITE_THE_GRAPH_STUDIO_API_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1
-VITE_GRAPHQL_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1
+VITE_THEGRAPH_API_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.2
+VITE_THE_GRAPH_API_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.2
+VITE_THE_GRAPH_STUDIO_API_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.2
+VITE_GRAPHQL_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.2
 
 # Mainnet URL
 VITE_MAINNET_URL=https://dungeondelvers.xyz
@@ -55,7 +55,7 @@ VITE_WALLET_CONNECT_PROJECT_ID=d02f4199d4862ab0a12a3d0424fb567b
 
 ```bash
 # 必須設置的變數
-VITE_GRAPHQL_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1
+VITE_GRAPHQL_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.2
 VITE_SERVER_URL=https://dungeondelvers-backend.onrender.com
 VITE_METADATA_SERVER_URL=https://dungeondelvers-backend.onrender.com
 VITE_USE_RPC_PROXY=true

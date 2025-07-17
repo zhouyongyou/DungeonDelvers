@@ -13,9 +13,14 @@ export function handleUpgradeProcessed(event: UpgradeProcessed): void {
     
     const upgradeAttempt = new UpgradeAttempt(attemptId)
     upgradeAttempt.player = player.id
-    upgradeAttempt.tokenContract = event.params.tokenContract
-    upgradeAttempt.targetRarity = event.params.targetRarity
-    upgradeAttempt.outcome = event.params.outcome
+    upgradeAttempt.type = event.params.tokenContract.toHexString() // 使用合約地址來確定類型
+    upgradeAttempt.targetId = event.params.targetRarity.toString() // 將目標稀有度轉換為字符串
+    upgradeAttempt.materialIds = [] // 無法從事件中獲取，設為空陣列
+    upgradeAttempt.materials = [] // 無法從事件中獲取，設為空陣列
+    upgradeAttempt.isSuccess = event.params.outcome >= 2
+    if (event.params.outcome >= 2) {
+        upgradeAttempt.newRarity = event.params.targetRarity
+    }
     upgradeAttempt.timestamp = event.block.timestamp
     upgradeAttempt.save()
     

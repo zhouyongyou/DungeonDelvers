@@ -32,7 +32,7 @@ const GET_PLAYER_ASSETS_QUERY = `
   query GetPlayerAssets($owner: ID!) {
     player(id: $owner) {
       id
-      heros { 
+      heroes { 
         id 
         tokenId 
         power 
@@ -55,7 +55,7 @@ const GET_PLAYER_ASSETS_QUERY = `
         totalCapacity
         partyRarity
         contractAddress
-        heros { tokenId }
+        heroes { tokenId }
         relics { tokenId }
         fatigueLevel
         provisionsRemaining
@@ -103,22 +103,15 @@ export async function fetchMetadata(
     const baseTimeout = 5000; // 增加基礎超時時間以適應 IPFS 網關
     const timeout = baseTimeout + (retryCount * 1000); // 更長的漸進式超時
     
-    // 識別 NFT 類型以提供更好的錯誤處理 - 使用實際合約地址
+    // 識別 NFT 類型 - 使用當前環境變數中的合約地址
     const addressLower = contractAddress.toLowerCase();
+    const currentContracts = contracts[56]; // BSC mainnet
     const nftType = 
-        addressLower === '0x929a4187a462314fcc480ff547019fa122a283f0' ? 'hero' :     // Hero 最新版
-        addressLower === '0x1067295025d21f59c8acb5e777e42f3866a6d2ff' ? 'relic' :    // Relic 最新版
-        addressLower === '0xe0272e1d76de1f789ce0996f3226bcf54a8c7735' ? 'party' :    // Party 最新版
-        addressLower === '0x7abea5b90528a19580a0a2a83e4cf9ad4871880f' ? 'vip' :      // VIP Staking 最新版
-        addressLower === '0x648fcdf1f59a2598e9f68ab3210a25a877fad353' ? 'hero' :     // Hero v1.3.0 (舊版)
-        addressLower === '0x6704d55c8736e373b001d54ba00a80dbb0ec793b' ? 'relic' :    // Relic v1.3.0 (舊版)
-        addressLower === '0x66ea7c0b2baa497eaf18be9f3d4459ffc20ba491' ? 'party' :    // Party v1.3.0 (舊版)
-        addressLower === '0x845de2d044323161703bb0c6ffb1f2ce287ad5bb' ? 'vip' :      // VIP Staking v1.3.2 (舊版)
-        addressLower === '0x2a046140668cbb8f598ff3852b08852a8eb23b6a' ? 'hero' :     // Hero v1.2.6 (舊版)
-        addressLower === '0x95f005e2e0d38381576da36c5ca4619a87da550e' ? 'relic' :    // Relic v1.2.6 (舊版)
-        addressLower === '0x11fb68409222b53b04626d382d7e691e640a1dcb' ? 'party' :    // Party v1.2.6 (舊版)
-        addressLower === '0xefdfff583944a2c6318d1597ad1e41159fcd8f6db' ? 'vip' :      // VIP v1.2.6 (舊版)
-        'party';  // 預設為 party 而不是 unknown，避免錯誤
+        addressLower === currentContracts.hero.address.toLowerCase() ? 'hero' :
+        addressLower === currentContracts.relic.address.toLowerCase() ? 'relic' :
+        addressLower === currentContracts.party.address.toLowerCase() ? 'party' :
+        addressLower === currentContracts.vipStaking.address.toLowerCase() ? 'vip' :
+        'unknown';
 
     // 🔥 1. 先检查持久化缓存
     const cacheKey = `${contractAddress}-${tokenId}`;
@@ -523,7 +516,7 @@ interface PartyAsset extends AssetWithTokenId {
     totalPower: string | number | bigint;
     totalCapacity: string | number | bigint;
     partyRarity: string | number | bigint;
-          heros?: Array<{ tokenId: string | number | bigint }>;
+          heroes?: Array<{ tokenId: string | number | bigint }>;
     relics?: Array<{ tokenId: string | number | bigint }>;
 }
 
@@ -631,7 +624,7 @@ async function parseNfts<T extends AssetWithTokenId>(
                     type, 
                     totalPower: BigInt(partyAsset.totalPower), 
                     totalCapacity: BigInt(partyAsset.totalCapacity), 
-                    heroIds: partyAsset.heros ? partyAsset.heros.map((h) => BigInt(h.tokenId)) : [], 
+                    heroIds: partyAsset.heroes ? partyAsset.heroes.map((h) => BigInt(h.tokenId)) : [], 
                     relicIds: partyAsset.relics ? partyAsset.relics.map((r) => BigInt(r.tokenId)) : [], 
                     partyRarity: Number(partyAsset.partyRarity),
                     attributes: [
@@ -663,7 +656,7 @@ async function parseNfts<T extends AssetWithTokenId>(
 }
 
 export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promise<AllNftCollections> {
-    const emptyResult: AllNftCollections = { heros: [], relics: [], parties: [], vipCards: [] };
+    const emptyResult: AllNftCollections = { heroes: [], relics: [], parties: [], vipCards: [] };
     
     if (!isSupportedChain(chainId)) {
         logger.error(`不支援的鏈 ID: ${chainId}`);
@@ -722,7 +715,7 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
         // 🔥 純子圖數據流：所有數據並行處理，無需重試邏輯
         const [relics, heroes, parties, vipCards] = await Promise.all([
             parseNfts(playerAssets.relics || [], 'relic', chainId, client),
-            parseNfts(playerAssets.heros || [], 'hero', chainId, client),
+            parseNfts(playerAssets.heroes || [], 'hero', chainId, client),
             parseNfts(playerAssets.parties || [], 'party', chainId, client),
             playerAssets.vip ? parseNfts([playerAssets.vip], 'vip', chainId, client) : Promise.resolve([])
         ]);
@@ -735,7 +728,7 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
         });
 
         return {
-            heros: heroes.filter(Boolean),
+            heroes: heroes.filter(Boolean),
             relics: relics.filter(Boolean),
             parties: parties.filter(Boolean),
             vipCards: vipCards.filter(Boolean),

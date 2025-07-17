@@ -99,7 +99,7 @@ export function useOptimisticUpdate<T = any>({
  *   queryKey: ['ownedNfts', address],
  *   updateFn: (oldNfts) => ({
  *     ...oldNfts,
- *     heros: [...oldNfts.heros, newHero],
+ *     heroes: [...oldNfts.heroes, newHero],
  *   }),
  * });
  * 

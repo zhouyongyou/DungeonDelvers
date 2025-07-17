@@ -25,13 +25,16 @@ export function getOrCreateGlobalStats(): GlobalStats {
   let stats = GlobalStats.load("global");
   if (!stats) {
     stats = new GlobalStats("global");
-    stats.totalHeroes = BigInt.fromI32(0);
-    stats.totalRelics = BigInt.fromI32(0);
-    stats.totalParties = BigInt.fromI32(0);
-    stats.totalPlayers = BigInt.fromI32(0);
-    stats.totalUpgradeAttempts = BigInt.fromI32(0);
-    stats.successfulUpgrades = BigInt.fromI32(0);
-    stats.lastUpdated = BigInt.fromI32(0);
+    stats.totalHeroes = 0;
+    stats.totalRelics = 0;
+    stats.totalParties = 0;
+    stats.totalPlayers = 0;
+    stats.totalUpgradeAttempts = 0;
+    stats.successfulUpgrades = 0;
+    stats.totalExpeditions = 0;
+    stats.successfulExpeditions = 0;
+    stats.totalRewardsDistributed = BigInt.fromI32(0);
+    stats.lastUpdatedAt = BigInt.fromI32(0);
     stats.save();
   }
   return stats as GlobalStats;
@@ -41,14 +44,14 @@ export function getOrCreateGlobalStats(): GlobalStats {
  * 獲取或創建玩家統計數據
  */
 export function getOrCreatePlayerStats(playerAddress: Address): PlayerStats {
-  const playerId = playerAddress.toHexString();
+  const playerId = playerAddress;
   let stats = PlayerStats.load(playerId);
   if (!stats) {
     stats = new PlayerStats(playerId);
     stats.player = playerAddress;
-    stats.totalHeroesMinted = 0;
-    stats.totalRelicsMinted = 0;
-    stats.totalPartiesCreated = 0;
+    stats.totalHeroes = 0;
+    stats.totalRelics = 0;
+    stats.totalParties = 0;
     stats.totalExpeditions = 0;
     stats.successfulExpeditions = 0;
     stats.totalRewardsEarned = BigInt.fromI32(0);
@@ -73,22 +76,22 @@ export function updateGlobalStats(
   
   switch (field) {
     case TOTAL_HEROES:
-      stats.totalHeroes = stats.totalHeroes.plus(BigInt.fromI32(increment));
+      stats.totalHeroes = stats.totalHeroes + increment;
       break;
     case TOTAL_RELICS:
-      stats.totalRelics = stats.totalRelics.plus(BigInt.fromI32(increment));
+      stats.totalRelics = stats.totalRelics + increment;
       break;
     case TOTAL_PARTIES:
-      stats.totalParties = stats.totalParties.plus(BigInt.fromI32(increment));
+      stats.totalParties = stats.totalParties + increment;
       break;
     case TOTAL_PLAYERS:
-      stats.totalPlayers = stats.totalPlayers.plus(BigInt.fromI32(increment));
+      stats.totalPlayers = stats.totalPlayers + increment;
       break;
     case TOTAL_UPGRADE_ATTEMPTS:
-      stats.totalUpgradeAttempts = stats.totalUpgradeAttempts.plus(BigInt.fromI32(increment));
+      stats.totalUpgradeAttempts = stats.totalUpgradeAttempts + increment;
       break;
     case SUCCESSFUL_UPGRADES:
-      stats.successfulUpgrades = stats.successfulUpgrades.plus(BigInt.fromI32(increment));
+      stats.successfulUpgrades = stats.successfulUpgrades + increment;
       break;
     default:
       log.warning("Unknown global stats field: {}", [field.toString()]);
@@ -96,7 +99,7 @@ export function updateGlobalStats(
   }
   
   if (timestamp.gt(BigInt.fromI32(0))) {
-    stats.lastUpdated = timestamp;
+    stats.lastUpdatedAt = timestamp;
   }
   
   stats.save();
@@ -114,16 +117,15 @@ export function updatePlayerStats(
 ): void {
   const stats = getOrCreatePlayerStats(playerAddress);
   const playerId = playerAddress.toHexString();
-  
   switch (field) {
     case TOTAL_HEROES_MINTED:
-      stats.totalHeroesMinted = stats.totalHeroesMinted + increment;
+      stats.totalHeroes = stats.totalHeroes + increment;
       break;
     case TOTAL_RELICS_MINTED:
-      stats.totalRelicsMinted = stats.totalRelicsMinted + increment;
+      stats.totalRelics = stats.totalRelics + increment;
       break;
     case TOTAL_PARTIES_CREATED:
-      stats.totalPartiesCreated = stats.totalPartiesCreated + increment;
+      stats.totalParties = stats.totalParties + increment;
       break;
     case TOTAL_EXPEDITIONS:
       stats.totalExpeditions = stats.totalExpeditions + increment;

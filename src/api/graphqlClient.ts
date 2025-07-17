@@ -10,15 +10,16 @@ export const PLAYER_FRAGMENTS = {
     fragment PlayerCore on Player {
       id
       profile {
-        level
-        experience
-        achievementPoints
+        name
+        successfulExpeditions
+        totalRewardsEarned
+        commissionEarned
       }
     }
   `,
   assets: `
     fragment PlayerAssets on Player {
-      heros {
+      heroes {
         id
         tokenId
         power
@@ -35,21 +36,19 @@ export const PLAYER_FRAGMENTS = {
       parties {
         id
         tokenId
+        name
         totalPower
-        totalCapacity
-        partyRarity
-        provisionsRemaining
-        cooldownEndsAt
-        fatigueLevel
+        heroIds
+        heroes
       }
     }
   `,
   vault: `
     fragment PlayerVault on Player {
       vault {
-        balance
-        cumulativeDeposits
-        cumulativeWithdrawals
+        pendingRewards
+        claimedRewards
+        totalProvisionSpent
       }
     }
   `,
@@ -76,18 +75,18 @@ const cacheConfig = new InMemoryCache({
           read(_, { readField }) {
             const vault = readField('vault') as any;
             const vip = readField('vip') as any;
-            const balance = vault?.balance || '0';
+            const pendingRewards = vault?.pendingRewards || '0';
             const stakedAmount = vip?.stakedAmount || '0';
-            return (BigInt(balance) + BigInt(stakedAmount)).toString();
+            return (BigInt(pendingRewards) + BigInt(stakedAmount)).toString();
           },
         },
         // Computed field: total NFT count
         totalNftCount: {
           read(_, { readField }) {
-            const heros = readField('heros') as any[] || [];
+            const heroes = readField('heroes') as any[] || [];
             const relics = readField('relics') as any[] || [];
             const parties = readField('parties') as any[] || [];
-            return heros.length + relics.length + parties.length;
+            return heroes.length + relics.length + parties.length;
           },
         },
       },

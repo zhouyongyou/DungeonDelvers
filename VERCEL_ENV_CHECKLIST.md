@@ -5,7 +5,7 @@
 - ✅ `VITE_SERVER_URL` = https://dungeondelvers-backend.onrender.com
 - ✅ `VITE_METADATA_SERVER_URL` = https://dungeondelvers-backend.onrender.com
 - ✅ `YOUR_API_KEY` = （某個值）
-- ✅ `VITE_THE_GRAPH_STUDIO_API_URL` = https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1
+- ✅ `VITE_THE_GRAPH_STUDIO_API_URL` = https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.2
 
 ## 需要添加的必要變數
 
@@ -40,9 +40,9 @@ VITE_MAINNET_POOL_ADDRESS=0x737c5b0430d5aeb104680460179aaa38608b6169
 
 ### 4. The Graph 相關（備用）
 ```
-VITE_THEGRAPH_API_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1
-VITE_THE_GRAPH_API_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1
-VITE_GRAPHQL_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1
+VITE_THEGRAPH_API_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.2
+VITE_THE_GRAPH_API_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.2
+VITE_GRAPHQL_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.2
 ```
 
 ### 5. 公共 RPC（備用）

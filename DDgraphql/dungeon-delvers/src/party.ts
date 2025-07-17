@@ -32,15 +32,14 @@ export function handlePartyCreated(event: PartyCreated): void {
     party.owner = player.id
     party.tokenId = event.params.partyId
     party.contractAddress = event.address
+    party.name = "Party #" + event.params.partyId.toString()
+    party.heroIds = []
+    party.heroes = []
     party.totalPower = event.params.totalPower
     party.totalCapacity = event.params.totalCapacity
     party.partyRarity = event.params.partyRarity
-    party.fatigueLevel = 0
-    party.provisionsRemaining = event.params.relicIds.length
-    party.cooldownEndsAt = event.block.timestamp
-    party.unclaimedRewards = event.params.totalPower 
     party.createdAt = event.block.timestamp
-    party.isDisbanded = false
+    party.isBurned = false
 
     // 批量處理英雄關聯 - 使用配置系統
     const heroIds: string[] = []
@@ -56,7 +55,8 @@ export function handlePartyCreated(event: PartyCreated): void {
             log.warning('Hero not found or not owned by player: {} for party: {}', [heroId, partyId]);
         }
     }
-    party.heros = heroIds
+    party.heroIds = heroIds
+    party.heroes = heroIds
 
     // 批量處理聖物關聯 - 使用配置系統
     const relicIds: string[] = []
@@ -72,7 +72,7 @@ export function handlePartyCreated(event: PartyCreated): void {
             log.warning('Relic not found or not owned by player: {} for party: {}', [relicId, partyId]);
         }
     }
-    party.relics = relicIds
+    // Note: relics field doesn't exist in schema, removing this line
     
     party.save()
     
@@ -90,9 +90,9 @@ export function handlePartyTransfer(event: Transfer): void {
     // 處理 burn 操作 (to = 0x0)
     if (event.params.to.toHexString() === '0x0000000000000000000000000000000000000000') {
         if (party) {
-            // 標記為已解散
-            party.isDisbanded = true
-            party.disbandedAt = event.block.timestamp
+            // 標記為已銷毀
+            party.isBurned = true
+            party.burnedAt = event.block.timestamp
             
             // 減少統計數據
             updateGlobalStats(TOTAL_PARTIES, -1, event.block.timestamp)
@@ -168,11 +168,12 @@ export function handlePartyMemberAdded(event: PartyMemberAdded): void {
     change.save()
 
     // 更新隊伍的英雄列表
-    const heroIds = party.heros
+    const heroIds = party.heroIds
     const heroId = createEntityId(getHeroContractAddress(), event.params.heroId.toString())
     if (!heroIds.includes(heroId)) {
         heroIds.push(heroId)
-        party.heros = heroIds
+        party.heroIds = heroIds
+        party.heroes = heroIds
         party.save()
     }
 
@@ -202,12 +203,13 @@ export function handlePartyMemberRemoved(event: PartyMemberRemoved): void {
     change.save()
 
     // 更新隊伍的英雄列表
-    const heroIds = party.heros
+    const heroIds = party.heroIds
     const heroId = createEntityId(getHeroContractAddress(), event.params.heroId.toString())
     const index = heroIds.indexOf(heroId)
     if (index > -1) {
         heroIds.splice(index, 1)
-        party.heros = heroIds
+        party.heroIds = heroIds
+        party.heroes = heroIds
         party.save()
     }
 

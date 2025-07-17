@@ -22,7 +22,7 @@ const BSC_RPC_ENDPOINTS = [
 ];
 
 // The Graph Studio API
-const GRAPH_STUDIO_API = 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1';
+const GRAPH_STUDIO_API = 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.2';
 
 class SubgraphDiagnostic {
     constructor() {

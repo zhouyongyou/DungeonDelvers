@@ -119,7 +119,7 @@ const GET_PLAYER_BASIC_INFO_QUERY = `
   query GetPlayerBasicInfo($address: ID!) {
     player(id: $address) {
       id
-      heros {
+      heroes {
         id
         tokenId
         rarity
@@ -169,27 +169,27 @@ const PlayerSearchQuery: React.FC = () => {
         if (isError) return <p className="text-red-500">查詢失敗: {(error as Error).message}</p>;
         if (!data) return <p className="text-red-500">查無此玩家的資料，可能尚未參與遊戲。</p>;
         
-        const totalHeroPower = data.heros?.reduce((sum: number, hero: any) => sum + Number(hero.power), 0) || 0;
+        const totalHeroPower = data.heroes?.reduce((sum: number, hero: any) => sum + Number(hero.power), 0) || 0;
         const totalRelicCapacity = data.relics?.reduce((sum: number, relic: any) => sum + Number(relic.capacity), 0) || 0;
         const totalPartyPower = data.parties?.reduce((sum: number, party: any) => sum + Number(party.totalPower), 0) || 0;
         
         return (
             <>
                 <p><b>玩家地址:</b> <span className="font-mono text-xs break-all">{data.id}</span></p>
-                <p><b>擁有英雄:</b> {data.heros?.length || 0} 個 {totalHeroPower > 0 && `(總戰力: ${totalHeroPower})`}</p>
+                <p><b>擁有英雄:</b> {data.heroes?.length || 0} 個 {totalHeroPower > 0 && `(總戰力: ${totalHeroPower})`}</p>
                 <p><b>擁有聖物:</b> {data.relics?.length || 0} 個 {totalRelicCapacity > 0 && `(總容量: ${totalRelicCapacity})`}</p>
                 <p><b>擁有隊伍:</b> {data.parties?.length || 0} 個 {totalPartyPower > 0 && `(總戰力: ${totalPartyPower})`}</p>
                 
-                {data.heros && data.heros.length > 0 && (
+                {data.heroes && data.heroes.length > 0 && (
                     <div className="mt-2">
                         <p><b>英雄列表:</b></p>
                         <div className="text-xs text-gray-400 ml-2">
-                            {data.heros.slice(0, 5).map((hero: any) => (
+                            {data.heroes.slice(0, 5).map((hero: any) => (
                                 <div key={hero.tokenId}>
                                     #{hero.tokenId} - {hero.rarity}★ ({hero.power}戰力)
                                 </div>
                             ))}
-                            {data.heros.length > 5 && <div>...還有 {data.heros.length - 5} 個英雄</div>}
+                            {data.heroes.length > 5 && <div>...還有 {data.heroes.length - 5} 個英雄</div>}
                         </div>
                     </div>
                 )}

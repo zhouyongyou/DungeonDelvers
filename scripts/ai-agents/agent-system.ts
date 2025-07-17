@@ -268,8 +268,8 @@ class SubgraphAgent extends BaseAgent {
   private async deploySubgraph(): Promise<any> {
     // graph deploy
     return {
-      endpoint: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1',
-      version: 'v2.0.1'
+      endpoint: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.2',
+      version: 'v2.0.2'
     };
   }
 }

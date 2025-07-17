@@ -33,7 +33,7 @@ const GET_NFT_DATA_QUERY = `
       totalPower
       totalCapacity
       partyRarity
-      heros {
+      heroes {
         tokenId
       }
       relics {
@@ -50,12 +50,12 @@ const GET_NFT_DATA_QUERY = `
 function getNftTypeFromContract(contractAddress: string): string {
   const address = contractAddress.toLowerCase();
   
-  // 根據你們的合約地址判斷類型
+  // 根據當前合約地址判斷類型
   const contracts = {
-    '0x648fcdf1f59a2598e9f68ab3210a25a877fad353': 'hero',
-    '0x6704d55c8736e373b001d54ba00a80dbb0ec793b': 'relic',
-    '0x66ea7c0b2baa497eaf18be9f3d4459ffc20ba491': 'party',
-    '0x845de2d044323161703bb0c6ffb1f2ce287ad5bb': 'vip',
+    '0x929a4187a462314fcc480ff547019fa122a283f0': 'hero',     // 最新 Hero 合約
+    '0x1067295025d21f59c8acb5e777e42f3866a6d2ff': 'relic',    // 最新 Relic 合約
+    '0xe0272e1d76de1f789ce0996f3226bcf54a8c7735': 'party',    // 最新 Party 合約
+    '0x7abea5b90528a19580a0a2a83e4cf9ad4871880f': 'vip',      // 最新 VIP 合約
   };
   
   return contracts[address] || 'unknown';
@@ -117,7 +117,7 @@ function formatNftData(rawData: any, type: string, contractAddress: string): any
         totalPower: BigInt(rawData.totalPower),
         totalCapacity: BigInt(rawData.totalCapacity),
         partyRarity: Number(rawData.partyRarity),
-        heroIds: rawData.heros.map((h: any) => BigInt(h.tokenId)),
+        heroIds: rawData.heroes.map((h: any) => BigInt(h.tokenId)),
         relicIds: rawData.relics.map((r: any) => BigInt(r.tokenId))
       };
       

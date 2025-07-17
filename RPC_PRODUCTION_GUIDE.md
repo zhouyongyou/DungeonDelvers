@@ -15,7 +15,7 @@ VITE_METADATA_SERVER_URL=https://dungeondelvers-backend.onrender.com
 VITE_USE_RPC_PROXY=true
 
 # GraphQL 端點
-VITE_GRAPHQL_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.1
+VITE_GRAPHQL_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.2
 
 # 其他必要配置
 VITE_WALLETCONNECT_PROJECT_ID=你的WalletConnect項目ID

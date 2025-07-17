@@ -408,7 +408,7 @@ const MyAssetsPageContent: React.FC = () => {
             try {
                 const result = await fetchAllOwnedNfts(address!, chainId!);
                 logger.debug('NFT 資產載入成功', { 
-                    heroes: result.heros.length, 
+                    heroes: result.heroes.length, 
                     relics: result.relics.length, 
                     parties: result.parties.length 
                 });
@@ -561,7 +561,7 @@ const MyAssetsPageContent: React.FC = () => {
             };
             
             // 更新可用英雄和聖物列表（移除已選擇的）
-            const updatedHeros = oldData.heros.filter((h: HeroNft) => 
+            const updatedHeroes = oldData.heroes.filter((h: HeroNft) => 
                 !currentPartyData.heroIds.includes(h.id)
             );
             const updatedRelics = oldData.relics.filter((r: RelicNft) => 
@@ -570,7 +570,7 @@ const MyAssetsPageContent: React.FC = () => {
             
             return {
                 ...oldData,
-                heros: updatedHeros,
+                heroes: updatedHeroes,
                 relics: updatedRelics,
                 parties: [...oldData.parties, tempParty]
             };
@@ -621,7 +621,7 @@ const MyAssetsPageContent: React.FC = () => {
         const sortRelicNfts = (nfts: RelicNft[]) => [...nfts].sort((a, b) => b.capacity - a.capacity);
 
         return {
-            availableHeroes: sortHeroNfts(nfts.heros.filter((h: HeroNft) => !heroIdsInParties.has(h.id.toString()))),
+            availableHeroes: sortHeroNfts(nfts.heroes.filter((h: HeroNft) => !heroIdsInParties.has(h.id.toString()))),
             availableRelics: sortRelicNfts(nfts.relics.filter((r: RelicNft) => !relicIdsInParties.has(r.id.toString()))),
         };
     }, [nfts]);
@@ -632,7 +632,7 @@ const MyAssetsPageContent: React.FC = () => {
         switch (filter) {
             case 'hero': 
                 // 英雄按稀有度排序（高到低），相同稀有度按戰力排序
-                return [...nfts.heros].sort((a, b) => {
+                return [...nfts.heroes].sort((a, b) => {
                     if (b.rarity !== a.rarity) return b.rarity - a.rarity;
                     return b.power - a.power;
                 });
@@ -777,7 +777,7 @@ const MyAssetsPageContent: React.FC = () => {
                     <li>• 新鑄造的 NFT 需要 <strong className="text-blue-300">2-3 分鐘</strong> 才會在此頁面顯示</li>
                     <li>• 如果您剛完成鑄造，請稍作等待或刷新頁面</li>
                     <li>• 系統正在同步區塊鏈數據和更新索引</li>
-                    {nfts && (nfts.heros.length + nfts.relics.length + nfts.parties.length) > 50 && (
+                    {nfts && (nfts.heroes.length + nfts.relics.length + nfts.parties.length) > 50 && (
                         <li className="text-yellow-300">• ⚠️ 您擁有大量 NFT，載入可能需要較長時間</li>
                     )}
                 </ul>

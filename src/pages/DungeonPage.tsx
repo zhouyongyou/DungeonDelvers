@@ -40,7 +40,7 @@ interface Dungeon {
   isInitialized: boolean;
 }
 
-// 查詢玩家擁有的隊伍及其詳細狀態
+// 查詢玩家擁有的隊伍基本信息（不包含動態狀態）
 const GET_PLAYER_PARTIES_QUERY = `
   query GetPlayerParties($owner: ID!) {
     player(id: $owner) {
@@ -50,17 +50,12 @@ const GET_PLAYER_PARTIES_QUERY = `
         totalPower
         totalCapacity
         partyRarity
-        provisionsRemaining
-        cooldownEndsAt
-        unclaimedRewards
-        fatigueLevel
-        heros {
+        heroIds
+        heroes {
           id
           tokenId
-        }
-        relics {
-          id
-          tokenId
+          power
+          rarity
         }
       }
     }
@@ -122,9 +117,9 @@ const usePlayerParties = () => {
                 type: 'party',
                 totalPower: BigInt(p.totalPower || '0'),
                 totalCapacity: BigInt(p.totalCapacity || '0'),
-                heroIds: (p.heros || []).map((h: { tokenId: string }) => BigInt(h.tokenId)),
-                relicIds: (p.relics || []).map((r: { tokenId: string }) => BigInt(r.tokenId)),
-                partyRarity: p.partyRarity || '1',
+                heroIds: (p.heroes || []).map((h: { tokenId: string }) => BigInt(h.tokenId)),
+                relicIds: [], // 聖物數據需要從其他查詢獲取
+                partyRarity: Number(p.partyRarity || 1),
                 // 這些數據需要從合約讀取，不在子圖中
                 provisionsRemaining: 0n,  // 將從 getPartyStatus 獲取
                 cooldownEndsAt: 0n,       // 將從 getPartyStatus 獲取

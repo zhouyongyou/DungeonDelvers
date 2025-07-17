@@ -7,15 +7,16 @@ import { getOrCreatePlayer } from "./common"
 function getOrCreatePlayerVault(playerAddress: Address): PlayerVault {
     const player = getOrCreatePlayer(playerAddress)
     
-    const vaultId = playerAddress.toHexString()
+    const vaultId = playerAddress
     let vault = PlayerVault.load(vaultId)
 
     if (!vault) {
         vault = new PlayerVault(vaultId)
-        vault.player = player.id
-        vault.totalDeposited = BigInt.fromI32(0)
-        vault.totalWithdrawn = BigInt.fromI32(0)
-        vault.balance = BigInt.fromI32(0)
+        vault.owner = player.id
+        vault.pendingRewards = BigInt.fromI32(0)
+        vault.claimedRewards = BigInt.fromI32(0)
+        vault.totalProvisionSpent = BigInt.fromI32(0)
+        vault.createdAt = BigInt.fromI32(0)
     }
     return vault
 }
@@ -23,8 +24,8 @@ function getOrCreatePlayerVault(playerAddress: Address): PlayerVault {
 export function handleDeposited(event: Deposited): void {
     // ★ 核心修正 #1：事件參數是 `player` 而不是 `user`
     const vault = getOrCreatePlayerVault(event.params.player)
-    vault.totalDeposited = vault.totalDeposited.plus(event.params.amount)
-    vault.balance = vault.balance.plus(event.params.amount)
+    vault.pendingRewards = vault.pendingRewards.plus(event.params.amount)
+    vault.lastUpdatedAt = event.block.timestamp
     vault.save()
 }
 
@@ -33,15 +34,17 @@ export function handleWithdrawn(event: Withdrawn): void {
     const vault = getOrCreatePlayerVault(event.params.player)
     // ★ 核心修正 #3：事件參數是 `taxAmount` 而不是 `fee`
     const totalAmount = event.params.amount.plus(event.params.taxAmount)
-    vault.totalWithdrawn = vault.totalWithdrawn.plus(totalAmount)
-    vault.balance = vault.balance.minus(totalAmount)
+    vault.claimedRewards = vault.claimedRewards.plus(totalAmount)
+    vault.pendingRewards = vault.pendingRewards.minus(totalAmount)
+    vault.lastClaimedAt = event.block.timestamp
+    vault.lastUpdatedAt = event.block.timestamp
     vault.save()
 }
 
 export function handleCommissionPaid(event: CommissionPaid): void {
     // ★ 核心修正 #4：事件參數是 `referrer` 而不是 `recipient`
     const vault = getOrCreatePlayerVault(event.params.referrer)
-    vault.totalDeposited = vault.totalDeposited.plus(event.params.amount)
-    vault.balance = vault.balance.plus(event.params.amount)
+    vault.pendingRewards = vault.pendingRewards.plus(event.params.amount)
+    vault.lastUpdatedAt = event.block.timestamp
     vault.save()
 }

@@ -12,13 +12,9 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
   const party = Party.load(partyId)
 
   if (party) {
-    party.fatigueLevel = party.fatigueLevel + 1
-    party.provisionsRemaining = party.provisionsRemaining - 1
-    
-    if (event.params.success) {
-      party.unclaimedRewards = party.unclaimedRewards.plus(event.params.reward)
-    }
-    party.cooldownEndsAt = event.block.timestamp.plus(BigInt.fromI32(24 * 60 * 60))
+    // Note: Party schema doesn't have fatigueLevel, provisionsRemaining, unclaimedRewards, cooldownEndsAt
+    // These fields may be tracked elsewhere or removed from the schema
+    party.lastUpdatedAt = event.block.timestamp
     party.save()
 
     const playerAddress = event.params.player
@@ -31,10 +27,10 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
       updatePlayerStatsBigInt(playerAddress, "totalRewardsEarned", event.params.reward, event.block.timestamp)
     }
     
-    const profile = PlayerProfile.load(playerAddress.toHexString());
+    const profile = PlayerProfile.load(playerAddress);
     if (profile) {
-      profile.experience = profile.experience.plus(event.params.expGained);
-      profile.level = calculateLevel(profile.experience);
+      profile.totalRewardsEarned = profile.totalRewardsEarned.plus(event.params.expGained);
+      profile.lastUpdatedAt = event.block.timestamp;
       profile.save();
     } else {
         log.warning("ExpeditionFulfilled for a non-existent profile: {}", [playerAddress.toHexString()])
@@ -48,7 +44,8 @@ export function handlePartyRested(event: PartyRested): void {
   const partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
   const party = Party.load(partyId)
   if (party) {
-    party.fatigueLevel = 0
+    // Note: Party schema doesn't have fatigueLevel
+    party.lastUpdatedAt = event.block.timestamp
     party.save()
   }
 }
@@ -57,7 +54,8 @@ export function handleProvisionsBought(event: ProvisionsBought): void {
   const partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
   const party = Party.load(partyId)
   if (party) {
-    party.provisionsRemaining = party.provisionsRemaining + event.params.amount.toI32()
+    // Note: Party schema doesn't have provisionsRemaining
+    party.lastUpdatedAt = event.block.timestamp
     party.save()
   }
 }

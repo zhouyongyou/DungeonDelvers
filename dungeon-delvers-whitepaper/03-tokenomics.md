@@ -9,20 +9,20 @@ description: 我們的經濟核心是 U 本位定價與多維度的動態稅率�
 * **代幣名稱**: SoulShard
 * **代幣符號**: $SoulShard
 * **所在區塊鏈**: Binance Smart Chain (BSC)
-* **合約地址**: *待更新*
+* **合約地址**: `0xc88dAD283Ac209D77Bfe452807d378615AB8B94a`
 
 #### **3.2 智能合約地址**
 
 以下是我們 V3 架構中的主要智能合約地址（BSC 主網）：
 
-* **英雄合約 (Hero)**: `待更新`
-* **聖物合約 (Relic)**: `待更新`
-* **隊伍合約 (Party)**: `待更新`
-* **玩家檔案合約 (PlayerProfile)**: `待更新`
-* **VIP 質押合約 (VIPStaking)**: `待更新`
-* **地下城主控合約 (DungeonMaster)**: `待更新`
-* **玩家金庫合約 (PlayerVault)**: `待更新`
-* **升星祭壇合約 (AltarOfAscension)**: `待更新`
+* **英雄合約 (Hero)**: `待部署新地址`
+* **聖物合約 (Relic)**: `待部署新地址`
+* **隊伍合約 (Party)**: `待部署新地址`
+* **玩家檔案合約 (PlayerProfile)**: `待部署新地址`
+* **VIP 質押合約 (VIPStaking)**: `待部署新地址`
+* **地下城主控合約 (DungeonMaster)**: `待部署新地址`
+* **玩家金庫合約 (PlayerVault)**: `待部署新地址`
+* **升星祭壇合約 (AltarOfAscension)**: `待部署新地址`
 
 #### **3.3 代幣產出與消耗**
 
