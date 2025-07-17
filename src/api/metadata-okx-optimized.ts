@@ -19,7 +19,7 @@ interface MetadataOptions {
 
 // 從 The Graph 獲取 NFT 數據
 async function fetchNftDataFromGraph(contractAddress: string, tokenId: string): Promise<any> {
-    const THE_GRAPH_API_URL = process.env.THE_GRAPH_STUDIO_API_URL || '';
+    const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.3';
     
     // 判斷 NFT 類型
     const nftType = getNftTypeFromContract(contractAddress);
@@ -52,8 +52,23 @@ async function fetchNftDataFromGraph(contractAddress: string, tokenId: string): 
             })
         });
         
-        const { data } = await response.json();
-        const result = data[nftType];
+        const responseData = await response.json();
+        
+        // 調試信息
+        if (import.meta.env.DEV) {
+            console.log('The Graph 查詢結果:', {
+                url: THE_GRAPH_API_URL,
+                id: fullId,
+                type: nftType,
+                response: responseData
+            });
+        }
+        
+        if (responseData.errors) {
+            console.error('The Graph 查詢錯誤:', responseData.errors);
+        }
+        
+        const result = responseData.data?.[nftType];
         
         if (result) {
             return { ...result, type: nftType };
