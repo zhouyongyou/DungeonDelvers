@@ -50,17 +50,16 @@
     --sal: env(safe-area-inset-left);
   }
 
-  /* 防止文字選擇（移動端） */
-  @media (max-width: 768px) {
-    body {
-      -webkit-user-select: none;
-      user-select: none;
-    }
-    
-    input, textarea {
-      -webkit-user-select: text;
-      user-select: text;
-    }
+  /* 防止文字選擇（僅限按鈕和遊戲元素） */
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  /* 確保輸入框可以選擇文字 */
+  input, textarea, pre, code {
+    -webkit-user-select: text;
+    user-select: text;
   }
 
   /* 優化觸控反饋 */

@@ -354,7 +354,7 @@ export function usePagePerformance(pageName: string) {
     */
 
     return () => {
-      clearInterval(memoryInterval);
+      // clearInterval(memoryInterval);
     };
   }, [pageName]);
 }

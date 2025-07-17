@@ -110,9 +110,9 @@ const SettingRow: React.FC<SettingRowProps> = ({
   const displayValue = isLoading ? (
     <LoadingSpinner size="h-4 w-4" />
   ) : currentValue === undefined || currentValue === null ? (
-    'N/A'
+    '載入中...'
   ) : unit === 'USD' || unit === 'BNB' ? (
-    `${formatEther(typeof currentValue === 'bigint' ? currentValue : 0n)}`
+    `${formatEther(typeof currentValue === 'bigint' ? currentValue : BigInt(currentValue || 0))}`
   ) : unit === '‱' ? (
     `${(Number(currentValue ?? 0n) / 100).toFixed(2)}%`
   ) : (

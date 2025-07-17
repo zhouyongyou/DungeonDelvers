@@ -41,7 +41,7 @@ const GET_RELIC_BY_ID_QUERY = `
   }
 `;
 
-// 查詢特定 ID 的隊伍及其詳細組成
+// 查詢特定 ID 的隊伍 - 只查詢真正靜態的基本信息
 const GET_PARTY_BY_ID_QUERY = `
   query GetPartyById($id: ID!) {
     party(id: $id) {
@@ -51,18 +51,6 @@ const GET_PARTY_BY_ID_QUERY = `
       totalPower
       totalCapacity
       partyRarity
-      provisionsRemaining
-      cooldownEndsAt
-      unclaimedRewards
-      fatigueLevel
-      heros {
-        id
-        tokenId
-      }
-      relics {
-        id
-        tokenId
-      }
     }
   }
 `;
@@ -114,6 +102,7 @@ const QuerySection: React.FC<QuerySectionProps> = ({ title, inputType, inputPlac
                         onChange={e => setInputValue(e.target.value)}
                         placeholder={inputPlaceholder}
                         className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none h-10 bg-gray-800 border-gray-700 text-gray-200 placeholder-gray-400"
+                        min={inputType === 'number' ? "0" : undefined}
                     />
                 </div>
                 <ActionButton onClick={() => onQuery(inputValue)} className="px-6 py-2 rounded-lg whitespace-nowrap w-24 h-10">查詢</ActionButton>
@@ -125,18 +114,101 @@ const QuerySection: React.FC<QuerySectionProps> = ({ title, inputType, inputPlac
     );
 };
 
+// 添加玩家基本資料查詢 - 修正字段名稱
+const GET_PLAYER_BASIC_INFO_QUERY = `
+  query GetPlayerBasicInfo($address: ID!) {
+    player(id: $address) {
+      id
+      heros {
+        id
+        tokenId
+        rarity
+        power
+      }
+      relics {
+        id
+        tokenId
+        rarity
+        capacity
+      }
+      parties {
+        id
+        tokenId
+        totalPower
+        totalCapacity
+        partyRarity
+      }
+    }
+  }
+`;
+
 const PlayerSearchQuery: React.FC = () => {
-    const [message, setMessage] = useState('請輸入玩家地址進行查詢。');
+    const [submittedAddress, setSubmittedAddress] = useState<string | null>(null);
+    
+    const { data, isLoading, isError, error } = useQuery({
+        queryKey: ['explorer', 'player', submittedAddress],
+        queryFn: async () => {
+            if (!submittedAddress) return null;
+            const result = await fetchFromGraph(GET_PLAYER_BASIC_INFO_QUERY, { address: submittedAddress.toLowerCase() });
+            return result.player;
+        },
+        enabled: !!submittedAddress,
+    });
+    
     const handleQuery = (address: string) => {
         if (isAddress(address)) {
-            window.location.hash = `#/profile?address=${address}`;
+            setSubmittedAddress(address);
         } else {
-            setMessage('無效的錢包地址，請重新輸入。');
+            setSubmittedAddress(null);
         }
     };
+    
+    const renderResult = () => {
+        if (!submittedAddress) return <p className="text-gray-500">請輸入玩家地址進行查詢。</p>;
+        if (!isAddress(submittedAddress)) return <p className="text-red-500">無效的錢包地址，請重新輸入。</p>;
+        if (isError) return <p className="text-red-500">查詢失敗: {(error as Error).message}</p>;
+        if (!data) return <p className="text-red-500">查無此玩家的資料，可能尚未參與遊戲。</p>;
+        
+        const totalHeroPower = data.heros?.reduce((sum: number, hero: any) => sum + Number(hero.power), 0) || 0;
+        const totalRelicCapacity = data.relics?.reduce((sum: number, relic: any) => sum + Number(relic.capacity), 0) || 0;
+        const totalPartyPower = data.parties?.reduce((sum: number, party: any) => sum + Number(party.totalPower), 0) || 0;
+        
+        return (
+            <>
+                <p><b>玩家地址:</b> <span className="font-mono text-xs break-all">{data.id}</span></p>
+                <p><b>擁有英雄:</b> {data.heros?.length || 0} 個 {totalHeroPower > 0 && `(總戰力: ${totalHeroPower})`}</p>
+                <p><b>擁有聖物:</b> {data.relics?.length || 0} 個 {totalRelicCapacity > 0 && `(總容量: ${totalRelicCapacity})`}</p>
+                <p><b>擁有隊伍:</b> {data.parties?.length || 0} 個 {totalPartyPower > 0 && `(總戰力: ${totalPartyPower})`}</p>
+                
+                {data.heros && data.heros.length > 0 && (
+                    <div className="mt-2">
+                        <p><b>英雄列表:</b></p>
+                        <div className="text-xs text-gray-400 ml-2">
+                            {data.heros.slice(0, 5).map((hero: any) => (
+                                <div key={hero.tokenId}>
+                                    #{hero.tokenId} - {hero.rarity}★ ({hero.power}戰力)
+                                </div>
+                            ))}
+                            {data.heros.length > 5 && <div>...還有 {data.heros.length - 5} 個英雄</div>}
+                        </div>
+                    </div>
+                )}
+                
+                <div className="mt-2">
+                    <button
+                        onClick={() => window.location.hash = `#/profile?address=${submittedAddress}`}
+                        className="text-blue-400 hover:text-blue-300 text-sm underline"
+                    >
+                        查看完整檔案 →
+                    </button>
+                </div>
+            </>
+        );
+    };
+    
     return (
-        <QuerySection title="玩家檔案搜尋" inputType="text" inputPlaceholder="輸入玩家地址" onQuery={handleQuery}>
-            <p className="text-gray-500">{message}</p>
+        <QuerySection title="玩家檔案搜尋" inputType="text" inputPlaceholder="輸入玩家地址" onQuery={handleQuery} isLoading={isLoading}>
+            {renderResult()}
         </QuerySection>
     );
 };
@@ -169,8 +241,16 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
     });
 
     const handleQuery = (id: string) => {
-        if (id && /^\d+$/.test(id)) setSubmittedId(id);
-        else setSubmittedId(null);
+        if (id && /^\d+$/.test(id)) {
+            const numId = parseInt(id, 10);
+            if (numId >= 0) {
+                setSubmittedId(id);
+            } else {
+                setSubmittedId(null);
+            }
+        } else {
+            setSubmittedId(null);
+        }
     };
 
     const renderResult = () => {
@@ -178,6 +258,9 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
         if (isError) return <p className="text-red-500">查詢失敗: {(error as Error).message}</p>;
         if (!data) return <p className="text-red-500">查無此 ID 的資料。</p>;
 
+        // 🔍 調試信息 - 顯示原始數據結構
+        console.log(`${type.toUpperCase()} 查詢結果:`, data);
+        
         return (
             <>
                 <p><b>擁有者:</b> <span className="font-mono text-xs break-all">{data.owner?.id}</span></p>
@@ -187,11 +270,10 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
                     <p><b>隊伍稀有度:</b> {"★".repeat(data.partyRarity)}{"☆".repeat(5 - data.partyRarity)}</p>
                     <p><b>總戰力:</b> {data.totalPower.toString()}</p>
                     <p><b>總容量:</b> {data.totalCapacity.toString()}</p>
-                    <p><b>剩餘儲備:</b> {data.provisionsRemaining.toString()}</p>
-                    <p><b>疲勞度:</b> {data.fatigueLevel.toString()}</p>
-                    <p><b>未領取獎勵:</b> {formatEther(BigInt(data.unclaimedRewards))} $SoulShard</p>
-                    <p><b>英雄列表 (ID):</b> {data.heros?.map((h: { tokenId: string }) => h.tokenId).join(', ') || '無'}</p>
-                    <p><b>聖物列表 (ID):</b> {data.relics?.map((r: { tokenId: string }) => r.tokenId).join(', ') || '無'}</p>
+                    {/* 🎯 移除不可靠的數據顯示 */}
+                    <p className="text-gray-500 text-xs mt-2">
+                        ⚠️ 注意：疲勞度、儲備、獎勵、英雄/聖物列表需要從實時合約讀取，子圖只記錄靜態的鑄造信息
+                    </p>
                 </>}
             </>
         );

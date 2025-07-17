@@ -8,8 +8,14 @@ interface PreloadConfig {
   maxConcurrent: number;
 }
 
+interface QueuedPreload extends PreloadConfig {
+  url: string;
+  resolve: () => void;
+  reject: (err: Error) => void;
+}
+
 class ImagePreloadManager {
-  private preloadQueue: Map<string, PreloadConfig> = new Map();
+  private preloadQueue: Map<string, QueuedPreload> = new Map();
   private loadingImages: Set<string> = new Set();
   private loadedImages: Set<string> = new Set();
 
@@ -27,13 +33,26 @@ class ImagePreloadManager {
       return this.waitForImage(url);
     }
 
-    // 檢查並發限制
+    // 檢查並發限制 - 加入隊列但不遞歸調用
     if (this.loadingImages.size >= config.maxConcurrent) {
-      this.preloadQueue.set(url, config);
-      return this.waitForSlot().then(() => this.preloadImage(url, config));
+      return new Promise((resolve, reject) => {
+        this.preloadQueue.set(url, { 
+          ...config,
+          url,
+          resolve, 
+          reject 
+        });
+      });
     }
 
     // 開始加載
+    return this.loadImageInternal(url, config);
+  }
+
+  /**
+   * 內部圖片加載方法（避免遞歸）
+   */
+  private loadImageInternal(url: string, config: PreloadConfig): Promise<void> {
     this.loadingImages.add(url);
     const startTime = performance.now();
     
@@ -129,7 +148,7 @@ class ImagePreloadManager {
    * 處理預加載隊列
    */
   private processQueue() {
-    if (this.preloadQueue.size === 0) return;
+    if (this.preloadQueue.size === 0 || this.loadingImages.size >= 3) return;
 
     // 按優先級排序
     const sortedQueue = Array.from(this.preloadQueue.entries()).sort((a, b) => {
@@ -138,11 +157,13 @@ class ImagePreloadManager {
     });
 
     // 取出最高優先級的圖片
-    const [url, config] = sortedQueue[0];
+    const [url, queuedItem] = sortedQueue[0];
     this.preloadQueue.delete(url);
 
-    // 開始加載
-    this.preloadImage(url, config);
+    // 使用內部方法加載，避免遞歸
+    this.loadImageInternal(url, queuedItem)
+      .then(() => queuedItem.resolve())
+      .catch((err) => queuedItem.reject(err));
   }
 
   /**
@@ -203,19 +224,35 @@ export async function preloadNftImagesByRarity(type: 'hero' | 'relic', rarities:
  * 智能預加載策略
  */
 export function setupSmartPreloading() {
-  // 監聽路由變化，預加載相關圖片
+  let preloadTimer: NodeJS.Timeout | null = null;
+  
+  // 監聽路由變化，預加載相關圖片（使用防抖）
   window.addEventListener('hashchange', () => {
-    const hash = window.location.hash;
-    
-    if (hash.includes('mint')) {
-      // 預加載鑄造頁面相關圖片
-      preloadNftImagesByRarity('hero', [1, 2, 3]);
-      preloadNftImagesByRarity('relic', [1, 2, 3]);
-    } else if (hash.includes('party')) {
-      // 預加載隊伍頁面相關圖片
-      preloadNftImagesByRarity('hero', [1, 2, 3, 4, 5]);
-      preloadNftImagesByRarity('relic', [1, 2, 3, 4, 5]);
+    if (preloadTimer) {
+      clearTimeout(preloadTimer);
     }
+    
+    preloadTimer = setTimeout(() => {
+      const hash = window.location.hash;
+      
+      if (hash.includes('mint')) {
+        // 預加載鑄造頁面相關圖片
+        preloadNftImagesByRarity('hero', [1, 2, 3]).catch(err => 
+          logger.warn('Mint page preload failed', err)
+        );
+        preloadNftImagesByRarity('relic', [1, 2, 3]).catch(err => 
+          logger.warn('Mint page relic preload failed', err)
+        );
+      } else if (hash.includes('party')) {
+        // 預加載隊伍頁面相關圖片
+        preloadNftImagesByRarity('hero', [1, 2, 3, 4, 5]).catch(err => 
+          logger.warn('Party page hero preload failed', err)
+        );
+        preloadNftImagesByRarity('relic', [1, 2, 3, 4, 5]).catch(err => 
+          logger.warn('Party page relic preload failed', err)
+        );
+      }
+    }, 300); // 300ms 防抖延遲
   });
 
   // 使用 Intersection Observer 預加載即將進入視窗的圖片
@@ -226,7 +263,8 @@ export function setupSmartPreloading() {
           const img = entry.target as HTMLImageElement;
           const src = img.dataset.src;
           if (src && !img.src) {
-            imagePreloadManager.preloadImage(src, { priority: 'low', maxConcurrent: 2 });
+            imagePreloadManager.preloadImage(src, { priority: 'low', maxConcurrent: 2 })
+              .catch(err => logger.warn('Lazy load failed', { src, err }));
           }
         }
       });

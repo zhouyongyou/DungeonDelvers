@@ -1,73 +1,16 @@
 // src/hooks/useAdminData.ts - 管理員數據混合載入 Hook
 
 import { useState, useEffect, useMemo } from 'react';
-import { useQuery } from '@apollo/client';
-import { gql } from '@apollo/client';
 import { useMonitoredReadContracts } from './useMonitoredContract';
 import { getContract } from '../config/contracts';
 import { logger } from '../utils/logger';
 import { formatEther, parseEther } from 'viem';
 import { bsc } from 'wagmi/chains';
 
-// GraphQL 查詢管理員數據
-const ADMIN_DATA_QUERY = gql`
-  query GetAdminData {
-    adminParameters(id: "admin") {
-      id
-      # 鑄造價格
-      heroMintPriceUSD
-      relicMintPriceUSD
-      provisionPriceUSD
-      # 平台費用
-      heroPlatformFee
-      relicPlatformFee
-      partyPlatformFee
-      explorationFee
-      # 遊戲參數
-      restCostPowerDivisor
-      vipUnstakeCooldown
-      globalRewardMultiplier
-      # 稅務系統
-      commissionRate
-      # Oracle 設定
-      twapPeriod
-      # 元數據
-      lastUpdatedAt
-      updatedBy
-    }
-    contractRegistry(id: "contracts") {
-      id
-      # 核心合約
-      dungeonCore
-      hero
-      relic
-      party
-      # 遊戲邏輯合約
-      dungeonMaster
-      playerVault
-      oracle
-      vipStaking
-      playerProfile
-      altarOfAscension
-      # 元數據
-      lastUpdatedAt
-      updatedBy
-    }
-    # 獲取最近的管理員操作
-    adminActions(first: 10, orderBy: timestamp, orderDirection: desc) {
-      id
-      actionType
-      targetContract
-      functionName
-      parameterName
-      oldValue
-      newValue
-      executor
-      transactionHash
-      timestamp
-    }
-  }
-`;
+// TODO: 暫時禁用 GraphQL 查詢，先實施 RPC 部分
+
+// GraphQL 查詢將在子圖事件處理完成後實施
+// const ADMIN_DATA_QUERY = `...`;
 
 interface AdminDataHookReturn {
   // 數據
@@ -88,11 +31,11 @@ interface AdminDataHookReturn {
 export function useAdminData(): AdminDataHookReturn {
   const chainId = bsc.id;
   
-  // 第一層：從子圖獲取基礎數據
-  const { data: subgraphData, loading: subgraphLoading, error: subgraphError, refetch: refetchSubgraph } = useQuery(ADMIN_DATA_QUERY, {
-    pollInterval: 30000, // 每 30 秒輪詢一次
-    notifyOnNetworkStatusChange: true,
-  });
+  // 暫時模擬子圖數據
+  const subgraphData = null;
+  const subgraphLoading = false;
+  const subgraphError = null;
+  const refetchSubgraph = async () => { logger.info('子圖查詢尚未實施'); };
   
   // 狀態管理
   const [verifiedData, setVerifiedData] = useState<Record<string, any>>({});
@@ -203,8 +146,8 @@ export function useAdminData(): AdminDataHookReturn {
     // TODO: 實施完整的 RPC 數據載入
     // 這裡應該使用代理節點進行批量查詢
     
-    // 同時刷新子圖數據
-    await refetchSubgraph();
+    // TODO: 同時刷新子圖數據
+    // await refetchSubgraph();
   };
   
   // 合併數據源

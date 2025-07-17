@@ -3,11 +3,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
 import { useMonitoredReadContracts } from '../hooks/useMonitoredContract';
+import { useSafeMultipleReads } from '../hooks/useSafeMultipleReads';
+import { useAdminContracts } from '../hooks/useAdminContracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatEther, isAddress } from 'viem';
 type ContractName = keyof typeof import('../config/contracts').contracts[typeof bsc.id];
 import { getContract, contracts as contractConfigs } from '../config/contracts';
-import { useAppToast } from '../hooks/useAppToast';
+import { useAppToast } from '../contexts/SimpleToastContext';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -230,56 +232,63 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     };
   }, []);
 
-  // 使用自動查詢，但增強防護機制
-  const [readResults, setReadResults] = useState<any>(undefined);
-  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
-  const [settingsError, setSettingsError] = useState<any>(null);
+  // 移除不必要的狀態，直接使用 hook 返回的值
+  // const [contractsReadResult, setContractsReadResult] = useState<any>(undefined);
+  // const [isLoadingContracts, setIsLoadingContracts] = useState(false);
+  // const [contractsReadError, setContractsReadError] = useState<any>(null);
   
-  // 恢復合約讀取功能，使用優化配置避免過載
-  const { data: contractsReadResult, isLoading: isLoadingContracts, error: contractsReadError } = useMonitoredReadContracts({
+  // 使用備用的單獨合約讀取方案
+  const { data: adminContractsResult, isLoading: isLoadingAdminContracts, error: adminContractsError } = useAdminContracts(
+    safeContractsToRead.filter(c => c && c.address && c.abi && c.functionName)
+  );
+
+  // 嘗試使用批量讀取，如果失敗則使用備用方案
+  const { data: batchResult, isLoading: isLoadingBatch, error: batchError } = useMonitoredReadContracts({
     contracts: safeContractsToRead,
     contractName: 'adminSettings',
     batchName: 'adminSettingsBatch',
     query: {
-      enabled: contractsReadEnabled,
-      staleTime: 1000 * 60 * 30,     // 30分鐘緩存，減少重複請求
-      gcTime: 1000 * 60 * 60,        // 60分鐘垃圾回收
-      refetchOnWindowFocus: false,    // 禁用窗口聚焦刷新
-      refetchInterval: false,         // 禁用自動刷新
-      retry: 1,                       // 只重試一次
-      retryDelay: 3000,               // 3秒重試延遲
-      retryOnMount: false,            // 禁用掛載時重試
-      structuralSharing: false,       // 禁用結構共享，減少計算開銷
-      refetchOnReconnect: false       // 禁用重連時刷新
+      enabled: contractsReadEnabled && !adminContractsResult, // 只在備用方案未完成時啟用
+      staleTime: 1000 * 60 * 30,
+      gcTime: 1000 * 60 * 60,
+      refetchOnWindowFocus: false,
+      refetchInterval: false,
+      retry: 0, // 不重試，直接使用備用方案
+      retryDelay: 3000,
+      retryOnMount: false,
+      structuralSharing: false,
+      refetchOnReconnect: false
     }
   });
+
+  // 選擇使用哪個結果
+  const contractsReadResult = batchResult || adminContractsResult;
+  const isLoadingContracts = isLoadingBatch || isLoadingAdminContracts;
+  const contractsReadError = batchError || adminContractsError;
   
-  // 同步查詢結果
-  useEffect(() => {
-    setReadResults(contractsReadResult);
-    setIsLoadingSettings(isLoadingContracts);
-    setSettingsError(contractsReadError);
-  }, [contractsReadResult, isLoadingContracts, contractsReadError]);
+  // 移除會導致無限循環的 useEffect
+  // 直接使用 contractsReadResult、isLoadingContracts 和 contractsReadError
+  // 不需要同步到本地狀態
 
   // 移除手動觸發邏輯，使用自動查詢
 
   const currentAddressMap: Record<string, Address | undefined> = useMemo(() => {
     try {
-      if (!readResults || !Array.isArray(readResults) || readResults.length === 0 || 
+      if (!contractsReadResult || !Array.isArray(contractsReadResult) || contractsReadResult.length === 0 || 
           !setupConfig || !Array.isArray(setupConfig) || setupConfig.length === 0) {
         logger.debug('currentAddressMap: 數據不完整', { 
-          readResults: readResults ? 'exists' : 'undefined',
-          readResultsLength: readResults?.length,
+          contractsReadResult: contractsReadResult ? 'exists' : 'undefined',
+          contractsReadResultLength: contractsReadResult?.length,
           setupConfig: setupConfig ? 'exists' : 'undefined',
           setupConfigLength: setupConfig?.length
         });
         return {};
       }
       
-      const owner = readResults[0]?.result as Address | undefined;
+      const owner = contractsReadResult[0]?.result as Address | undefined;
       const settings = setupConfig.reduce((acc, config, index) => {
-        if (config && config.key && readResults[index + 1] && readResults[index + 1].result) {
-          acc[config.key] = readResults[index + 1].result as Address | undefined;
+        if (config && config.key && contractsReadResult[index + 1] && contractsReadResult[index + 1].result) {
+          acc[config.key] = contractsReadResult[index + 1].result as Address | undefined;
         }
         return acc;
       }, {} as Record<string, Address | undefined>);
@@ -290,7 +299,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       logger.error('currentAddressMap 計算失敗:', error);
       return {};
     }
-  }, [readResults, setupConfig]);
+  }, [contractsReadResult, setupConfig]);
   
   // 診斷模式：在開發環境中執行診斷（移到 currentAddressMap 定義之後）
   useEffect(() => {
@@ -415,25 +424,8 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     }
   }, [parameterConfig]);
 
-  // 恢復參數合約讀取，使用分批策略減少單次請求量
-  const { data: params, isLoading: isLoadingParams, error: paramsError, refetch: refetchParams } = useMonitoredReadContracts({
-    contracts: parameterContracts,
-    contractName: 'adminParameters',
-    batchName: 'adminParametersBatch',
-    query: { 
-      enabled: Array.isArray(parameterContracts) && parameterContracts.length > 0 && 
-        (loadedSections.corePrice || loadedSections.platformFee || loadedSections.taxSystem || loadedSections.gameParams || loadedSections.oracle),
-      staleTime: 1000 * 60 * 45,     // 45分鐘緩存
-      gcTime: 1000 * 60 * 90,        // 90分鐘垃圾回收
-      refetchOnWindowFocus: false,
-      refetchInterval: false,
-      retry: 1,
-      retryDelay: 4000,               // 4秒重試延遲
-      retryOnMount: false,
-      structuralSharing: false,
-      refetchOnReconnect: false
-    }
-  });
+  // 使用安全的批量讀取方法
+  const { data: params, isLoading: isLoadingParams, error: paramsError, refetch: refetchParams } = useSafeMultipleReads(parameterContracts);
 
   // 讀取 PlayerVault 的稅務參數
   const playerVaultContract = getContract(chainId, 'playerVault');
@@ -469,24 +461,65 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     }
   }, [playerVaultContract]);
 
-  // 恢復 Vault 參數讀取，使用延遲載入策略
-  const { data: vaultParams, isLoading: isLoadingVaultParams, error: vaultParamsError, refetch: refetchVaultParams } = useMonitoredReadContracts({
-    contracts: vaultContracts,
-    contractName: 'playerVault',
-    batchName: 'vaultParametersBatch',
-    query: { 
-      enabled: !!playerVaultContract && !!playerVaultContract.address && Array.isArray(vaultContracts) && vaultContracts.length > 0 && loadedSections.taxSystem,
-      staleTime: 1000 * 60 * 60,     // 60分鐘緩存
-      gcTime: 1000 * 60 * 120,       // 120分鐘垃圾回收
-      refetchOnWindowFocus: false,
-      refetchInterval: false,
-      retry: 1,
-      retryDelay: 5000,               // 5秒重試延遲
-      retryOnMount: false,
-      structuralSharing: false,
-      refetchOnReconnect: false
+  // 使用安全的批量讀取 Vault 參數
+  const { data: vaultParams, isLoading: isLoadingVaultParams, error: vaultParamsError, refetch: refetchVaultParams } = useSafeMultipleReads(
+    vaultContracts,
+    { enabled: loadedSections.taxSystem }
+  );
+
+  // 額外的調試信息 - 檢查參數合約
+  useEffect(() => {
+    if (parameterContracts.length > 0) {
+      logger.debug('📊 參數合約配置:', {
+        count: parameterContracts.length,
+        contracts: parameterContracts.map(c => ({
+          address: c.address,
+          functionName: c.functionName,
+          hasAbi: !!c.abi
+        }))
+      });
     }
-  });
+  }, [parameterContracts]);
+  
+  // 診斷參數讀取結果
+  useEffect(() => {
+    if (!isLoadingParams) {
+      logger.debug('📊 參數讀取狀態:', {
+        isLoading: isLoadingParams,
+        hasParams: !!params,
+        paramsType: typeof params,
+        isArray: Array.isArray(params),
+        length: params?.length,
+        error: paramsError,
+        errorMessage: paramsError?.message
+      });
+      
+      if (params && Array.isArray(params)) {
+        logger.debug('📊 參數讀取結果詳情:', {
+          results: params.map((result: any, index: number) => ({
+            index,
+            status: result?.status,
+            hasResult: !!result?.result,
+            resultValue: result?.result,
+            error: result?.error?.message
+          }))
+        });
+        
+        // 特別檢查 explorationFee
+        const explorationFeeIndex = parameterConfig.findIndex(p => p.key === 'explorationFee');
+        if (explorationFeeIndex >= 0) {
+          logger.debug('🔍 explorationFee 讀取狀態:', {
+            index: explorationFeeIndex,
+            configKey: parameterConfig[explorationFeeIndex]?.key,
+            hasParam: !!params[explorationFeeIndex],
+            status: params[explorationFeeIndex]?.status,
+            result: params[explorationFeeIndex]?.result,
+            error: params[explorationFeeIndex]?.error
+          });
+        }
+      }
+    }
+  }, [isLoadingParams, params, paramsError, parameterConfig]);
 
   // 額外的調試信息 - 檢查參數合約
   useEffect(() => {
@@ -569,10 +602,10 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   const [hasShownError, setHasShownError] = useState<{ settings?: boolean; params?: boolean; vault?: boolean }>({});
   
   useEffect(() => {
-    if (settingsError && !hasShownError.settings) {
+    if (contractsReadError && !hasShownError.settings) {
       // 詳細錯誤信息
-      const errorMessage = settingsError.message || '未知錯誤';
-      const errorStack = settingsError.stack || '無堆疊信息';
+      const errorMessage = contractsReadError.message || '未知錯誤';
+      const errorStack = contractsReadError.stack || '無堆疊信息';
       
       logger.error('讀取管理員設定失敗詳細信息:', {
         message: errorMessage,
@@ -580,16 +613,16 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         contractsToReadLength: contractsToRead?.length,
         contractsToReadContent: contractsToRead?.map(c => `${c.address}:${c.functionName}`),
         chainId,
-        error: settingsError
+        error: contractsReadError
       });
       
       showToast(`讀取合約設定失敗: ${errorMessage}`, 'error');
       setHasShownError(prev => ({ ...prev, settings: true }));
     }
-    if (!settingsError && hasShownError.settings) {
+    if (!contractsReadError && hasShownError.settings) {
       setHasShownError(prev => ({ ...prev, settings: false }));
     }
-  }, [settingsError, hasShownError.settings, showToast, contractsToRead, chainId]);
+  }, [contractsReadError, hasShownError.settings, showToast, contractsToRead, chainId]);
   
   useEffect(() => {
     if (paramsError && !hasShownError.params) {
@@ -614,7 +647,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   }, [vaultParamsError, hasShownError.vault, showToast]);
 
   // 只在第一次加載合約串接中心時顯示全屏加載
-  if (loadedSections.contractCenter && isLoadingSettings && !ownerAddress) {
+  if (loadedSections.contractCenter && isLoadingContracts && !ownerAddress) {
     return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
   }
 
@@ -633,7 +666,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         title="合約串接中心"
         defaultExpanded={true}
         onExpand={() => setLoadedSections(prev => ({ ...prev, contractCenter: true }))}
-        isLoading={isLoadingSettings && loadedSections.contractCenter}
+        isLoading={isLoadingContracts && loadedSections.contractCenter}
       >
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <p className="text-gray-300 text-sm max-w-2xl">此頁面用於在合約部署後，將各個模組的地址設定到正確的位置。請依序填入所有已部署的合約地址，然後點擊「全部設定」，或逐一進行設定。</p>
@@ -654,7 +687,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                 currentAddress={currentAddressMap[config.key]} 
                 envAddress={envAddressMap[config.key]?.address} 
                 envContractName={envAddressMap[config.key]?.name} 
-                isLoading={isLoadingSettings} 
+                isLoading={isLoadingContracts} 
                 inputValue={inputs[config.key] || ''} 
                 onInputChange={(val) => setInputs(prev => ({ ...prev, [config.key]: val }))} 
                 onSet={() => {
@@ -680,7 +713,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                 currentAddress={currentAddressMap[config.key]} 
                 envAddress={envAddressMap[config.key]?.address} 
                 envContractName={envAddressMap[config.key]?.name} 
-                isLoading={isLoadingSettings} 
+                isLoading={isLoadingContracts} 
                 inputValue={inputs[config.key] || ''} 
                 onInputChange={(val) => setInputs(prev => ({ ...prev, [config.key]: val }))} 
                 onSet={() => {
@@ -753,12 +786,29 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
               {...rest}
               functionName={setter}
               readSource={`${p.contract.address}.${p.getter}()`}
-              currentValue={params && paramIndex >= 0 ? params[paramIndex]?.result : undefined}
+              currentValue={params && paramIndex >= 0 && params[paramIndex] ? params[paramIndex].result : undefined}
               isLoading={isLoadingParams}
             />
           );
         })}
       </AdminSection>
+
+      {/* 診斷區塊 - 生產環境請移除 */}
+      {import.meta.env.DEV && (
+        <AdminSection title="診斷信息" defaultExpanded={true}>
+          <div className="p-4 bg-gray-800 rounded">
+            <p>參數載入狀態: {isLoadingParams ? '載入中' : '完成'}</p>
+            <p>參數數量: {params?.length || 0}</p>
+            <p>explorationFee 索引: {parameterConfig.findIndex(p => p.key === 'explorationFee')}</p>
+            {params && params[parameterConfig.findIndex(p => p.key === 'explorationFee')] && (
+              <div>
+                <p>explorationFee 狀態: {params[parameterConfig.findIndex(p => p.key === 'explorationFee')].status}</p>
+                <p>explorationFee 結果: {params[parameterConfig.findIndex(p => p.key === 'explorationFee')].result?.toString()}</p>
+              </div>
+            )}
+          </div>
+        </AdminSection>
+      )}
 
       <AdminSection 
         title="平台費用管理 (BNB)"
@@ -769,13 +819,32 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         {parameterConfig && Array.isArray(parameterConfig) && parameterConfig.filter(p => p && p.unit === 'BNB').map((p) => {
           const { key, setter, ...rest } = p;
           const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
+          
+          // 調試：檢查探索費用的數據
+          if (p.key === 'explorationFee') {
+            logger.debug('🔍 探索費用調試信息:', {
+              key: p.key,
+              label: p.label,
+              paramIndex,
+              paramsExist: !!params,
+              paramsLength: params?.length,
+              specificParam: params?.[paramIndex],
+              status: params?.[paramIndex]?.status,
+              result: params?.[paramIndex]?.result,
+              error: params?.[paramIndex]?.error,
+              isLoadingParams,
+              contractAddress: p.contract?.address,
+              functionName: p.getter
+            });
+          }
+          
           return (
             <SettingRow
               key={key}
               {...rest}
               functionName={setter}
               readSource={`${p.contract.address}.${p.getter}()`}
-              currentValue={params && paramIndex >= 0 ? params[paramIndex]?.result : undefined}
+              currentValue={params && paramIndex >= 0 && params[paramIndex] ? params[paramIndex].result : undefined}
               isLoading={isLoadingParams}
             />
           );
@@ -854,7 +923,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
               {...rest}
               functionName={setter}
               readSource={`${p.contract.address}.${p.getter}()`}
-              currentValue={params && paramIndex >= 0 ? params[paramIndex]?.result : undefined}
+              currentValue={params && paramIndex >= 0 && params[paramIndex] ? params[paramIndex].result : undefined}
               isLoading={isLoadingParams}
             />
           );
@@ -876,7 +945,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
               {...rest}
               functionName={setter}
               readSource={`${p.contract.address}.${p.getter}()`}
-              currentValue={params && paramIndex >= 0 ? params[paramIndex]?.result : undefined}
+              currentValue={params && paramIndex >= 0 && params[paramIndex] ? params[paramIndex].result : undefined}
               isLoading={isLoadingParams}
             />
           );

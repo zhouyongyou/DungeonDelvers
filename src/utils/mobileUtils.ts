@@ -31,17 +31,24 @@ export const getSafeAreaInsets = () => {
   };
 };
 
-// 防止雙擊縮放
-export const preventDoubleTapZoom = (element: HTMLElement): void => {
+// 防止雙擊縮放 - 修復版本（返回清理函數）
+export const preventDoubleTapZoom = (element: HTMLElement): (() => void) => {
   let lastTouchEnd = 0;
   
-  element.addEventListener('touchend', (event) => {
+  const handleTouchEnd = (event: TouchEvent) => {
     const now = Date.now();
     if (now - lastTouchEnd <= 300) {
       event.preventDefault();
     }
     lastTouchEnd = now;
-  }, false);
+  };
+  
+  element.addEventListener('touchend', handleTouchEnd, false);
+  
+  // 返回清理函數
+  return () => {
+    element.removeEventListener('touchend', handleTouchEnd, false);
+  };
 };
 
 // 獲取視口尺寸（考慮移動瀏覽器工具欄）

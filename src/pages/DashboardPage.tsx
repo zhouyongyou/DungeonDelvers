@@ -7,7 +7,7 @@ import { formatEther } from 'viem';
 import { getContract, contracts } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import type { Page } from '../types/page';
-import { useAppToast } from '../hooks/useAppToast';
+import { useAppToast } from '../contexts/SimpleToastContext';
 import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';
 import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
 import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';

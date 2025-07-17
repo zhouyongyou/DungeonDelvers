@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useWriteContract } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getContract } from '../config/contracts';
-import { useAppToast } from '../hooks/useAppToast';
+import { useAppToast } from '../contexts/SimpleToastContext';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { ActionButton } from '../components/ui/ActionButton';
 import { isAddress, formatEther } from 'viem';
@@ -28,6 +28,22 @@ const GET_REFERRAL_DATA_QUERY = `
       vault {
         referrer
         totalCommissionPaid
+      }
+    }
+  }
+`;
+
+// 查詢推薦人基本信息（用於落地頁）
+const GET_REFERRER_INFO_QUERY = `
+  query GetReferrerInfo($address: ID!) {
+    player(id: $address) {
+      id
+      heros {
+        id
+      }
+      parties {
+        id
+        totalPower
       }
     }
   }
@@ -64,7 +80,8 @@ const useReferralData = () => {
 // =================================================================
 
 const ReferralPage: React.FC = () => {
-    const { address, chainId } = useAccount();
+    console.log('ReferralPage 組件被渲染');
+    const { address, chainId, isConnected } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
     const queryClient = useQueryClient();
@@ -73,6 +90,7 @@ const ReferralPage: React.FC = () => {
     const [copied, setCopied] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [autoDetectedRef, setAutoDetectedRef] = useState<string | null>(null);
+    const [urlRefParam, setUrlRefParam] = useState<string | null>(null);
 
     // ★ 核心改造：使用新的 Hook 獲取數據
     const { data: referralData, isLoading } = useReferralData();
@@ -88,21 +106,29 @@ const ReferralPage: React.FC = () => {
         return currentReferrer && currentReferrer !== '0x0000000000000000000000000000000000000000';
     }, [currentReferrer]);
 
+    // 檢測 URL 中的 ref 參數 - 分成兩個 useEffect
+    // 第一個：立即檢測 URL 參數
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
         const ref = urlParams.get('ref');
+        console.log('檢測到 ref 參數:', ref); // 調試用
+        
         if (ref && isAddress(ref)) {
+            setUrlRefParam(ref);
             setReferrerInput(ref);
             logger.debug('檢測到推薦連結', { ref });
-            
-            // 如果用戶已連接錢包且沒有邀請人，自動顯示確認彈窗
-            if (address && !hasReferrer && ref.toLowerCase() !== address.toLowerCase()) {
-                setAutoDetectedRef(ref);
-                setShowConfirmModal(true);
-                logger.info('自動顯示推薦確認彈窗', { ref, userAddress: address });
-            }
         }
-    }, [address, hasReferrer]);
+    }, []); // 只在組件掛載時執行一次
+
+    // 第二個：處理自動顯示確認彈窗
+    useEffect(() => {
+        console.log('isConnected:', isConnected); // 調試用
+        if (urlRefParam && address && !hasReferrer && urlRefParam.toLowerCase() !== address.toLowerCase()) {
+            setAutoDetectedRef(urlRefParam);
+            setShowConfirmModal(true);
+            logger.info('自動顯示推薦確認彈窗', { ref: urlRefParam, userAddress: address });
+        }
+    }, [urlRefParam, address, hasReferrer]);
 
     const handleSetReferrer = async () => {
         if (!isAddress(referrerInput)) return showToast('請輸入有效的錢包地址', 'error');
@@ -127,7 +153,7 @@ const ReferralPage: React.FC = () => {
 
     const referralLink = useMemo(() => {
         if (typeof window === 'undefined' || !address) return '';
-        return `${window.location.origin}${window.location.pathname}#/?ref=${address}`;
+        return `${window.location.origin}${window.location.pathname}#/referral?ref=${address}`;
     }, [address]);
 
     const handleCopyLink = () => {
@@ -136,6 +162,133 @@ const ReferralPage: React.FC = () => {
         setTimeout(() => setCopied(false), 2000);
     };
     
+    // 查詢推薦人信息（用於落地頁顯示）
+    const { data: referrerInfo } = useQuery({
+        queryKey: ['referrerInfo', urlRefParam],
+        queryFn: async () => {
+            if (!urlRefParam || !THE_GRAPH_API_URL) return null;
+            const response = await fetch(THE_GRAPH_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    query: GET_REFERRER_INFO_QUERY,
+                    variables: { address: urlRefParam.toLowerCase() },
+                }),
+            });
+            const { data } = await response.json();
+            return data.player;
+        },
+        enabled: !!urlRefParam && !isConnected,
+    });
+
+    const referrerTotalPower = referrerInfo?.parties?.reduce((sum: number, party: any) => 
+        sum + Number(party.totalPower), 0
+    ) || 0;
+
+    // 調試信息
+    console.log('ReferralPage 渲染條件:', {
+        isConnected,
+        urlRefParam,
+        chainId,
+        address,
+        hasReferrer,
+        currentReferrer
+    });
+
+    // 如果未連接錢包且有推薦參數，顯示推薦落地頁
+    if (!isConnected && urlRefParam) {
+        console.log('顯示推薦落地頁');
+        return (
+            <div className="min-h-screen bg-gradient-to-b from-gray-900 via-purple-900/20 to-gray-900">
+                <div className="container mx-auto px-4 py-8 max-w-6xl">
+                    {/* 標題區 */}
+                    <div className="text-center mb-12">
+                        <h1 className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-red-500 to-purple-600 mb-4">
+                            歡迎來到 Dungeon Delvers
+                        </h1>
+                        <p className="text-xl text-gray-300">
+                            您的朋友邀請您加入這個史詩般的區塊鏈冒險！
+                        </p>
+                    </div>
+
+                    {/* 推薦人信息卡片 */}
+                    {referrerInfo && (
+                        <div className="card-bg p-6 rounded-2xl mb-8 text-center max-w-md mx-auto">
+                            <h3 className="text-lg font-bold text-yellow-400 mb-4">您的推薦人</h3>
+                            <div className="space-y-3">
+                                <p className="font-mono text-sm text-gray-400 break-all">
+                                    {urlRefParam}
+                                </p>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-black/20 p-3 rounded-lg">
+                                        <p className="text-gray-400 text-sm">擁有英雄</p>
+                                        <p className="text-2xl font-bold text-white">
+                                            {referrerInfo.heros?.length || 0}
+                                        </p>
+                                    </div>
+                                    <div className="bg-black/20 p-3 rounded-lg">
+                                        <p className="text-gray-400 text-sm">總戰力</p>
+                                        <p className="text-2xl font-bold text-white">
+                                            {referrerTotalPower}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 遊戲特色介紹 */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                        <div className="card-bg p-6 rounded-xl text-center">
+                            <Icons.Hero className="w-16 h-16 text-blue-400 mx-auto mb-4" />
+                            <h3 className="text-xl font-bold text-white mb-2">收集英雄</h3>
+                            <p className="text-gray-400">
+                                鑄造獨特的 NFT 英雄，每個都有不同的稀有度和戰力
+                            </p>
+                        </div>
+                        <div className="card-bg p-6 rounded-xl text-center">
+                            <Icons.Party className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
+                            <h3 className="text-xl font-bold text-white mb-2">組建隊伍</h3>
+                            <p className="text-gray-400">
+                                將英雄和聖物組合成強大的隊伍，征服地下城
+                            </p>
+                        </div>
+                        <div className="card-bg p-6 rounded-xl text-center">
+                            <Icons.ExternalLink className="w-16 h-16 text-green-400 mx-auto mb-4" />
+                            <h3 className="text-xl font-bold text-white mb-2">賺取獎勵</h3>
+                            <p className="text-gray-400">
+                                完成遠征任務，獲得 $SoulShard 代幣獎勵
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* 開始遊戲區塊 */}
+                    <div className="card-bg p-8 rounded-2xl text-center max-w-2xl mx-auto">
+                        <h2 className="text-3xl font-bold text-white mb-6">
+                            準備開始您的冒險了嗎？
+                        </h2>
+                        <p className="text-gray-400 mb-6">
+                            連接您的錢包以開始遊戲，並自動綁定推薦人關係
+                        </p>
+                        <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-500/30 mb-6">
+                            <p className="text-sm text-blue-300">
+                                💡 提示：連接錢包後您可以確認綁定推薦人
+                            </p>
+                        </div>
+                        <p className="text-2xl mb-6">👇</p>
+                        <p className="text-lg text-gray-300 mb-4">請點擊右上角的錢包按鈕連接</p>
+                    </div>
+
+                    {/* 底部說明 */}
+                    <div className="mt-12 text-center text-sm text-gray-500">
+                        <p>邀請關係將為推薦人帶來 5% 的佣金收益</p>
+                        <p>不會影響您的任何收益，還能獲得社群支持</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     // 僅支援主網
     if (chainId && chainId !== bsc.id) {
         return <div className="p-4 text-center text-gray-400">請連接到支援的網路以使用邀請功能。</div>;

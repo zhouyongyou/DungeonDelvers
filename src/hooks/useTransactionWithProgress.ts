@@ -153,7 +153,10 @@ export function useTransactionWithProgress(options?: UseTransactionWithProgressO
                 }
               }
             } catch (err) {
-              logger.error('檢查交易狀態時出錯', err);
+              // 只記錄非 TransactionReceiptNotFoundError 的錯誤
+              if (err instanceof Error && !err.message.includes('Transaction receipt with hash')) {
+                logger.error('檢查交易狀態時出錯', err);
+              }
             }
           },
           emitOnBegin: true,
@@ -185,10 +188,28 @@ export function useTransactionWithProgress(options?: UseTransactionWithProgressO
       });
       
       if (!errorMessage.includes('User rejected')) {
-        showToast(
-          options?.errorMessage || errorMessage, 
-          'error'
-        );
+        // 🎯 智能錯誤提示 - 直接在現有邏輯中改進
+        let userFriendlyMessage = options?.errorMessage || errorMessage;
+        
+        if (errorMessage.includes('insufficient funds')) {
+          userFriendlyMessage = 'BNB 餘額不足支付手續費，請充值後重試';
+        } else if (errorMessage.includes('execution reverted')) {
+          if (errorMessage.includes('Not party owner')) {
+            userFriendlyMessage = '您不是該隊伍的擁有者，無法執行此操作';
+          } else if (errorMessage.includes('Insufficient allowance')) {
+            userFriendlyMessage = '請先授權合約使用您的代幣';
+          } else if (errorMessage.includes('Party on cooldown')) {
+            userFriendlyMessage = '隊伍正在冷卻中，請稍後再試';
+          } else {
+            userFriendlyMessage = '操作被智能合約拒絕，請檢查操作條件';
+          }
+        } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+          userFriendlyMessage = '網路連接問題，請檢查網路後重試';
+        } else if (errorMessage.includes('timeout')) {
+          userFriendlyMessage = '交易確認超時，請查看區塊鏈瀏覽器確認狀態';
+        }
+        
+        showToast(userFriendlyMessage, 'error');
         options?.onError?.(error);
       }
       

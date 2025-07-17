@@ -74,6 +74,19 @@ const getPowerRange = (rarity: number): { min: number; max: number } => {
     return ranges[Math.min(rarity, 5)] || ranges[0];
 };
 
+const getCapacityRange = (rarity: number): { min: number; max: number } => {
+    // 基於稀有度的容量範圍
+    const ranges = [
+        { min: 0, max: 0 },     // 0 - 不存在
+        { min: 1, max: 1 },     // 1 - Common
+        { min: 2, max: 2 },     // 2 - Uncommon
+        { min: 3, max: 3 },     // 3 - Rare
+        { min: 4, max: 4 },     // 4 - Epic
+        { min: 5, max: 5 }      // 5 - Legendary
+    ];
+    return ranges[Math.min(rarity, 5)] || ranges[0];
+};
+
 // ============= Emoji 選擇 =============
 
 const getHeroEmojis = (rarity: number): { main: string; secondary: string } => {
@@ -102,7 +115,7 @@ const getRelicEmojis = (rarity: number): { main: string; secondary: string } => 
 
 // ============= Hero SVG 生成器 =============
 
-export function generateHeroSVG(hero: HeroNft): string {
+export function generateHeroSVG(hero: HeroNft, isCodex: boolean = false): string {
     const rarityValue = typeof hero.rarity === 'string' ? parseInt(hero.rarity) : hero.rarity;
     const rarityColor = getRarityColor(rarityValue);
     const powerRange = getPowerRange(rarityValue);
@@ -123,17 +136,24 @@ export function generateHeroSVG(hero: HeroNft): string {
         <!-- 標題區 -->
         <text x="200" y="40" text-anchor="middle" class="title">HERO #${hero.id}</text>
         
-        <!-- 中央雙 Emoji -->
-        <g transform="translate(200, 160)" class="float">
-            <text x="-50" y="0" text-anchor="middle" style="font-size: 80px;">${emojis.main}</text>
-            <text x="50" y="0" text-anchor="middle" style="font-size: 80px;">${emojis.secondary}</text>
-        </g>
+        <!-- 使用 foreignObject 顯示 Emoji -->
+        <foreignObject x="50" y="120" width="300" height="100" class="float">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; justify-content: center; align-items: center; height: 100%; gap: 20px;">
+                <span style="font-size: 60px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;">${emojis.main}</span>
+                <span style="font-size: 60px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;">${emojis.secondary}</span>
+            </div>
+        </foreignObject>
         
-        <!-- 主要屬性 - 戰力範圍 -->
+        <!-- 主要屬性 -->
         <rect x="50" y="260" width="300" height="80" rx="10" fill="${rarityColor}" opacity="0.1"/>
+        ${isCodex ? `
         <text x="200" y="285" text-anchor="middle" class="stat-label">POWER RANGE</text>
         <text x="200" y="315" text-anchor="middle" class="stat-value">${powerRange.min} - ${powerRange.max}</text>
         <text x="200" y="335" text-anchor="middle" style="font: 12px 'Cinzel', serif; fill: #9ca3af;">Current: ${hero.power}</text>
+        ` : `
+        <text x="200" y="300" text-anchor="middle" class="stat-label">POWER</text>
+        <text x="200" y="330" text-anchor="middle" class="stat-value">${hero.power}</text>
+        `}
         
         <!-- 稀有度 -->
         <text x="200" y="370" text-anchor="middle" class="rarity">${getRarityStars(rarityValue)}</text>
@@ -142,7 +162,7 @@ export function generateHeroSVG(hero: HeroNft): string {
 
 // ============= Relic SVG 生成器 =============
 
-export function generateRelicSVG(relic: RelicNft): string {
+export function generateRelicSVG(relic: RelicNft, isCodex: boolean = false): string {
     const rarityValue = typeof relic.rarity === 'string' ? parseInt(relic.rarity) : relic.rarity;
     const rarityColor = getRarityColor(rarityValue);
     const emojis = getRelicEmojis(rarityValue);
@@ -162,17 +182,25 @@ export function generateRelicSVG(relic: RelicNft): string {
         <!-- 標題區 -->
         <text x="200" y="40" text-anchor="middle" class="title">RELIC #${relic.id}</text>
         
-        <!-- 中央雙 Emoji -->
-        <g transform="translate(200, 160)" class="float">
-            <text x="-50" y="0" text-anchor="middle" style="font-size: 80px;">${emojis.main}</text>
-            <text x="50" y="0" text-anchor="middle" style="font-size: 80px;">${emojis.secondary}</text>
-        </g>
+        <!-- 使用 foreignObject 顯示 Emoji -->
+        <foreignObject x="50" y="120" width="300" height="100" class="float">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; justify-content: center; align-items: center; height: 100%; gap: 20px;">
+                <span style="font-size: 60px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;">${emojis.main}</span>
+                <span style="font-size: 60px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;">${emojis.secondary}</span>
+            </div>
+        </foreignObject>
         
-        <!-- 主要屬性 - 容量 -->
+        <!-- 主要屬性 -->
         <rect x="50" y="260" width="300" height="80" rx="10" fill="${rarityColor}" opacity="0.1"/>
+        ${isCodex ? `
+        <text x="200" y="285" text-anchor="middle" class="stat-label">CAPACITY RANGE</text>
+        <text x="200" y="315" text-anchor="middle" class="stat-value">${getCapacityRange(rarityValue).min} - ${getCapacityRange(rarityValue).max}</text>
+        <text x="200" y="335" text-anchor="middle" style="font: 12px 'Cinzel', serif; fill: #9ca3af;">Current: ${relic.capacity}</text>
+        ` : `
         <text x="200" y="285" text-anchor="middle" class="stat-label">CAPACITY</text>
         <text x="200" y="315" text-anchor="middle" class="stat-value">${relic.capacity}</text>
         <text x="200" y="335" text-anchor="middle" style="font: 12px 'Cinzel', serif; fill: #9ca3af;">Heroes Limit</text>
+        `}
         
         <!-- 稀有度 -->
         <text x="200" y="370" text-anchor="middle" class="rarity">${getRarityStars(rarityValue)}</text>

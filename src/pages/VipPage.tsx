@@ -11,7 +11,7 @@ import { logger } from '../utils/logger';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useContractTransaction, ContractOperations } from '../hooks/useContractTransaction';
 import { APP_CONSTANTS, getVipTier } from '../config/constants';
-import { useAppToast } from '../hooks/useAppToast';
+import { useAppToast } from '../contexts/SimpleToastContext';
 
 const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undefined, vipLevel: number, contractAddress?: string }> = ({ tokenId, chainId, vipLevel, contractAddress }) => {
     const [nftImage, setNftImage] = useState<string | null>(null);
@@ -354,7 +354,7 @@ const VipPageContent: React.FC = () => {
                 {/* 質押冷卻期提示 */}
                 <div className="mb-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded">
                     <p className="text-sm text-blue-300">
-                        ⏱️ <strong>質押冷卻期</strong>：贖回請求後需等待 <span className="text-yellow-400 font-bold">{cooldownFormatted}</span> 才能領取
+                        ⏱️ <strong>質押冷卻期</strong>：贖回請求後需等待 <span className="text-yellow-400 font-bold">{isLoading ? '讀取中...' : cooldownFormatted}</span> 才能領取
                     </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">

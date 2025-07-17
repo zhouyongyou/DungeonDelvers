@@ -2,7 +2,7 @@ import { useWriteContract } from 'wagmi';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { useAppToast } from './useAppToast';
 import { logger } from '../utils/logger';
-import { useGlobalLoading } from '../components/core/GlobalLoadingProvider';
+// import { useGlobalLoading } from '../components/core/GlobalLoadingProvider'; // 移除未使用的 Provider
 
 export interface ContractTransactionConfig {
   contractCall: {
@@ -24,7 +24,7 @@ export function useContractTransaction() {
   const { writeContractAsync, isPending } = useWriteContract();
   const { addTransaction } = useTransactionStore();
   const { showToast } = useAppToast();
-  const { setLoading } = useGlobalLoading();
+  // const { setLoading } = useGlobalLoading(); // 移除未使用的 hook
 
   const executeTransaction = async (config: ContractTransactionConfig): Promise<string | null> => {
     const {
@@ -40,7 +40,7 @@ export function useContractTransaction() {
     try {
       // 設置加載狀態
       if (loadingMessage) {
-        setLoading(true, loadingMessage);
+        // setLoading(true, loadingMessage); // 移除未使用的 loading
       }
 
       logger.info('Executing contract transaction:', {
@@ -96,7 +96,7 @@ export function useContractTransaction() {
     } finally {
       // 清除加載狀態
       if (loadingMessage) {
-        setLoading(false);
+        // setLoading(false); // 移除未使用的 loading
       }
     }
   };

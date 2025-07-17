@@ -14,21 +14,23 @@ interface NftSvgDisplayProps {
     className?: string;
     interactive?: boolean;
     showFallback?: boolean;
+    isCodex?: boolean;
 }
 
 export const NftSvgDisplay: React.FC<NftSvgDisplayProps> = ({ 
     nft, 
     className = '', 
     interactive = true,
-    showFallback = true 
+    showFallback = true,
+    isCodex = false 
 }) => {
     const svgContent = useMemo(() => {
         try {
             switch (nft.type) {
                 case 'hero':
-                    return generateHeroSVG(nft);
+                    return generateHeroSVG(nft, isCodex);
                 case 'relic':
-                    return generateRelicSVG(nft);
+                    return generateRelicSVG(nft, isCodex);
                 case 'party':
                     return generatePartySVG(nft);
                 case 'vip':

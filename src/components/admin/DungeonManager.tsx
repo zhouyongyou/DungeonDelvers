@@ -88,11 +88,55 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
     }
   };
 
+  const handleInitializeAllDungeons = async () => {
+    if (!dungeonMasterContract) return;
+    
+    setPendingDungeon(-1); // 使用 -1 表示批量處理
+    
+    try {
+      for (const dungeon of defaultDungeons) {
+        const inputs = dungeonInputs[dungeon.id];
+        await writeContractAsync({
+          address: dungeonMasterContract.address,
+          abi: dungeonMasterContract.abi as Abi,
+          functionName: 'adminSetDungeon',
+          args: [
+            BigInt(dungeon.id),
+            BigInt(inputs.requiredPower),
+            parseEther(inputs.rewardAmountUSD),
+            BigInt(inputs.baseSuccessRate)
+          ],
+        });
+        
+        showToast(`地城 #${dungeon.id} - ${dungeon.name} 初始化成功！`, 'success');
+        
+        // 稍微延遲避免 RPC 請求過於頻繁
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      showToast('所有地城初始化完成！', 'success');
+    } catch (e) {
+      const err = e as { shortMessage?: string };
+      showToast(err.shortMessage || '批量初始化失敗', "error");
+    } finally {
+      setPendingDungeon(null);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-semibold text-yellow-400">地下城配置管理</h3>
-        <p className="text-sm text-gray-400">設定地下城的戰力要求、獎勵和成功率</p>
+        <div>
+          <h3 className="text-xl font-semibold text-yellow-400">地下城配置管理</h3>
+          <p className="text-sm text-gray-400">設定地下城的戰力要求、獎勵和成功率</p>
+        </div>
+        <ActionButton
+          onClick={handleInitializeAllDungeons}
+          isLoading={pendingDungeon === -1}
+          className="bg-green-600 hover:bg-green-700 text-white px-6 py-2"
+        >
+          批量初始化所有地城
+        </ActionButton>
       </div>
 
       {defaultDungeons.map((dungeon) => {

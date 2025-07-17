@@ -66,7 +66,7 @@ export function getCurrentWatchConfig(): WatchConfig {
   const currentPage = getCurrentPageName();
   const config = WATCH_CONFIGS[currentPage] || WATCH_CONFIGS.default;
   
-  logger.debug(`🔍 當前頁面 Watch 配置: ${currentPage}`, config);
+  // logger.debug(`🔍 當前頁面 Watch 配置: ${currentPage}`, config);
   
   return config;
 }
@@ -165,24 +165,24 @@ class WatchManager {
     const config = getCurrentWatchConfig();
     
     if (!config.enabled) {
-      logger.debug(`Watch 已禁用，跳過註冊: ${key}`);
+      // logger.debug(`Watch 已禁用，跳過註冊: ${key}`);
       return false;
     }
     
     if (this.activeWatchers.size >= config.maxWatchers) {
-      logger.warn(`Watch 數量已達上限 (${config.maxWatchers})，跳過註冊: ${key}`);
+      // logger.warn(`Watch 數量已達上限 (${config.maxWatchers})，跳過註冊: ${key}`);
       return false;
     }
     
     this.activeWatchers.add(key);
-    logger.debug(`註冊 Watch: ${key} (${this.activeWatchers.size}/${config.maxWatchers})`);
+    // logger.debug(`註冊 Watch: ${key} (${this.activeWatchers.size}/${config.maxWatchers})`);
     return true;
   }
   
   // 移除 Watcher
   unregisterWatcher(key: string): void {
     this.activeWatchers.delete(key);
-    logger.debug(`移除 Watch: ${key} (${this.activeWatchers.size})`);
+    // logger.debug(`移除 Watch: ${key} (${this.activeWatchers.size})`);
   }
   
   // 獲取活動 Watcher 數量

@@ -138,7 +138,7 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
       <SimpleSettingRow
         title="探索費用 (BNB)"
         description="每次探索需要支付的 BNB 費用"
-        currentValue={currentValues.explorationFee ? 
+        currentValue={currentValues.explorationFee !== undefined ? 
           `${formatEther(currentValues.explorationFee)} BNB` : 
           '載入中...'
         }

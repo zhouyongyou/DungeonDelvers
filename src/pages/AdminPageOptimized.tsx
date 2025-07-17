@@ -6,7 +6,7 @@ import { useMonitoredReadContracts } from '../hooks/useMonitoredContract';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatEther, isAddress } from 'viem';
 import { getContract, contracts as contractConfigs } from '../config/contracts';
-import { useAppToast } from '../hooks/useAppToast';
+import { useAppToast } from '../contexts/SimpleToastContext';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -124,12 +124,15 @@ const AdminPageOptimizedContent: React.FC<{ chainId: SupportedChainId }> = ({ ch
   }, [chainId, setupConfig]);
 
   // 使用優化的 useMonitoredReadContracts
+  const optimizedConfig = createOptimizedContractReadConfig(contractsToRead, 'adminContractsBatch', {
+    enabled: !!chainId && contractsToRead.length > 0,
+    staleTime: 1000 * 60 * 30, // 30分鐘
+    gcTime: 1000 * 60 * 90,    // 90分鐘
+  });
+  
   const { data: readResults, isLoading: isLoadingSettings, error: settingsError } = useMonitoredReadContracts({
-    ...createOptimizedContractReadConfig(contractsToRead, 'adminContractsBatch', {
-      enabled: !!chainId && contractsToRead.length > 0,
-      staleTime: 1000 * 60 * 30, // 30分鐘
-      gcTime: 1000 * 60 * 90,    // 90分鐘
-    }),
+    contracts: optimizedConfig.contracts,
+    query: optimizedConfig.query,
     contractName: 'adminSettings',
     batchName: 'adminContractsBatch',
   });
@@ -146,12 +149,15 @@ const AdminPageOptimizedContent: React.FC<{ chainId: SupportedChainId }> = ({ ch
   }, [parameterConfig, chainId]);
 
   // 使用優化的參數讀取
+  const paramsOptimizedConfig = createOptimizedContractReadConfig(parameterContracts, 'adminParametersBatch', {
+    enabled: parameterContracts.length > 0,
+    staleTime: 1000 * 60 * 20, // 20分鐘
+    gcTime: 1000 * 60 * 60,    // 60分鐘
+  });
+  
   const { data: params, isLoading: isLoadingParams, error: paramsError } = useMonitoredReadContracts({
-    ...createOptimizedContractReadConfig(parameterContracts, 'adminParametersBatch', {
-      enabled: parameterContracts.length > 0,
-      staleTime: 1000 * 60 * 20, // 20分鐘
-      gcTime: 1000 * 60 * 60,    // 60分鐘
-    }),
+    contracts: paramsOptimizedConfig.contracts,
+    query: paramsOptimizedConfig.query,
     contractName: 'adminParameters',
     batchName: 'adminParametersBatch',
   });
@@ -170,12 +176,15 @@ const AdminPageOptimizedContent: React.FC<{ chainId: SupportedChainId }> = ({ ch
     ];
   }, [playerVaultContract]);
 
+  const vaultOptimizedConfig = createOptimizedContractReadConfig(vaultContracts, 'vaultParametersBatch', {
+    enabled: !!playerVaultContract && vaultContracts.length > 0,
+    staleTime: 1000 * 60 * 25, // 25分鐘
+    gcTime: 1000 * 60 * 75,    // 75分鐘
+  });
+  
   const { data: vaultParams, isLoading: isLoadingVaultParams, error: vaultError } = useMonitoredReadContracts({
-    ...createOptimizedContractReadConfig(vaultContracts, 'vaultParametersBatch', {
-      enabled: !!playerVaultContract && vaultContracts.length > 0,
-      staleTime: 1000 * 60 * 25, // 25分鐘
-      gcTime: 1000 * 60 * 75,    // 75分鐘
-    }),
+    contracts: vaultOptimizedConfig.contracts,
+    query: vaultOptimizedConfig.query,
     contractName: 'playerVault',
     batchName: 'vaultParametersBatch',
   });

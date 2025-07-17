@@ -483,18 +483,19 @@ export function disableWagmiWatchers(): void {
 
 // 工具函數：減少 eth_newFilter 請求
 export function optimizeEthFilters(): void {
-  // 禁用不必要的事件監聽
+  // 暫時禁用事件監聽器覆蓋以避免系統不穩定
   if (typeof window !== 'undefined') {
-    const originalAddEventListener = window.addEventListener;
-    window.addEventListener = function(type, listener, options) {
-      // 過濾掉某些事件類型
-      const blockedEvents = ['storage', 'online', 'offline'];
-      if (blockedEvents.includes(type)) {
-        logger.debug(`阻止事件監聽: ${type}`);
-        return;
-      }
-      return originalAddEventListener.call(this, type, listener, options);
-    };
+    logger.debug('事件監聽器優化已禁用');
+    // const originalAddEventListener = window.addEventListener;
+    // window.addEventListener = function(type, listener, options) {
+    //   // 過濾掉某些事件類型
+    //   const blockedEvents = ['storage', 'online', 'offline'];
+    //   if (blockedEvents.includes(type)) {
+    //     logger.debug(`阻止事件監聽: ${type}`);
+    //     return;
+    //   }
+    //   return originalAddEventListener.call(this, type, listener, options);
+    // };
   }
 }
 

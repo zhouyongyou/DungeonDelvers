@@ -1,6 +1,8 @@
 // src/config/cdn.ts
 // 🌍 CDN 和資源載入配置
 
+import { silentFetch } from '../utils/silentFetch';
+
 export interface ResourceConfig {
   baseUrl: string;
   fallbackUrl?: string;
@@ -156,12 +158,13 @@ export async function loadResourceWithFallback<T>(
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), config.timeout);
       
-      const response = await fetch(url, {
+      const response = await silentFetch(url, {
         signal: controller.signal,
         headers: {
-          'Accept': type === 'api' ? 'application/json' : '*/*',
-          'Cache-Control': 'max-age=300'
-        }
+          'Accept': type === 'api' ? 'application/json' : '*/*'
+          // 移除 Cache-Control header 以避免 CORS 問題
+        },
+        silent: true // 減少錯誤輸出
       });
       
       clearTimeout(timeoutId);
@@ -185,10 +188,11 @@ export async function loadResourceWithFallback<T>(
         try {
           const fallbackUrl = `${config.fallbackUrl}/${type}/${resourcePath}`;
 
-          const response = await fetch(fallbackUrl, {
+          const response = await silentFetch(fallbackUrl, {
             headers: {
               'Accept': type === 'api' ? 'application/json' : '*/*'
-            }
+            },
+            silent: true // fallback 也使用靜默模式
           });
           
           if (response.ok) {

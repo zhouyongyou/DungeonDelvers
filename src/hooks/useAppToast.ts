@@ -1,5 +1,6 @@
 import { useContext } from 'react';
-import { ToastContext } from '../contexts/ToastContext';
+// 使用簡化版的 ToastContext
+import { ToastContext } from '../contexts/SimpleToastContext';
 
 export const useAppToast = () => {
   const context = useContext(ToastContext);

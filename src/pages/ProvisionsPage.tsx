@@ -7,7 +7,7 @@ import { formatEther, maxUint256 } from 'viem';
 
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { getContract } from '../config/contracts';
-import { useAppToast } from '../hooks/useAppToast';
+import { useAppToast } from '../contexts/SimpleToastContext';
 import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';
 import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
 import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
@@ -70,9 +70,9 @@ const useProvisionsLogic = (quantity: number) => {
         args: [address!, dungeonMasterContract?.address],
         query: { 
             enabled: !!address && !!soulShardContract && !!dungeonMasterContract,
-            staleTime: 1000 * 60 * 5, // 5分鐘 - 授權額度需要較新的數據
-            gcTime: 1000 * 60 * 15,   // 15分鐘
-            refetchOnWindowFocus: false,
+            staleTime: 1000 * 30, // 30秒 - 授權後需要快速更新
+            gcTime: 1000 * 60 * 5,   // 5分鐘
+            refetchOnWindowFocus: true, // 視窗聚焦時重新檢查
             retry: 2,
         },
     });
@@ -91,6 +91,7 @@ const useProvisionsLogic = (quantity: number) => {
         dungeonMasterContract,
         soulShardContract,
         refetchAllowance,
+        provisionPriceUSD: provisionPriceUSD ?? 0n,
     };
 };
 
@@ -116,7 +117,8 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
     // Move all hooks before early returns
     const { 
         isLoading, totalRequiredAmount, walletBalance, needsApproval, 
-        dungeonMasterContract, soulShardContract, refetchAllowance 
+        dungeonMasterContract, soulShardContract, refetchAllowance,
+        provisionPriceUSD 
     } = useProvisionsLogic(quantity);
 
     const { data: nfts, isLoading: isLoadingNfts } = useQuery({
@@ -152,9 +154,30 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
     
     // 交易進度 Hooks - 授權
     const { execute: executeApprove, progress: approveProgress, reset: resetApprove } = useTransactionWithProgress({
-        onSuccess: () => {
-            showToast('授權成功！現在可以購買儲備了', 'success');
-            refetchAllowance();
+        onSuccess: async () => {
+            showToast('授權成功！正在更新狀態...', 'success');
+            
+            // 立即清除快取，強制重新獲取
+            queryClient.invalidateQueries({ 
+                queryKey: ['readContract', soulShardContract?.address, 'allowance'] 
+            });
+            
+            // 等待 3 秒確保交易已上鏈
+            setTimeout(async () => {
+                await refetchAllowance();
+                // 再次檢查授權狀態
+                const checkInterval = setInterval(async () => {
+                    const { data: newAllowance } = await refetchAllowance();
+                    if (newAllowance && newAllowance >= totalRequiredAmount) {
+                        clearInterval(checkInterval);
+                        showToast('授權完成！現在可以購買儲備了', 'success');
+                    }
+                }, 1000);
+                
+                // 最多檢查 10 次
+                setTimeout(() => clearInterval(checkInterval), 10000);
+            }, 3000);
+            
             setShowProgressModal(false);
             confirmApproveUpdate();
         },
@@ -309,6 +332,11 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
                 <div className="font-bold text-yellow-400 text-2xl">
                     {isLoading ? <LoadingSpinner size="h-6 w-6" /> : `${parseFloat(formatEther(typeof totalRequiredAmount === 'bigint' ? totalRequiredAmount : 0n)).toFixed(4)} $SoulShard`}
                 </div>
+                {!isLoading && (
+                    <div className="text-gray-400 text-sm mt-1">
+                        (${parseFloat(formatEther(provisionPriceUSD * BigInt(quantity))).toFixed(2)})
+                    </div>
+                )}
             </div>
             {needsApproval ? (
                 <div className="space-y-3">
@@ -322,9 +350,27 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
                     </ActionButton>
                 </div>
             ) : (
-                <ActionButton onClick={handlePurchase} isLoading={isTxPending} disabled={!selectedPartyId} className="w-full h-12">
-                    {isTxPending ? '購買儲備中...' : '購買儲備'}
-                </ActionButton>
+                <>
+                    {/* 🎯 簡單的預防性檢查提示 - 最小化修改 */}
+                    {walletBalance < totalRequiredAmount && (
+                        <div className="p-3 bg-red-900/50 rounded-lg border border-red-500/50 mb-3">
+                            <div className="text-sm text-red-300 text-center">
+                                ❌ SoulShard 餘額不足，需要 {parseFloat(formatEther(totalRequiredAmount - walletBalance)).toFixed(4)} 更多代幣
+                            </div>
+                        </div>
+                    )}
+                    
+                    <ActionButton 
+                        onClick={handlePurchase} 
+                        isLoading={isTxPending} 
+                        disabled={!selectedPartyId || walletBalance < totalRequiredAmount} 
+                        className="w-full h-12"
+                    >
+                        {isTxPending ? '購買儲備中...' : 
+                         walletBalance < totalRequiredAmount ? '餘額不足' :
+                         !selectedPartyId ? '請選擇隊伍' : '購買儲備'}
+                    </ActionButton>
+                </>
             )}
         </div>
     );

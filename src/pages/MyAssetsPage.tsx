@@ -9,7 +9,7 @@ import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { getContract } from '../config/contracts';
-import { useAppToast } from '../hooks/useAppToast';
+import { useAppToast } from '../contexts/SimpleToastContext';
 import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';
 import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
 import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
@@ -17,7 +17,7 @@ import type { HeroNft, RelicNft, NftType, PartyNft } from '../types/nft';
 import { formatEther } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
-import { useGlobalLoading } from '../components/core/GlobalLoadingProvider';
+// import { useGlobalLoading } from '../components/core/GlobalLoadingProvider'; // 移除未使用的 Provider
 import { logger } from '../utils/logger';
 import { OptimizedNftGrid } from '../components/ui/OptimizedNftGrid';
 
@@ -54,8 +54,9 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
 }: TeamBuilderProps) => {
     const [selectedHeroes, setSelectedHeroes] = useState<bigint[]>([]);
     const [selectedRelics, setSelectedRelics] = useState<bigint[]>([]);
-    const [showAllRelics, setShowAllRelics] = useState(false);
-    const [showAllHeroes, setShowAllHeroes] = useState(false);
+    // 預設顯示全部，避免用戶困惑
+    const [showAllRelics, setShowAllRelics] = useState(true);
+    const [showAllHeroes, setShowAllHeroes] = useState(true);
     const [currentStep, setCurrentStep] = useState<'select-relic' | 'select-hero' | 'ready'>('select-relic');
     const { showToast } = useAppToast();
 
@@ -119,6 +120,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
         const sortedHeroes = [...heroes].sort((a, b) => b.power - a.power);
         const selected = sortedHeroes.slice(0, totalCapacity).map(h => h.id);
         setSelectedHeroes(selected);
+        setCurrentStep('ready');
         showToast(`已自動選擇 ${selected.length} 個最強英雄`, 'success');
     };
 
@@ -127,6 +129,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
         const sortedRelics = [...relics].sort((a, b) => b.capacity - a.capacity);
         const selected = sortedRelics.slice(0, 5).map(r => r.id);
         setSelectedRelics(selected);
+        setCurrentStep('select-hero');
         showToast(`已自動選擇 ${selected.length} 個最大容量聖物`, 'success');
     };
 
@@ -261,7 +264,17 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                             👆 請先選擇 1-5 個聖物，聖物的容量決定可攜帶的英雄數量
                         </p>
                     )}
-                    <div className="flex justify-end mb-2">
+                    <div className="flex justify-between mb-2">
+                        {/* 診斷信息 - 生產環境請移除 */}
+                        {import.meta.env.DEV && relics.length > 0 && (
+                            <div className="text-xs text-gray-400">
+                                聖物總數: {relics.length} | 
+                                容量分布: {[1,2,3,4,5].map(cap => {
+                                    const count = relics.filter(r => r.capacity === cap).length;
+                                    return count > 0 ? `${cap}星:${count}` : null;
+                                }).filter(Boolean).join(', ')}
+                            </div>
+                        )}
                         <ActionButton 
                             onClick={handleAutoSelectRelics}
                             disabled={relics.length === 0}
@@ -372,7 +385,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
 // =================================================================
 
 const MyAssetsPageContent: React.FC = () => {
-    const { setLoading } = useGlobalLoading();
+    // const { setLoading } = useGlobalLoading(); // 移除未使用的 hook
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
     const queryClient = useQueryClient();
@@ -391,7 +404,7 @@ const MyAssetsPageContent: React.FC = () => {
         queryKey: ['ownedNfts', address, chainId],
         queryFn: async () => {
             logger.debug('開始載入 NFT 資產', { address, chainId });
-            setLoading(true, '載入您的 NFT 資產...');
+            // setLoading(true, '載入您的 NFT 資產...'); // 移除未使用的 loading
             try {
                 const result = await fetchAllOwnedNfts(address!, chainId!);
                 logger.debug('NFT 資產載入成功', { 
@@ -404,7 +417,7 @@ const MyAssetsPageContent: React.FC = () => {
                 logger.error('載入 NFT 資產失敗', err);
                 throw err;
             } finally {
-                setLoading(false);
+                // setLoading(false); // 移除未使用的 loading
             }
         },
         enabled: !!address && !!chainId,
@@ -472,24 +485,33 @@ const MyAssetsPageContent: React.FC = () => {
     const { execute: executeCreateParty, progress: createPartyProgress, reset: resetCreateParty } = useTransactionWithProgress({
         onSuccess: () => {
             showToast(
-                '🎉 隊伍創建成功！\n⏱️ 數據同步需要約 2-3 分鐘\n🔄 頁面將自動更新', 
+                '🎉 隊伍創建成功！正在同步數據...', 
                 'success',
-                8000
+                5000
             );
             
-            // 多階段刷新策略
+            // 立即刷新資料
             queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
+            queryClient.invalidateQueries({ queryKey: ['playerParties', address, chainId] });
             
-            setTimeout(() => {
+            // 持續刷新策略 - 每3秒檢查一次，最多檢查10次
+            let checkCount = 0;
+            const checkInterval = setInterval(() => {
+                checkCount++;
                 queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
+                queryClient.invalidateQueries({ queryKey: ['playerParties', address, chainId] });
                 refetch();
+                
+                if (checkCount >= 10) {
+                    clearInterval(checkInterval);
+                    showToast('✅ 隊伍創建完成！如果還沒看到，請稍後刷新頁面', 'info');
+                }
+            }, 3000);
+            
+            // 30秒後確保停止
+            setTimeout(() => {
+                clearInterval(checkInterval);
             }, 30000);
-            
-            setTimeout(() => {
-                queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
-                refetch();
-                showToast('✅ 隊伍數據已同步完成！', 'info');
-            }, 120000);
             
             setShowProgressModal(false);
             confirmCreatePartyUpdate();

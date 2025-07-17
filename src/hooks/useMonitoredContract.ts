@@ -5,6 +5,7 @@ import { useEffect, useCallback, useMemo } from 'react';
 // import { rpcMonitor } from '../utils/rpcMonitor'; // Removed RPC monitoring
 import { logger } from '../utils/logger';
 import { getOptimizedQueryConfig, shouldEnableWatch, watchManager } from '../config/watchConfig';
+import { useSafeReadContracts } from './useSafeReadContracts';
 
 // 獲取當前頁面名稱
 const getCurrentPageName = (): string => {
@@ -103,7 +104,25 @@ export function useMonitoredReadContracts<T = any>(
           'monitored-read-contracts',
           contractName,
           batchName,
-          validContracts.map(c => `${c.address}:${c.functionName}:${JSON.stringify(c.args || [])}`).join('|')
+          validContracts.map(c => {
+            // 安全地序列化參數，處理 BigInt
+            const safeArgs = (c.args || []).map((arg: any) => {
+              if (typeof arg === 'bigint') {
+                return `bigint:${arg.toString()}`;
+              }
+              if (arg && typeof arg === 'object' && arg.constructor?.name === 'BigInt') {
+                return `bigint:${arg.toString()}`;
+              }
+              return arg;
+            });
+            
+            try {
+              return `${c.address}:${c.functionName}:${JSON.stringify(safeArgs)}`;
+            } catch (e) {
+              // 如果還是無法序列化，使用簡單的字符串表示
+              return `${c.address}:${c.functionName}:${safeArgs.toString()}`;
+            }
+          }).join('|')
         ],
       }
     };
@@ -113,7 +132,13 @@ export function useMonitoredReadContracts<T = any>(
   try {
     // 額外的防護：確保 contracts 是有效的數組
     if (!optimizedConfig.contracts || !Array.isArray(optimizedConfig.contracts) || optimizedConfig.contracts.length === 0) {
-      logger.debug('useMonitoredReadContracts: 合約數組為空或無效，返回空結果');
+      logger.debug('useMonitoredReadContracts: 合約數組為空或無效，返回空結果', {
+        contractName,
+        batchName,
+        hasContracts: !!optimizedConfig.contracts,
+        isArray: Array.isArray(optimizedConfig.contracts),
+        length: optimizedConfig.contracts?.length
+      });
       result = {
         data: undefined,
         isLoading: false,
@@ -121,10 +146,53 @@ export function useMonitoredReadContracts<T = any>(
         refetch: () => Promise.resolve({ data: undefined })
       };
     } else {
-      result = useReadContracts(optimizedConfig);
+      // 再次驗證每個合約對象的有效性
+      const validContracts = optimizedConfig.contracts.every(contract => 
+        contract && 
+        contract.address && 
+        contract.functionName && 
+        contract.abi &&
+        contract.address !== '0x' &&
+        contract.address !== '0x0000000000000000000000000000000000000000'
+      );
+      
+      if (!validContracts) {
+        logger.error('useMonitoredReadContracts: 發現無效合約配置', {
+          contractName,
+          batchName,
+          contracts: optimizedConfig.contracts.map((c, idx) => ({
+            index: idx,
+            address: c?.address,
+            functionName: c?.functionName,
+            hasAbi: !!c?.abi,
+            isValid: !!(c && c.address && c.functionName && c.abi)
+          }))
+        });
+        result = {
+          data: undefined,
+          isLoading: false,
+          error: new Error('Invalid contract configuration'),
+          refetch: () => Promise.resolve({ data: undefined })
+        };
+      } else {
+        // 詳細記錄即將傳遞給 useSafeReadContracts 的配置
+        if (batchName === 'adminParametersBatch' || batchName === 'vipStatusBatch') {
+          logger.debug(`🔍 ${batchName} 詳細配置:`, {
+            contractCount: optimizedConfig.contracts?.length || 0,
+            contracts: optimizedConfig.contracts?.map((c, idx) => ({
+              index: idx,
+              address: c.address,
+              functionName: c.functionName,
+              hasArgs: !!c.args,
+              args: c.args
+            })) || []
+          });
+        }
+        result = useSafeReadContracts(optimizedConfig);
+      }
     }
   } catch (error) {
-    logger.error('useReadContracts 調用失敗:', error);
+    logger.error('useReadContracts 調用失敗:', { error, contractName, batchName });
     result = {
       data: undefined,
       isLoading: false,

@@ -1,7 +1,7 @@
 // src/hooks/useVipStatus.ts (修正後)
 
 import { useAccount, useReadContract, useBalance, useReadContracts } from 'wagmi';
-import { useMonitoredReadContracts } from './useMonitoredContract';
+// import { useMonitoredReadContracts } from './useMonitoredContract';
 import { useMemo, useEffect } from 'react';
 import { bsc } from 'wagmi/chains';
 import { getContract } from '../config/contracts';
@@ -10,7 +10,7 @@ import { logger } from '../utils/logger';
 
 // 格式化冷卻期的輔助函數
 const formatCooldownPeriod = (cooldownPeriod: any): string => {
-    if (!cooldownPeriod) return '7 天';
+    if (cooldownPeriod === undefined || cooldownPeriod === null) return '讀取中...';
     
     const seconds = Number(cooldownPeriod);
     
@@ -43,12 +43,50 @@ export const useVipStatus = () => {
     const vipStakingContract = useMemo(() => {
         if (!isSupportedChain) return null;
         const contract = getContract(chainId, 'vipStaking');
+        
+        if (!contract) {
+            logger.error('無法獲取 VIP Staking 合約配置', { chainId });
+            return null;
+        }
+        
+        logger.debug('VIP Staking 合約配置:', { 
+            address: contract.address,
+            hasAbi: !!contract.abi,
+            abiLength: contract.abi?.length
+        });
 
         return contract;
     }, [chainId, isSupportedChain]);
     
-    const soulShardContract = useMemo(() => isSupportedChain ? getContract(chainId, 'soulShard') : null, [chainId, isSupportedChain]);
-    const oracleContract = useMemo(() => isSupportedChain ? getContract(chainId, 'oracle') : null, [chainId, isSupportedChain]);
+    const soulShardContract = useMemo(() => {
+        if (!isSupportedChain) return null;
+        const contract = getContract(chainId, 'soulShard');
+        
+        if (!contract) {
+            logger.error('無法獲取 SoulShard 合約配置', { chainId });
+            return null;
+        }
+        
+        logger.debug('SoulShard 合約配置:', { 
+            address: contract.address,
+            hasAbi: !!contract.abi,
+            abiLength: contract.abi?.length
+        });
+        
+        return contract;
+    }, [chainId, isSupportedChain]);
+    
+    const oracleContract = useMemo(() => {
+        if (!isSupportedChain) return null;
+        const contract = getContract(chainId, 'oracle');
+        
+        if (!contract) {
+            logger.error('無法獲取 Oracle 合約配置', { chainId });
+            return null;
+        }
+        
+        return contract;
+    }, [chainId, isSupportedChain]);
 
     // 讀取鏈上數據
     const { data: soulShardBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useBalance({ 
@@ -65,19 +103,90 @@ export const useVipStatus = () => {
     });
     
     // ★ 核心修正 #1: 使用合約方法獲取 VIP 等級和稅率減免（增強錯誤處理）
-    const { data: vipData, isLoading: isLoadingVipData, error: vipDataError, refetch: refetchVipData } = useMonitoredReadContracts({
-        contracts: [
-            { ...vipStakingContract, functionName: 'userStakes', args: [address!] },
-            { ...vipStakingContract, functionName: 'unstakeQueue', args: [address!] },
-            { ...soulShardContract, functionName: 'allowance', args: [address!, vipStakingContract?.address as `0x${string}`] },
-            { ...vipStakingContract, functionName: 'getVipLevel', args: [address!] },
-            { ...vipStakingContract, functionName: 'getVipTaxReduction', args: [address!] },
-            { ...vipStakingContract, functionName: 'unstakeCooldown' }, // 添加冷卻期讀取
-        ],
-        contractName: 'vipStaking',
-        batchName: 'vipStatusBatch',
+    const vipContracts = useMemo(() => {
+        if (!vipStakingContract || !soulShardContract || !address) {
+            logger.debug('VIP 合約配置不完整', { 
+                hasVipStaking: !!vipStakingContract,
+                hasSoulShard: !!soulShardContract,
+                hasAddress: !!address
+            });
+            return [];
+        }
+        
+        // 確保合約對象包含必要屬性
+        if (!vipStakingContract.address || !vipStakingContract.abi) {
+            logger.error('VIP Staking 合約配置無效', { vipStakingContract });
+            return [];
+        }
+        
+        if (!soulShardContract.address || !soulShardContract.abi) {
+            logger.error('SoulShard 合約配置無效', { soulShardContract });
+            return [];
+        }
+        
+        try {
+            const contracts = [
+                { 
+                    address: vipStakingContract.address as `0x${string}`,
+                    abi: vipStakingContract.abi,
+                    functionName: 'userStakes',
+                    args: [address]
+                },
+                { 
+                    address: vipStakingContract.address as `0x${string}`,
+                    abi: vipStakingContract.abi,
+                    functionName: 'unstakeQueue',
+                    args: [address]
+                },
+                { 
+                    address: soulShardContract.address as `0x${string}`,
+                    abi: soulShardContract.abi,
+                    functionName: 'allowance',
+                    args: [address, vipStakingContract.address as `0x${string}`]
+                },
+                { 
+                    address: vipStakingContract.address as `0x${string}`,
+                    abi: vipStakingContract.abi,
+                    functionName: 'getVipLevel',
+                    args: [address]
+                },
+                { 
+                    address: vipStakingContract.address as `0x${string}`,
+                    abi: vipStakingContract.abi,
+                    functionName: 'getVipTaxReduction',
+                    args: [address]
+                },
+                { 
+                    address: vipStakingContract.address as `0x${string}`,
+                    abi: vipStakingContract.abi,
+                    functionName: 'unstakeCooldown',
+                    args: []
+                }
+            ];
+            
+            logger.debug('VIP 合約配置已構建', { 
+                contractCount: contracts.length,
+                contracts: contracts.map(c => ({ 
+                    address: c.address, 
+                    functionName: c.functionName,
+                    hasArgs: !!c.args,
+                    argsLength: c.args?.length || 0
+                }))
+            });
+            
+            return contracts;
+        } catch (error) {
+            logger.error('構建 VIP 合約配置時發生錯誤', { error });
+            return [];
+        }
+    }, [vipStakingContract, soulShardContract, address]);
+    
+    // VIP 合約讀取 - 直接使用 wagmi 的 useReadContracts
+    const { data: vipData, isLoading: isLoadingVipData, error: vipDataError, refetch: refetchVipData } = useReadContracts({
+        contracts: vipContracts,
+        allowFailure: true,
         query: { 
-            enabled: !!address && !!vipStakingContract && !!soulShardContract && !!vipStakingContract?.address && isSupportedChain,
+            enabled: vipContracts.length > 0 && !!address && isSupportedChain,
             // 🔄 VIP 數據快取配置
             staleTime: 1000 * 60 * 10, // 10分鐘 - VIP 狀態變更不頻繁
             gcTime: 1000 * 60 * 30,    // 30分鐘

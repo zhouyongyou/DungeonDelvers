@@ -1,6 +1,6 @@
-// src/pages/CodexPage.tsx (重構：移除 SVG 生成，統一用圖片)
+// src/pages/CodexPage.tsx (重構：整合英雄、聖物、VIP)
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
 import { NftCard } from '../components/ui/NftCard';
@@ -25,6 +25,7 @@ const useAllPossibleNfts = () => useQuery({
         const getCapacityByRarity = (r: number) => [0, 1, 2, 3, 4, 5][r] || 0;
         const rarityNames = ["", "Common", "Uncommon", "Rare", "Epic", "Legendary"];
 
+        // 生成英雄和聖物
         for (const r of rarities) {
             const heroPower = getPowerByRarity(r);
             const relicCapacity = getCapacityByRarity(r);
@@ -59,44 +60,65 @@ const useAllPossibleNfts = () => useQuery({
                 source: 'fallback' as const,
             });
         }
+        
         return { heros, relics };
     },
     staleTime: Infinity, // 這些數據是靜態的，不需要重新獲取
 });
 
-// ★ 核心改造：新的 Hook，只獲取已解鎖的稀有度
+// ★ 核心改造：新的 Hook，獲取已解鎖的稀有度
 const useOwnedCodexIdentifiers = () => {
     const { address, chainId } = useAccount();
     const { data, isLoading } = useQuery<{ ownedHeroRarities: Set<number>, ownedRelicRarities: Set<number> }>({
         queryKey: ['ownedCodexIdentifiers', address, chainId],
         queryFn: async () => {
-            if (!address || !import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL) return { ownedHeroRarities: new Set(), ownedRelicRarities: new Set() };
+            if (!address || !import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL) {
+                return { ownedHeroRarities: new Set(), ownedRelicRarities: new Set() };
+            }
+            
             const response = await fetch(import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL, {
-                // Fix: Import the missing GraphQL query and handle possible missing data
-                // Import at the top of the file (outside this selection):
-                // import { GET_OWNED_RARITIES_QUERY } from '../graphql/queries';
-
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     query: `
-                        query GetOwnedRarities($owner: String!) {
+                        query GetOwnedRarities($owner: ID!) {
                             player(id: $owner) {
-                                heros { rarity }
-                                relics { rarity }
+                                id
+                                heros {
+                                    id
+                                    rarity
+                                }
+                                relics {
+                                    id
+                                    rarity
+                                }
                             }
                         }
                     `,
                     variables: { owner: address.toLowerCase() }
                 }),
             });
+            
             if (!response.ok) throw new Error('GraphQL Network response was not ok');
             const json = await response.json();
+            
+            // 檢查是否有錯誤
+            if (json.errors) {
+                console.error('GraphQL 錯誤:', json.errors);
+                return { ownedHeroRarities: new Set(), ownedRelicRarities: new Set() };
+            }
+            
             const data = json?.data;
+            const heros = data?.player?.heros || [];
+            const relics = data?.player?.relics || [];
+            
             const ownedHeroRarities = new Set<number>(
-                data?.player?.heros?.map((h: { rarity: number }) => h.rarity) ?? []
+                heros.map((h: { rarity: number }) => Number(h.rarity)).filter((r: number) => !isNaN(r))
             );
-            const ownedRelicRarities = new Set<number>(data?.player?.relics?.map((r: { rarity: number }) => r.rarity) ?? []);
+            const ownedRelicRarities = new Set<number>(
+                relics.map((r: { rarity: number }) => Number(r.rarity)).filter((r: number) => !isNaN(r))
+            );
+            
             return { ownedHeroRarities, ownedRelicRarities };
         },
         enabled: !!address && chainId === bsc.id,
@@ -111,19 +133,22 @@ const useOwnedCodexIdentifiers = () => {
 // =================================================================
 
 const CodexPage: React.FC = () => {
-    const [filter, setFilter] = useState<'hero' | 'relic'>('hero');
     const { data: allPossibleNfts, isLoading: isLoadingAll } = useAllPossibleNfts();
     const { identifiers, isLoadingIdentifiers } = useOwnedCodexIdentifiers();
 
-    const displayNfts = useMemo(() => {
-        if (!allPossibleNfts) return [];
-        return filter === 'hero' ? allPossibleNfts.heros : allPossibleNfts.relics;
-    }, [allPossibleNfts, filter]);
-
     const getIsUnlocked = (nft: AnyNft) => {
         if (!identifiers) return false;
-        if (nft.type === 'hero') return identifiers.ownedHeroRarities.has(nft.rarity);
-        if (nft.type === 'relic') return identifiers.ownedRelicRarities.has(nft.rarity);
+        
+        if (nft.type === 'hero') {
+            const rarity = typeof nft.rarity === 'number' ? nft.rarity : Number(nft.rarity);
+            return identifiers.ownedHeroRarities.has(rarity);
+        }
+        
+        if (nft.type === 'relic') {
+            const rarity = typeof nft.rarity === 'number' ? nft.rarity : Number(nft.rarity);
+            return identifiers.ownedRelicRarities.has(rarity);
+        }
+        
         return false;
     };
 
@@ -132,8 +157,10 @@ const CodexPage: React.FC = () => {
     return (
         <section>
             <h2 className="page-title">冒險者圖鑑</h2>
-            <p className="text-center text-gray-400 max-w-2xl mx-auto -mt-4 mb-6">探索埃索斯大陸上所有傳說中的英雄與聖物。點亮您已擁有的收藏！</p>
-            <div className="text-center mb-8"><a href="#/mint"><ActionButton className="px-8 py-3 text-lg">前往鑄造英雄/聖物</ActionButton></a></div>
+            <p className="text-center text-gray-400 max-w-2xl mx-auto -mt-4 mb-6">探索埃索斯大陸上所有傳說中的英雄與聖物。點亮您已解鎖的收藏！</p>
+            <div className="text-center mb-8">
+                <a href="#/mint"><ActionButton className="px-8 py-3 text-lg">前往鑄造英雄/聖物</ActionButton></a>
+            </div>
 
             {/* 圖鑑說明 */}
             <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-6 max-w-4xl mx-auto">
@@ -143,39 +170,66 @@ const CodexPage: React.FC = () => {
                 </div>
                 <ul className="text-xs text-gray-400 space-y-1">
                     <li>• <strong className="text-blue-300">已解鎖</strong>：擁有該稀有度的 NFT 後即可在圖鑑中查看</li>
+                    <li>• <strong className="text-red-400">⚠️ 重要提醒</strong>：當英雄或聖物組成隊伍後，該稀有度在圖鑑中會暫時顯示為未解鎖狀態，直到解散隊伍</li>
                     <li>• <strong className="text-purple-300">戰力範圍</strong>：英雄顯示該稀有度的戰力範圍值，實際戰力可能有所不同</li>
-                    <li>• <strong className="text-pink-300">視覺圖標</strong>：每個稀有度都有獨特的雙 Emoji 圖標來展現其特性</li>
-                    <li>• <strong className="text-yellow-300">隊伍中的 NFT</strong>：已組建隊伍的英雄和聖物會顯示為"鎖定"狀態，無法單獨使用</li>
-                    <li>• <strong className="text-green-300">數據同步</strong>：新鑄造或組隊的 NFT 需要 2-3 分鐘才會在圖鑑中更新</li>
+                    <li>• <strong className="text-green-300">數據同步</strong>：新鑄造或組隊的變更需要 2-3 分鐘才會在圖鑑中更新</li>
                 </ul>
-            </div>
-
-            <div className="flex justify-center mb-6">
-                <div className="flex items-center gap-2 bg-gray-900/50 p-1 rounded-lg">
-                    <button onClick={() => setFilter('hero')} className={`px-6 py-2 text-sm font-medium rounded-md transition ${filter === 'hero' ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'}`}>英雄圖鑑</button>
-                    <button onClick={() => setFilter('relic')} className={`px-6 py-2 text-sm font-medium rounded-md transition ${filter === 'relic' ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'}`}>聖物圖鑑</button>
-                </div>
             </div>
 
             {isLoading ? (
                 <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>
-            ) : displayNfts.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    {displayNfts.map((nft: unknown, index: number) =>  {
-                        const isUnlocked = getIsUnlocked(nft);
-                        return (
-                            <div key={index} className={`transition-all duration-500 ${isUnlocked ? 'opacity-100' : 'opacity-50 grayscale'}`}>
-                                <div className="relative">
-                                    <NftCard nft={nft} />
-                                    {!isUnlocked && (
-                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl">
-                                            <span className="font-bold text-gray-300 text-lg">未解鎖</span>
+            ) : allPossibleNfts ? (
+                <div className="space-y-12">
+                    {/* 英雄圖鑑區 */}
+                    <div>
+                        <h3 className="text-2xl font-bold text-yellow-400 mb-6 flex items-center gap-3">
+                            <span>🦸</span>
+                            <span>英雄圖鑑</span>
+                        </h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                            {allPossibleNfts.heros.map((nft, index) => {
+                                const isUnlocked = getIsUnlocked(nft);
+                                return (
+                                    <div key={`hero-${index}`} className={`transition-all duration-500 ${isUnlocked ? 'opacity-100' : 'opacity-50 grayscale'}`}>
+                                        <div className="relative">
+                                            <NftCard nft={nft} isCodex={true} />
+                                            {!isUnlocked && (
+                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl">
+                                                    <span className="font-bold text-gray-300 text-lg">未解鎖</span>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* 聖物圖鑑區 */}
+                    <div>
+                        <h3 className="text-2xl font-bold text-purple-400 mb-6 flex items-center gap-3">
+                            <span>💎</span>
+                            <span>聖物圖鑑</span>
+                        </h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                            {allPossibleNfts.relics.map((nft, index) => {
+                                const isUnlocked = getIsUnlocked(nft);
+                                return (
+                                    <div key={`relic-${index}`} className={`transition-all duration-500 ${isUnlocked ? 'opacity-100' : 'opacity-50 grayscale'}`}>
+                                        <div className="relative">
+                                            <NftCard nft={nft} isCodex={true} />
+                                            {!isUnlocked && (
+                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl">
+                                                    <span className="font-bold text-gray-300 text-lg">未解鎖</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
                 </div>
             ) : (
                 <EmptyState message="無法載入圖鑑資料。" />

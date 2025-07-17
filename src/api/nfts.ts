@@ -533,6 +533,7 @@ interface VipAsset extends AssetWithTokenId {
     stakedValueUSD?: string | number | bigint;
 }
 
+// 🔥 新版本：純子圖數據流，無需合約調用和 metadata 獲取
 async function parseNfts<T extends AssetWithTokenId>(
     assets: T[],
     type: NftType,
@@ -555,64 +556,73 @@ async function parseNfts<T extends AssetWithTokenId>(
     }
     const contractAddress = contract.address;
 
-    const uriCalls = assets.map(asset => ({
-        ...contract,
-        functionName: 'tokenURI',
-        args: [BigInt(asset.tokenId)],
-    }));
+    logger.info(`📊 使用純子圖數據流處理 ${assets.length} 個 ${type} NFT`);
 
-    const uriResults = await client.multicall({ contracts: uriCalls, allowFailure: true });
-
-    // 使用批量處理來限制並發元數據請求
-    const processAsset = async (asset: T, index: number) => {
-        const uriResult = uriResults[index];
-        let metadata: Omit<BaseNft, 'id' | 'contractAddress' | 'type'>;
-
-        // 先從子圖獲取稀有度信息（如果可用）
-        let assetRarity: number | undefined;
-        if ('rarity' in asset && typeof asset.rarity === 'number') {
-            assetRarity = asset.rarity;
-        } else if ('rarity' in asset && typeof asset.rarity === 'string') {
-            assetRarity = parseInt(asset.rarity);
-        } else if ('rarity' in asset && typeof asset.rarity === 'bigint') {
-            assetRarity = Number(asset.rarity);
-        } else if (type === 'party' && 'partyRarity' in asset) {
-            assetRarity = Number(asset.partyRarity);
-        }
-
-        if (uriResult && uriResult.status === 'success') {
-            metadata = await fetchMetadata(
-                uriResult.result as string, 
-                asset.tokenId.toString(), 
-                contractAddress
-            );
-        } else {
-            logger.warn(`無法獲取 ${type} #${asset.tokenId} 的 tokenURI，使用稀有度 ${assetRarity} 的 fallback`);
-            // 使用增強的 fallback，包含稀有度信息
-            metadata = generateFallbackMetadata(type, asset.tokenId.toString(), assetRarity);
-        }
-
-        const findAttr = (trait: string, defaultValue: string | number = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
-        
-        // 處理稀有度轉換 - 從 metadata 或子圖數據獲取
-        const getRarityFromMetadata = () => {
-          const rarityAttr = metadata.attributes?.find((a: NftAttribute) => a.trait_type === 'Rarity');
-          if (rarityAttr) {
-            return rarityAttr.value;
-          }
-          return assetRarity || 1;
+    // 直接從子圖數據構建 NFT 對象，無需額外的合約調用
+    const results = assets.map((asset: T) => {
+        // 生成基本的 metadata 結構
+        const baseMetadata = {
+            name: `${type.charAt(0).toUpperCase() + type.slice(1)} #${asset.tokenId}`,
+            description: `${type.charAt(0).toUpperCase() + type.slice(1)} NFT from DungeonDelvers`,
+            image: `/images/${type}/${type}.png`, // 使用默認圖片
+            attributes: [] as NftAttribute[]
         };
-        
-        const baseNft = { ...metadata, id: BigInt(asset.tokenId), contractAddress, source: metadata.source || 'metadata' };
+
+        const baseNft = {
+            ...baseMetadata,
+            id: BigInt(asset.tokenId),
+            contractAddress,
+            source: 'subgraph'
+        };
 
         switch (type) {
             case 'hero': {
                 const heroAsset = asset as unknown as HeroAsset;
-                return { ...baseNft, type, power: Number(heroAsset.power), rarity: getRarityFromMetadata() };
+                const power = Number(heroAsset.power);
+                const rarity = Number(heroAsset.rarity);
+                
+                logger.debug(`Hero #${asset.tokenId} 純子圖數據:`, {
+                    tokenId: asset.tokenId,
+                    power,
+                    rarity,
+                    originalPower: heroAsset.power,
+                    originalRarity: heroAsset.rarity
+                });
+                
+                return { 
+                    ...baseNft, 
+                    type, 
+                    power, 
+                    rarity,
+                    attributes: [
+                        { trait_type: 'Power', value: power },
+                        { trait_type: 'Rarity', value: rarity }
+                    ]
+                };
             }
             case 'relic': {
                 const relicAsset = asset as unknown as RelicAsset;
-                return { ...baseNft, type, capacity: Number(relicAsset.capacity), rarity: getRarityFromMetadata() };
+                const capacity = Number(relicAsset.capacity);
+                const rarity = Number(relicAsset.rarity);
+                
+                logger.debug(`Relic #${asset.tokenId} 純子圖數據:`, {
+                    tokenId: asset.tokenId,
+                    capacity,
+                    rarity,
+                    originalCapacity: relicAsset.capacity,
+                    originalRarity: relicAsset.rarity
+                });
+                
+                return { 
+                    ...baseNft, 
+                    type, 
+                    capacity, 
+                    rarity,
+                    attributes: [
+                        { trait_type: 'Capacity', value: capacity },
+                        { trait_type: 'Rarity', value: rarity }
+                    ]
+                };
             }
             case 'party': {
                 const partyAsset = asset as unknown as PartyAsset;
@@ -623,7 +633,12 @@ async function parseNfts<T extends AssetWithTokenId>(
                     totalCapacity: BigInt(partyAsset.totalCapacity), 
                     heroIds: partyAsset.heros ? partyAsset.heros.map((h) => BigInt(h.tokenId)) : [], 
                     relicIds: partyAsset.relics ? partyAsset.relics.map((r) => BigInt(r.tokenId)) : [], 
-                    partyRarity: Number(partyAsset.partyRarity) 
+                    partyRarity: Number(partyAsset.partyRarity),
+                    attributes: [
+                        { trait_type: 'Total Power', value: Number(partyAsset.totalPower) },
+                        { trait_type: 'Total Capacity', value: Number(partyAsset.totalCapacity) },
+                        { trait_type: 'Rarity', value: Number(partyAsset.partyRarity) }
+                    ]
                 };
             }
             case 'vip': {
@@ -631,22 +646,18 @@ async function parseNfts<T extends AssetWithTokenId>(
                 return { 
                     ...baseNft, 
                     type, 
-                    level: Number(vipAsset.level || findAttr('VIP Level', 0)),
+                    level: Number(vipAsset.level || 0),
                     stakedAmount: BigInt(vipAsset.stakedAmount || 0),
-                    stakedValueUSD: vipAsset.stakedValueUSD ? BigInt(vipAsset.stakedValueUSD) : undefined
+                    stakedValueUSD: vipAsset.stakedValueUSD ? BigInt(vipAsset.stakedValueUSD) : undefined,
+                    attributes: [
+                        { trait_type: 'Level', value: Number(vipAsset.level || 0) },
+                        { trait_type: 'Staked Amount', value: Number(vipAsset.stakedAmount || 0) }
+                    ]
                 };
             }
             default: return null;
         }
-    };
-
-    // 使用批量處理來處理資產，限制並發數量
-    const assetsWithIndex = assets.map((asset: unknown, index: number) => ({ asset, index }));
-    const results = await batchProcess(
-        assetsWithIndex,
-        ({ asset, index }) => processAsset(asset, index),
-        3 // 限制並發數量為3
-    );
+    });
 
     return results.filter(Boolean) as Array<HeroNft | RelicNft | PartyNft | VipNft>;
 }
@@ -708,48 +719,26 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
 
         const client = getClient(chainId);
 
-        // 🔥 優化載入順序：優先載入聖物和英雄（組隊需要），然後是其他
-        const [relics, heroes] = await Promise.all([
+        // 🔥 純子圖數據流：所有數據並行處理，無需重試邏輯
+        const [relics, heroes, parties, vipCards] = await Promise.all([
             parseNfts(playerAssets.relics || [], 'relic', chainId, client),
             parseNfts(playerAssets.heros || [], 'hero', chainId, client),
+            parseNfts(playerAssets.parties || [], 'party', chainId, client),
+            playerAssets.vip ? parseNfts([playerAssets.vip], 'vip', chainId, client) : Promise.resolve([])
         ]);
         
-        // 其他資產並行載入
-        // 隊伍數據可能需要更長時間同步，添加重試邏輯
-        let parties: Array<HeroNft | RelicNft | PartyNft | VipNft> = [];
-        let retryCount = 0;
-        const maxRetries = 3;
-        
-        while (retryCount < maxRetries) {
-            try {
-                parties = await parseNfts(playerAssets.parties || [], 'party', chainId, client);
-                // 檢查隊伍數據是否完整
-                const partyNfts = parties.filter((nft): nft is PartyNft => nft.type === 'party');
-                const hasValidParties = partyNfts.every(party => 
-                    party.partyRarity > 0 && 
-                    party.totalPower > 0n && 
-                    party.totalCapacity > 0n
-                );
-                if (hasValidParties || retryCount === maxRetries - 1) break;
-
-                await new Promise<void>(resolve => setTimeout(resolve, 2000)); // 等待2秒
-                retryCount++;
-            } catch (error) {
-                logger.warn(`解析隊伍數據失敗，重試 ${retryCount + 1}/${maxRetries}:`, error);
-                retryCount++;
-                if (retryCount < maxRetries) {
-                    await new Promise<void>(resolve => setTimeout(resolve, 2000));
-                }
-            }
-        }
-        
-        const vipCards = playerAssets.vip ? await parseNfts([playerAssets.vip], 'vip', chainId, client) : [];
+        logger.info('📊 純子圖數據流處理完成:', {
+            heroes: heroes.length,
+            relics: relics.length,
+            parties: parties.length,
+            vipCards: vipCards.length
+        });
 
         return {
-            heros: heroes.filter(Boolean).map(nft => ({ ...nft, source: nft.source || 'subgraph' })),
-            relics: relics.filter(Boolean).map(nft => ({ ...nft, source: nft.source || 'subgraph' })),
-            parties: parties.filter(Boolean).map(nft => ({ ...nft, source: nft.source || 'subgraph' })),
-            vipCards: vipCards.filter(Boolean).map(nft => ({ ...nft, source: nft.source || 'subgraph' })),
+            heros: heroes.filter(Boolean),
+            relics: relics.filter(Boolean),
+            parties: parties.filter(Boolean),
+            vipCards: vipCards.filter(Boolean),
         };
 
     } catch (error) {

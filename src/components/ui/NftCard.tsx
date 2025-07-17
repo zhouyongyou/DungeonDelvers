@@ -19,6 +19,7 @@ interface NftCardProps {
   disabled?: boolean;
   showDetails?: boolean;
   className?: string;
+  isCodex?: boolean;
 }
 
 const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, fallbackImage }) => {
@@ -77,7 +78,8 @@ const NftCard: React.FC<NftCardProps> = memo(({
   selected = false, 
   disabled = false, 
   showDetails = true,
-  className = '' 
+  className = '',
+  isCodex = false 
 }) => {
   const { shouldUseSvg } = useNftDisplayMode();
   const { optimizeImageUrl } = useImageOptimization();
@@ -137,6 +139,7 @@ const NftCard: React.FC<NftCardProps> = memo(({
             nft={nft} 
             className="w-full h-full rounded-lg"
             showFallback={false}
+            isCodex={isCodex}
           />
         ) : (
           <LazyImage
@@ -207,12 +210,7 @@ const NftCard: React.FC<NftCardProps> = memo(({
           </div>
         </div>
         
-        {/* 只顯示最重要的屬性，避免重複 */}
-        {nft.type === 'party' && 'heroIds' in nft && (
-          <div className="text-xs text-gray-400">
-            成員: {(nft as PartyNft).heroIds?.length || 0} 英雄, {(nft as PartyNft).relicIds?.length || 0} 聖物
-          </div>
-        )}
+        {/* 隊伍不需要顯示成員資訊 */}
       </div>
     );
   };

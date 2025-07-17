@@ -12,7 +12,7 @@ import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LocalErrorBoundary, LoadingState, ErrorState } from '../components/ui/ErrorBoundary';
-import { useAppToast } from '../hooks/useAppToast';
+import { useAppToast } from '../contexts/SimpleToastContext';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';
 import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
@@ -501,11 +501,43 @@ const AltarPage: React.FC = () => {
                         <div className="relative z-10 p-6">
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="section-title">2. 選擇材料 ({selectedNfts.length} / {currentRule?.materialsRequired ?? '...'})</h3>
-                                {currentRule && selectedNfts.length === currentRule.materialsRequired - 1 && (
-                                    <span className="text-xs text-yellow-400 animate-pulse">
-                                        再選 1 個將自動彈出確認窗口
-                                    </span>
-                                )}
+                                <div className="flex items-center gap-2">
+                                    {availableNfts && availableNfts.length >= (currentRule?.materialsRequired ?? 0) && (
+                                        <button
+                                            onClick={() => {
+                                                // 一鍵選擇：選擇戰力/容量最低的材料
+                                                if (!currentRule) return;
+                                                const lowestNfts = availableNfts
+                                                    .slice(0, currentRule.materialsRequired)
+                                                    .map(nft => nft.id);
+                                                setSelectedNfts(lowestNfts);
+                                                // 如果選滿了，自動彈出確認窗口
+                                                if (lowestNfts.length === currentRule.materialsRequired) {
+                                                    setShowConfirmModal(true);
+                                                }
+                                            }}
+                                            className="px-3 py-1 text-xs bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
+                                        >
+                                            ⚡ 一鍵選擇最弱
+                                        </button>
+                                    )}
+                                    {selectedNfts.length > 0 && (
+                                        <button
+                                            onClick={() => {
+                                                setSelectedNfts([]);
+                                                setShowConfirmModal(false);
+                                            }}
+                                            className="px-3 py-1 text-xs bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-all duration-200"
+                                        >
+                                            清除選擇
+                                        </button>
+                                    )}
+                                    {currentRule && selectedNfts.length === currentRule.materialsRequired - 1 && (
+                                        <span className="text-xs text-yellow-400 animate-pulse">
+                                            再選 1 個將自動彈出確認窗口
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                             {isLoading ? (
                                 <LoadingState message="載入材料中..." />

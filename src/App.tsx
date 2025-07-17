@@ -20,6 +20,7 @@ import { useMobileOptimization } from './hooks/useMobileOptimization';
 import PerformanceDashboard from './components/debug/PerformanceDashboard';
 import { preloadCriticalImages, setupSmartPreloading } from './utils/imagePreloadStrategy';
 import { usePagePerformance } from './utils/performanceMonitor';
+import { quickDiagnose } from './utils/simpleDiagnostics';
 
 // 動態導入所有頁面
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -70,16 +71,27 @@ function App() {
   // TODO: 優化事件監聽邏輯，只在需要的頁面啟用
   // useContractEvents();
   
-  // 性能監控
-  usePagePerformance(activePage);
+  // 性能監控 - 暫時禁用
+  // if (import.meta.env.DEV) {
+  //   usePagePerformance(activePage);
+  // }
 
   useEffect(() => {
     const handleHashChange = () => setActivePage(getPageFromHash());
     window.addEventListener('hashchange', handleHashChange);
     
-    // 初始化圖片預加載
-    preloadCriticalImages();
-    setupSmartPreloading();
+    // 延遲初始化圖片預加載，避免阻塞首次渲染
+    setTimeout(() => {
+      preloadCriticalImages();
+      setupSmartPreloading();
+    }, 1000);
+    
+    // 在開發環境下執行診斷
+    if (import.meta.env.DEV) {
+      setTimeout(() => {
+        quickDiagnose();
+      }, 2000);
+    }
     
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
@@ -96,7 +108,7 @@ function App() {
   };
 
   const renderPage = () => {
-    const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'admin', 'altar', 'profile', 'vip', 'referral', 'codex'];
+    const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'admin', 'altar', 'profile', 'vip', 'codex'];
     
     // 如果頁面需要錢包但尚未連接，則顯示提示
     if (!isConnected && pageRequiresWallet.includes(activePage)) {
@@ -155,8 +167,8 @@ function App() {
             <TransactionWatcher />
             {/* RPC 狀態監控（開發環境） - DISABLED */}
             {/* <RpcStatusMonitor /> */}
-            {/* 性能監控儀表板（開發環境） */}
-            <PerformanceDashboard />
+            {/* 性能監控儀表板（開發環境） - DISABLED */}
+            {/* <PerformanceDashboard /> */}
             {/* 移動端底部安全區域 */}
             {isMobile && <div className="h-16" />}
           </div>

@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useWriteContract, useBalance, usePublicClient, useReadContract } from 'wagmi';
 import { formatEther, maxUint256, type Abi, decodeEventLog } from 'viem';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAppToast } from '../hooks/useAppToast';
+import { useAppToast } from '../contexts/SimpleToastContext';
 import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';
 import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
 import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
@@ -330,38 +330,8 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
         if (balance < requiredAmount) return showToast(`${paymentSource === 'wallet' ? '錢包' : '金庫'}餘額不足`, 'error');
         if (paymentSource === 'wallet' && needsApproval) return showToast(`請先完成授權`, 'error');
 
-        // 🔄 混合策略：鑄造前即時價格檢查
-        showToast('正在驗證最新價格...', 'info');
-        
-        try {
-            // 重新獲取最新價格
-            const { data: latestPrice } = await refetchPrice();
-            
-            if (latestPrice && latestPrice !== requiredAmount) {
-                // 價格已經改變，提示用戶
-                const priceChangePercentage = ((Number(latestPrice) - Number(requiredAmount)) / Number(requiredAmount) * 100).toFixed(1);
-                const priceDirection = Number(latestPrice) > Number(requiredAmount) ? '上漲' : '下跌';
-                
-                showToast(
-                    `價格已更新！${priceDirection} ${Math.abs(Number(priceChangePercentage))}%\n新價格：${formatEther(latestPrice)} SoulShard`, 
-                    'warning'
-                );
-                
-                // 檢查新價格下的餘額是否足夠
-                if (balance < latestPrice) {
-                    return showToast(`價格已調整，${paymentSource === 'wallet' ? '錢包' : '金庫'}餘額不足`, 'error');
-                }
-                
-                // 給用戶一點時間看到價格更新訊息
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-            
-            showToast('價格驗證完成，開始鑄造...', 'success');
-        } catch (error) {
-            console.error('價格驗證失敗:', error);
-            showToast('無法驗證最新價格，請稍後再試', 'error');
-            return;
-        }
+        // 直接使用已經獲取的價格開始鑄造
+        showToast('開始鑄造...', 'info');
 
         setShowProgressModal(true);
         resetMint();

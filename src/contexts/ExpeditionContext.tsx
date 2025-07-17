@@ -3,10 +3,10 @@
 import React, { createContext, useState, useCallback, useContext, type ReactNode, useMemo } from 'react';
 import { formatEther } from 'viem';
 import { Modal } from '../components/ui/Modal';
-import victoryImageUrl from '/assets/images/win_screen_500x500.png';
-import defeatImageUrl from '/assets/images/lose_screen_500x500.png';
+import victoryImageUrl from '/dungeon/win_screen_500x500.png';
+import defeatImageUrl from '/dungeon/lose_screen_500x500.png';
 import { Icons } from '../components/ui/icons'; // ★ 新增：導入圖示
-import { useAppToast } from '../hooks/useAppToast'; // ★ 新增：導入 Toast
+import { useAppToast } from '../contexts/SimpleToastContext'; // ★ 新增：導入 Toast
 
 interface ExpeditionResult { 
     success: boolean; 
