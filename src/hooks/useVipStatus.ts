@@ -264,8 +264,31 @@ export const useVipStatus = () => {
         }
     });
 
-    const pendingUnstakeAmount = useMemo(() => (unstakeQueue as readonly [bigint, bigint])?.[0] ?? 0n, [unstakeQueue]);
-    const unstakeAvailableAt = useMemo(() => Number((unstakeQueue as readonly [bigint, bigint])?.[1] ?? 0n), [unstakeQueue]);
+    const pendingUnstakeAmount = useMemo(() => {
+        const amount = (unstakeQueue as readonly [bigint, bigint])?.[0] ?? 0n;
+        if (import.meta.env.DEV && unstakeQueue) {
+            logger.debug('unstakeQueue 解析:', { 
+                rawData: unstakeQueue, 
+                amount: amount.toString(),
+                isArray: Array.isArray(unstakeQueue)
+            });
+        }
+        return amount;
+    }, [unstakeQueue]);
+    
+    const unstakeAvailableAt = useMemo(() => {
+        const timestamp = (unstakeQueue as readonly [bigint, bigint])?.[1] ?? 0n;
+        const timestampNumber = Number(timestamp);
+        if (import.meta.env.DEV && unstakeQueue) {
+            logger.debug('unstakeAvailableAt 解析:', { 
+                rawTimestamp: timestamp.toString(),
+                timestampNumber,
+                currentTime: Date.now() / 1000,
+                isInFuture: timestampNumber > Date.now() / 1000
+            });
+        }
+        return timestampNumber;
+    }, [unstakeQueue]);
 
     const { isOver: isCooldownOver, formatted: countdown } = useCountdown(unstakeAvailableAt);
 

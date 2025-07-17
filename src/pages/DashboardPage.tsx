@@ -236,10 +236,14 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
 
     const withdrawableBalance = stats.withdrawableBalance;
 
-        const { data: withdrawableBalanceInUSD } = useReadContract({ address: dungeonCoreContract?.address as `0x${string}`,
+    // 先獲取 SoulShard 價值的 USD 金額
+    const { data: withdrawableBalanceInUSD } = useReadContract({ 
+        address: dungeonCoreContract?.address as `0x${string}`,
         abi: dungeonCoreContract?.abi,
-        functionName: 'getSoulShardAmountForUSD',
-        args: [withdrawableBalance], query: { enabled: !!dungeonCoreContract && withdrawableBalance > 0n } });
+        functionName: 'getUSDForSoulShardAmount',  // 改為正確的函數名
+        args: [withdrawableBalance], 
+        query: { enabled: !!dungeonCoreContract && withdrawableBalance > 0n } 
+    });
     
     const currentTaxRate = useMemo(() => {
         if (!taxParams || !stats) return 0;

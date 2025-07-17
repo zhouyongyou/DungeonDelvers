@@ -441,25 +441,42 @@ const VipPageContent: React.FC = () => {
                             </div>
                         </div>
                         
-                        {pendingUnstakeAmount > 0n && (
-                            <div className="bg-yellow-900/50 p-4 rounded-lg text-center">
-                                <h4 className="font-bold text-yellow-300">待領取請求</h4>
+                        {/* 調試信息 - 生產環境請移除 */}
+                        {import.meta.env.DEV && (
+                            <div className="bg-gray-800 p-2 rounded text-xs text-gray-400 mb-2">
+                                <p>pendingUnstakeAmount: {pendingUnstakeAmount.toString()}</p>
+                                <p>isCooldownOver: {isCooldownOver.toString()}</p>
+                                <p>countdown: {countdown}</p>
+                            </div>
+                        )}
+                        
+                        {/* 待領取區塊 - 總是顯示以便用戶知道功能存在 */}
+                        <div className={`p-4 rounded-lg text-center ${
+                                pendingUnstakeAmount > 0n ? 'bg-yellow-900/50' : 'bg-gray-800 border border-gray-700'
+                            }`}>
+                                <h4 className={`font-bold ${
+                                    pendingUnstakeAmount > 0n ? 'text-yellow-300' : 'text-gray-400'
+                                }`}>待領取請求</h4>
                                 <p className="text-2xl font-mono text-white">
                                     {formatEther(pendingUnstakeAmount)} $SoulShard
                                 </p>
-                                {isCooldownOver ? (
-                                    <ActionButton 
-                                        onClick={handleClaim} 
-                                        isLoading={isTxPending} 
-                                        className="mt-2 w-full h-10"
-                                    >
-                                        立即領取
-                                    </ActionButton>
-                                ) : (
-                                    <p className="text-sm text-yellow-400">可領取倒數: {countdown}</p>
+                                {pendingUnstakeAmount > 0n && (
+                                    isCooldownOver ? (
+                                        <ActionButton 
+                                            onClick={handleClaim} 
+                                            isLoading={isTxPending} 
+                                            className="mt-2 w-full h-10"
+                                        >
+                                            立即領取
+                                        </ActionButton>
+                                    ) : (
+                                        <p className="text-sm text-yellow-400">可領取倒數: {countdown}</p>
+                                    )
+                                )}
+                                {pendingUnstakeAmount === 0n && (
+                                    <p className="text-sm text-gray-500 mt-2">目前沒有待領取的贖回請求</p>
                                 )}
                             </div>
-                        )}
                         
                         {renderActionPanel()}
                     </div>

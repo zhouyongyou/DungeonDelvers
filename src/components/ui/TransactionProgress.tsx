@@ -120,7 +120,22 @@ export const TransactionProgress: React.FC<TransactionProgressProps> = ({
       case 'success':
         return '交易成功！';
       case 'error':
-        return error?.message || '交易失敗';
+        // 將技術性錯誤轉換為友好訊息
+        if (error?.message) {
+          const msg = error.message;
+          if (msg.includes('Transaction receipt with hash') && msg.includes('could not be found')) {
+            return '交易正在等待區塊確認，請耐心等待...';
+          } else if (msg.includes('reverted')) {
+            return '交易被區塊鏈拒絕';
+          } else if (msg.includes('insufficient funds')) {
+            return 'BNB 餘額不足';
+          } else if (msg.includes('User rejected')) {
+            return '您已取消交易';
+          } else if (msg.includes('timeout')) {
+            return '交易確認超時';
+          }
+        }
+        return '交易失敗';
     }
   };
 

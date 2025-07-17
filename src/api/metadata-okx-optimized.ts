@@ -25,9 +25,12 @@ async function fetchNftDataFromGraph(contractAddress: string, tokenId: string): 
     const nftType = getNftTypeFromContract(contractAddress);
     
     // GraphQL 查詢 - 獲取稀有度
+    // 構建完整的 ID (contractAddress-tokenId 格式)
+    const fullId = `${contractAddress.toLowerCase()}-${tokenId}`;
+    
     const query = `
-        query GetNFT($contractAddress: String!, $tokenId: String!) {
-            ${nftType}s(where: { contractAddress: $contractAddress, tokenId: $tokenId }) {
+        query GetNFT($id: ID!) {
+            ${nftType}(id: $id) {
                 tokenId
                 rarity
                 ${nftType === 'hero' ? 'power' : ''}
@@ -44,17 +47,16 @@ async function fetchNftDataFromGraph(contractAddress: string, tokenId: string): 
             body: JSON.stringify({
                 query,
                 variables: { 
-                    contractAddress: contractAddress.toLowerCase(), 
-                    tokenId: tokenId.toString() 
+                    id: fullId
                 }
             })
         });
         
         const { data } = await response.json();
-        const results = data[`${nftType}s`];
+        const result = data[nftType];
         
-        if (results && results.length > 0) {
-            return { ...results[0], type: nftType };
+        if (result) {
+            return { ...result, type: nftType };
         }
     } catch (error) {
         console.error('Failed to fetch from The Graph:', error);
@@ -102,32 +104,11 @@ export async function generateOptimizedMetadata(
         attributes: [],
     };
     
-    // 4. 添加屬性（針對不同市場優化）
-    if (marketOptimized === 'okx') {
-        // OKX 優化：簡化屬性，確保關鍵信息在名稱和圖片中體現
-        metadata.attributes = generateOkxOptimizedAttributes(nftData);
-        
-        // OKX 可能不支援 animation_url，但我們還是添加
-        if (includeAnimation && rarity > 0) {
-            metadata.animation_url = `${baseUrl}/api/metadata/${contractAddress}/${tokenId}/svg`;
-        }
-    } else if (marketOptimized === 'element') {
-        // Element 優化：提供豐富的屬性
-        metadata.attributes = generateDetailedAttributes(nftData);
-        
-        if (includeAnimation) {
-            metadata.animation_url = `${baseUrl}/api/metadata/${contractAddress}/${tokenId}/svg`;
-            // Element 支援更多字段
-            metadata.external_url = `${baseUrl}/nft/${contractAddress}/${tokenId}`;
-            metadata.background_color = '0f172a';
-        }
-    } else {
-        // 通用格式
-        metadata.attributes = generateStandardAttributes(nftData);
-        if (includeAnimation) {
-            metadata.animation_url = `${baseUrl}/api/metadata/${contractAddress}/${tokenId}/svg`;
-        }
-    }
+    // 4. 添加屬性（簡化版 - 只提供必要資訊）
+    metadata.attributes = generateSimpleAttributes(nftData);
+    
+    // NFT 市場不需要動畫或其他複雜功能
+    // 只提供基本的 metadata 和 PNG 圖片
     
     return metadata;
 }
@@ -135,36 +116,85 @@ export async function generateOptimizedMetadata(
 // 生成名稱（在名稱中體現稀有度，確保 OKX 能看到）
 function generateName(type: string, tokenId: string, rarity: number): string {
     const typeNames = {
-        hero: '英雄',
-        relic: '聖物',
-        party: '隊伍',
+        hero: 'Hero',
+        relic: 'Relic',
+        party: 'Party',
         vip: 'VIP'
     };
     
-    const rarityNames = ['未知', '普通', '稀有', '史詩', '傳說', '神話'];
-    const rarityName = rarityNames[rarity] || '未知';
+    const rarityNames = ['Unknown', 'Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
+    const rarityName = rarityNames[rarity] || 'Unknown';
     
     if (rarity === 0) {
-        return `${typeNames[type] || type} #${tokenId} (載入中...)`;
+        return `${typeNames[type] || type} #${tokenId} (Loading...)`;
     }
     
-    return `${rarityName} ${typeNames[type] || type} #${tokenId}`;
+    // 加上星級讓用戶更容易識別
+    const stars = '★'.repeat(rarity) + '☆'.repeat(5 - rarity);
+    return `${typeNames[type] || type} #${tokenId} ${stars} ${rarityName}`;
 }
 
 // 生成描述
 function generateDescription(type: string, rarity: number): string {
     if (rarity === 0) {
-        return '此 NFT 的詳細資訊正在同步中，請稍後再查看完整屬性。圖片將在數據同步完成後自動更新。';
+        return 'NFT data is syncing. Please check back later for complete attributes.';
     }
     
     const descriptions = {
-        hero: '一位勇敢的英雄，準備探索地下城的黑暗深處。',
-        relic: '一件古老的聖物，蘊含著神秘的力量。',
-        party: '一支精心組建的冒險隊伍，準備迎接最危險的挑戰。',
-        vip: '專屬 VIP 會員卡，享有特殊權益和優惠。'
+        hero: 'A brave hero ready to explore the darkest depths of the dungeons.',
+        relic: 'An ancient relic containing mysterious powers.',
+        party: 'A carefully assembled party of adventurers, ready for the most dangerous challenges.',
+        vip: 'Exclusive VIP membership card with special privileges and benefits.'
     };
     
     return descriptions[type] || 'Dungeon Delvers NFT';
+}
+
+// 簡化屬性 - NFT 市場專用
+function generateSimpleAttributes(nftData: any): any[] {
+    const attributes = [];
+    
+    // 稀有度
+    if (nftData.rarity && nftData.rarity > 0) {
+        attributes.push({
+            trait_type: 'Rarity',
+            value: nftData.rarity,
+            display_type: 'number'
+        });
+    }
+    
+    // 類型特定的核心屬性
+    switch (nftData.type) {
+        case 'hero':
+            if (nftData.power) {
+                attributes.push({
+                    trait_type: 'Power',
+                    value: nftData.power,
+                    display_type: 'number'
+                });
+            }
+            break;
+        case 'relic':
+            if (nftData.capacity) {
+                attributes.push({
+                    trait_type: 'Capacity',
+                    value: nftData.capacity,
+                    display_type: 'number'
+                });
+            }
+            break;
+        case 'party':
+            if (nftData.totalPower) {
+                attributes.push({
+                    trait_type: 'Total Power',
+                    value: Number(nftData.totalPower),
+                    display_type: 'number'
+                });
+            }
+            break;
+    }
+    
+    return attributes;
 }
 
 // OKX 優化屬性（簡潔明了）
