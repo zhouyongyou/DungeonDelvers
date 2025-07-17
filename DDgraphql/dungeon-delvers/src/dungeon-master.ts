@@ -45,6 +45,7 @@ export function handlePartyRested(event: PartyRested): void {
   const party = Party.load(partyId)
   if (party) {
     // Note: Party schema doesn't have fatigueLevel
+    // New V2 parameter: payer = event.params.payer
     party.lastUpdatedAt = event.block.timestamp
     party.save()
   }
@@ -55,6 +56,7 @@ export function handleProvisionsBought(event: ProvisionsBought): void {
   const party = Party.load(partyId)
   if (party) {
     // Note: Party schema doesn't have provisionsRemaining
+    // New V2 parameter: buyer = event.params.buyer
     party.lastUpdatedAt = event.block.timestamp
     party.save()
   }

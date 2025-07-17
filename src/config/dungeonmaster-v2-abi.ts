@@ -1,4 +1,4 @@
-[
+export const dungeonMasterV2ABI = [
   {
     "inputs": [
       {
@@ -721,4 +721,4 @@
     "stateMutability": "nonpayable",
     "type": "function"
   }
-]
+] as const;

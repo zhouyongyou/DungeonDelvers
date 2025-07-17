@@ -209,9 +209,22 @@ export function generateRelicSVG(relic: RelicNft, isCodex: boolean = false): str
 
 // ============= Party SVG 生成器 =============
 
+const getPartyEmojis = (rarity: number): { main: string; secondary: string } => {
+    const emojis = [
+        { main: '👥', secondary: '⚔️' },      // 0/1 - Common
+        { main: '👥', secondary: '⚔️' },      // 1 - Common  
+        { main: '🛡️', secondary: '👑' },      // 2 - Uncommon
+        { main: '🏰', secondary: '⚡' },      // 3 - Rare
+        { main: '🌟', secondary: '🔥' },      // 4 - Epic
+        { main: '👑', secondary: '💎' }       // 5 - Legendary
+    ];
+    return emojis[Math.min(rarity, 5)] || emojis[0];
+};
+
 export function generatePartySVG(party: PartyNft): string {
     const rarityColor = getRarityColor(party.partyRarity);
     const tierName = ['Standard', 'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond'][Math.min(party.partyRarity, 5)] || 'Standard';
+    const emojis = getPartyEmojis(party.partyRarity);
     
     return `${getSVGHeader()}
         ${getGlobalStyles()}
@@ -228,10 +241,13 @@ export function generatePartySVG(party: PartyNft): string {
         <!-- 標題區 -->
         <text x="200" y="40" text-anchor="middle" class="title">PARTY #${party.id}</text>
         
-        <!-- 中央圖像 -->
-        <g transform="translate(200, 180)" class="float">
-            <text text-anchor="middle" style="font-size: 120px;">👥</text>
-        </g>
+        <!-- 使用 foreignObject 顯示雙 Emoji -->
+        <foreignObject x="50" y="120" width="300" height="100" class="float">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; justify-content: center; align-items: center; height: 100%; gap: 20px;">
+                <span style="font-size: 60px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;">${emojis.main}</span>
+                <span style="font-size: 60px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;">${emojis.secondary}</span>
+            </div>
+        </foreignObject>
         
         <!-- 統計數據 -->
         <g transform="translate(0, 260)">

@@ -145,8 +145,18 @@ const ProvisionsPage: React.FC<ProvisionsPageProps> = ({ preselectedPartyId, onP
             setShowProgressModal(false);
             confirmPurchaseUpdate();
         },
-        onError: () => {
+        onError: (error) => {
             rollbackPurchaseUpdate();
+            // 提供更詳細的錯誤信息
+            if (error?.message?.includes('execution reverted')) {
+                if (error.message.includes('1002')) {
+                    showToast('交易失敗：可能是合約暫停、餘額不足或隊伍狀態異常。請檢查管理頁面的診斷工具。', 'error');
+                } else {
+                    showToast(`交易失敗：${error.message}`, 'error');
+                }
+            } else {
+                showToast(`購買儲備失敗：${error?.message || '未知錯誤'}`, 'error');
+            }
         },
         successMessage: '購買儲備成功！',
         errorMessage: '購買儲備失敗',

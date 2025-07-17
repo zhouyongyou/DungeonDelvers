@@ -47,23 +47,19 @@ export function useAdminContracts(contracts: ContractReadConfig[]) {
       const successCount = allResults.filter(r => r.status === 'success').length;
       const errorCount = allResults.filter(r => r.status === 'error').length;
       
-      logger.debug('AdminContracts 讀取完成:', {
-        total: allResults.length,
-        success: successCount,
-        error: errorCount,
-      });
-      
-      // 記錄失敗的合約
-      allResults.forEach((result, index) => {
-        if (result.status === 'error') {
-          logger.error(`合約讀取失敗 [${index}]:`, {
-            contract: contracts[index],
-            error: result.error
-          });
-        }
-      });
+      // 減少日誌輸出，只在有錯誤時記錄
+      if (errorCount > 0) {
+        logger.error('AdminContracts 讀取錯誤:', {
+          total: allResults.length,
+          success: successCount,
+          error: errorCount,
+          failures: allResults
+            .map((result, index) => ({ index, error: result.error }))
+            .filter(item => item.error)
+        });
+      }
     }
-  }, [contractReads.map(r => r.data).join(','), contractReads.map(r => r.isLoading).join(',')]);
+  }, contractReads); // 使用穩定的依賴
 
   return {
     data: results,

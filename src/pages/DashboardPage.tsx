@@ -64,7 +64,11 @@ const useDashboardStats = () => {
                     player(id: $owner) {
                         id
                         profile { level }
-                        vault { pendingRewards }
+                        vault { 
+                            id
+                            withdrawableBalance
+                            pendingRewards
+                        }
                     }
                 }
             `;
@@ -113,7 +117,8 @@ const useDashboardStats = () => {
     const stats = useMemo(() => {
         return {
             level: data?.profile?.level ? Number(data.profile.level) : 1,
-            withdrawableBalance: data?.vault?.pendingRewards ? BigInt(data.vault.pendingRewards) : 0n,
+            withdrawableBalance: data?.vault?.withdrawableBalance ? BigInt(data.vault.withdrawableBalance) : 
+                                data?.vault?.pendingRewards ? BigInt(data.vault.pendingRewards) : 0n,
         };
     }, [data]);
 

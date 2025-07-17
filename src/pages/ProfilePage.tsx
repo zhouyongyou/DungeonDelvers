@@ -22,6 +22,8 @@ const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
 const GET_PLAYER_PROFILE_QUERY = `
   query GetPlayerProfile($owner: ID!) {
     player(id: $owner) {
+      id
+      address
       profile {
         tokenId
         experience
@@ -54,19 +56,38 @@ const usePlayerProfile = (targetAddress: Address | undefined) => {
         queryKey: ['playerProfile', targetAddress],
         queryFn: async () => {
             if (!targetAddress || !THE_GRAPH_API_URL) return null;
-            const response = await fetch(THE_GRAPH_API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    query: GET_PLAYER_PROFILE_QUERY,
-                    variables: { owner: targetAddress.toLowerCase() },
-                }),
-            });
-            if (!response.ok) throw new Error('GraphQL Network response was not ok');
-            const { data } = await response.json();
-            return data.player?.profile;
+            
+            try {
+                const response = await fetch(THE_GRAPH_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: GET_PLAYER_PROFILE_QUERY,
+                        variables: { owner: targetAddress.toLowerCase() },
+                    }),
+                });
+                
+                if (!response.ok) {
+                    logger.error('GraphQL Network response error:', response.status, response.statusText);
+                    throw new Error(`GraphQL Network response was not ok: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.errors) {
+                    logger.error('GraphQL query errors:', result.errors);
+                    throw new Error(`GraphQL query failed: ${result.errors.map((e: any) => e.message).join(', ')}`);
+                }
+                
+                return result.data?.player?.profile || null;
+            } catch (error) {
+                logger.error('Error fetching player profile:', error);
+                throw error;
+            }
         },
         enabled: !!targetAddress && chainId === bsc.id,
+        retry: 1, // 只重試一次
+        retryDelay: 1000, // 1秒後重試
     });
 
     const tokenId = useMemo(() => graphData?.tokenId ? BigInt(graphData.tokenId) : null, [graphData]);
@@ -123,7 +144,21 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
         }
 
         if (isError) {
-            return <EmptyState message="讀取玩家檔案時發生錯誤，請稍後再試。" />;
+            logger.debug('ProfilePage error details:', { isError, targetAddress, isMyProfile });
+            // 如果是自己的檔案且出錯，很可能是沒有檔案，顯示提示
+            if (isMyProfile) {
+                return (
+                    <EmptyState message="您尚未獲得玩家檔案">
+                        <p className="text-gray-400 mb-4 max-w-md text-center">您的玩家檔案是一個獨一無二的靈魂綁定代幣 (SBT)，它將在您**首次成功完成地下城遠征**後由系統自動為您鑄造。</p>
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                            <ActionButton onClick={() => setActivePage('dungeon')} className="w-48 h-12">前往地下城</ActionButton>
+                            <ActionButton onClick={() => setActivePage('mint')} className="w-48 h-12 bg-teal-600 hover:bg-teal-500">前往鑄造</ActionButton>
+                        </div>
+                    </EmptyState>
+                );
+            }
+            // 如果是別人的檔案，顯示通用錯誤
+            return <EmptyState message="讀取玩家檔案時發生錯誤，該玩家可能尚未創建個人檔案。" />;
         }
 
         if (hasProfile && tokenURI) {

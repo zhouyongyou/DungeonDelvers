@@ -34,6 +34,8 @@ import GlobalRewardSettings from '../components/admin/GlobalRewardSettings';
 // import RpcMonitoringPanel from '../components/admin/RpcMonitoringPanel'; // Removed RPC monitoring
 import { ContractHealthCheck } from '../components/admin/ContractHealthCheck';
 import { validateContract, getSafeContract } from '../utils/contractValidator';
+import ProvisionsDiagnosticPanel from '../components/admin/ProvisionsDiagnosticPanel';
+import PartyOwnershipDiagnostic from '../components/admin/PartyOwnershipDiagnostic';
 
 type SupportedChainId = typeof bsc.id;
 type Address = `0x${string}`;
@@ -51,10 +53,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   const { writeContractAsync } = useWriteContract();
   const queryClient = useQueryClient();
   
-  // 調試 chainId
-  useEffect(() => {
-    logger.debug('AdminPageContent chainId 變更:', { chainId, type: typeof chainId });
-  }, [chainId]);
+  // 移除不必要的調試日誌
   
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [isBatchSetting, setIsBatchSetting] = useState(false);
@@ -74,16 +73,17 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     oracle: false,
     contractControl: false,
     rpcMonitor: false,
+    provisionsDiagnostic: false,
   });
 
   // 管理員頁面初始化時清理 Watch
   useEffect(() => {
     watchManager.clearAll();
-    showToast('管理員模式已啟用，Watch 監聽已優化', 'info');
+    // 移除 toast 通知以減少重新渲染
     return () => {
       // 離開管理員頁面時不需要特別處理，因為其他頁面會重新註冊需要的 Watch
     };
-  }, [showToast]);
+  }, []); // 只在組件首次掛載時執行一次
 
   const setupConfig = useMemo(() => {
     try {
@@ -109,9 +109,10 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         createSetting('dungeonCoreForProfile', '在 PlayerProfile 中設定總機', 'playerProfile', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
         createSetting('dungeonCoreForVip', '在 VIPStaking 中設定總機', 'vipStaking', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
         createSetting('dungeonCoreForAltar', '在 Altar 中設定總機', 'altarOfAscension', 'setDungeonCore', 'dungeonCore', 'dungeonCore'),
+        createSetting('soulShardForDM', '在 DungeonMaster 中設定 SoulShard', 'dungeonMaster', 'setSoulShardToken', 'soulShard', 'soulShardToken'),
       ];
       
-      logger.debug('setupConfig 創建成功', { configCount: config.length });
+      // 減少日誌輸出
       return config;
     } catch (error) {
       logger.error('setupConfig 創建失敗:', error);
@@ -122,12 +123,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   const contractsToRead = useMemo(() => {
     try {
       if (!chainId || !setupConfig || !Array.isArray(setupConfig) || setupConfig.length === 0) {
-        logger.debug('contractsToRead: 基礎數據不完整', { 
-          chainId, 
-          setupConfig: setupConfig ? 'exists' : 'undefined',
-          isArray: Array.isArray(setupConfig),
-          length: setupConfig?.length
-        });
+        // 移除不必要的調試日誌
         return [];
       }
       
@@ -154,11 +150,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       configs.unshift({ ...coreContract, functionName: 'owner' });
       
       const filteredConfigs = configs.filter((c): c is NonNullable<typeof c> => c !== null && !!c.address);
-      logger.debug('contractsToRead 計算完成', { 
-        totalConfigs: configs.length,
-        filteredConfigs: filteredConfigs.length,
-        chainId
-      });
+      // 移除不必要的調試日誌
       
       return filteredConfigs;
     } catch (error) {
@@ -201,20 +193,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
            );
   }, [chainId, safeContractsToRead, loadedSections.contractCenter]);
 
-  // 調試用的 useEffect
-  useEffect(() => {
-    logger.debug('AdminPage 合約讀取狀態:', {
-      chainId,
-      contractsReadEnabled,
-      safeContractsToReadLength: safeContractsToRead?.length,
-      loadedSections: loadedSections.contractCenter,
-      safeContractsToRead: safeContractsToRead?.map(c => ({
-        hasAddress: !!c?.address,
-        hasAbi: !!c?.abi,
-        hasFunctionName: !!c?.functionName
-      }))
-    });
-  }, [chainId, contractsReadEnabled, safeContractsToRead, loadedSections.contractCenter]);
+  // 移除不必要的調試日誌
 
   // 全局錯誤處理器
   useEffect(() => {
@@ -298,7 +277,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         return acc;
       }, {} as Record<string, Address | undefined>);
       
-      logger.debug('currentAddressMap 計算完成', { owner, settingsCount: Object.keys(settings).length });
+      // 減少日誌輸出
       return { owner, ...settings };
     } catch (error) {
       logger.error('currentAddressMap 計算失敗:', error);
@@ -306,12 +285,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     }
   }, [contractsReadResult, setupConfig]);
   
-  // 診斷模式：在開發環境中執行診斷（移到 currentAddressMap 定義之後）
-  useEffect(() => {
-    if (import.meta.env.DEV && contractsToRead.length > 0 && currentAddressMap) {
-      AdminPageDebugger.runFullDiagnostics(chainId, contractsToRead, address, currentAddressMap.owner);
-    }
-  }, [chainId, contractsToRead, address, currentAddressMap]);
+  // 移除開發環境的自動診斷以減少重新渲染
   
   // 調試信息將在 parameterContracts 和 vaultContracts 定義之後添加
   
@@ -1046,6 +1020,22 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         <RpcMonitoringPanel />
       </AdminSection>
       */}
+
+      <AdminSection 
+        title="購買儲備診斷工具"
+        defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, provisionsDiagnostic: true }))}
+      >
+        <ProvisionsDiagnosticPanel />
+      </AdminSection>
+
+      <AdminSection 
+        title="隊伍擁有權診斷"
+        defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, partyOwnership: true }))}
+      >
+        <PartyOwnershipDiagnostic />
+      </AdminSection>
     </>
   );
 };

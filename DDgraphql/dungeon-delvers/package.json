@@ -5,7 +5,7 @@
   "scripts": {
     "codegen": "graph codegen",
     "build": "graph build",
-    "deploy": "graph deploy --studio dungeon-delvers",
+    "deploy": "graph deploy dungeon-delvers --access-token $GRAPH_ACCESS_TOKEN --node https://api.studio.thegraph.com/deploy/",
     "create-local": "graph create --node http://localhost:8020/ dungeon-delvers",
     "remove-local": "graph remove --node http://localhost:8020/ dungeon-delvers",
     "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 dungeon-delvers",
