@@ -36,6 +36,7 @@ export function handleRelicMinted(event: RelicMinted): void {
     relic.contractAddress = event.address
     relic.rarity = event.params.rarity
     relic.capacity = event.params.capacity
+    relic.currentProvisions = 0  // 初始儲備為 0
     relic.createdAt = event.block.timestamp
     relic.isBurned = false
     relic.save()
