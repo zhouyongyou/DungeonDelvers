@@ -2,7 +2,7 @@
 import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
 
 const httpLink = createHttpLink({
-  uri: import.meta.env.VITE_GRAPHQL_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.2',
+  uri: import.meta.env.VITE_GRAPHQL_URL || import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.3',
 });
 
 const client = new ApolloClient({

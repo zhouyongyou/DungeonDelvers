@@ -31,7 +31,7 @@ const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
 // ★ 核心修正: 查詢語句現在直接查詢頂層的 heroes 和 relics，並使用正確的變數類型
 const GET_FILTERED_NFTS_QUERY = `
   query GetFilteredNfts($owner: String!, $rarity: Int!) {
-    heroes(where: { owner: $owner, rarity: $rarity }, first: 1000) {
+    heros(where: { owner: $owner, rarity: $rarity }, first: 1000) {
       id
       tokenId
       power
@@ -65,7 +65,7 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
                     return [];
                 }
                 
-                const assets = nftType === 'hero' ? result.heroes : result.relics;
+                const assets = nftType === 'hero' ? result.heros : result.relics;
 
                 if (!assets || !Array.isArray(assets)) {
                     logger.warn(`${nftType} 資產數組為空或不是數組:`, assets, '- 可能是子圖數據尚未同步');

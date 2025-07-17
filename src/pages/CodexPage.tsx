@@ -84,7 +84,7 @@ const useOwnedCodexIdentifiers = () => {
                         query GetOwnedRarities($owner: ID!) {
                             player(id: $owner) {
                                 id
-                                heroes {
+                                heros {
                                     id
                                     rarity
                                 }
@@ -109,7 +109,7 @@ const useOwnedCodexIdentifiers = () => {
             }
             
             const data = json?.data;
-            const heroes = data?.player?.heroes || [];
+            const heroes = data?.player?.heros || [];
             const relics = data?.player?.relics || [];
             
             const ownedHeroRarities = new Set<number>(

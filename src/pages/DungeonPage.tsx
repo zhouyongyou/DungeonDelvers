@@ -201,11 +201,27 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
         }
     });
 
-    // 🧮 計算獎勵的輔助函數
+    // 讀取全局獎勵倍率
+    const { data: globalRewardMultiplier } = useReadContract({
+        address: dungeonMasterContract?.address as `0x${string}`,
+        abi: dungeonMasterContract?.abi,
+        functionName: 'globalRewardMultiplier',
+        query: {
+            enabled: !!dungeonMasterContract,
+            staleTime: 1000 * 60 * 5, // 5分鐘緩存
+        }
+    });
+
+    // 🧮 計算獎勵的輔助函數 (這個版本在 PartyStatusCard 中使用，也需要考慮全局倍率)
     const calculateSoulReward = (usdAmount: bigint): bigint => {
         if (!usdToSoulRate) return 0n;
-        // 公式：SOUL 獎勵 = (USD 金額 * 1 USD 對應的 SOUL 數量) / 1 USD
-        return (usdAmount * usdToSoulRate) / parseEther('1');
+        
+        // 應用全局獎勵倍率
+        const multiplier = globalRewardMultiplier ? BigInt(globalRewardMultiplier.toString()) : 1000n; // 預設 100%
+        const adjustedUsdAmount = (usdAmount * multiplier) / 1000n;
+        
+        // 公式：SOUL 獎勵 = (調整後 USD 金額 * 1 USD 對應的 SOUL 數量) / 1 USD
+        return (adjustedUsdAmount * usdToSoulRate) / parseEther('1');
     };
     
     // 從 RPC 讀取實時的隊伍狀態
@@ -372,10 +388,25 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
         }
     });
 
-    // 🧮 計算獎勵的輔助函數
+    // 讀取全局獎勵倍率
+    const { data: globalRewardMultiplier } = useReadContract({
+        address: getContract(bsc.id, 'dungeonMaster')?.address,
+        abi: getContract(bsc.id, 'dungeonMaster')?.abi,
+        functionName: 'globalRewardMultiplier',
+        query: {
+            staleTime: 1000 * 60 * 5, // 5分鐘緩存
+        }
+    });
+
+    // 🧮 計算獎勵的輔助函數（考慮全局倍率）
     const calculateSoulReward = (usdAmount: bigint): bigint => {
         if (!usdToSoulRate) return 0n;
-        return (usdAmount * usdToSoulRate) / parseEther('1');
+        
+        // 應用全局獎勵倍率
+        const multiplier = globalRewardMultiplier ? BigInt(globalRewardMultiplier.toString()) : 1000n; // 預設 100%
+        const adjustedUsdAmount = (usdAmount * multiplier) / 1000n;
+        
+        return (adjustedUsdAmount * usdToSoulRate) / parseEther('1');
     };
 
     // ★ 核心改造：使用新的 Hook 獲取隊伍數據

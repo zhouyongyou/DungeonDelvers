@@ -374,7 +374,6 @@ export const useRpcOptimization = () => {
 
   const applyOptimizationSettings = useCallback(() => {
     // 這裡可以應用各種優化設置
-    console.log('應用 RPC 優化設置:', optimizationSettings);
   }, [optimizationSettings]);
 
   return {

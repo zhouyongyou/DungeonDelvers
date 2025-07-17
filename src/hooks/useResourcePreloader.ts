@@ -220,8 +220,7 @@ export function useResourcePreloader(options: PreloaderOptions = {}) {
 export const registerServiceWorker = async () => {
   if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js');
-      console.log('SW registered: ', registration);
+      await navigator.serviceWorker.register('/sw.js');
     } catch (registrationError) {
       console.log('SW registration failed: ', registrationError);
     }

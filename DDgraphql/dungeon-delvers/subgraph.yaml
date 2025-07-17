@@ -206,7 +206,7 @@ dataSources:
     name: DungeonCore
     network: bsc
     source:
-      address: '0x548A15CaFAE2a5D19f9683CDad6D57e3320E61a7'
+      address: '0x3dCcbcbf81911A635E2b21e2e49925F6441B08B6'
       abi: DungeonCore
       startBlock: 54317609
     mapping:

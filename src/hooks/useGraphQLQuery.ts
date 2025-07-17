@@ -107,7 +107,7 @@ export function usePlayerAssets(options: Omit<GraphQLQueryOptions<any>, 'variabl
     query GetPlayerAssets($owner: ID!) {
       player(id: $owner) {
         id
-        heroes {
+        heros {
           id
           tokenId
           power
@@ -129,12 +129,7 @@ export function usePlayerAssets(options: Omit<GraphQLQueryOptions<any>, 'variabl
           totalPower
           totalCapacity
           partyRarity
-          provisionsRemaining
-          cooldownEndsAt
-          fatigueLevel
-          unclaimedRewards
-          heroes { tokenId }
-          relics { tokenId }
+          heroIds
           createdAt
         }
         vip {
@@ -170,7 +165,7 @@ export function usePlayerStats(options: Omit<GraphQLQueryOptions<any>, 'variable
           claimedRewards
           totalProvisionSpent
         }
-        heroes { id }
+        heros { id }
         relics { id }
         parties { id }
       }
@@ -195,12 +190,7 @@ export function usePlayerParties(options: Omit<GraphQLQueryOptions<any>, 'variab
           totalPower
           totalCapacity
           partyRarity
-          provisionsRemaining
-          cooldownEndsAt
-          fatigueLevel
-          unclaimedRewards
-          heroes { id tokenId }
-          relics { id tokenId }
+          heroIds
           createdAt
         }
       }
@@ -252,7 +242,7 @@ export function useLeaderboard(
           level
           experience
         }
-        ${type === 'assets' ? 'heroes { id } relics { id } parties { id }' : ''}
+        ${type === 'assets' ? 'heros { id } relics { id } parties { id }' : ''}
         ${type === 'power' ? 'parties { totalPower }' : ''}
       }
     }
@@ -281,7 +271,7 @@ export function useSearchPlayers(
           level
           experience
         }
-        heroes { id }
+        heros { id }
         relics { id }
         parties { id }
       }

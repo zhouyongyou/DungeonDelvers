@@ -80,7 +80,6 @@ const useReferralData = () => {
 // =================================================================
 
 const ReferralPage: React.FC = () => {
-    console.log('ReferralPage 組件被渲染');
     const { address, chainId, isConnected } = useAccount();
     const { showToast } = useAppToast();
     const { addTransaction } = useTransactionStore();
@@ -111,7 +110,6 @@ const ReferralPage: React.FC = () => {
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
         const ref = urlParams.get('ref');
-        console.log('檢測到 ref 參數:', ref); // 調試用
         
         if (ref && isAddress(ref)) {
             setUrlRefParam(ref);
@@ -122,7 +120,6 @@ const ReferralPage: React.FC = () => {
 
     // 第二個：處理自動顯示確認彈窗
     useEffect(() => {
-        console.log('isConnected:', isConnected); // 調試用
         if (urlRefParam && address && !hasReferrer && urlRefParam.toLowerCase() !== address.toLowerCase()) {
             setAutoDetectedRef(urlRefParam);
             setShowConfirmModal(true);
@@ -161,6 +158,91 @@ const ReferralPage: React.FC = () => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
+
+    // 複製推薦文案
+    const handleCopyReferralText = () => {
+        const referralText = `🎮 加入 Dungeon Delvers - 最刺激的 Web3 地城冒險遊戲！
+
+🔥 立即體驗：
+• 招募強力英雄 ⚔️
+• 收集珍稀聖物 💎  
+• 組建無敵隊伍 👥
+• 探索神秘地城 🏰
+• 賺取豐厚獎勵 💰
+
+🎁 使用我的邀請連結註冊，一起開啟冒險之旅：
+${referralLink}
+
+#DungeonDelvers #Web3Gaming #PlayToEarn #NFT #GameFi`;
+        
+        navigator.clipboard.writeText(referralText);
+        showToast('推薦文案已複製！可直接分享到社群', 'success');
+    };
+
+    // 下載宣傳圖片
+    const handleDownloadImage = () => {
+        // 創建 Canvas 生成宣傳圖片
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        canvas.width = 1200;
+        canvas.height = 630;
+
+        // 背景漸變
+        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        gradient.addColorStop(0, '#1a1a2e');
+        gradient.addColorStop(0.5, '#16213e');
+        gradient.addColorStop(1, '#0f3460');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 標題
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 72px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Dungeon Delvers', canvas.width / 2, 150);
+
+        // 副標題
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 36px Arial';
+        ctx.fillText('Web3 地城冒險遊戲', canvas.width / 2, 220);
+
+        // 特色功能
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '32px Arial';
+        ctx.textAlign = 'left';
+        const features = [
+            '⚔️ 招募強力英雄',
+            '💎 收集珍稀聖物', 
+            '👥 組建無敵隊伍',
+            '🏰 探索神秘地城',
+            '💰 賺取豐厚獎勵'
+        ];
+        
+        features.forEach((feature, index) => {
+            ctx.fillText(feature, 100, 320 + index * 50);
+        });
+
+        // 邀請連結
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 24px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('使用邀請連結加入遊戲:', canvas.width / 2, 580);
+        
+        // 下載圖片
+        canvas.toBlob((blob) => {
+            if (blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'dungeon-delvers-referral.png';
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('宣傳圖片已下載！', 'success');
+            }
+        });
+    };
     
     // 查詢推薦人信息（用於落地頁顯示）
     const { data: referrerInfo } = useQuery({
@@ -185,19 +267,9 @@ const ReferralPage: React.FC = () => {
         sum + Number(party.totalPower), 0
     ) || 0;
 
-    // 調試信息
-    console.log('ReferralPage 渲染條件:', {
-        isConnected,
-        urlRefParam,
-        chainId,
-        address,
-        hasReferrer,
-        currentReferrer
-    });
 
     // 如果未連接錢包且有推薦參數，顯示推薦落地頁
     if (!isConnected && urlRefParam) {
-        console.log('顯示推薦落地頁');
         return (
             <div className="min-h-screen bg-gradient-to-b from-gray-900 via-purple-900/20 to-gray-900">
                 <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -387,6 +459,30 @@ const ReferralPage: React.FC = () => {
                         {copied ? '已複製!' : <><Icons.Copy className="w-4 h-4 mr-2" />複製連結</>}
                     </ActionButton>
                 </div>
+                
+                {/* 推廣工具 */}
+                <div className="mt-6 space-y-3">
+                    <h4 className="text-lg font-semibold text-blue-400">推廣工具</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <ActionButton onClick={handleCopyReferralText} className="flex items-center justify-center gap-2">
+                            <Icons.Copy className="w-4 h-4" />
+                            複製推薦文案
+                        </ActionButton>
+                        <ActionButton onClick={handleDownloadImage} className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700">
+                            <Icons.Download className="w-4 h-4" />
+                            下載宣傳圖片
+                        </ActionButton>
+                    </div>
+                    <div className="text-xs text-gray-400 bg-gray-800/30 p-3 rounded-lg">
+                        <p className="mb-2"><strong>使用建議：</strong></p>
+                        <ul className="space-y-1">
+                            <li>• 複製文案可直接分享到 Discord、Telegram、Twitter 等社群平台</li>
+                            <li>• 宣傳圖片適合用於群組分享，提高視覺吸引力</li>
+                            <li>• 建議搭配個人介紹，提升推薦轉換率</li>
+                        </ul>
+                    </div>
+                </div>
+
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                     <div className="bg-gray-800/50 p-3 rounded-lg">
                         <p className="text-xs text-gray-400">分享方式</p>

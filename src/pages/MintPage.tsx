@@ -184,6 +184,7 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
     const [paymentSource, setPaymentSource] = useState<PaymentSource>('wallet');
     const [mintingResult, setMintingResult] = useState<AnyNft | null>(null);
     const [showProgressModal, setShowProgressModal] = useState(false);
+    const [isAwaitingMintAfterApproval, setIsAwaitingMintAfterApproval] = useState(false);
 
     const debouncedQuantity = useDebounce(quantity, 300);
     
@@ -221,6 +222,7 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
     // 使用新的交易進度 Hook
     const { execute: executeApprove, progress: approveProgress, reset: resetApprove } = useTransactionWithProgress({
         onSuccess: () => {
+            setIsAwaitingMintAfterApproval(true);
             refetchAllowance();
             setShowProgressModal(false);
         },
@@ -292,6 +294,27 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
         errorMessage: '鑄造失敗',
     });
     
+    // 授權完成後自動鑄造邏輯
+    useEffect(() => {
+        async function handlePostApproval() {
+            if (isAwaitingMintAfterApproval && !approveProgress.isLoading && !mintProgress.isLoading) {
+                // 等待足夠時間確保區塊鏈狀態更新
+                await new Promise<void>(resolve => setTimeout(resolve, 3000));
+                await refetchAllowance();
+                setIsAwaitingMintAfterApproval(false);
+                
+                // 檢查授權是否成功
+                if (!needsApproval && requiredAmount) {
+                    showToast('授權成功，開始自動鑄造...', 'info');
+                    handleMint(); // 自動觸發鑄造
+                } else {
+                    showToast('授權尚未完成，請稍後重試', 'info');
+                }
+            }
+        }
+        handlePostApproval();
+    }, [isAwaitingMintAfterApproval, approveProgress.isLoading, mintProgress.isLoading, needsApproval, requiredAmount, refetchAllowance, showToast]);
+
     // 決定使用哪個進度狀態
     const currentProgress = needsApproval && paymentSource === 'wallet' ? approveProgress : mintProgress;
     const isProcessing = currentProgress.status !== 'idle' && currentProgress.status !== 'error';

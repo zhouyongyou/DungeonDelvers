@@ -49,6 +49,15 @@ const CheckIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+// ★ 新增：下載圖示
+const DownloadIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="7 10 12 15 17 10"></polyline>
+        <line x1="12" y1="15" x2="12" y2="3"></line>
+    </svg>
+);
+
 // ★ 新增：叉叉圖示
 const XIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -83,6 +92,7 @@ export const Icons = {
     Codex: CodexIcon,
     Twitter: TwitterIcon, // ★ 新增
     Copy: CopyIcon,       // ★ 新增
+    Download: DownloadIcon, // ★ 新增：下載圖示
     AlertTriangle: AlertTriangleIcon, // ★ 新增：警告三角形圖示
     Check: CheckIcon,     // ★ 新增：勾選圖示
     X: XIcon,            // ★ 新增：叉叉圖示
