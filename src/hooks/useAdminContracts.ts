@@ -1,6 +1,6 @@
 // 專門為 AdminPage 設計的合約讀取 hook
-import { useContractRead } from 'wagmi';
-import { useState, useEffect } from 'react';
+import { useReadContract } from 'wagmi';
+import { useState, useEffect, useMemo } from 'react';
 import { logger } from '../utils/logger';
 
 interface ContractReadConfig {
@@ -15,15 +15,32 @@ export function useAdminContracts(contracts: ContractReadConfig[]) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // 為每個合約創建單獨的讀取 hook
-  const contractReads = contracts.map((contract) => {
+  // 使用 useMemo 穩定合約配置
+  const stableContracts = useMemo(() => {
+    return contracts.filter(contract => 
+      contract && 
+      contract.address && 
+      contract.address !== '0x0000000000000000000000000000000000000000' &&
+      contract.abi && 
+      contract.functionName
+    );
+  }, [contracts]);
+
+  // 為每個合約創建單獨的讀取 hook (使用新的 useReadContract)
+  const contractReads = stableContracts.map((contract, index) => {
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    return useContractRead({
+    return useReadContract({
       address: contract.address,
       abi: contract.abi,
       functionName: contract.functionName,
       args: contract.args,
-      enabled: !!contract.address && !!contract.abi && !!contract.functionName,
+      query: {
+        enabled: !!contract.address && !!contract.abi && !!contract.functionName,
+        staleTime: 30000, // 30秒緩存
+        gcTime: 60000, // 1分鐘垃圾回收
+        retry: 1, // 最多重試1次
+        refetchOnWindowFocus: false
+      }
     });
   });
 
@@ -47,19 +64,29 @@ export function useAdminContracts(contracts: ContractReadConfig[]) {
       const successCount = allResults.filter(r => r.status === 'success').length;
       const errorCount = allResults.filter(r => r.status === 'error').length;
       
-      // 減少日誌輸出，只在有錯誤時記錄
+      logger.info('AdminContracts 讀取結果:', {
+        total: allResults.length,
+        success: successCount,
+        error: errorCount,
+        validContracts: stableContracts.length,
+        originalContracts: contracts.length
+      });
+      
+      // 詳細記錄錯誤
       if (errorCount > 0) {
-        logger.error('AdminContracts 讀取錯誤:', {
-          total: allResults.length,
-          success: successCount,
-          error: errorCount,
+        logger.error('AdminContracts 讀取錯誤詳情:', {
           failures: allResults
-            .map((result, index) => ({ index, error: result.error }))
+            .map((result, index) => ({ 
+              index, 
+              contract: stableContracts[index], 
+              error: result.error,
+              errorMessage: result.error?.message 
+            }))
             .filter(item => item.error)
         });
       }
     }
-  }, contractReads); // 使用穩定的依賴
+  }, [contractReads, stableContracts.length, contracts.length]);
 
   return {
     data: results,

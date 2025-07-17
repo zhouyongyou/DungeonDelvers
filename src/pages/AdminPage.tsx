@@ -1,6 +1,6 @@
 // src/pages/AdminPage.tsx
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
 import { useMonitoredReadContracts } from '../hooks/useMonitoredContract';
 import { useSafeMultipleReads } from '../hooks/useSafeMultipleReads';
@@ -85,6 +85,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     };
   }, []); // 只在組件首次掛載時執行一次
 
+  // 將 setupConfig 移到組件外部，避免每次渲染都重新創建
   const setupConfig = useMemo(() => {
     try {
       const createSetting = (key: string, title: string, target: ContractName, setter: string, value: ContractName, getter: string) => ({ key, title, targetContractName: target, setterFunctionName: setter, valueToSetContractName: value, getterFunctionName: getter });
@@ -112,18 +113,16 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         createSetting('soulShardForDM', '在 DungeonMaster 中設定 SoulShard', 'dungeonMaster', 'setSoulShardToken', 'soulShard', 'soulShardToken'),
       ];
       
-      // 減少日誌輸出
       return config;
     } catch (error) {
       logger.error('setupConfig 創建失敗:', error);
       return [];
     }
-  }, []);
+  }, []); // 確保空依賴項陣列，只計算一次
 
   const contractsToRead = useMemo(() => {
     try {
       if (!chainId || !setupConfig || !Array.isArray(setupConfig) || setupConfig.length === 0) {
-        // 移除不必要的調試日誌
         return [];
       }
       
@@ -150,7 +149,6 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       configs.unshift({ ...coreContract, functionName: 'owner' });
       
       const filteredConfigs = configs.filter((c): c is NonNullable<typeof c> => c !== null && !!c.address);
-      // 移除不必要的調試日誌
       
       return filteredConfigs;
     } catch (error) {
@@ -260,12 +258,6 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     try {
       if (!contractsReadResult || !Array.isArray(contractsReadResult) || contractsReadResult.length === 0 || 
           !setupConfig || !Array.isArray(setupConfig) || setupConfig.length === 0) {
-        logger.debug('currentAddressMap: 數據不完整', { 
-          contractsReadResult: contractsReadResult ? 'exists' : 'undefined',
-          contractsReadResultLength: contractsReadResult?.length,
-          setupConfig: setupConfig ? 'exists' : 'undefined',
-          setupConfigLength: setupConfig?.length
-        });
         return {};
       }
       
@@ -277,7 +269,6 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         return acc;
       }, {} as Record<string, Address | undefined>);
       
-      // 減少日誌輸出
       return { owner, ...settings };
     } catch (error) {
       logger.error('currentAddressMap 計算失敗:', error);
@@ -451,9 +442,9 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     { enabled: loadedSections.taxSystem }
   );
 
-  // 額外的調試信息 - 檢查參數合約
-  useEffect(() => {
-    if (parameterContracts.length > 0) {
+  // 保留必要的調試信息，但使用 useCallback 穩定引用
+  const logParameterContracts = useCallback(() => {
+    if (import.meta.env.DEV && parameterContracts.length > 0) {
       logger.debug('📊 參數合約配置:', {
         count: parameterContracts.length,
         contracts: parameterContracts.map(c => ({
@@ -463,69 +454,78 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         }))
       });
     }
-  }, [parameterContracts]);
+  }, [parameterContracts.length]);
   
-  // 診斷參數讀取結果
-  useEffect(() => {
-    if (!isLoadingParams) {
-      logger.debug('📊 參數讀取狀態:', {
-        isLoading: isLoadingParams,
-        hasParams: !!params,
-        paramsType: typeof params,
-        isArray: Array.isArray(params),
-        length: params?.length,
-        error: paramsError,
-        errorMessage: paramsError?.message
+  const logVaultContracts = useCallback(() => {
+    if (import.meta.env.DEV && vaultContracts.length > 0) {
+      logger.debug('=== Vault 合約配置 ===', {
+        count: vaultContracts.length,
+        contracts: vaultContracts.map(c => ({
+          address: c.address,
+          functionName: c.functionName
+        }))
       });
+    }
+  }, [vaultContracts.length]);
+  
+  // 只在開發環境且數量變化時記錄
+  useEffect(() => {
+    logParameterContracts();
+  }, [logParameterContracts]);
+  
+  useEffect(() => {
+    logVaultContracts();
+  }, [logVaultContracts]);
+
+  // 合約健康檢查 - 在組件首次加載時檢查所有合約
+  useEffect(() => {
+    const performHealthCheck = async () => {
+      if (!chainId) return;
       
-      if (params && Array.isArray(params)) {
-        logger.debug('📊 參數讀取結果詳情:', {
-          results: params.map((result: any, index: number) => ({
-            index,
-            status: result?.status,
-            hasResult: !!result?.result,
-            resultValue: result?.result,
-            error: result?.error?.message
-          }))
-        });
+      logger.info('🏥 開始合約健康檢查...');
+      
+      // 檢查所有合約是否有效配置
+      const contractNames = ['dungeonCore', 'oracle', 'playerVault', 'hero', 'relic', 'party', 'dungeonMaster', 'altarOfAscension', 'playerProfile', 'soulShard', 'vipStaking'] as const;
+      
+      const healthStatus = contractNames.map(name => {
+        const contract = getContract(chainId, name);
+        const isValid = contract && contract.address && contract.address !== '0x0000000000000000000000000000000000000000';
         
-        // 特別檢查 explorationFee
-        const explorationFeeIndex = parameterConfig.findIndex(p => p.key === 'explorationFee');
-        if (explorationFeeIndex >= 0) {
-          logger.debug('🔍 explorationFee 讀取狀態:', {
-            index: explorationFeeIndex,
-            configKey: parameterConfig[explorationFeeIndex]?.key,
-            hasParam: !!params[explorationFeeIndex],
-            status: params[explorationFeeIndex]?.status,
-            result: params[explorationFeeIndex]?.result,
-            error: params[explorationFeeIndex]?.error
+        if (!isValid) {
+          logger.warn(`❌ 合約 ${name} 配置無效:`, {
+            hasContract: !!contract,
+            address: contract?.address,
+            hasAbi: !!contract?.abi
           });
         }
+        
+        return {
+          name,
+          isValid,
+          address: contract?.address,
+          hasAbi: !!contract?.abi
+        };
+      });
+      
+      const validContracts = healthStatus.filter(c => c.isValid);
+      const invalidContracts = healthStatus.filter(c => !c.isValid);
+      
+      logger.info('🏥 合約健康檢查完成:', {
+        total: healthStatus.length,
+        valid: validContracts.length,
+        invalid: invalidContracts.length,
+        invalidContracts: invalidContracts.map(c => c.name),
+        chainId
+      });
+      
+      // 如果有無效合約，在 UI 中顯示警告
+      if (invalidContracts.length > 0) {
+        showToast(`發現 ${invalidContracts.length} 個無效合約配置: ${invalidContracts.map(c => c.name).join(', ')}`, 'error');
       }
-    }
-  }, [isLoadingParams, params, paramsError, parameterConfig]);
-
-  // 額外的調試信息 - 檢查參數合約
-  useEffect(() => {
-    if (import.meta.env.DEV && parameterContracts.length > 0) {
-      logger.info('=== 參數合約配置 ===');
-      logger.info(`參數合約數量: ${parameterContracts.length}`);
-      parameterContracts.forEach((contract, index) => {
-        logger.info(`參數合約 ${index}: ${contract.address}.${contract.functionName}`);
-      });
-    }
-  }, [parameterContracts]);
-  
-  // 調試信息 - 檢查 vault 合約
-  useEffect(() => {
-    if (import.meta.env.DEV && vaultContracts.length > 0) {
-      logger.info('=== Vault 合約配置 ===');
-      logger.info(`Vault 合約數量: ${vaultContracts.length}`);
-      vaultContracts.forEach((contract, index) => {
-        logger.info(`Vault 合約 ${index}: ${contract.address}.${contract.functionName}`);
-      });
-    }
-  }, [vaultContracts]);
+    };
+    
+    performHealthCheck();
+  }, [chainId, showToast]); // 只在 chainId 變化時執行
 
   const handleSet = async (key: string, targetContract: NonNullable<ReturnType<typeof getContract>>, functionName: string) => {
     const newAddress = inputs[key];
@@ -582,53 +582,95 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   
   const ownerAddress = currentAddressMap.owner;
   
-  // 錯誤處理 - 使用 useEffect 避免重複觸發
+  // 錯誤處理 - 使用 useCallback 和 useRef 避免重複觸發
   const [hasShownError, setHasShownError] = useState<{ settings?: boolean; params?: boolean; vault?: boolean }>({});
   
-  useEffect(() => {
-    if (contractsReadError && !hasShownError.settings) {
-      // 詳細錯誤信息
-      const errorMessage = contractsReadError.message || '未知錯誤';
-      const errorStack = contractsReadError.stack || '無堆疊信息';
-      
+  // 使用 useCallback 穩定錯誤處理函數引用
+  const handleSettingsError = useCallback((error: any) => {
+    if (error && !hasShownError.settings) {
+      const errorMessage = error.message || '未知錯誤';
       logger.error('讀取管理員設定失敗詳細信息:', {
         message: errorMessage,
-        stack: errorStack,
+        stack: error.stack || '無堆疊信息',
         contractsToReadLength: contractsToRead?.length,
-        contractsToReadContent: contractsToRead?.map(c => `${c.address}:${c.functionName}`),
         chainId,
-        error: contractsReadError
+        error
       });
       
       showToast(`讀取合約設定失敗: ${errorMessage}`, 'error');
       setHasShownError(prev => ({ ...prev, settings: true }));
-    }
-    if (!contractsReadError && hasShownError.settings) {
+    } else if (!error && hasShownError.settings) {
       setHasShownError(prev => ({ ...prev, settings: false }));
     }
-  }, [contractsReadError, hasShownError.settings, showToast, contractsToRead, chainId]);
+  }, [hasShownError.settings, showToast, contractsToRead?.length, chainId]);
   
-  useEffect(() => {
-    if (paramsError && !hasShownError.params) {
-      showToast(`讀取參數設定失敗: ${paramsError.message || '未知錯誤'}`, 'error');
-      logger.debug('讀取參數設定失敗:', paramsError);
+  const handleParamsError = useCallback((error: any) => {
+    if (error && !hasShownError.params) {
+      showToast(`讀取參數設定失敗: ${error.message || '未知錯誤'}`, 'error');
+      logger.debug('讀取參數設定失敗:', error);
       setHasShownError(prev => ({ ...prev, params: true }));
-    }
-    if (!paramsError && hasShownError.params) {
+    } else if (!error && hasShownError.params) {
       setHasShownError(prev => ({ ...prev, params: false }));
     }
-  }, [paramsError, hasShownError.params, showToast]);
+  }, [hasShownError.params, showToast]);
   
-  useEffect(() => {
-    if (vaultParamsError && !hasShownError.vault) {
-      showToast(`讀取稅務參數失敗: ${vaultParamsError.message || '未知錯誤'}`, 'error');
-      logger.debug('讀取稅務參數失敗:', vaultParamsError);
+  const handleVaultError = useCallback((error: any) => {
+    if (error && !hasShownError.vault) {
+      showToast(`讀取稅務參數失敗: ${error.message || '未知錯誤'}`, 'error');
+      logger.debug('讀取稅務參數失敗:', error);
       setHasShownError(prev => ({ ...prev, vault: true }));
-    }
-    if (!vaultParamsError && hasShownError.vault) {
+    } else if (!error && hasShownError.vault) {
       setHasShownError(prev => ({ ...prev, vault: false }));
     }
-  }, [vaultParamsError, hasShownError.vault, showToast]);
+  }, [hasShownError.vault, showToast]);
+  
+  // 使用穩定的錯誤處理函數
+  useEffect(() => {
+    handleSettingsError(contractsReadError);
+  }, [contractsReadError, handleSettingsError]);
+  
+  useEffect(() => {
+    handleParamsError(paramsError);
+  }, [paramsError, handleParamsError]);
+  
+  useEffect(() => {
+    handleVaultError(vaultParamsError);
+  }, [vaultParamsError, handleVaultError]);
+
+  // 添加詳細的合約讀取診斷
+  useEffect(() => {
+    if (contractsReadResult || contractsReadError) {
+      logger.info('🔍 合約讀取診斷結果:', {
+        hasResult: !!contractsReadResult,
+        resultLength: contractsReadResult?.length,
+        hasError: !!contractsReadError,
+        errorMessage: contractsReadError?.message,
+        loadingState: isLoadingContracts,
+        contractsToReadCount: contractsToRead?.length,
+        safeContractsCount: safeContractsToRead?.length,
+        contractsReadEnabled,
+        setupConfigLength: setupConfig?.length,
+        chainId
+      });
+      
+      // 詳細記錄每個合約的讀取狀態
+      if (contractsReadResult && Array.isArray(contractsReadResult)) {
+        contractsReadResult.forEach((result, index) => {
+          const configItem = setupConfig?.[index - 1]; // 第0個是owner，所以減1
+          if (result?.status === 'failure' || result?.error) {
+            logger.error(`合約讀取失敗 [${index}]:`, {
+              configKey: index === 0 ? 'owner' : configItem?.key,
+              targetContract: index === 0 ? 'dungeonCore' : configItem?.targetContractName,
+              functionName: index === 0 ? 'owner' : configItem?.getterFunctionName,
+              error: result.error,
+              status: result.status,
+              result: result.result
+            });
+          }
+        });
+      }
+    }
+  }, [contractsReadResult, contractsReadError, isLoadingContracts, contractsToRead?.length, safeContractsToRead?.length, contractsReadEnabled, setupConfig?.length, chainId]);
 
   // 只在第一次加載合約串接中心時顯示全屏加載
   if (loadedSections.contractCenter && isLoadingContracts && !ownerAddress) {
