@@ -281,13 +281,17 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
                 keys: Object.keys(partyStatus),
                 values: Object.values(partyStatus),
                 // 解析具體數值
-                provisionsRemaining: partyStatus[0]?.toString(),
-                cooldownEndsAt: partyStatus[1]?.toString(),
-                unclaimedRewards: partyStatus[2]?.toString(),
-                fatigueLevel: partyStatus[3]?.toString(),
+                provisionsRemaining: partyStatus[0]?.toString() || partyStatus.provisionsRemaining?.toString(),
+                cooldownEndsAt: partyStatus[1]?.toString() || partyStatus.cooldownEndsAt?.toString(),
+                unclaimedRewards: partyStatus[2]?.toString() || partyStatus.unclaimedRewards?.toString(),
+                fatigueLevel: partyStatus[3]?.toString() || partyStatus.fatigueLevel?.toString(),
                 // 檢查冷卻狀態
                 currentTime: Math.floor(Date.now() / 1000),
-                isInCooldown: partyStatus[1] ? Number(partyStatus[1]) > Math.floor(Date.now() / 1000) : false
+                isInCooldown: partyStatus[1] ? Number(partyStatus[1]) > Math.floor(Date.now() / 1000) : false,
+                // 顯示完整結構
+                fullStructure: JSON.stringify(partyStatus, (key, value) => 
+                    typeof value === 'bigint' ? value.toString() : value
+                )
             });
         }
         if (partyStatusError) {
@@ -305,31 +309,19 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
         }
         
         try {
-            // partyStatus 可能是對象格式
-            if (typeof partyStatus === 'object' && !Array.isArray(partyStatus)) {
-                // 嘗試不同的屬性名稱
-                const cooldownValue = partyStatus.cooldownEndsAt || 
-                                     partyStatus['1'] || 
-                                     (partyStatus as any)[1];
-                
+            // partyStatus 是一個對象，直接訪問 cooldownEndsAt 屬性
+            if (typeof partyStatus === 'object' && 'cooldownEndsAt' in partyStatus) {
+                const cooldownValue = partyStatus.cooldownEndsAt;
                 if (cooldownValue !== undefined) {
                     const cooldownBigInt = BigInt(cooldownValue.toString());
-                    console.log('[DungeonPage] 成功解析 cooldownEndsAt (從對象):', cooldownBigInt.toString());
+                    console.log('[DungeonPage] 成功解析 cooldownEndsAt:', cooldownBigInt.toString());
                     return cooldownBigInt;
                 }
             }
             
-            // 嘗試作為數組
-            if (Array.isArray(partyStatus) && partyStatus[1] !== undefined) {
-                const cooldownBigInt = BigInt(partyStatus[1]);
-                console.log('[DungeonPage] 成功解析 cooldownEndsAt (從數組):', cooldownBigInt.toString());
-                return cooldownBigInt;
-            }
-            
-            // 嘗試直接訪問索引
-            const cooldownValue = (partyStatus as any)[1];
-            if (cooldownValue !== undefined) {
-                const cooldownBigInt = BigInt(cooldownValue.toString());
+            // 備用方案：嘗試數組訪問
+            if (partyStatus[1] !== undefined) {
+                const cooldownBigInt = BigInt(partyStatus[1].toString());
                 console.log('[DungeonPage] 成功解析 cooldownEndsAt (從索引):', cooldownBigInt.toString());
                 return cooldownBigInt;
             }
@@ -337,7 +329,7 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
             console.error('[DungeonPage] 解析 cooldownEndsAt 失敗:', error);
         }
         
-        console.warn('[DungeonPage] 無法解析 partyStatus，回退到原始數據:', partyStatus);
+        console.warn('[DungeonPage] 無法解析 partyStatus，使用原始數據');
         return party.cooldownEndsAt || 0n;
     })();
     
@@ -443,14 +435,13 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
                         queryClient.invalidateQueries({ queryKey: ['playerParties'] });
                     }} 
                 />
-            ) : (
-                <div className="mt-3 text-xs text-gray-500 space-y-1">
-                    {/* 調試資訊：沒有顯示冷卻計時器的原因 */}
-                    <p>冷卻狀態: {cooldownEndsAt > 0n ? '已結束' : '無冷卻數據'}</p>
-                    <p>冷卻時間: {cooldownEndsAt.toString()}</p>
-                    <p>當前時間: {Math.floor(Date.now() / 1000)}</p>
+            ) : cooldownEndsAt > 0n ? (
+                <div className="mt-3 p-2 bg-green-900/20 rounded-lg border border-green-600/30">
+                    <p className="text-xs text-green-400 text-center">
+                        ✅ 冷卻已結束，可以再次出征！
+                    </p>
                 </div>
-            )}
+            ) : null}
             
             <ExpeditionResults partyId={party.id} chainId={chainId} />
         </div>
