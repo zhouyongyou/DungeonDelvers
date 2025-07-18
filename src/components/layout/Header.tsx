@@ -67,7 +67,8 @@ export const Header: React.FC<HeaderProps> = ({
           { key: 'mint', label: '鑄造' },
           { key: 'party', label: '隊伍' },
           { key: 'dungeon', label: '地下城' },
-          { key: 'altar', label: '升星祭壇' },
+          // V1版本：暫時禁用祭壇功能
+          // { key: 'altar', label: '升星祭壇' },
           { key: 'codex', label: '圖鑑' },
           { key: 'vip', label: 'VIP' },
           { key: 'referral', label: '推薦' },

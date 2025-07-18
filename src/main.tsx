@@ -12,6 +12,14 @@ import client from './simpleApolloClient'; // 2. 引入簡化的 Apollo Client
 import { ToastProvider } from './contexts/SimpleToastContext';
 import { ExpeditionProvider } from './contexts/ExpeditionContext';
 import App from './StableApp';
+import { checkSubgraphSync } from './utils/checkSubgraphSync';
+
+// 開發環境下自動檢查子圖狀態
+if (import.meta.env.DEV) {
+  checkSubgraphSync();
+  // 將函數暴露到全局，方便在控制台調用
+  (window as any).checkSubgraphSync = checkSubgraphSync;
+}
 
 // 第一步：測試基本的 React Query
 const queryClient = new QueryClient({

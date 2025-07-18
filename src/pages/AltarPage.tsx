@@ -1,7 +1,7 @@
 // src/pages/AltarPage.tsx (數據讀取修正版)
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useAccount, useReadContracts, useWriteContract, usePublicClient } from 'wagmi';
+import { useAccount, useReadContracts, useWriteContract, usePublicClient, useReadContract } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatEther, decodeEventLog, type Abi } from 'viem';
 import { fetchMetadata } from '../api/nfts';
@@ -36,12 +36,18 @@ const GET_FILTERED_NFTS_QUERY = `
       tokenId
       power
       rarity
+      owner {
+        id
+      }
     }
     relics(where: { owner: $owner, rarity: $rarity }, first: 1000) {
       id
       tokenId
       capacity
       rarity
+      owner {
+        id
+      }
     }
   }
 `;
@@ -191,18 +197,28 @@ const UpgradeResultModal: React.FC<{ result: UpgradeOutcome | null; onClose: () 
 const UpgradeInfoCard: React.FC<{ rule: { materialsRequired: number; nativeFee: bigint; greatSuccessChance: number; successChance: number; partialFailChance: number } | null; isLoading: boolean; }> = ({ rule, isLoading }) => {
   if (isLoading) return <div className="card-bg p-4 rounded-xl animate-pulse h-48"><LoadingSpinner /></div>;
   if (!rule || !rule.materialsRequired) return <div className="card-bg p-4 rounded-xl text-center text-gray-500">請先選擇要升級的星級</div>;
-  const totalChance = rule.greatSuccessChance + rule.successChance + rule.partialFailChance;
+  
+  // 暫時顯示優化後的機率（無失敗機制）
+  const optimizedRules = {
+    1: { greatSuccessChance: 10, successChance: 90 }, // 升2★
+    2: { greatSuccessChance: 8, successChance: 92 },  // 升3★
+  };
+  
+  const rarity = rule.materialsRequired === 5 ? 1 : 2;
+  const displayRule = optimizedRules[rarity as 1 | 2] || { greatSuccessChance: rule.greatSuccessChance, successChance: rule.successChance };
+  
   return (
     <div className="card-bg p-6 rounded-2xl text-sm">
       <h4 className="section-title text-xl">升星規則</h4>
       <div className="space-y-2">
         <p>所需材料: <span className="font-bold text-white">{rule.materialsRequired.toString()} 個</span></p>
-        <p>所需費用: <span className="font-bold text-yellow-400">{formatEther(rule.nativeFee)} BNB</span></p>
+        <p>所需費用: <span className="font-bold text-yellow-400">免費</span></p>
         <hr className="border-gray-700 my-3" />
-        <p className="text-green-400">⚜️ 大成功 (獲得2個): {rule.greatSuccessChance}%</p>
-        <p className="text-sky-400">✨ 普通成功 (獲得1個): {rule.successChance}%</p>
-        <p className="text-orange-400">💔 一般失敗 (返還部分): {rule.partialFailChance}%</p>
-        <p className="text-red-500">💀 完全失敗 (全部損失): {100 - totalChance}%</p>
+        <p className="text-green-400">⚜️ 大成功 (獲得2個): {displayRule.greatSuccessChance}%</p>
+        <p className="text-sky-400">✨ 普通成功 (獲得1個): {displayRule.successChance}%</p>
+        <div className="mt-2 p-2 bg-green-900/20 border border-green-500/30 rounded-lg">
+          <p className="text-xs text-green-300">✅ 優化版：保證成功，無失敗風險！</p>
+        </div>
       </div>
     </div>
   );
@@ -217,6 +233,7 @@ const AltarPage: React.FC = () => {
     const { showToast } = useAppToast();
     const publicClient = usePublicClient();
     const queryClient = useQueryClient();
+    const { writeContract } = useWriteContract();
 
     const [nftType, setNftType] = useState<NftType>('hero');
     const [rarity, setRarity] = useState<number>(1);
@@ -229,6 +246,19 @@ const AltarPage: React.FC = () => {
     const altarContract = getContract(bsc.id, 'altarOfAscension');
     const heroContract = getContract(bsc.id, 'hero');
     const relicContract = getContract(bsc.id, 'relic');
+
+    // 檢查當前 NFT 類型的授權狀態
+    const currentNftContract = nftType === 'hero' ? heroContract : relicContract;
+    const { data: isApprovedForAll, refetch: refetchApproval } = useReadContract({
+        address: currentNftContract?.address as `0x${string}`,
+        abi: currentNftContract?.abi,
+        functionName: 'isApprovedForAll',
+        args: address && altarContract ? [address, altarContract.address] : undefined,
+        query: {
+            enabled: !!address && !!currentNftContract && !!altarContract && chainId === bsc.id,
+            refetchInterval: 3000, // 每3秒檢查一次授權狀態
+        }
+    });
 
     // 使用交易進度 Hook
     const { execute: executeUpgrade, progress: upgradeProgress, reset: resetProgress } = useTransactionWithProgress({
@@ -335,11 +365,13 @@ const AltarPage: React.FC = () => {
                 const newSelection = [...prev, id];
                 // 當選滿材料時自動彈出確認窗口
                 if (newSelection.length === currentRule.materialsRequired) {
-                    setShowConfirmModal(true);
+                    // 使用 setTimeout 避免在渲染期間更新狀態
+                    setTimeout(() => setShowConfirmModal(true), 0);
                 }
                 return newSelection;
             }
-            showToast(`最多只能選擇 ${currentRule?.materialsRequired} 個材料`, 'error');
+            // 使用 setTimeout 避免在渲染期間調用 showToast
+            setTimeout(() => showToast(`最多只能選擇 ${currentRule?.materialsRequired} 個材料`, 'error'), 0);
             return prev;
         });
     };
@@ -350,12 +382,43 @@ const AltarPage: React.FC = () => {
         resetSelections();
     }, [nftType, rarity]);
 
+    const handleApproval = async () => {
+        if (!currentNftContract || !altarContract || !address) return;
+        
+        try {
+            showToast('正在授權祭壇合約...', 'info');
+            
+            await writeContract({
+                address: currentNftContract.address as `0x${string}`,
+                abi: currentNftContract.abi,
+                functionName: 'setApprovalForAll',
+                args: [altarContract.address, true],
+            });
+            
+            showToast('授權交易已發送，請等待確認', 'success');
+            
+            // 等待一段時間後刷新授權狀態
+            setTimeout(() => {
+                refetchApproval();
+            }, 3000);
+        } catch (error) {
+            logger.error('授權失敗:', error);
+            showToast('授權失敗，請重試', 'error');
+        }
+    };
+
     const handleUpgrade = async () => {
         if (!currentRule || !altarContract || !publicClient) return;
         if (selectedNfts.length !== currentRule.materialsRequired) return showToast(`需要 ${currentRule.materialsRequired} 個材料`, 'error');
 
         const tokenContract = nftType === 'hero' ? heroContract : relicContract;
         if (!tokenContract) return showToast('合約地址未設定', 'error');
+
+        // 檢查授權狀態
+        if (!isApprovedForAll) {
+            showToast('請先授權祭壇合約', 'error');
+            return;
+        }
 
         // 調試信息：檢查選中的 NFT 稀有度
         logger.debug('升星操作調試信息:', {
@@ -436,19 +499,20 @@ const AltarPage: React.FC = () => {
                             <div className="bg-gray-800/50 rounded-lg p-4">
                                 <h4 className="font-semibold text-white mb-2">升星機率</h4>
                                 <div className="space-y-1 text-sm">
-                                    <p className="text-purple-400">🌟 大成功 (2個 {rarity + 1}★): {currentRule.greatSuccessChance}%</p>
-                                    <p className="text-green-400">✨ 成功 (1個 {rarity + 1}★): {currentRule.successChance}%</p>
-                                    <p className="text-yellow-400">💫 部分失敗 ({Math.floor(currentRule.materialsRequired / 2)}個 {rarity}★): {currentRule.partialFailChance}%</p>
-                                    <p className="text-red-400">💀 完全失敗 (全部損失): {100 - currentRule.greatSuccessChance - currentRule.successChance - currentRule.partialFailChance}%</p>
+                                    <p className="text-purple-400">🌟 大成功 (2個 {rarity + 1}★): {rarity === 1 ? 10 : 8}%</p>
+                                    <p className="text-green-400">✨ 成功 (1個 {rarity + 1}★): {rarity === 1 ? 90 : 92}%</p>
+                                </div>
+                                <div className="mt-2 p-2 bg-green-900/20 border border-green-500/30 rounded-lg">
+                                    <p className="text-xs text-green-300">✅ 保證成功，無失敗風險！</p>
                                 </div>
                             </div>
                             
-                            <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3">
-                                <p className="text-xs text-yellow-300">
-                                    ⚠️ 費用：{formatEther(currentRule.nativeFee)} BNB
+                            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
+                                <p className="text-xs text-blue-300">
+                                    ✨ 免費升級活動中！
                                 </p>
                                 <p className="text-xs text-gray-400 mt-1">
-                                    升星結果由鏈上隨機數決定，請謹慎操作
+                                    升星結果由鏈上隨機數決定
                                 </p>
                             </div>
                         </>
@@ -469,16 +533,39 @@ const AltarPage: React.FC = () => {
                             ))}
                         </div>
                         <div className="flex items-center gap-2 bg-gray-900/50 p-1 rounded-lg">
-                            {[1, 2, 3, 4].map(r => (
+                            {[1, 2].map(r => (
                                 <button key={r} onClick={() => setRarity(r)} className={`w-full py-2 text-sm font-medium rounded-md transition ${rarity === r ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'}`}>{r} ★</button>
+                            ))}
+                            {[3, 4].map(r => (
+                                <button key={r} disabled className={`w-full py-2 text-sm font-medium rounded-md transition opacity-50 cursor-not-allowed text-gray-500 relative`}>
+                                    {r} ★
+                                    <span className="absolute inset-0 flex items-center justify-center text-xs text-red-400">暫不開放</span>
+                                </button>
                             ))}
                         </div>
                     </div>
                     <UpgradeInfoCard rule={currentRule} isLoading={isLoadingRules} />
+                    
+                    {/* 授權狀態檢查和按鈕 */}
+                    {!isApprovedForAll && currentRule && (
+                        <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-4">
+                            <p className="text-sm text-yellow-300 mb-2">
+                                ⚠️ 需要先授權祭壇合約才能進行升星
+                            </p>
+                            <ActionButton
+                                onClick={handleApproval}
+                                isLoading={false}
+                                className="w-full h-12"
+                            >
+                                授權 {nftType === 'hero' ? '英雄' : '聖物'} NFT
+                            </ActionButton>
+                        </div>
+                    )}
+                    
                     <ActionButton 
                         onClick={() => setShowConfirmModal(true)} 
                         isLoading={isTxPending} 
-                        disabled={isTxPending || !currentRule || selectedNfts.length !== currentRule.materialsRequired} 
+                        disabled={isTxPending || !currentRule || selectedNfts.length !== currentRule.materialsRequired || !isApprovedForAll} 
                         className="w-full h-14 text-lg"
                     >
                         {isTxPending ? '正在獻祭...' : '開始升星'}
@@ -502,6 +589,7 @@ const AltarPage: React.FC = () => {
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="section-title">2. 選擇材料 ({selectedNfts.length} / {currentRule?.materialsRequired ?? '...'})</h3>
                                 <div className="flex items-center gap-2">
+                                    {/* 暫時移除一鍵選擇功能
                                     {availableNfts && availableNfts.length >= (currentRule?.materialsRequired ?? 0) && (
                                         <button
                                             onClick={() => {
@@ -521,6 +609,7 @@ const AltarPage: React.FC = () => {
                                             ⚡ 一鍵選擇最弱
                                         </button>
                                     )}
+                                    */}
                                     {selectedNfts.length > 0 && (
                                         <button
                                             onClick={() => {

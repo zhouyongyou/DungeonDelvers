@@ -1,6 +1,6 @@
 {
   "name": "dungeon-delvers",
-  "version": "2.0.7",
+  "version": "2.0.9",
   "description": "Dungeon Delvers Subgraph",
   "scripts": {
     "codegen": "graph codegen",

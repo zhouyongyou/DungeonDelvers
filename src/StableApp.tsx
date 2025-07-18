@@ -11,6 +11,7 @@ import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { WrongNetworkBanner } from './components/ui/WrongNetworkBanner';
 // 現在可以安全地使用修復後的圖片預加載
 import { preloadCriticalImages, setupSmartPreloading } from './utils/imagePreloadStrategy';
+import { V3AuthorizationNotice } from './components/V3AuthorizationNotice';
 
 // 動態導入所有頁面
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -96,7 +97,8 @@ function StableApp() {
         case 'mint': return <MintPage />;
         case 'explorer': return <ExplorerPage />;
         case 'admin': return <AdminPage />;
-        case 'altar': return <AltarPage />;
+        // V1版本：暫時禁用祭壇功能
+        // case 'altar': return <AltarPage />;
         case 'profile': return <ProfilePage setActivePage={handleSetPage} />;
         case 'vip': return <VipPage />;
         case 'referral': return <ReferralPage />;
@@ -125,6 +127,7 @@ function StableApp() {
             </Suspense>
         </main>
         {!isMobile && <Footer />}
+        <V3AuthorizationNotice />
         {/* 移動端底部導航 - 簡化版 */}
         {isMobile && (
           <div className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700">

@@ -89,7 +89,7 @@ export const ApprovalHelper: React.FC<ApprovalHelperProps> = ({ className = '' }
     address: relicContract?.address,
     abi: relicContract?.abi,
     functionName: 'isApprovedForAll',
-    args: [address, relicContract?.address],
+    args: [address, partyContract?.address],
     query: { enabled: !!address && isExpanded }
   });
   
