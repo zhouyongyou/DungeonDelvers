@@ -1,6 +1,6 @@
 // DDgraphql/dungeondelvers/src/dungeon-master.ts (統一配置系統版)
 import { BigInt, log } from "@graphprotocol/graph-ts"
-import { ExpeditionFulfilled, PartyRested, ProvisionsBought } from "../generated/DungeonMaster/DungeonMaster"
+import { ExpeditionFulfilled, ProvisionsBought } from "../generated/DungeonMaster/DungeonMaster"
 import { Party, PlayerProfile } from "../generated/schema"
 import { calculateLevel } from "./utils"
 import { getOrCreatePlayer } from "./common"
@@ -46,17 +46,18 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
   }
 }
 
-export function handlePartyRested(event: PartyRested): void {
-  const partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
-  const party = Party.load(partyId)
-  if (party) {
-    // 已禁用疲勞度系統
-    // party.fatigueLevel = 0
-    party.cooldownEndsAt = event.block.timestamp
-    party.lastUpdatedAt = event.block.timestamp
-    party.save()
-  }
-}
+// 已移除疲勞度系統，不再需要 handlePartyRested
+// export function handlePartyRested(event: PartyRested): void {
+//   const partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
+//   const party = Party.load(partyId)
+//   if (party) {
+//     // 已禁用疲勞度系統
+//     // party.fatigueLevel = 0
+//     party.cooldownEndsAt = event.block.timestamp
+//     party.lastUpdatedAt = event.block.timestamp
+//     party.save()
+//   }
+// }
 
 export function handleProvisionsBought(event: ProvisionsBought): void {
   const partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
