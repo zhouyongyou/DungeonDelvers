@@ -63,12 +63,12 @@ export const ExpeditionResults: React.FC<ExpeditionResultsProps> = ({ partyId, c
                     
                     if (success) {
                         showToast(
-                            `🎉 出征成功！獲得 ${formatEther(reward)} SOUL 和 ${expGained} 經驗值`,
+                            `🎉 出征成功！獲得 ${formatEther(reward)} SOUL 和 ${expGained.toString()} 經驗值`,
                             'success'
                         );
                     } else {
                         showToast(
-                            `😢 出征失敗... 獲得 ${expGained} 經驗值`,
+                            `😢 出征失敗... 獲得 ${expGained.toString()} 經驗值`,
                             'error'
                         );
                     }

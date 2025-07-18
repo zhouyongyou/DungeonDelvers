@@ -162,6 +162,7 @@ interface PartyStatusCardProps {
 }
 
 const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onStartExpedition, /* onRest, */ isTxPending, isAnyTxPendingForThisParty, chainId }) => {
+    const { address } = useAccount();
     const queryClient = useQueryClient();
     // 🎯 智能選擇最高可挑戰的地城作為預設值
     const getHighestChallengeableDungeon = () => {
@@ -180,6 +181,7 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
     const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
     const dungeonStorageContract = getContract(chainId, 'dungeonStorage');
     const dungeonCoreContract = getContract(chainId, 'dungeonCore');
+    const playerProfileContract = getContract(chainId, 'playerProfile');
     
     // 🎯 當地城數據加載完成後，更新預設選擇
     React.useEffect(() => {
@@ -218,6 +220,32 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
             staleTime: 1000 * 60 * 5, // 5分鐘緩存
         }
     });
+    
+    // 讀取玩家經驗值和等級
+    const { data: experienceResult } = useReadContract({
+        address: playerProfileContract?.address as `0x${string}`,
+        abi: playerProfileContract?.abi,
+        functionName: 'getExperience',
+        args: [address!],
+        query: { 
+            enabled: !!address && !!playerProfileContract,
+            staleTime: 1000 * 60, // 1分鐘
+        },
+    });
+    
+    const { data: levelResult } = useReadContract({
+        address: playerProfileContract?.address as `0x${string}`,
+        abi: playerProfileContract?.abi,
+        functionName: 'getLevel',
+        args: [address!],
+        query: { 
+            enabled: !!address && !!playerProfileContract,
+            staleTime: 1000 * 60, // 1分鐘
+        },
+    });
+    
+    const playerExp = experienceResult ? BigInt(experienceResult.toString()) : 0n;
+    const playerLevel = levelResult ? Number(levelResult.toString()) : 0;
 
     // 🧮 計算獎勵的輔助函數 (這個版本在 PartyStatusCard 中使用，也需要考慮全局倍率)
     const calculateSoulReward = (usdAmount: bigint): bigint => {
@@ -352,6 +380,16 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
                 <h4 className="font-bold text-lg text-white truncate pr-2">{party.name}</h4>
                 {renderStatus()}
             </div>
+            
+            {/* 顯示玩家等級 */}
+            {playerLevel > 0 && (
+                <div className="flex justify-center mb-2">
+                    <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-black px-3 py-1 rounded-full text-sm font-bold">
+                        Lv. {playerLevel}
+                    </div>
+                </div>
+            )}
+            
             <div className="grid grid-cols-1 gap-2 mb-4 text-center">
                 <div><p className="text-sm text-gray-400">戰力</p><p className="font-bold text-2xl text-indigo-400">{effectivePower.toString()}</p></div>
                 {/* 已移除疲勞度顯示 */}
@@ -373,15 +411,6 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
                         [...dungeons].reverse().map(d => <option key={d.id} value={d.id.toString()}>{d.id}. {d.name} (要求: {d.requiredPower.toString()})</option>)
                     )}
                 </select>
-            </div>
-            
-            {/* 臨時調試區域 */}
-            <div className="text-xs text-gray-500 space-y-1 p-2 bg-gray-900/50 rounded mb-2">
-                <p>調試資訊：</p>
-                <p>冷卻結束時間: {cooldownEndsAt.toString()}</p>
-                <p>當前時間戳: {Math.floor(Date.now() / 1000)}</p>
-                <p>是否冷卻中: {isOnCooldown ? '是' : '否'}</p>
-                <p>剩餘時間: {isOnCooldown ? Number(cooldownEndsAt) - Math.floor(Date.now() / 1000) : 0} 秒</p>
             </div>
             
             {renderAction()}

@@ -128,6 +128,37 @@ const usePlayerProfile = (targetAddress: Address | undefined) => {
     // 如果有 Profile，嘗試獲取 tokenURI（需要知道 tokenId）
     const hasProfile = hasProfileResult && BigInt(hasProfileResult.toString()) > 0n;
 
+    // 步驟 3: 從合約讀取經驗值
+    const { data: experienceResult } = useReadContract({
+        address: playerProfileContract?.address as `0x${string}`,
+        abi: playerProfileContract?.abi,
+        functionName: 'getExperience',
+        args: [targetAddress!],
+        query: { 
+            enabled: !!targetAddress && !!playerProfileContract && hasProfile,
+            staleTime: 1000 * 60, // 1分鐘
+            gcTime: 1000 * 60 * 10, // 10分鐘
+            refetchOnWindowFocus: false,
+        },
+    });
+
+    // 步驟 4: 從合約讀取等級
+    const { data: levelResult } = useReadContract({
+        address: playerProfileContract?.address as `0x${string}`,
+        abi: playerProfileContract?.abi,
+        functionName: 'getLevel',
+        args: [targetAddress!],
+        query: { 
+            enabled: !!targetAddress && !!playerProfileContract && hasProfile,
+            staleTime: 1000 * 60, // 1分鐘
+            gcTime: 1000 * 60 * 10, // 10分鐘
+            refetchOnWindowFocus: false,
+        },
+    });
+
+    const experience = experienceResult ? BigInt(experienceResult.toString()) : 0n;
+    const level = levelResult ? Number(levelResult.toString()) : 1;
+
     return {
         tokenId,
         tokenURI: null, // 暫時設為 null，因為沒有 tokenId 無法獲取 tokenURI
@@ -135,7 +166,36 @@ const usePlayerProfile = (targetAddress: Address | undefined) => {
         isError,
         hasProfile: hasProfile || !!graphData?.profile,
         profileData: graphData?.profile,
+        experience,
+        level,
     };
+};
+
+// =================================================================
+// Section: 經驗值計算輔助函數
+// =================================================================
+
+// 根據合約公式計算等級所需的經驗值
+const getExpRequiredForLevel = (level: number): number => {
+    if (level <= 1) return 0;
+    return (level - 1) * (level - 1) * 100;
+};
+
+// 計算當前經驗值在當前等級的進度
+const getExpForNextLevel = (currentExp: bigint, currentLevel: number): number => {
+    const currentLevelExp = getExpRequiredForLevel(currentLevel);
+    return Number(currentExp) - currentLevelExp;
+};
+
+// 計算升級進度百分比
+const calculateExpProgress = (currentExp: bigint, currentLevel: number): number => {
+    const currentLevelExp = getExpRequiredForLevel(currentLevel);
+    const nextLevelExp = getExpRequiredForLevel(currentLevel + 1);
+    const expInCurrentLevel = Number(currentExp) - currentLevelExp;
+    const expNeededForNextLevel = nextLevelExp - currentLevelExp;
+    
+    if (expNeededForNextLevel === 0) return 100;
+    return Math.min(100, Math.max(0, Math.floor((expInCurrentLevel / expNeededForNextLevel) * 100)));
 };
 
 // =================================================================
@@ -147,7 +207,7 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
     const targetAddress = useTargetAddress();
     const isMyProfile = targetAddress?.toLowerCase() === connectedAddress?.toLowerCase();
 
-    const { tokenURI, isLoading, isError, hasProfile, profileData } = usePlayerProfile(targetAddress);
+    const { tokenURI, isLoading, isError, hasProfile, profileData, experience, level } = usePlayerProfile(targetAddress);
 
     if (!chainId || chainId !== bsc.id) {
         return (
@@ -199,6 +259,33 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                                 <h4 className="text-xl font-bold text-white mb-1">
                                     {profileData.name || '未命名玩家'}
                                 </h4>
+                                
+                                {/* 等級和經驗值顯示 */}
+                                <div className="flex items-center justify-center gap-4 my-2">
+                                    <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-black px-3 py-1 rounded-full font-bold">
+                                        Lv. {level}
+                                    </div>
+                                    <div className="text-sm text-gray-300">
+                                        經驗值: {experience.toString()}
+                                    </div>
+                                </div>
+                                
+                                {/* 經驗條 */}
+                                <div className="w-full mt-2 mb-3">
+                                    <div className="text-xs text-gray-400 mb-1">
+                                        升級進度: {calculateExpProgress(experience, level)}%
+                                    </div>
+                                    <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                                        <div 
+                                            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"
+                                            style={{ width: `${calculateExpProgress(experience, level)}%` }}
+                                        />
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                        {getExpForNextLevel(experience, level)} / {getExpRequiredForLevel(level + 1)} EXP
+                                    </div>
+                                </div>
+                                
                                 <p className="text-sm text-gray-400">
                                     成功遠征次數: {profileData.successfulExpeditions || 0}
                                 </p>
