@@ -317,17 +317,6 @@ export const useContractEventsOptimized = () => {
         }, true, queryClient) 
     });
     
-    useWatchContractEvent({ 
-        ...dungeonMasterContract, 
-        chainId: bsc.id, 
-        eventName: 'ProvisionsBought', 
-        pollingInterval, // 🔥 使用自適應間隔
-        enabled: isEnabled, // 🔥 背景模式時停用
-        onLogs: createContractEventHandler(dungeonMasterContract, 'ProvisionsBought', address, (log) => { 
-            showToast(`隊伍 #${log.args.partyId?.toString()} 儲備補充成功！`, 'success'); 
-            invalidatePartyStatus(log.args.partyId as bigint); 
-        }, true, queryClient) 
-    });
     
     // 升星祭壇事件 -> 刷新 NFT 列表和餘額
     useWatchContractEvent({ 

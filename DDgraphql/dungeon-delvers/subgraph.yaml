@@ -8,7 +8,7 @@ dataSources:
     name: Hero
     network: bsc
     source:
-      address: '0xB882915F4fD4C3773e0E8eeBB65088CB584A0Bdf'
+      address: '0xaF1Ca485BB112236BE70A40F0CD79D9D562B50E8'
       abi: Hero
       startBlock: 54356767
     mapping:
@@ -36,7 +36,7 @@ dataSources:
     name: Relic
     network: bsc
     source:
-      address: '0x41cb97b903547C4190D66E818A64b7b37DE005c0'
+      address: '0x07161a55DBc5f6351013B3513fab2b524F93023b'
       abi: Relic
       startBlock: 54356767
     mapping:
@@ -64,7 +64,7 @@ dataSources:
     name: Party
     network: bsc
     source:
-      address: '0x075F68Ab40A55CB4341A7dF5CFdB873696502dd0'
+      address: '0xBFcfB4e00EF020b30A602e982026e54617dAfd44'
       abi: Party
       startBlock: 54356767
     mapping:
@@ -92,7 +92,7 @@ dataSources:
     name: PlayerProfile
     network: bsc
     source:
-      address: '0x7f5D359bC65F0aB07f7A874C2efF72752Fb294e5'
+      address: '0xFa6D78B73546cf7D28ec11dee3131245e52ba9b9'
       abi: PlayerProfile
       startBlock: 54356767
     mapping:
@@ -114,7 +114,7 @@ dataSources:
     name: VIPStaking
     network: bsc
     source:
-      address: '0x8D7Eb405247C9AD0373D398C5F63E88421ba7b49'
+      address: '0x5a5eB30cA44CD30179c470dCbC9787b5666BC530'
       abi: VIPStaking
       startBlock: 54356767
     mapping:
@@ -138,7 +138,7 @@ dataSources:
     name: DungeonMaster
     network: bsc
     source:
-      address: '0xd13250E0F0766006816d7AfE95EaEEc5e215d082'
+      address: '0x5D4ae4275A5173A52EF32F42F21F13794dcFD95d'
       abi: DungeonMaster
       startBlock: 54356767
     mapping:
@@ -162,7 +162,7 @@ dataSources:
     name: PlayerVault
     network: bsc
     source:
-      address: '0x67CEecf8BE748dFd77D90D87a376Bd745B7c3c62'
+      address: '0x61c42bB0f0F123a85D6305Efa8eaaA51c9Ab2A7E'
       abi: PlayerVault
       startBlock: 54356767
     mapping:
@@ -186,7 +186,7 @@ dataSources:
     name: AltarOfAscension
     network: bsc
     source:
-      address: '0xdf87881b48b51380CE47Bf6B54930ef1e07471F0'
+      address: '0x86681Fb06cB3Be62c0b175B72381868610DF1092'
       abi: AltarOfAscension
       startBlock: 54356767
     mapping:
@@ -206,7 +206,7 @@ dataSources:
     name: DungeonCore
     network: bsc
     source:
-      address: '0xd03d3D7456ba3B52E6E0112eBc2494dB1cB34524'
+      address: '0x942cde20A3ebA345e6A329B71362C383bC2cDa48'
       abi: DungeonCore
       startBlock: 54356767
     mapping:

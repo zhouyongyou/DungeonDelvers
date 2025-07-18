@@ -36,7 +36,6 @@ import GlobalRewardSettings from '../components/admin/GlobalRewardSettings';
 // RPC監控已移除以解決循環依賴問題
 import { ContractHealthCheck } from '../components/admin/ContractHealthCheck';
 import { validateContract, getSafeContract } from '../utils/contractValidator';
-import ProvisionsDiagnosticPanel from '../components/admin/ProvisionsDiagnosticPanel';
 import PartyOwnershipDiagnostic from '../components/admin/PartyOwnershipDiagnostic';
 
 type SupportedChainId = typeof bsc.id;
@@ -75,7 +74,6 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     oracle: false,
     contractControl: false,
     // rpcMonitor: false, // 移除RPC監控
-    provisionsDiagnostic: false,
   });
 
   // 移除 watchManager 相關代碼以解決循環依賴
@@ -1032,13 +1030,6 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       </AdminSection>
       */}
 
-      <AdminSection 
-        title="購買儲備診斷工具"
-        defaultExpanded={false}
-        onExpand={() => setLoadedSections(prev => ({ ...prev, provisionsDiagnostic: true }))}
-      >
-        <ProvisionsDiagnosticPanel />
-      </AdminSection>
 
       <AdminSection 
         title="隊伍擁有權診斷"

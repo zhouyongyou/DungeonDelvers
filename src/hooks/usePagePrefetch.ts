@@ -15,7 +15,7 @@ const prefetchStrategies: Record<string, string[]> = {
   // 從 party 可能前往的頁面
   'party': ['dungeon', 'dashboard'],
   // 從 dungeon 可能前往的頁面
-  'dungeon': ['party', 'provisions'],
+  'dungeon': ['party'],
 };
 
 export function usePagePrefetch(currentPage: Page) {
@@ -54,17 +54,6 @@ export function usePagePrefetch(currentPage: Page) {
           });
           break;
 
-        case 'provisions':
-          // 預取儲備相關數據
-          queryClient.prefetchQuery({
-            queryKey: ['provisions', address],
-            queryFn: async () => {
-              // 獲取儲備價格等數據
-              return {};
-            },
-            staleTime: 1000 * 60 * 10, // 10 分鐘
-          });
-          break;
       }
     });
   }, [currentPage, address, chainId, queryClient]);

@@ -19,7 +19,6 @@ import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
 import type { Page } from '../types/page';
 import type { PartyNft } from '../types/nft';
 import { Modal } from '../components/ui/Modal';
-import ProvisionsPage from './ProvisionsPage';
 import { bsc } from 'wagmi/chains';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 // import { useGlobalLoading } from '../components/core/GlobalLoadingProvider'; // 移除未使用的 Provider
@@ -128,7 +127,6 @@ const usePlayerParties = () => {
                 relicIds: [], // 聖物數據需要從其他查詢獲取
                 partyRarity: Number(p.partyRarity || 1),
                 // 這些數據需要從合約讀取，不在子圖中
-                provisionsRemaining: 0n,  // 將從 getPartyStatus 獲取
                 cooldownEndsAt: 0n,       // 將從 getPartyStatus 獲取
                 unclaimedRewards: 0n,     // 將從 getPartyStatus 獲取
                 fatigueLevel: 0,          // 將從 getPartyStatus 獲取
@@ -152,17 +150,16 @@ const usePlayerParties = () => {
 
 // PartyStatusCard 現在是一個純粹的 UI 元件
 interface PartyStatusCardProps {
-  party: PartyNft & { provisionsRemaining: bigint; cooldownEndsAt: bigint; fatigueLevel: number; };
+  party: PartyNft & { cooldownEndsAt: bigint; fatigueLevel: number; };
   dungeons: Dungeon[];
   onStartExpedition: (partyId: bigint, dungeonId: bigint, fee: bigint) => void;
   onRest: (partyId: bigint) => void;
-  onBuyProvisions: (partyId: bigint) => void;
   isTxPending: boolean;
   isAnyTxPendingForThisParty: boolean;
   chainId: number;
 }
 
-const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onStartExpedition, onRest, onBuyProvisions, isTxPending, isAnyTxPendingForThisParty, chainId }) => {
+const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onStartExpedition, onRest, isTxPending, isAnyTxPendingForThisParty, chainId }) => {
     // 🎯 智能選擇最高可挑戰的地城作為預設值
     const getHighestChallengeableDungeon = () => {
         if (!dungeons.length) return 1n;
@@ -244,9 +241,7 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
     });
 
     // 使用 RPC 數據或回退到原始數據
-    const provisionsRemaining = partyStatus && partyStatus[0] !== undefined 
-        ? BigInt(partyStatus[0]) 
-        : party.provisionsRemaining || 0n;
+    // 已移除儲備檢查
     const cooldownEndsAt = partyStatus && partyStatus[1] !== undefined 
         ? BigInt(partyStatus[1]) 
         : party.cooldownEndsAt || 0n;
@@ -276,7 +271,7 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
     const renderStatus = () => {
         if (isAnyTxPendingForThisParty) return <span className="px-3 py-1 text-sm font-medium text-purple-300 bg-purple-900/50 rounded-full flex items-center gap-2"><LoadingSpinner size="h-3 w-3" />遠征中</span>;
         if (isOnCooldown) return <span className="px-3 py-1 text-sm font-medium text-yellow-300 bg-yellow-900/50 rounded-full">冷卻中...</span>;
-        if (provisionsRemaining === 0n) return <span className="px-3 py-1 text-sm font-medium text-orange-400 bg-orange-900/50 rounded-full">需要儲備</span>;
+        // 已移除儲備檢查
         if (party.fatigueLevel > 30) return <span className="px-3 py-1 text-sm font-medium text-red-300 bg-red-900/50 rounded-full">急需休息</span>;
         if (party.fatigueLevel > 15) return <span className="px-3 py-1 text-sm font-medium text-yellow-300 bg-yellow-900/50 rounded-full">建議休息</span>;
         return <span className="px-3 py-1 text-sm font-medium text-green-300 bg-green-900/50 rounded-full">準備就緒</span>;
@@ -284,7 +279,7 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
 
     const renderAction = () => {
         if (isOnCooldown || isAnyTxPendingForThisParty) return <ActionButton disabled className="w-full h-10">{isAnyTxPendingForThisParty ? '遠征中' : '冷卻中'}</ActionButton>;
-        if (provisionsRemaining === 0n) return <ActionButton onClick={() => onBuyProvisions(party.id)} className="w-full h-10 bg-orange-600 hover:bg-orange-500">購買儲備</ActionButton>;
+        // 已移除儲備購買按鈕
         if (party.fatigueLevel > 30) return <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10 bg-red-600 hover:bg-red-500">休息</ActionButton>;
         if (party.fatigueLevel > 15) return <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10 bg-yellow-600 hover:bg-yellow-500">建議休息</ActionButton>;
         
@@ -302,14 +297,14 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
                 <div><p className="text-sm text-gray-400">有效戰力</p><p className="font-bold text-2xl text-indigo-400">{effectivePower.toString()}</p></div>
                 <div><p className="text-sm text-gray-400">疲勞度</p><p className={`font-bold text-xl ${fatigueColorClass}`}>{party.fatigueLevel} / 45</p></div>
             </div>
-            <p className="text-center text-xs text-gray-400 mb-2">剩餘儲備: {provisionsRemaining.toString()}</p>
+            <p className="text-center text-xs text-gray-400 mb-2">直接付費出征</p>
             <div className="mb-4">
                 <label className="text-xs text-gray-400">選擇地城:</label>
                 <select 
                     value={selectedDungeonId.toString()} 
                     onChange={(e) => setSelectedDungeonId(BigInt(e.target.value))}
                     className="w-full p-2 border rounded-lg bg-gray-900/80 border-gray-700 text-white mt-1"
-                    disabled={provisionsRemaining === 0n || isOnCooldown || isAnyTxPendingForThisParty}
+                    disabled={isOnCooldown || isAnyTxPendingForThisParty}
                 >
                     {dungeons.length === 0 ? (
                         <option value="0">載入地下城中...</option>
@@ -373,8 +368,7 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
     const { transactions } = useTransactionStore();
     const queryClient = useQueryClient();
 
-    const [isProvisionModalOpen, setIsProvisionModalOpen] = useState(false);
-    const [selectedPartyForProvision, setSelectedPartyForProvision] = useState<bigint | null>(null);
+    // 已移除儲備 Modal 狀態
     const [showProgressModal, setShowProgressModal] = useState(false);
     const [currentAction, setCurrentAction] = useState<'expedition' | 'rest'>('expedition');
 
@@ -462,7 +456,7 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
                     return {
                         ...party,
                         cooldownEndsAt: BigInt(Math.floor(Date.now() / 1000) + 300), // 假設5分鐘冷卻
-                        provisionsRemaining: party.provisionsRemaining - 1n,
+                        // 已移除儲備減少邏輯
                     };
                 }
                 return party;
@@ -639,10 +633,7 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
         }
     };
 
-    const handleBuyProvisions = (partyId: bigint) => {
-        setSelectedPartyForProvision(partyId);
-        setIsProvisionModalOpen(true);
-    };
+    // 已移除 handleBuyProvisions 函數
 
     const isLoading = isLoadingParties || isLoadingDungeons;
 
@@ -669,9 +660,7 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
                 progress={currentProgress}
                 title={currentAction === 'expedition' ? '遠征進度' : '休息進度'}
             />
-            <Modal isOpen={isProvisionModalOpen} onClose={() => setIsProvisionModalOpen(false)} title="購買遠征儲備" onConfirm={() => {}} confirmText="關閉">
-                <ProvisionsPage preselectedPartyId={selectedPartyForProvision} onPurchaseSuccess={() => setIsProvisionModalOpen(false)} />
-            </Modal>
+            {/* 已移除儲備購買 Modal */}
             <div>
                 <h2 className="page-title">遠征指揮中心</h2>
                 {(!parties || parties.length === 0) ? (
@@ -686,11 +675,10 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
                         {parties.map((party: unknown) => (
                             <PartyStatusCard
                                 key={party.id.toString()}
-                                party={party as PartyNft & { provisionsRemaining: bigint; cooldownEndsAt: bigint; fatigueLevel: number; }}
+                                party={party as PartyNft & { cooldownEndsAt: bigint; fatigueLevel: number; }}
                                 dungeons={dungeons}
                                 onStartExpedition={handleStartExpedition}
                                 onRest={handleRest}
-                                onBuyProvisions={handleBuyProvisions}
                                 isTxPending={isTxPending}
                                 isAnyTxPendingForThisParty={checkPendingTxForParty(party.id)}
                                 chainId={bsc.id}
