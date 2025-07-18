@@ -213,6 +213,15 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                         如果按鈕仍為灰色，請手動刷新頁面更新狀態
                     </p>
                 )}
+                
+                {/* 創建成功後的提醒 */}
+                {canCreate && selectedHeroes.length > 0 && selectedRelics.length > 0 && (
+                    <div className="mt-2 text-center">
+                        <p className="text-xs text-green-400">
+                            ✅ 準備就緒！創建後需等待 3-5 分鐘同步
+                        </p>
+                    </div>
+                )}
             </div>
             
             {/* 狀態顯示 */}
@@ -267,6 +276,26 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                     </ActionButton>
                 </div>
             )}
+
+            {/* 隊伍創建延遲提醒 */}
+            <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-3 mb-4">
+                <div className="flex items-start gap-2">
+                    <div className="flex-shrink-0 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center mt-0.5">
+                        <span className="text-white text-xs">⏰</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <p className="text-xs text-amber-200 font-medium">
+                            隊伍創建時間說明
+                        </p>
+                        <p className="text-xs text-amber-200">
+                            創建隊伍後，需要等待 <span className="font-semibold text-amber-100">3-5 分鐘</span> 才會在資產頁面顯示新隊伍。
+                        </p>
+                        <p className="text-xs text-amber-200">
+                            這是由於區塊鏈數據同步需要時間，請耐心等候。交易完成後可刷新頁面檢查狀態。
+                        </p>
+                    </div>
+                </div>
+            </div>
 
             <div className="flex flex-col md:grid md:grid-cols-2 gap-6 mb-4">
                 <div>

@@ -12,8 +12,14 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
   const party = Party.load(partyId)
 
   if (party) {
-    // Note: Party schema doesn't have fatigueLevel, provisionsRemaining, unclaimedRewards, cooldownEndsAt
-    // These fields may be tracked elsewhere or removed from the schema
+    // 更新隊伍狀態 - 已禁用疲勞度系統
+    // if (event.params.success) {
+    //   party.fatigueLevel = party.fatigueLevel + 10 // 成功遠征增加10疲勞度
+    // } else {
+    //   party.fatigueLevel = party.fatigueLevel + 5  // 失敗遠征增加5疲勞度
+    // }
+    party.unclaimedRewards = party.unclaimedRewards.plus(event.params.reward)
+    party.cooldownEndsAt = event.block.timestamp.plus(BigInt.fromI32(3600)) // 1小時冷卻時間
     party.lastUpdatedAt = event.block.timestamp
     party.save()
 
@@ -44,8 +50,9 @@ export function handlePartyRested(event: PartyRested): void {
   const partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
   const party = Party.load(partyId)
   if (party) {
-    // Note: Party schema doesn't have fatigueLevel
-    // New V2 parameter: payer = event.params.payer
+    // 已禁用疲勞度系統
+    // party.fatigueLevel = 0
+    party.cooldownEndsAt = event.block.timestamp
     party.lastUpdatedAt = event.block.timestamp
     party.save()
   }
@@ -55,8 +62,8 @@ export function handleProvisionsBought(event: ProvisionsBought): void {
   const partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
   const party = Party.load(partyId)
   if (party) {
-    // Note: Party schema doesn't have provisionsRemaining
-    // New V2 parameter: buyer = event.params.buyer
+    // 增加補給品數量
+    party.provisionsRemaining = party.provisionsRemaining + event.params.amount.toI32()
     party.lastUpdatedAt = event.block.timestamp
     party.save()
   }

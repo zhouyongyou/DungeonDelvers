@@ -129,7 +129,7 @@ const usePlayerParties = () => {
                 // 這些數據需要從合約讀取，不在子圖中
                 cooldownEndsAt: 0n,       // 將從 getPartyStatus 獲取
                 unclaimedRewards: 0n,     // 將從 getPartyStatus 獲取
-                fatigueLevel: 0,          // 將從 getPartyStatus 獲取
+                // fatigueLevel: 0,       // 已禁用疲勞度系統
             }));
         },
         enabled: !!address && chainId === bsc.id,
@@ -150,16 +150,16 @@ const usePlayerParties = () => {
 
 // PartyStatusCard 現在是一個純粹的 UI 元件
 interface PartyStatusCardProps {
-  party: PartyNft & { cooldownEndsAt: bigint; fatigueLevel: number; };
+  party: PartyNft & { cooldownEndsAt: bigint; };
   dungeons: Dungeon[];
   onStartExpedition: (partyId: bigint, dungeonId: bigint, fee: bigint) => void;
-  onRest: (partyId: bigint) => void;
+  // onRest: (partyId: bigint) => void; // 已移除休息功能
   isTxPending: boolean;
   isAnyTxPendingForThisParty: boolean;
   chainId: number;
 }
 
-const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onStartExpedition, onRest, isTxPending, isAnyTxPendingForThisParty, chainId }) => {
+const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onStartExpedition, /* onRest, */ isTxPending, isAnyTxPendingForThisParty, chainId }) => {
     // 🎯 智能選擇最高可挑戰的地城作為預設值
     const getHighestChallengeableDungeon = () => {
         if (!dungeons.length) return 1n;
@@ -241,47 +241,48 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
     });
 
     // 使用 RPC 數據或回退到原始數據
-    // 已移除儲備檢查
+    // 已移除儲備檢查和疲勞度系統
     const cooldownEndsAt = partyStatus && partyStatus[1] !== undefined 
         ? BigInt(partyStatus[1]) 
         : party.cooldownEndsAt || 0n;
-    const fatigueLevel = partyStatus && partyStatus[3] !== undefined 
-        ? Number(partyStatus[3]) 
-        : party.fatigueLevel || 0;
+    // const fatigueLevel = partyStatus && partyStatus[3] !== undefined 
+    //     ? Number(partyStatus[3]) 
+    //     : party.fatigueLevel || 0;
     
-    const { isOnCooldown, effectivePower, fatigueColorClass } = useMemo(() => {
+    const { isOnCooldown, effectivePower } = useMemo(() => {
         const power = BigInt(party.totalPower);
-        const effPower = power * (100n - BigInt(fatigueLevel) * 2n) / 100n;
+        // const effPower = power * (100n - BigInt(fatigueLevel) * 2n) / 100n;
+        const effPower = power; // 不再計算疲勞度影響
         
-        // 疲勞度顏色邏輯：0-15 綠色（健康），16-30 黃色（疲勞），31-45 紅色（非常疲勞）
-        let fatigueColor = 'text-green-400';
-        if (party.fatigueLevel > 30) {
-            fatigueColor = 'text-red-400';
-        } else if (party.fatigueLevel > 15) {
-            fatigueColor = 'text-yellow-400';
-        }
+        // 已移除疲勞度顏色邏輯
+        // let fatigueColor = 'text-green-400';
+        // if (party.fatigueLevel > 30) {
+        //     fatigueColor = 'text-red-400';
+        // } else if (party.fatigueLevel > 15) {
+        //     fatigueColor = 'text-yellow-400';
+        // }
         
         return {
             isOnCooldown: BigInt(Math.floor(Date.now() / 1000)) < cooldownEndsAt,
             effectivePower: effPower,
-            fatigueColorClass: fatigueColor,
+            // fatigueColorClass: fatigueColor,
         };
-    }, [party.totalPower, cooldownEndsAt, fatigueLevel]);
+    }, [party.totalPower, cooldownEndsAt]);
 
     const renderStatus = () => {
         if (isAnyTxPendingForThisParty) return <span className="px-3 py-1 text-sm font-medium text-purple-300 bg-purple-900/50 rounded-full flex items-center gap-2"><LoadingSpinner size="h-3 w-3" />遠征中</span>;
         if (isOnCooldown) return <span className="px-3 py-1 text-sm font-medium text-yellow-300 bg-yellow-900/50 rounded-full">冷卻中...</span>;
-        // 已移除儲備檢查
-        if (party.fatigueLevel > 30) return <span className="px-3 py-1 text-sm font-medium text-red-300 bg-red-900/50 rounded-full">急需休息</span>;
-        if (party.fatigueLevel > 15) return <span className="px-3 py-1 text-sm font-medium text-yellow-300 bg-yellow-900/50 rounded-full">建議休息</span>;
+        // 已移除儲備檢查和疲勞度檢查
+        // if (party.fatigueLevel > 30) return <span className="px-3 py-1 text-sm font-medium text-red-300 bg-red-900/50 rounded-full">急需休息</span>;
+        // if (party.fatigueLevel > 15) return <span className="px-3 py-1 text-sm font-medium text-yellow-300 bg-yellow-900/50 rounded-full">建議休息</span>;
         return <span className="px-3 py-1 text-sm font-medium text-green-300 bg-green-900/50 rounded-full">準備就緒</span>;
     };
 
     const renderAction = () => {
         if (isOnCooldown || isAnyTxPendingForThisParty) return <ActionButton disabled className="w-full h-10">{isAnyTxPendingForThisParty ? '遠征中' : '冷卻中'}</ActionButton>;
-        // 已移除儲備購買按鈕
-        if (party.fatigueLevel > 30) return <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10 bg-red-600 hover:bg-red-500">休息</ActionButton>;
-        if (party.fatigueLevel > 15) return <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10 bg-yellow-600 hover:bg-yellow-500">建議休息</ActionButton>;
+        // 已移除儲備購買按鈕和疲勞度檢查
+        // if (party.fatigueLevel > 30) return <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10 bg-red-600 hover:bg-red-500">休息</ActionButton>;
+        // if (party.fatigueLevel > 15) return <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10 bg-yellow-600 hover:bg-yellow-500">建議休息</ActionButton>;
         
         const fee = typeof explorationFee === 'bigint' ? explorationFee : 0n;
         return <ActionButton onClick={() => onStartExpedition(party.id, selectedDungeonId, fee)} isLoading={isTxPending} className="w-full h-10">開始遠征</ActionButton>;
@@ -293,9 +294,10 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
                 <h4 className="font-bold text-lg text-white truncate pr-2">{party.name}</h4>
                 {renderStatus()}
             </div>
-            <div className="grid grid-cols-2 gap-2 mb-4 text-center">
-                <div><p className="text-sm text-gray-400">有效戰力</p><p className="font-bold text-2xl text-indigo-400">{effectivePower.toString()}</p></div>
-                <div><p className="text-sm text-gray-400">疲勞度</p><p className={`font-bold text-xl ${fatigueColorClass}`}>{party.fatigueLevel} / 45</p></div>
+            <div className="grid grid-cols-1 gap-2 mb-4 text-center">
+                <div><p className="text-sm text-gray-400">戰力</p><p className="font-bold text-2xl text-indigo-400">{effectivePower.toString()}</p></div>
+                {/* 已移除疲勞度顯示 */}
+                {/* <div><p className="text-sm text-gray-400">疲勞度</p><p className={`font-bold text-xl ${fatigueColorClass}`}>{party.fatigueLevel} / 45</p></div> */}
             </div>
             <p className="text-center text-xs text-gray-400 mb-2">直接付費出征</p>
             <div className="mb-4">
@@ -370,7 +372,7 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
 
     // 已移除儲備 Modal 狀態
     const [showProgressModal, setShowProgressModal] = useState(false);
-    const [currentAction, setCurrentAction] = useState<'expedition' | 'rest'>('expedition');
+    // const [currentAction, setCurrentAction] = useState<'expedition' | 'rest'>('expedition'); // 已移除休息功能
 
     // ✅ 將所有Hooks調用移到組件頂部，在任何條件語句之前
     const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
@@ -429,20 +431,21 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
         errorMessage: '遠征請求失敗',
     });
 
-    const { execute: executeRest, progress: restProgress, reset: resetRest } = useTransactionWithProgress({
-        onSuccess: () => {
-            showToast('隊伍開始休息，疲勞度正在恢復...', 'success');
-            queryClient.invalidateQueries({ queryKey: ['playerParties'] });
-            setTimeout(() => refetchParties(), 3000);
-            setShowProgressModal(false);
-            confirmRestUpdate();
-        },
-        onError: () => {
-            rollbackRestUpdate();
-        },
-        successMessage: '休息成功！',
-        errorMessage: '休息失敗',
-    });
+    // 已移除疲勞度系統，不再需要休息功能
+    // const { execute: executeRest, progress: restProgress, reset: resetRest } = useTransactionWithProgress({
+    //     onSuccess: () => {
+    //         showToast('隊伍開始休息，疲勞度正在恢復...', 'success');
+    //         queryClient.invalidateQueries({ queryKey: ['playerParties'] });
+    //         setTimeout(() => refetchParties(), 3000);
+    //         setShowProgressModal(false);
+    //         confirmRestUpdate();
+    //     },
+    //     onError: () => {
+    //         rollbackRestUpdate();
+    //     },
+    //     successMessage: '休息成功！',
+    //     errorMessage: '休息失敗',
+    // });
 
     // 樂觀更新 - 遠征
     const { optimisticUpdate: optimisticExpeditionUpdate, confirmUpdate: confirmExpeditionUpdate, rollback: rollbackExpeditionUpdate } = useOptimisticUpdate({
@@ -465,27 +468,28 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
     });
 
     // 樂觀更新 - 休息
-    const { optimisticUpdate: optimisticRestUpdate, confirmUpdate: confirmRestUpdate, rollback: rollbackRestUpdate } = useOptimisticUpdate({
-        queryKey: ['playerParties'],
-        updateFn: (oldData: any) => {
-            if (!oldData || !currentPartyId) return oldData;
-            
-            // 更新隊伍疲勞度
-            return oldData.map((party: any) => {
-                if (party.id === currentPartyId) {
-                    return {
-                        ...party,
-                        fatigueLevel: 0, // 休息後疲勞度歸零
-                    };
-                }
-                return party;
-            });
-        }
-    });
+    // 已移除疲勞度系統，不再需要休息功能的樂觀更新
+    // const { optimisticUpdate: optimisticRestUpdate, confirmUpdate: confirmRestUpdate, rollback: rollbackRestUpdate } = useOptimisticUpdate({
+    //     queryKey: ['playerParties'],
+    //     updateFn: (oldData: any) => {
+    //         if (!oldData || !currentPartyId) return oldData;
+    //         
+    //         // 更新隊伍疲勞度
+    //         return oldData.map((party: any) => {
+    //             if (party.id === currentPartyId) {
+    //                 return {
+    //                     ...party,
+    //                     fatigueLevel: 0, // 休息後疲勞度歸零
+    //                 };
+    //             }
+    //             return party;
+    //         });
+    //     }
+    // });
 
     const [currentPartyId, setCurrentPartyId] = useState<bigint | null>(null);
     
-    const currentProgress = currentAction === 'expedition' ? expeditionProgress : restProgress;
+    const currentProgress = expeditionProgress; // 已移除休息功能
     const isTxPending = currentProgress.status !== 'idle' && currentProgress.status !== 'error';
 
     // 獲取地城資訊的邏輯保持不變，因為這是全域數據
@@ -584,7 +588,7 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
         if (!dungeonMasterContract) return;
         
         setCurrentPartyId(partyId);
-        setCurrentAction('expedition');
+        // setCurrentAction('expedition'); // 已移除休息功能
         setShowProgressModal(true);
         resetExpedition();
         
@@ -607,31 +611,32 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
         }
     };
 
-    const handleRest = async (partyId: bigint) => {
-        if (!dungeonMasterContract) return;
-        
-        setCurrentPartyId(partyId);
-        setCurrentAction('rest');
-        setShowProgressModal(true);
-        resetRest();
-        
-        // 立即執行樂觀更新
-        optimisticRestUpdate();
-        
-        try {
-            await executeRest(
-                {
-                    address: dungeonMasterContract.address as `0x${string}`,
-                    abi: dungeonMasterContract.abi,
-                    functionName: 'restParty',
-                    args: [partyId]
-                },
-                `隊伍 #${partyId.toString()} 正在休息`
-            );
-        } catch (error) {
-            // 錯誤已在 hook 中處理
-        }
-    };
+    // 已移除疲勞度系統，不再需要休息功能
+    // const handleRest = async (partyId: bigint) => {
+    //     if (!dungeonMasterContract) return;
+    //     
+    //     setCurrentPartyId(partyId);
+    //     setCurrentAction('rest');
+    //     setShowProgressModal(true);
+    //     resetRest();
+    //     
+    //     // 立即執行樂觀更新
+    //     optimisticRestUpdate();
+    //     
+    //     try {
+    //         await executeRest(
+    //             {
+    //                 address: dungeonMasterContract.address as `0x${string}`,
+    //                 abi: dungeonMasterContract.abi,
+    //                 functionName: 'restParty',
+    //                 args: [partyId]
+    //             },
+    //             `隊伍 #${partyId.toString()} 正在休息`
+    //         );
+    //     } catch (error) {
+    //         // 錯誤已在 hook 中處理
+    //     }
+    // };
 
     // 已移除 handleBuyProvisions 函數
 
@@ -658,7 +663,7 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
                 isOpen={showProgressModal}
                 onClose={() => setShowProgressModal(false)}
                 progress={currentProgress}
-                title={currentAction === 'expedition' ? '遠征進度' : '休息進度'}
+                title={'遠征進度'} // 已移除休息功能
             />
             {/* 已移除儲備購買 Modal */}
             <div>
@@ -675,10 +680,10 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
                         {parties.map((party: unknown) => (
                             <PartyStatusCard
                                 key={party.id.toString()}
-                                party={party as PartyNft & { cooldownEndsAt: bigint; fatigueLevel: number; }}
+                                party={party as PartyNft & { cooldownEndsAt: bigint; }}
                                 dungeons={dungeons}
                                 onStartExpedition={handleStartExpedition}
-                                onRest={handleRest}
+                                // onRest={handleRest} // 已移除休息功能
                                 isTxPending={isTxPending}
                                 isAnyTxPendingForThisParty={checkPendingTxForParty(party.id)}
                                 chainId={bsc.id}

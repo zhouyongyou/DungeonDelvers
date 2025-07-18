@@ -11,9 +11,9 @@ fi
 
 # 新的合約地址
 declare -A env_vars=(
-    ["VITE_THEGRAPH_API_URL"]="https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.0-new-contracts"
-    ["VITE_THE_GRAPH_API_URL"]="https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.0-new-contracts"
-    ["VITE_THE_GRAPH_STUDIO_API_URL"]="https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.0-new-contracts"
+    ["VITE_THEGRAPH_API_URL"]="https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.1.0"
+    ["VITE_THE_GRAPH_API_URL"]="https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.1.0"
+    ["VITE_THE_GRAPH_STUDIO_API_URL"]="https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.1.0"
     ["VITE_MAINNET_ORACLE_ADDRESS"]="0xc5bBFfFf552167D1328432AA856B752e9c4b4838"
     ["VITE_MAINNET_PLAYERVAULT_ADDRESS"]="0x6187DBCcb58088E414437A6b8d58a42cD2BD1ec4"
     ["VITE_MAINNET_ALTAROFASCENSION_ADDRESS"]="0x83a7fB85E0892A67041FcFc4c1F0F1111e5aB3DA"

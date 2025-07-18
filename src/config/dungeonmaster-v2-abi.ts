@@ -188,31 +188,6 @@ export const dungeonMasterV2ABI = [
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "partyId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "costInSoulShard",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "payer",
-        "type": "address"
-      }
-    ],
-    "name": "PartyRested",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
         "indexed": false,
         "internalType": "address",
         "name": "account",
@@ -251,19 +226,6 @@ export const dungeonMasterV2ABI = [
       }
     ],
     "name": "ProvisionsBought",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "newDivisor",
-        "type": "uint256"
-      }
-    ],
-    "name": "RestCostDivisorSet",
     "type": "event"
   },
   {
@@ -560,19 +522,6 @@ export const dungeonMasterV2ABI = [
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "_partyId",
-        "type": "uint256"
-      }
-    ],
-    "name": "restParty",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "address",
         "name": "_newAddress",
         "type": "address"
@@ -631,19 +580,6 @@ export const dungeonMasterV2ABI = [
       }
     ],
     "name": "setProvisionPriceUSD",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_newDivisor",
-        "type": "uint256"
-      }
-    ],
-    "name": "setRestCostPowerDivisor",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

@@ -8,7 +8,7 @@ dataSources:
     name: Hero
     network: bsc
     source:
-      address: '0x33d94b7F5E32aAdEf1BD40C529c8552f0bB6d1CB'
+      address: '0x5EEa0b978f6DbE7735125C4C757458B0F5B48A65'
       abi: Hero
       startBlock: 54440794
     mapping:
@@ -36,7 +36,7 @@ dataSources:
     name: Relic
     network: bsc
     source:
-      address: '0xf1A26Cbf115f62aD2a78378288b3b84f840B99ce'
+      address: '0x82A680344C09C10455F5A6397f6F7a38cf3ebe8A'
       abi: Relic
       startBlock: 54440794
     mapping:
@@ -64,7 +64,7 @@ dataSources:
     name: Party
     network: bsc
     source:
-      address: '0xcB580B4F444D72853800e6e4A3e01BD919271179'
+      address: '0x6f707409821F11CbFC01FC79073264FC02b8Ff3e'
       abi: Party
       startBlock: 54440794
     mapping:
@@ -92,7 +92,7 @@ dataSources:
     name: PlayerProfile
     network: bsc
     source:
-      address: '0xD8905614a826DBBF42601380d6f467AeDCB74e07'
+      address: '0x7c04BB7C2bF02Fe8Fc33a29A61898D7Bd50650c7'
       abi: PlayerProfile
       startBlock: 54440794
     mapping:
@@ -114,7 +114,7 @@ dataSources:
     name: VIPStaking
     network: bsc
     source:
-      address: '0x31c94D459aAdc27F69465b83cb306DFB778D46b2'
+      address: '0x6B25bf958F47259e7ae1e4F59948e50cD931a3A8'
       abi: VIPStaking
       startBlock: 54440794
     mapping:
@@ -138,7 +138,7 @@ dataSources:
     name: DungeonMaster
     network: bsc
     source:
-      address: '0x9868D71D6f28185aA2dc949973dfe3833829e93F'
+      address: '0x9c8089a4e39971FD530fefd6B4ad2543C409d58d'
       abi: DungeonMaster
       startBlock: 54440794
     mapping:
@@ -162,7 +162,7 @@ dataSources:
     name: PlayerVault
     network: bsc
     source:
-      address: '0x2a5798D63e715F2B8b91000664f2556E794D00F2'
+      address: '0x8777C09F0becA12767F746d50D3963d319a83F8c'
       abi: PlayerVault
       startBlock: 54440794
     mapping:
@@ -206,7 +206,7 @@ dataSources:
     name: DungeonCore
     network: bsc
     source:
-      address: '0xd3E55D5EdCF5255F933F5a82b10Ad4b8e4E351b7'
+      address: '0x70Dce1dE6Eb73B66c26D49279bB6846947282952'
       abi: DungeonCore
       startBlock: 54440794
     mapping:

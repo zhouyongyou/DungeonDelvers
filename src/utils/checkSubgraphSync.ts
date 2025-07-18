@@ -32,12 +32,13 @@ export async function checkSubgraphSync() {
       const blockTime = parseInt(meta.block.timestamp);
       const timeDiff = currentTime - blockTime;
       
-      console.log('📊 子圖同步狀態:');
+      console.log('📊 子圖同步狀態 (v2.1.0):');
       console.log('- 最新區塊:', meta.block.number);
       console.log('- 區塊時間:', new Date(blockTime * 1000).toLocaleString());
       console.log('- 延遲時間:', Math.floor(timeDiff / 60), '分鐘');
       console.log('- 索引錯誤:', meta.hasIndexingErrors ? '❌ 有錯誤' : '✅ 無錯誤');
       console.log('- 部署 ID:', meta.deployment);
+      console.log('⚠️  注意: v2.1.0 從區塊 54440794 開始索引，歷史數據會缺失');
       
       // 檢查是否有 Party 數據
       const partyResponse = await fetch(SUBGRAPH_URL, {

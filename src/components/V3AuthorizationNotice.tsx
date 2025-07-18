@@ -1,4 +1,4 @@
-// V3 授權通知 - 簡化版
+// 合約授權通知 - V1版本（無祭壇）
 import React, { useState, useEffect } from 'react';
 import { useAccount, useWriteContract, useReadContract } from 'wagmi';
 import { getContract } from '../config/contracts';
@@ -19,7 +19,7 @@ export const V3AuthorizationNotice: React.FC = () => {
   const heroContract = getContract(bsc.id, 'hero');
   const relicContract = getContract(bsc.id, 'relic');
   const partyContract = getContract(bsc.id, 'party');
-  const altarContract = getContract(bsc.id, 'altarOfAscension');
+  // V1版本：暫時不包含祭壇授權
 
   // 檢查授權狀態
   const { data: heroToParty } = useReadContract({
@@ -38,26 +38,10 @@ export const V3AuthorizationNotice: React.FC = () => {
     query: { enabled: !!address && chainId === bsc.id }
   });
 
-  const { data: heroToAltar } = useReadContract({
-    address: heroContract?.address,
-    abi: heroContract?.abi,
-    functionName: 'isApprovedForAll',
-    args: address && altarContract ? [address, altarContract.address] : undefined,
-    query: { enabled: !!address && chainId === bsc.id }
-  });
-
-  const { data: relicToAltar } = useReadContract({
-    address: relicContract?.address,
-    abi: relicContract?.abi,
-    functionName: 'isApprovedForAll',
-    args: address && altarContract ? [address, altarContract.address] : undefined,
-    query: { enabled: !!address && chainId === bsc.id }
-  });
-
   // 檢查本地存儲
   useEffect(() => {
     if (address) {
-      const dismissed = localStorage.getItem(`v3-notice-dismissed-${address}`);
+      const dismissed = localStorage.getItem(`v1-notice-dismissed-${address}`);
       setHasUserDismissed(dismissed === 'true');
     }
   }, [address]);
@@ -65,9 +49,7 @@ export const V3AuthorizationNotice: React.FC = () => {
   // 計算需要授權的數量
   const needsAuth = [
     !heroToParty,
-    !relicToParty,
-    !heroToAltar,
-    !relicToAltar
+    !relicToParty
   ].filter(Boolean).length;
 
   // 如果不需要顯示，返回 null
@@ -76,7 +58,7 @@ export const V3AuthorizationNotice: React.FC = () => {
   }
 
   const handleDismiss = () => {
-    localStorage.setItem(`v3-notice-dismissed-${address}`, 'true');
+    localStorage.setItem(`v1-notice-dismissed-${address}`, 'true');
     setHasUserDismissed(true);
   };
 
@@ -108,30 +90,6 @@ export const V3AuthorizationNotice: React.FC = () => {
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
 
-      // 授權英雄給祭壇
-      if (!heroToAltar) {
-        showToast('授權英雄 NFT 給祭壇合約...', 'info');
-        await writeContract({
-          address: heroContract?.address as `0x${string}`,
-          abi: heroContract?.abi,
-          functionName: 'setApprovalForAll',
-          args: [altarContract?.address, true],
-        });
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-
-      // 授權聖物給祭壇
-      if (!relicToAltar) {
-        showToast('授權聖物 NFT 給祭壇合約...', 'info');
-        await writeContract({
-          address: relicContract?.address as `0x${string}`,
-          abi: relicContract?.abi,
-          functionName: 'setApprovalForAll',
-          args: [altarContract?.address, true],
-        });
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-
       showToast('所有授權已完成！', 'success');
       handleDismiss();
     } catch (error) {
@@ -153,12 +111,12 @@ export const V3AuthorizationNotice: React.FC = () => {
             className="flex items-center gap-2 px-4 py-3 text-yellow-300 hover:text-yellow-200 transition-colors"
           >
             <span className="text-lg animate-pulse">⚠️</span>
-            <span className="text-sm font-medium">需要 V3 授權 ({needsAuth})</span>
+            <span className="text-sm font-medium">需要合約授權 ({needsAuth})</span>
           </button>
         ) : (
           <div className="p-4 space-y-3">
             <div className="flex justify-between items-start">
-              <h3 className="text-yellow-300 font-semibold">V3 合約授權</h3>
+              <h3 className="text-yellow-300 font-semibold">合約授權通知</h3>
               <button
                 onClick={() => setIsExpanded(false)}
                 className="text-gray-400 hover:text-white"
@@ -168,7 +126,7 @@ export const V3AuthorizationNotice: React.FC = () => {
             </div>
             
             <p className="text-xs text-gray-300">
-              檢測到您有 {needsAuth} 個授權需要更新，這是因為我們升級到了 V3 合約。
+              檢測到您有 {needsAuth} 個授權需要更新，授權後才能組隊遊玩。
             </p>
 
             <div className="flex gap-2">

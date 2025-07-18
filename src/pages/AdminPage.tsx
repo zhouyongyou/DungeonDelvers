@@ -301,6 +301,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         playerVault: getContract(chainId, 'playerVault'),
         vipStaking: getContract(chainId, 'vipStaking'),
         oracle: getContract(chainId, 'oracle'),
+        altarOfAscension: getContract(chainId, 'altarOfAscension'),
       };
       
       // 驗證所有合約
@@ -957,7 +958,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
           <div className="space-y-4">
             <h4 className="text-lg font-semibold">合約暫停/恢復</h4>
             <div className="space-y-2">
-              {['hero', 'relic', 'party', 'dungeonMaster', 'vipStaking'].map(contractName => {
+              {['hero', 'relic', 'party', 'dungeonMaster', 'vipStaking', 'altarOfAscension'].map(contractName => {
                 const contract = getContract(chainId, contractName);
                 if (!contract || !contract.address) return null;
                 return (
