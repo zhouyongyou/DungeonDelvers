@@ -159,6 +159,18 @@ const usePlayerProfile = (targetAddress: Address | undefined) => {
     const experience = experienceResult ? BigInt(experienceResult.toString()) : 0n;
     const level = levelResult ? Number(levelResult.toString()) : 1;
 
+    // 調試日誌
+    logger.debug('PlayerProfile Debug:', {
+        targetAddress,
+        hasProfile,
+        hasGraphProfile: !!graphData?.profile,
+        experienceResult,
+        experience: experience.toString(),
+        levelResult,
+        level,
+        contractAddress: playerProfileContract?.address,
+    });
+
     return {
         tokenId,
         tokenURI: null, // 暫時設為 null，因為沒有 tokenId 無法獲取 tokenURI

@@ -24,6 +24,7 @@ import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 // import { useGlobalLoading } from '../components/core/GlobalLoadingProvider'; // 移除未使用的 Provider
 import { logger } from '../utils/logger';
 import { ExpeditionResults } from '../components/ExpeditionResults';
+import { ExpeditionHistory } from '../components/ExpeditionHistory';
 import { CooldownTimer } from '../components/CooldownTimer';
 
 // =================================================================
@@ -444,6 +445,9 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
             ) : null}
             
             <ExpeditionResults partyId={party.id} chainId={chainId} />
+            
+            {/* 出征歷史紀錄 */}
+            <ExpeditionHistory partyId={party.entityId} limit={3} />
         </div>
     );
 };

@@ -21,6 +21,8 @@ type Player @entity(immutable: false) {
   upgradeAttempts: [UpgradeAttempt!] @derivedFrom(field: "player")
   " 玩家的統計數據 "
   stats: PlayerStats @derivedFrom(field: "player")
+  " 玩家的所有出征紀錄 "
+  expeditions: [Expedition!] @derivedFrom(field: "player")
 }
 
 type Hero @entity(immutable: false) {
@@ -112,6 +114,8 @@ type Party @entity(immutable: false) {
   burnedAt: BigInt
   " 成員變更歷史 "
   memberChanges: [PartyMemberChange!] @derivedFrom(field: "party")
+  " 出征歷史紀錄 "
+  expeditions: [Expedition!] @derivedFrom(field: "party")
 }
 
 type PlayerProfile @entity(immutable: false) {
@@ -295,6 +299,33 @@ type PartyMemberChange @entity(immutable: true) {
   hero: Hero!
   " 時間戳 "
   timestamp: BigInt!
+}
+
+type Expedition @entity(immutable: true) {
+  " 使用 `txHash-logIndex` 作為唯一 ID "
+  id: String!
+  " 執行遠征的玩家 "
+  player: Player!
+  " 參與的隊伍 "
+  party: Party!
+  " 目標地下城 ID "
+  dungeonId: BigInt!
+  " 地下城名稱 "
+  dungeonName: String!
+  " 地下城戰力要求 "
+  dungeonPowerRequired: BigInt!
+  " 隊伍戰力 "
+  partyPower: BigInt!
+  " 是否成功 "
+  success: Boolean!
+  " 獲得的獎勵 (SoulShard) "
+  reward: BigInt!
+  " 獲得的經驗值 "
+  expGained: BigInt!
+  " 時間戳 "
+  timestamp: BigInt!
+  " 交易哈希 "
+  transactionHash: Bytes!
 }
 
 # =================================================================

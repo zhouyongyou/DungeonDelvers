@@ -1,17 +1,74 @@
 // DDgraphql/dungeondelvers/src/dungeon-master.ts (統一配置系統版)
 import { BigInt, log } from "@graphprotocol/graph-ts"
 import { ExpeditionFulfilled, ProvisionsBought } from "../generated/DungeonMaster/DungeonMaster"
-import { Party, PlayerProfile } from "../generated/schema"
+import { Party, PlayerProfile, Expedition } from "../generated/schema"
 import { calculateLevel } from "./utils"
 import { getOrCreatePlayer } from "./common"
 import { getPartyContractAddress, createEntityId } from "./config"
 import { updatePlayerStats, updatePlayerStatsBigInt, TOTAL_EXPEDITIONS, SUCCESSFUL_EXPEDITIONS } from "./stats"
+
+// 地下城名稱映射
+function getDungeonName(dungeonId: BigInt): string {
+  const id = dungeonId.toI32()
+  const dungeonNames = [
+    "", // 0 - 無效
+    "新手礦洞",      // 1
+    "哥布林洞穴",    // 2
+    "食人魔山谷",    // 3
+    "蜘蛛巢穴",      // 4
+    "石化蜥蜴沼澤",  // 5
+    "巫妖墓穴",      // 6
+    "奇美拉之巢",    // 7
+    "惡魔前哨站",    // 8
+    "巨龍之巔",      // 9
+    "混沌深淵"       // 10
+  ]
+  return id >= 0 && id < dungeonNames.length ? dungeonNames[id] : "未知地城"
+}
+
+// 地下城戰力需求映射
+function getDungeonPowerRequired(dungeonId: BigInt): BigInt {
+  const id = dungeonId.toI32()
+  const powerRequirements = [
+    BigInt.fromI32(0),    // 0 - 無效
+    BigInt.fromI32(300),  // 1 - 新手礦洞
+    BigInt.fromI32(600),  // 2 - 哥布林洞穴
+    BigInt.fromI32(900),  // 3 - 食人魔山谷
+    BigInt.fromI32(1200), // 4 - 蜘蛛巢穴
+    BigInt.fromI32(1500), // 5 - 石化蜥蜴沼澤
+    BigInt.fromI32(1800), // 6 - 巫妖墓穴
+    BigInt.fromI32(2100), // 7 - 奇美拉之巢
+    BigInt.fromI32(2400), // 8 - 惡魔前哨站
+    BigInt.fromI32(2700), // 9 - 巨龍之巔
+    BigInt.fromI32(3000)  // 10 - 混沌深淵
+  ]
+  return id >= 0 && id < powerRequirements.length ? powerRequirements[id] : BigInt.fromI32(0)
+}
 
 export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
   const partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
   const party = Party.load(partyId)
 
   if (party) {
+    // 創建 Expedition 實體
+    const expeditionId = event.transaction.hash.toHex() + "-" + event.logIndex.toString()
+    const expedition = new Expedition(expeditionId)
+    
+    // 從事件中獲取真實的 dungeonId
+    const dungeonId = event.params.dungeonId
+    
+    expedition.player = event.params.player
+    expedition.party = partyId
+    expedition.dungeonId = dungeonId
+    expedition.dungeonName = getDungeonName(dungeonId)
+    expedition.dungeonPowerRequired = getDungeonPowerRequired(dungeonId)
+    expedition.partyPower = party.totalPower
+    expedition.success = event.params.success
+    expedition.reward = event.params.reward
+    expedition.expGained = event.params.expGained
+    expedition.timestamp = event.block.timestamp
+    expedition.transactionHash = event.transaction.hash
+    expedition.save()
     // 更新隊伍狀態 - 已禁用疲勞度系統
     // if (event.params.success) {
     //   party.fatigueLevel = party.fatigueLevel + 10 // 成功遠征增加10疲勞度
