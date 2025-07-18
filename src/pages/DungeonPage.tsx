@@ -23,6 +23,8 @@ import { bsc } from 'wagmi/chains';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 // import { useGlobalLoading } from '../components/core/GlobalLoadingProvider'; // 移除未使用的 Provider
 import { logger } from '../utils/logger';
+import { ExpeditionResults } from '../components/ExpeditionResults';
+import { CooldownTimer } from '../components/CooldownTimer';
 
 // =================================================================
 // Section: 型別定義與 GraphQL 查詢
@@ -160,6 +162,7 @@ interface PartyStatusCardProps {
 }
 
 const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onStartExpedition, /* onRest, */ isTxPending, isAnyTxPendingForThisParty, chainId }) => {
+    const queryClient = useQueryClient();
     // 🎯 智能選擇最高可挑戰的地城作為預設值
     const getHighestChallengeableDungeon = () => {
         if (!dungeons.length) return 1n;
@@ -229,7 +232,7 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
     };
     
     // 從 RPC 讀取實時的隊伍狀態
-    const { data: partyStatus } = useReadContract({
+    const { data: partyStatus, error: partyStatusError } = useReadContract({
         address: dungeonStorageContract?.address as `0x${string}`,
         abi: dungeonStorageContract?.abi,
         functionName: 'getPartyStatus',
@@ -239,15 +242,57 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
             refetchInterval: 10000, // 每10秒刷新一次
         }
     });
+    
+    // 調試日誌
+    React.useEffect(() => {
+        if (partyStatus) {
+            console.log(`[DungeonPage] 隊伍 #${party.id} 狀態:`, {
+                raw: partyStatus,
+                type: typeof partyStatus,
+                isArray: Array.isArray(partyStatus),
+                keys: Object.keys(partyStatus),
+                values: Object.values(partyStatus),
+                // 解析具體數值
+                provisionsRemaining: partyStatus[0]?.toString(),
+                cooldownEndsAt: partyStatus[1]?.toString(),
+                unclaimedRewards: partyStatus[2]?.toString(),
+                fatigueLevel: partyStatus[3]?.toString(),
+                // 檢查冷卻狀態
+                currentTime: Math.floor(Date.now() / 1000),
+                isInCooldown: partyStatus[1] ? Number(partyStatus[1]) > Math.floor(Date.now() / 1000) : false
+            });
+        }
+        if (partyStatusError) {
+            console.error(`[DungeonPage] 讀取隊伍 #${party.id} 狀態錯誤:`, partyStatusError);
+        }
+    }, [partyStatus, partyStatusError, party.id]);
 
     // 使用 RPC 數據或回退到原始數據
     // 已移除儲備檢查和疲勞度系統
-    const cooldownEndsAt = partyStatus && partyStatus[1] !== undefined 
-        ? BigInt(partyStatus[1]) 
-        : party.cooldownEndsAt || 0n;
-    // const fatigueLevel = partyStatus && partyStatus[3] !== undefined 
-    //     ? Number(partyStatus[3]) 
-    //     : party.fatigueLevel || 0;
+    // partyStatus 返回的是一個結構體，在 JS 中會變成數組
+    const cooldownEndsAt = (() => {
+        if (!partyStatus) {
+            console.log('[DungeonPage] partyStatus 為空，使用原始數據');
+            return party.cooldownEndsAt || 0n;
+        }
+        
+        try {
+            // partyStatus 應該是一個數組: [provisionsRemaining, cooldownEndsAt, unclaimedRewards, fatigueLevel]
+            // 索引 1 是 cooldownEndsAt
+            const cooldownValue = partyStatus[1];
+            
+            if (cooldownValue !== undefined) {
+                const cooldownBigInt = BigInt(cooldownValue);
+                console.log('[DungeonPage] 成功解析 cooldownEndsAt:', cooldownBigInt.toString());
+                return cooldownBigInt;
+            }
+        } catch (error) {
+            console.error('[DungeonPage] 解析 cooldownEndsAt 失敗:', error);
+        }
+        
+        console.warn('[DungeonPage] 無法解析 partyStatus，回退到原始數據:', partyStatus);
+        return party.cooldownEndsAt || 0n;
+    })();
     
     const { isOnCooldown, effectivePower } = useMemo(() => {
         const power = BigInt(party.totalPower);
@@ -262,15 +307,28 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
         //     fatigueColor = 'text-yellow-400';
         // }
         
+        const currentTime = BigInt(Math.floor(Date.now() / 1000));
+        const onCooldown = currentTime < cooldownEndsAt;
+        
+        // 調試日誌
+        console.log(`[DungeonPage] 隊伍 #${party.id} 冷卻檢查:`, {
+            currentTime: currentTime.toString(),
+            cooldownEndsAt: cooldownEndsAt.toString(),
+            isOnCooldown: onCooldown,
+            timeLeft: onCooldown ? (cooldownEndsAt - currentTime).toString() : '0',
+            cooldownEndsAtType: typeof cooldownEndsAt,
+            willShowTimer: onCooldown && cooldownEndsAt > 0n
+        });
+        
         return {
-            isOnCooldown: BigInt(Math.floor(Date.now() / 1000)) < cooldownEndsAt,
+            isOnCooldown: onCooldown,
             effectivePower: effPower,
             // fatigueColorClass: fatigueColor,
         };
-    }, [party.totalPower, cooldownEndsAt]);
+    }, [party.totalPower, cooldownEndsAt, party.id]);
 
     const renderStatus = () => {
-        if (isAnyTxPendingForThisParty) return <span className="px-3 py-1 text-sm font-medium text-purple-300 bg-purple-900/50 rounded-full flex items-center gap-2"><LoadingSpinner size="h-3 w-3" />遠征中</span>;
+        if (isAnyTxPendingForThisParty) return <span className="px-3 py-1 text-sm font-medium text-purple-300 bg-purple-900/50 rounded-full flex items-center gap-2"><LoadingSpinner size="h-3 w-3" />載入中...</span>;
         if (isOnCooldown) return <span className="px-3 py-1 text-sm font-medium text-yellow-300 bg-yellow-900/50 rounded-full">冷卻中...</span>;
         // 已移除儲備檢查和疲勞度檢查
         // if (party.fatigueLevel > 30) return <span className="px-3 py-1 text-sm font-medium text-red-300 bg-red-900/50 rounded-full">急需休息</span>;
@@ -279,7 +337,7 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
     };
 
     const renderAction = () => {
-        if (isOnCooldown || isAnyTxPendingForThisParty) return <ActionButton disabled className="w-full h-10">{isAnyTxPendingForThisParty ? '遠征中' : '冷卻中'}</ActionButton>;
+        if (isOnCooldown || isAnyTxPendingForThisParty) return <ActionButton disabled className="w-full h-10">{isAnyTxPendingForThisParty ? '載入中...' : '冷卻中'}</ActionButton>;
         // 已移除儲備購買按鈕和疲勞度檢查
         // if (party.fatigueLevel > 30) return <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10 bg-red-600 hover:bg-red-500">休息</ActionButton>;
         // if (party.fatigueLevel > 15) return <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10 bg-yellow-600 hover:bg-yellow-500">建議休息</ActionButton>;
@@ -316,7 +374,35 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
                     )}
                 </select>
             </div>
+            
+            {/* 臨時調試區域 */}
+            <div className="text-xs text-gray-500 space-y-1 p-2 bg-gray-900/50 rounded mb-2">
+                <p>調試資訊：</p>
+                <p>冷卻結束時間: {cooldownEndsAt.toString()}</p>
+                <p>當前時間戳: {Math.floor(Date.now() / 1000)}</p>
+                <p>是否冷卻中: {isOnCooldown ? '是' : '否'}</p>
+                <p>剩餘時間: {isOnCooldown ? Number(cooldownEndsAt) - Math.floor(Date.now() / 1000) : 0} 秒</p>
+            </div>
+            
             {renderAction()}
+            
+            {/* 冷卻計時器 - 調試版本 */}
+            {isOnCooldown ? (
+                <CooldownTimer 
+                    cooldownEndsAt={cooldownEndsAt} 
+                    onCooldownEnd={() => {
+                        console.log('[DungeonPage] 冷卻結束，重新查詢數據');
+                        queryClient.invalidateQueries({ queryKey: ['playerParties'] });
+                    }} 
+                />
+            ) : (
+                <div className="mt-3 text-xs text-gray-500">
+                    {/* 調試資訊：沒有顯示冷卻計時器的原因 */}
+                    冷卻狀態: {cooldownEndsAt > 0n ? '已結束' : '無冷卻數據'}
+                </div>
+            )}
+            
+            <ExpeditionResults partyId={party.id} chainId={chainId} />
         </div>
     );
 };
