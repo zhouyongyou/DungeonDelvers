@@ -94,6 +94,14 @@ type Party @entity(immutable: false) {
   totalCapacity: BigInt!
   " 隊伍稀有度 (1-5) "
   partyRarity: Int!
+  " 疲勞等級 (0-255) "
+  fatigueLevel: Int!
+  " 剩餘補給品數量 "
+  provisionsRemaining: Int!
+  " 未領取的獎勵 (SoulShard 數量) "
+  unclaimedRewards: BigInt!
+  " 冷卻結束時間戳 "
+  cooldownEndsAt: BigInt!
   " 創建時間戳 "
   createdAt: BigInt!
   " 最後更新時間戳 (配置英雄或改名) "

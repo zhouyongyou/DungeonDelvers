@@ -58,7 +58,17 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
     const [showAllRelics, setShowAllRelics] = useState(true);
     const [showAllHeroes, setShowAllHeroes] = useState(true);
     const [currentStep, setCurrentStep] = useState<'select-relic' | 'select-hero' | 'ready'>('select-relic');
+    const [hasJustAuthorized, setHasJustAuthorized] = useState(false);
     const { showToast } = useAppToast();
+    
+    // 追蹤授權狀態變化
+    useEffect(() => {
+        if (isHeroAuthorized && isRelicAuthorized && hasJustAuthorized) {
+            // 授權完成，顯示成功提示
+            showToast('授權已完成！如果按鈕仍無法點擊，請刷新頁面', 'success');
+            setHasJustAuthorized(false);
+        }
+    }, [isHeroAuthorized, isRelicAuthorized, hasJustAuthorized]);
 
     const { totalPower, totalCapacity } = useMemo(() => {
         const power = selectedHeroes.reduce((acc: number, id: bigint) => {
@@ -137,6 +147,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
 
     // 組合授權處理
     const handleAuthorizeAll = async () => {
+        setHasJustAuthorized(true);
         if (!isRelicAuthorized) {
             await onAuthorizeRelic();
             // 等待一下再授權英雄
@@ -187,7 +198,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
             </div>
             
             {/* 創建隊伍按鈕 - 移到最上方 */}
-            <div className="flex justify-center mb-6">
+            <div className="flex flex-col items-center mb-6">
                 <ActionButton 
                     onClick={() => onCreateParty(selectedHeroes, selectedRelics)} 
                     isLoading={isCreating}
@@ -196,6 +207,12 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                 >
                     {!isHeroAuthorized || !isRelicAuthorized ? '請先完成授權' : '創建隊伍'}
                 </ActionButton>
+                {/* 授權後提示刷新 */}
+                {(isHeroAuthorized && isRelicAuthorized && !canCreate && selectedHeroes.length > 0 && selectedRelics.length > 0) && (
+                    <p className="text-xs text-yellow-400 mt-2 animate-pulse">
+                        如果按鈕仍為灰色，請手動刷新頁面更新狀態
+                    </p>
+                )}
             </div>
             
             {/* 狀態顯示 */}
@@ -224,9 +241,17 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                     <div className="flex-shrink-0 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
                         <span className="text-white text-xs font-bold">!</span>
                     </div>
-                    <p className="text-xs text-blue-200">
-                        授權彈窗的語言由您的錢包設定決定。授權完成後狀態會自動更新，約需3-10秒。
-                    </p>
+                    <div className="flex flex-col gap-1">
+                        <p className="text-xs text-blue-200">
+                            授權彈窗的語言由您的錢包設定決定。
+                        </p>
+                        <p className="text-xs text-blue-200">
+                            授權完成後狀態會自動更新，約需3-10秒。
+                        </p>
+                        <p className="text-xs text-yellow-300">
+                            ※ 若授權後按鈕仍無法點擊，請手動刷新頁面
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -449,12 +474,21 @@ const MyAssetsPageContent: React.FC = () => {
     const { execute: executeHeroAuth, progress: heroAuthProgress, reset: resetHeroAuth } = useTransactionWithProgress({
         onSuccess: async () => {
             showToast('英雄授權成功！', 'success');
-            // 等待區塊鏈確認並刷新授權狀態
-            setTimeout(async () => {
-                await refetchHeroAuth();
-            }, 3000);
             setShowProgressModal(false);
             confirmHeroAuthUpdate();
+            
+            // 多次重試刷新授權狀態
+            const refreshAuth = async () => {
+                for (let i = 0; i < 5; i++) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    const result = await refetchHeroAuth();
+                    if (result.data === true) {
+                        showToast('英雄授權狀態已更新', 'info');
+                        break;
+                    }
+                }
+            };
+            refreshAuth();
         },
         onError: () => {
             rollbackHeroAuthUpdate();
@@ -467,12 +501,21 @@ const MyAssetsPageContent: React.FC = () => {
     const { execute: executeRelicAuth, progress: relicAuthProgress, reset: resetRelicAuth } = useTransactionWithProgress({
         onSuccess: async () => {
             showToast('聖物授權成功！', 'success');
-            // 等待區塊鏈確認並刷新授權狀態
-            setTimeout(async () => {
-                await refetchRelicAuth();
-            }, 3000);
             setShowProgressModal(false);
             confirmRelicAuthUpdate();
+            
+            // 多次重試刷新授權狀態
+            const refreshAuth = async () => {
+                for (let i = 0; i < 5; i++) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    const result = await refetchRelicAuth();
+                    if (result.data === true) {
+                        showToast('聖物授權狀態已更新', 'info');
+                        break;
+                    }
+                }
+            };
+            refreshAuth();
         },
         onError: () => {
             rollbackRelicAuthUpdate();
