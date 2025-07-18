@@ -297,7 +297,7 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
 
     // 使用 RPC 數據或回退到原始數據
     // 已移除儲備檢查和疲勞度系統
-    // partyStatus 返回的是一個結構體，在 JS 中會變成數組
+    // partyStatus 返回的是一個結構體，在 JS 中可能是對象或數組
     const cooldownEndsAt = (() => {
         if (!partyStatus) {
             console.log('[DungeonPage] partyStatus 為空，使用原始數據');
@@ -305,13 +305,32 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
         }
         
         try {
-            // partyStatus 應該是一個數組: [provisionsRemaining, cooldownEndsAt, unclaimedRewards, fatigueLevel]
-            // 索引 1 是 cooldownEndsAt
-            const cooldownValue = partyStatus[1];
+            // partyStatus 可能是對象格式
+            if (typeof partyStatus === 'object' && !Array.isArray(partyStatus)) {
+                // 嘗試不同的屬性名稱
+                const cooldownValue = partyStatus.cooldownEndsAt || 
+                                     partyStatus['1'] || 
+                                     (partyStatus as any)[1];
+                
+                if (cooldownValue !== undefined) {
+                    const cooldownBigInt = BigInt(cooldownValue.toString());
+                    console.log('[DungeonPage] 成功解析 cooldownEndsAt (從對象):', cooldownBigInt.toString());
+                    return cooldownBigInt;
+                }
+            }
             
+            // 嘗試作為數組
+            if (Array.isArray(partyStatus) && partyStatus[1] !== undefined) {
+                const cooldownBigInt = BigInt(partyStatus[1]);
+                console.log('[DungeonPage] 成功解析 cooldownEndsAt (從數組):', cooldownBigInt.toString());
+                return cooldownBigInt;
+            }
+            
+            // 嘗試直接訪問索引
+            const cooldownValue = (partyStatus as any)[1];
             if (cooldownValue !== undefined) {
-                const cooldownBigInt = BigInt(cooldownValue);
-                console.log('[DungeonPage] 成功解析 cooldownEndsAt:', cooldownBigInt.toString());
+                const cooldownBigInt = BigInt(cooldownValue.toString());
+                console.log('[DungeonPage] 成功解析 cooldownEndsAt (從索引):', cooldownBigInt.toString());
                 return cooldownBigInt;
             }
         } catch (error) {
@@ -425,9 +444,11 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
                     }} 
                 />
             ) : (
-                <div className="mt-3 text-xs text-gray-500">
+                <div className="mt-3 text-xs text-gray-500 space-y-1">
                     {/* 調試資訊：沒有顯示冷卻計時器的原因 */}
-                    冷卻狀態: {cooldownEndsAt > 0n ? '已結束' : '無冷卻數據'}
+                    <p>冷卻狀態: {cooldownEndsAt > 0n ? '已結束' : '無冷卻數據'}</p>
+                    <p>冷卻時間: {cooldownEndsAt.toString()}</p>
+                    <p>當前時間: {Math.floor(Date.now() / 1000)}</p>
                 </div>
             )}
             
