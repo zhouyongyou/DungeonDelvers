@@ -103,14 +103,17 @@ function getRpcUrl(): string {
  * 優先使用 Alchemy，公共節點作為後備
  */
 export function createSmartRpcTransport(): Transport {
-  const primaryRpcUrl = getRpcUrl();
-  const isUsingProxy = primaryRpcUrl === '/api/rpc';
-  const isUsingAlchemy = primaryRpcUrl.includes('alchemy.com') || isUsingProxy;
+  // 保存所有可用的 Alchemy keys
+  const alchemyKeys = getAlchemyKeys();
+  let keyRotationIndex = 0;
   
   return custom({
     async request({ method, params }) {
       let lastError: any;
-      const maxRetries = isUsingAlchemy ? 3 : 2; // Alchemy 重試 3 次，公共節點重試 2 次
+      
+      // 每次請求時輪換使用不同的 key
+      const useAlchemyKeys = alchemyKeys.length > 0;
+      const maxRetries = useAlchemyKeys ? 3 : 2; // Alchemy 重試 3 次，公共節點重試 2 次
       
       // RPC monitoring disabled
       // const requestId = rpcMonitor.startRequest(
@@ -124,21 +127,35 @@ export function createSmartRpcTransport(): Transport {
       
       // 嘗試主要 RPC
       for (let i = 0; i < maxRetries; i++) {
+        // 動態獲取 RPC URL，實現 key 輪換
+        let primaryRpcUrl: string;
+        
+        if (useAlchemyKeys) {
+          // 輪換使用不同的 Alchemy key
+          const keyIndex = (keyRotationIndex + i) % alchemyKeys.length;
+          const key = alchemyKeys[keyIndex];
+          primaryRpcUrl = `https://bnb-mainnet.g.alchemy.com/v2/${key}`;
+          
+          if (i === 0) {
+            logger.info(`🔑 使用 Alchemy Key ${keyIndex + 1}/${alchemyKeys.length}`);
+          }
+        } else {
+          // 使用公共節點
+          primaryRpcUrl = PUBLIC_BSC_RPCS[i % PUBLIC_BSC_RPCS.length];
+        }
+        
+        const fetchUrl = primaryRpcUrl;
+          
         try {
           if (i > 0) {
             logger.info(`🔄 RPC 重試 ${i + 1}/${maxRetries}: ${method}`);
           } else {
             // 只記錄重要的方法，不記錄 filter 相關的頻繁請求
             if (!method.includes('filter') && !method.includes('blockNumber')) {
-              const nodeType = isUsingProxy ? '代理' : (isUsingAlchemy ? 'Alchemy' : '公共');
+              const nodeType = useAlchemyKeys ? 'Alchemy' : '公共';
               logger.debug(`📡 RPC 請求: ${method} 使用 ${nodeType}節點`);
             }
           }
-          
-          // 處理代理路由的相對路徑
-          const fetchUrl = isUsingProxy 
-            ? `${window.location.origin}${primaryRpcUrl}`
-            : primaryRpcUrl;
             
           const response = await fetch(fetchUrl, {
             method: 'POST',
@@ -174,11 +191,10 @@ export function createSmartRpcTransport(): Transport {
             method,
             attempt: i + 1,
             maxRetries,
-            isUsingAlchemy,
-            isUsingProxy
+            isUsingAlchemy: useAlchemyKeys
           };
           
-          logger.error(`RPC 請求失敗 (${isUsingProxy ? '代理' : isUsingAlchemy ? 'Alchemy' : '公共節點'}):`, errorDetails);
+          logger.error(`RPC 請求失敗 (${useAlchemyKeys ? 'Alchemy' : '公共節點'}):`, errorDetails);
           lastError = error;
           
           if (i < maxRetries - 1) {
@@ -188,8 +204,13 @@ export function createSmartRpcTransport(): Transport {
         }
       }
       
+      // 每次請求完成後，增加 key 輪換索引
+      if (useAlchemyKeys) {
+        keyRotationIndex = (keyRotationIndex + 1) % alchemyKeys.length;
+      }
+      
       // 如果使用 Alchemy 失敗，嘗試公共節點作為最後的後備
-      if (isUsingAlchemy) {
+      if (useAlchemyKeys) {
         logger.warn('⚠️ Alchemy RPC 失敗，嘗試公共節點');
         
         for (const publicRpc of PUBLIC_BSC_RPCS) {
