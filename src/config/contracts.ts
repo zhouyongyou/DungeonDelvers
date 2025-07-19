@@ -2,33 +2,34 @@
 
 import { type Address } from 'viem';
 import { bsc } from 'wagmi/chains';
-import { heroABI, relicABI, partyABI, vipStakingABI, playerProfileABI, playerVaultABI, soulShardTokenABI, dungeonMasterABI, altarOfAscensionABI, oracleABI, dungeonCoreABI, dungeonStorageABI } from './abis';
+import { heroABI, relicABI, partyABI, vipStakingABI, playerProfileABI, playerVaultABI, soulShardTokenABI, altarOfAscensionABI, oracleABI, dungeonCoreABI, dungeonStorageABI } from './abis';
+import dungeonMasterV5ABI from './abis/dungeonMasterV5.json';
 
 // 簡化的合約地址配置 - V3 版本 (2025-01-18 修復 interface 不匹配)
 const CONTRACT_ADDRESSES = {
   // 核心合約 (4個) - V3 部署地址 (2025-01-18)
   CORE: {
     DUNGEON_CORE: import.meta.env.VITE_MAINNET_DUNGEONCORE_ADDRESS || "0x3dCcbcbf81911A635E2b21e2e49925F6441B08B6",
-    ORACLE: import.meta.env.VITE_MAINNET_ORACLE_ADDRESS || "0x367f832fDAEFB8Bc038637a8c2E0F87521121a98", 
-    PLAYER_VAULT: import.meta.env.VITE_MAINNET_PLAYERVAULT_ADDRESS || "0xFF7642E66DF4cc240B218b361C3e5fB14573Cf0B",
-    DUNGEON_STORAGE: import.meta.env.VITE_MAINNET_DUNGEONSTORAGE_ADDRESS || "0x6FF605478fea3C3270f2eeD550129c58Dea81403"
+    ORACLE: import.meta.env.VITE_MAINNET_ORACLE_ADDRESS || "0xFa2255D806C62a68e8b2F4a7e20f3E8aE9a15c06", 
+    PLAYER_VAULT: import.meta.env.VITE_MAINNET_PLAYERVAULT_ADDRESS || "0x294Fb94d5a543cd77c9932fD34282462a74bFf1A",
+    DUNGEON_STORAGE: import.meta.env.VITE_MAINNET_DUNGEONSTORAGE_ADDRESS || "0x40D0DFA394707e26247a1EFfAe0f9C1b248Fff10"
   },
   // NFT合約 (3個) - V3 部署地址 (2025-01-18)
   NFTS: {
-    HERO: import.meta.env.VITE_MAINNET_HERO_ADDRESS || "0x99658b9Aa55BFD3a8bd465c77DcCa6b1E7741dA3",
-    RELIC: import.meta.env.VITE_MAINNET_RELIC_ADDRESS || "0xF3e8546216cFdB2F0A1E886291385785177ba773",
-    PARTY: import.meta.env.VITE_MAINNET_PARTY_ADDRESS || "0xddCFa681Cee80D3a0F23834cC07D371792207C85"
+    HERO: import.meta.env.VITE_MAINNET_HERO_ADDRESS || "0x929a4187a462314fCC480ff547019fA122A283f0",
+    RELIC: import.meta.env.VITE_MAINNET_RELIC_ADDRESS || "0x1067295025D21f59C8AcB5E777E42F3866a6D2fF",
+    PARTY: import.meta.env.VITE_MAINNET_PARTY_ADDRESS || "0xE0272e1D76de1F789ce0996F3226bCf54a8c7735"
   },
   // 遊戲合約 (3個) - V3 部署地址 (2025-01-18)
   GAME: {
-    DUNGEON_MASTER: import.meta.env.VITE_MAINNET_DUNGEONMASTER_ADDRESS || "0x84eD128634F9334Bd63a929824066901a74a0E71",
-    ALTAR: import.meta.env.VITE_MAINNET_ALTAROFASCENSION_ADDRESS || "0xB868842b8F4f35F6f8996aA741Fdf8a34fBBe7ED",
-    PLAYER_PROFILE: import.meta.env.VITE_MAINNET_PLAYERPROFILE_ADDRESS || "0xA65334a4F4aF2f344558094bD631e75A6A7617B6"
+    DUNGEON_MASTER: import.meta.env.VITE_MAINNET_DUNGEONMASTER_ADDRESS || "0xff99a6319Ed8D9832c8Bdc89eB5fc6Cb652F71b1",
+    ALTAR: import.meta.env.VITE_MAINNET_ALTAROFASCENSION_ADDRESS || "0xD26444ec19e567B872824fe0B9c104e45A3a3341",
+    PLAYER_PROFILE: import.meta.env.VITE_MAINNET_PLAYERPROFILE_ADDRESS || "0xBba4fE0b9Ac0b16786986aF0F39535B37D09Ff1F"
   },
   // 代幣合約 (2個) - V3 部署地址 (2025-01-18)
   TOKENS: {
     SOUL_SHARD: import.meta.env.VITE_MAINNET_SOULSHARDTOKEN_ADDRESS || "0xc88dAD283Ac209D77Bfe452807d378615AB8B94a",
-    VIP_STAKING: import.meta.env.VITE_MAINNET_VIPSTAKING_ADDRESS || "0x39f13d0ac5EFF88544e51bdf7c338fF881E311eD"
+    VIP_STAKING: import.meta.env.VITE_MAINNET_VIPSTAKING_ADDRESS || "0x7aBEA5b90528a19580A0a2A83e4CF9AD4871880F"
   }
 } as const;
 
@@ -77,7 +78,7 @@ export const contracts = {
     // 遊戲合約
     dungeonMaster: { 
       address: CONTRACT_ADDRESSES.GAME.DUNGEON_MASTER as Address, 
-      abi: dungeonMasterABI
+      abi: dungeonMasterV5ABI as any
     },
     altarOfAscension: { 
       address: CONTRACT_ADDRESSES.GAME.ALTAR as Address, 

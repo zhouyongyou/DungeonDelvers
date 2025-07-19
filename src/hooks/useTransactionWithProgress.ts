@@ -1,7 +1,7 @@
 // src/hooks/useTransactionWithProgress.ts - 帶進度追踪的交易 Hook
 
 import { useState, useCallback } from 'react';
-import { useWriteContract, usePublicClient, useEstimateGas } from 'wagmi';
+import { useWriteContract, usePublicClient } from 'wagmi';
 import { useAppToast } from './useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { logger } from '../utils/logger';
@@ -40,7 +40,7 @@ export function useTransactionWithProgress(options?: UseTransactionWithProgressO
   const { addTransaction } = useTransactionStore();
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
-  const { estimateGasAsync } = useEstimateGas();
+  // 移除 useEstimateGas，直接使用 publicClient
   
   const [progress, setProgress] = useState<TransactionProgressState>({
     status: 'idle',
@@ -57,12 +57,13 @@ export function useTransactionWithProgress(options?: UseTransactionWithProgressO
       if (!config.gas && publicClient) {
         try {
           logger.debug('開始估算 Gas', { description });
-          const estimatedGas = await estimateGasAsync({
+          const estimatedGas = await publicClient.estimateContractGas({
             address: config.address,
             abi: config.abi,
             functionName: config.functionName,
             args: config.args,
             value: config.value,
+            account: publicClient.account?.address,
           });
           
           // 添加緩衝（預設 20%）
@@ -215,7 +216,7 @@ export function useTransactionWithProgress(options?: UseTransactionWithProgressO
       
       throw error;
     }
-  }, [writeContractAsync, publicClient, showToast, addTransaction, options, estimateGasAsync]);
+  }, [writeContractAsync, publicClient, showToast, addTransaction, options]);
 
   const reset = useCallback(() => {
     setProgress({

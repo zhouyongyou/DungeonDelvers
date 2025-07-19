@@ -67,24 +67,21 @@ export class PartyOwnershipChecker {
         args: [userAddress],
       });
 
-      const partyIds: bigint[] = [];
-      
-      // 獲取每個隊伍的 tokenId
-      for (let i = 0; i < Number(balance); i++) {
-        try {
-          const tokenId = await this.publicClient.readContract({
-            address: partyContract.address as `0x${string}`,
-            abi: partyContract.abi,
-            functionName: 'tokenOfOwnerByIndex',
-            args: [userAddress, BigInt(i)],
-          });
-          partyIds.push(tokenId as bigint);
-        } catch (error) {
-          logger.warn(`獲取隊伍 index ${i} 失敗:`, error);
-        }
+      // 如果沒有隊伍，直接返回
+      if (balance === 0n) {
+        return { partyIds: [] };
       }
 
-      return { partyIds };
+      // 由於合約可能沒有 tokenOfOwnerByIndex，我們使用簡單的方法
+      // 返回用戶擁有的隊伍數量，但不獲取具體的 tokenId
+      logger.info(`用戶 ${userAddress} 擁有 ${balance} 個隊伍`);
+      
+      // 如果需要具體的隊伍 ID，可以通過 The Graph 查詢
+      // 這裡先返回數量信息
+      return { 
+        partyIds: [], 
+        error: `用戶擁有 ${balance} 個隊伍（請通過 The Graph 查詢具體 ID）` 
+      };
     } catch (error: any) {
       return {
         partyIds: [],
@@ -109,7 +106,7 @@ export class PartyOwnershipChecker {
       const partyContractAddress = await this.publicClient.readContract({
         address: dungeonCoreContract.address as `0x${string}`,
         abi: dungeonCoreContract.abi,
-        functionName: 'partyContract',
+        functionName: 'partyContractAddress',
       });
 
       return {
