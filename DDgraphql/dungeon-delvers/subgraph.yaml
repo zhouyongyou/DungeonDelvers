@@ -8,7 +8,7 @@ dataSources:
     name: Hero
     network: bsc
     source:
-      address: '0x99658b9Aa55BFD3a8bd465c77DcCa6b1E7741dA3'
+      address: '0x929a4187a462314fCC480ff547019fA122A283f0'
       abi: Hero
       startBlock: 54455500
     mapping:
@@ -36,7 +36,7 @@ dataSources:
     name: Relic
     network: bsc
     source:
-      address: '0xF3e8546216cFdB2F0A1E886291385785177ba773'
+      address: '0x1067295025D21f59C8AcB5E777E42F3866a6D2fF'
       abi: Relic
       startBlock: 54455500
     mapping:
@@ -64,9 +64,9 @@ dataSources:
     name: Party
     network: bsc
     source:
-      address: '0xddCFa681Cee80D3a0F23834cC07D371792207C85'
+      address: '0xe4A55375f7Aba70785f958E2661E08F9FD5f7ab1'
       abi: Party
-      startBlock: 54455500
+      startBlock: 54563557
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -92,7 +92,7 @@ dataSources:
     name: PlayerProfile
     network: bsc
     source:
-      address: '0xA65334a4F4aF2f344558094bD631e75A6A7617B6'
+      address: '0xBba4fE0b9Ac0b16786986aF0F39535B37D09Ff1F'
       abi: PlayerProfile
       startBlock: 54455500
     mapping:
@@ -114,7 +114,7 @@ dataSources:
     name: VIPStaking
     network: bsc
     source:
-      address: '0x39f13d0ac5EFF88544e51bdf7c338fF881E311eD'
+      address: '0x7aBEA5b90528a19580A0a2A83e4CF9AD4871880F'
       abi: VIPStaking
       startBlock: 54455500
     mapping:
@@ -138,9 +138,9 @@ dataSources:
     name: DungeonMaster
     network: bsc
     source:
-      address: '0xff99a6319Ed8D9832c8Bdc89eB5fc6Cb652F71b1'
+      address: '0x108ed6B38D30099E1d2D141Ef0813938E279C0Fe'
       abi: DungeonMaster
-      startBlock: 54455500
+      startBlock: 54563557
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -149,10 +149,12 @@ dataSources:
         - Party
       abis:
         - name: DungeonMaster
-          file: ./abis/DungeonMaster.json
+          file: ./abis/DungeonMasterV7.json
       eventHandlers:
         - event: 'ExpeditionFulfilled(indexed address,indexed uint256,uint256,bool,uint256,uint256)'
           handler: handleExpeditionFulfilled
+        - event: 'ExpeditionRequested(indexed address,indexed uint256,indexed uint256,uint256,uint256)'
+          handler: handleExpeditionRequested
         - event: 'ProvisionsBought(indexed uint256,uint256,uint256,indexed address)'
           handler: handleProvisionsBought
       file: ./src/dungeon-master.ts
@@ -160,7 +162,7 @@ dataSources:
     name: PlayerVault
     network: bsc
     source:
-      address: '0xFF7642E66DF4cc240B218b361C3e5fB14573Cf0B'
+      address: '0x294Fb94d5a543cd77c9932fD34282462a74bFf1A'
       abi: PlayerVault
       startBlock: 54455500
     mapping:
@@ -184,7 +186,7 @@ dataSources:
     name: AltarOfAscension
     network: bsc
     source:
-      address: '0xB868842b8F4f35F6f8996aA741Fdf8a34fBBe7ED'
+      address: '0xD26444ec19e567B872824fe0B9c104e45A3a3341'
       abi: AltarOfAscension
       startBlock: 54455500
     mapping:
@@ -204,7 +206,7 @@ dataSources:
     name: DungeonCore
     network: bsc
     source:
-      address: '0xd1F14243c42AF58E69ea7eA58570DC2d9A908D21'
+      address: '0x3dCcbcbf81911A635E2b21e2e49925F6441B08B6'
       abi: DungeonCore
       startBlock: 54455500
     mapping:

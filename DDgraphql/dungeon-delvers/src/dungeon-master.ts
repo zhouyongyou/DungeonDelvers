@@ -1,6 +1,6 @@
 // DDgraphql/dungeondelvers/src/dungeon-master.ts (統一配置系統版)
 import { BigInt, log } from "@graphprotocol/graph-ts"
-import { ExpeditionFulfilled, ProvisionsBought } from "../generated/DungeonMaster/DungeonMaster"
+import { ExpeditionFulfilled, ExpeditionRequested, ProvisionsBought } from "../generated/DungeonMaster/DungeonMaster"
 import { Party, PlayerProfile, Expedition } from "../generated/schema"
 import { calculateLevel } from "./utils"
 import { getOrCreatePlayer } from "./common"
@@ -115,6 +115,19 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
 //     party.save()
 //   }
 // }
+
+export function handleExpeditionRequested(event: ExpeditionRequested): void {
+  // 記錄探險請求事件，用於追踪和分析
+  log.info("Expedition requested - Party: {}, Dungeon: {}, PartyPower: {}, RequiredPower: {}", [
+    event.params.partyId.toString(),
+    event.params.dungeonId.toString(),
+    event.params.partyPower.toString(),
+    event.params.requiredPower.toString()
+  ])
+  
+  // 可以在這裡添加更多邏輯，例如創建一個 PendingExpedition 實體
+  // 或更新隊伍的狀態為 "正在探險中"
+}
 
 export function handleProvisionsBought(event: ProvisionsBought): void {
   const partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
