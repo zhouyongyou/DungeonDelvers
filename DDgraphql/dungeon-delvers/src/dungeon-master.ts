@@ -57,7 +57,7 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
     // 從事件中獲取真實的 dungeonId
     const dungeonId = event.params.dungeonId
     
-    expedition.player = event.params.player
+    expedition.player = event.params.requester
     expedition.party = partyId
     expedition.dungeonId = dungeonId
     expedition.dungeonName = getDungeonName(dungeonId)
@@ -80,7 +80,7 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
     party.lastUpdatedAt = event.block.timestamp
     party.save()
 
-    const playerAddress = event.params.player
+    const playerAddress = event.params.requester
     getOrCreatePlayer(playerAddress)
     
     // 更新玩家統計數據

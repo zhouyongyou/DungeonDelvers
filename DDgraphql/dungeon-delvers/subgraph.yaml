@@ -138,7 +138,7 @@ dataSources:
     name: DungeonMaster
     network: bsc
     source:
-      address: '0x311730fa5459fa099976B139f7007d98C2F1E7A7'
+      address: '0xff99a6319Ed8D9832c8Bdc89eB5fc6Cb652F71b1'
       abi: DungeonMaster
       startBlock: 54455500
     mapping:
