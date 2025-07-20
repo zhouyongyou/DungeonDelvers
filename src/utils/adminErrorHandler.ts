@@ -94,7 +94,7 @@ class ErrorClassifier {
       case AdminErrorType.NETWORK_ERROR:
         return '1. 檢查網絡連接\n2. 嘗試刷新頁面\n3. 切換到不同的 RPC 節點';
       case AdminErrorType.CONTRACT_ERROR:
-        return '1. 檢查合約地址是否正確\n2. 確認擁有足夠的權限\n3. 檢查 gas 費用設置';
+        return '1. 檢查合約地址是否正確\n2. 確認擁有足夠的權限\n3. 確保錢包有足夠的 BNB';
       case AdminErrorType.VALIDATION_ERROR:
         return '1. 檢查輸入格式\n2. 確認地址格式正確\n3. 檢查數值範圍';
       case AdminErrorType.TIMEOUT_ERROR:

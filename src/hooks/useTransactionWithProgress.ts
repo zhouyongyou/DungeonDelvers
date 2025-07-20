@@ -13,7 +13,6 @@ interface TransactionConfig {
   functionName: string;
   args?: any[];
   value?: bigint;
-  gas?: bigint; // 允許手動指定 gas
 }
 
 interface UseTransactionWithProgressOptions {
@@ -22,7 +21,6 @@ interface UseTransactionWithProgressOptions {
   successMessage?: string;
   errorMessage?: string;
   requiredConfirmations?: number;
-  gasBuffer?: number; // gas 緩衝百分比，預設 20%
 }
 
 export interface TransactionProgressState {
@@ -52,42 +50,12 @@ export function useTransactionWithProgress(options?: UseTransactionWithProgressO
     description: string
   ) => {
     try {
-      // 1. 估算 Gas（如果沒有手動指定）
-      let finalConfig = { ...config };
-      if (!config.gas && publicClient) {
-        try {
-          logger.debug('開始估算 Gas', { description });
-          const estimatedGas = await publicClient.estimateContractGas({
-            address: config.address,
-            abi: config.abi,
-            functionName: config.functionName,
-            args: config.args,
-            value: config.value,
-            account: publicClient.account?.address,
-          });
-          
-          // 添加緩衝（預設 20%）
-          const gasBuffer = options?.gasBuffer || 20;
-          const gasWithBuffer = estimatedGas * BigInt(100 + gasBuffer) / 100n;
-          
-          finalConfig.gas = gasWithBuffer;
-          logger.info('Gas 估算完成', { 
-            estimated: estimatedGas.toString(), 
-            withBuffer: gasWithBuffer.toString(),
-            bufferPercent: gasBuffer 
-          });
-        } catch (gasError) {
-          logger.warn('Gas 估算失敗，使用預設值', gasError);
-          // 如果估算失敗，不設定 gas，讓錢包自行處理
-        }
-      }
-      
-      // 2. 開始簽名
+      // 1. 開始簽名
       setProgress({ status: 'signing', confirmations: 0 });
       logger.info('請求用戶簽名交易', { description });
       
-      // 3. 發送交易
-      const hash = await writeContractAsync(finalConfig);
+      // 2. 發送交易（讓錢包自動處理 gas 估算）
+      const hash = await writeContractAsync(config);
       
       setProgress({ 
         hash, 
