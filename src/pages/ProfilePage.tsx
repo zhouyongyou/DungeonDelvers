@@ -57,12 +57,20 @@ const usePlayerProfile = (targetAddress: Address | undefined) => {
     const playerProfileContract = getContract(chainId === bsc.id ? chainId : bsc.id, 'playerProfile');
 
     // 步驟 1: 從 The Graph 快速獲取 tokenId 和 experience
-    const { data: graphData, isLoading: isLoadingGraph, isError } = useQuery({
+    const { data: graphData, isLoading: isLoadingGraph, isError, error: graphError } = useQuery({
         queryKey: ['playerProfile', targetAddress],
         queryFn: async () => {
-            if (!targetAddress || !THE_GRAPH_API_URL) return null;
+            if (!targetAddress || !THE_GRAPH_API_URL) {
+                logger.warn('Missing targetAddress or THE_GRAPH_API_URL', { targetAddress, THE_GRAPH_API_URL });
+                return null;
+            }
             
             try {
+                logger.info('Fetching player profile from The Graph', { 
+                    url: THE_GRAPH_API_URL,
+                    address: targetAddress.toLowerCase() 
+                });
+                
                 const response = await fetch(THE_GRAPH_API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -78,6 +86,7 @@ const usePlayerProfile = (targetAddress: Address | undefined) => {
                 }
                 
                 const result = await response.json();
+                logger.info('GraphQL response:', result);
                 
                 if (result.errors) {
                     logger.error('GraphQL query errors:', result.errors);
@@ -240,7 +249,16 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
         }
 
         if (isError) {
-            logger.info('ProfilePage error details:', { isError, targetAddress, isMyProfile, hasProfile, experience: experience.toString(), level });
+            logger.info('ProfilePage error details:', { 
+                isError, 
+                targetAddress, 
+                isMyProfile, 
+                hasProfile, 
+                experience: experience.toString(), 
+                level,
+                graphError: graphError?.message,
+                THE_GRAPH_API_URL
+            });
             
             // 如果透過 RPC 查到有 Profile（balance > 0）或有經驗值，但 GraphQL 失敗，顯示基本資訊
             if (hasProfile || experience > 0n) {

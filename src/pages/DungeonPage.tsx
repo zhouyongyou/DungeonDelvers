@@ -26,6 +26,7 @@ import { logger } from '../utils/logger';
 import { ExpeditionResults } from '../components/ExpeditionResults';
 import { ExpeditionHistory } from '../components/ExpeditionHistory';
 import { CooldownTimer } from '../components/CooldownTimer';
+import { ExpeditionTracker } from '../components/ExpeditionTracker';
 
 // =================================================================
 // Section: 型別定義與 GraphQL 查詢
@@ -790,6 +791,9 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
 
     return (
         <section className="space-y-8">
+            {/* Expedition Tracker for showing recent results */}
+            <ExpeditionTracker />
+            
             <TransactionProgressModal
                 isOpen={showProgressModal}
                 onClose={() => setShowProgressModal(false)}

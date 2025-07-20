@@ -1,4 +1,4 @@
-// contracts/DungeonMaster.sol (錢包支付修正版)
+// contracts/DungeonMaster_V8_Fix.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -8,7 +8,15 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces.sol";
 
-contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
+/**
+ * @title DungeonMaster V8 - Experience Fix Version
+ * @notice Fixes the silent failure of experience recording
+ * @dev Key changes:
+ * - Proper error handling for addExperience calls
+ * - Option to bypass experience recording if PlayerProfile is misconfigured
+ * - Events to track experience failures
+ */
+contract DungeonMasterV8 is Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
     
     // --- 狀態變數 ---
@@ -16,6 +24,7 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
     IDungeonStorage public dungeonStorage;
     
     uint256 public dynamicSeed;
+    bool public bypassExperienceOnError = false; // New: Allow bypassing exp errors
 
     // 遊戲設定
     uint256 public provisionPriceUSD = 2 * 1e18;
@@ -34,7 +43,11 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
     event DungeonStorageSet(address indexed newAddress);
     event RestCostDivisorSet(uint256 newDivisor);
     event DungeonSet(uint256 indexed dungeonId, uint256 requiredPower, uint256 rewardAmountUSD, uint8 baseSuccessRate);
+    
+    // New events for experience tracking
     event ExperienceAddFailed(address indexed player, uint256 expGained, string reason);
+    event ExperienceRecordingBypassed(address indexed player, uint256 expGained);
+    event BypassExperienceOnErrorSet(bool newValue);
 
     modifier onlyPartyOwner(uint256 _partyId) {
         require(IParty(dungeonCore.partyContract()).ownerOf(_partyId) == msg.sender, "DM: Not party owner");
@@ -129,14 +142,34 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
 
         expGained = calculateExperience(_dungeonId, _success);
         if (expGained > 0) {
-            try IPlayerProfile(dungeonCore.playerProfile()).addExperience(_requester, expGained) {
-                // Experience added successfully
-            } catch Error(string memory reason) {
-                // Log the error but don't revert the transaction
-                emit ExperienceAddFailed(_requester, expGained, reason);
-            } catch (bytes memory) {
-                // Unknown error - log with generic message
-                emit ExperienceAddFailed(_requester, expGained, "Unknown error");
+            _recordExperience(_requester, expGained);
+        }
+    }
+
+    /**
+     * @dev Properly handle experience recording with comprehensive error handling
+     */
+    function _recordExperience(address _player, uint256 _expGained) internal {
+        try IPlayerProfile(dungeonCore.playerProfile()).addExperience(_player, _expGained) {
+            // Experience added successfully - no action needed
+        } catch Error(string memory reason) {
+            // Known revert reason
+            emit ExperienceAddFailed(_player, _expGained, reason);
+            
+            if (!bypassExperienceOnError) {
+                // If not bypassing, revert the entire transaction
+                revert(string(abi.encodePacked("DM: Experience recording failed: ", reason)));
+            } else {
+                emit ExperienceRecordingBypassed(_player, _expGained);
+            }
+        } catch (bytes memory) {
+            // Unknown error
+            emit ExperienceAddFailed(_player, _expGained, "Unknown error");
+            
+            if (!bypassExperienceOnError) {
+                revert("DM: Experience recording failed with unknown error");
+            } else {
+                emit ExperienceRecordingBypassed(_player, _expGained);
             }
         }
     }
@@ -164,7 +197,6 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
 
         uint256 costInSoulShard = dungeonCore.getSoulShardAmountForUSD(costInUSD);
         
-        // ★ 核心修正 #4：休息也應該從錢包扣款
         IERC20 soulShardToken = IERC20(dungeonCore.soulShardTokenAddress());
         soulShardToken.safeTransferFrom(msg.sender, address(this), costInSoulShard);
         
@@ -185,6 +217,16 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable {
     }
 
     // --- Owner 管理函式 ---
+    
+    /**
+     * @notice Set whether to bypass experience recording errors
+     * @dev Use this as a temporary fix if PlayerProfile is misconfigured
+     */
+    function setBypassExperienceOnError(bool _bypass) external onlyOwner {
+        bypassExperienceOnError = _bypass;
+        emit BypassExperienceOnErrorSet(_bypass);
+    }
+    
     function adminSetDungeon(
         uint256 _dungeonId,
         uint256 _requiredPower,

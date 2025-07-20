@@ -189,46 +189,153 @@ ${referralLink}
         canvas.width = 1200;
         canvas.height = 630;
 
-        // 背景漸變
-        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-        gradient.addColorStop(0, '#1a1a2e');
-        gradient.addColorStop(0.5, '#16213e');
-        gradient.addColorStop(1, '#0f3460');
-        ctx.fillStyle = gradient;
+        // 背景 - 使用更豐富的漸變效果
+        const bgGradient = ctx.createRadialGradient(600, 315, 0, 600, 315, 800);
+        bgGradient.addColorStop(0, '#1e293b');
+        bgGradient.addColorStop(0.5, '#0f172a');
+        bgGradient.addColorStop(1, '#030712');
+        ctx.fillStyle = bgGradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // 標題
+        // 添加網格背景效果
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.1)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < canvas.width; i += 40) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i, canvas.height);
+            ctx.stroke();
+        }
+        for (let i = 0; i < canvas.height; i += 40) {
+            ctx.beginPath();
+            ctx.moveTo(0, i);
+            ctx.lineTo(canvas.width, i);
+            ctx.stroke();
+        }
+
+        // 添加裝飾性漸變圓形
+        const decorGradient1 = ctx.createRadialGradient(150, 150, 0, 150, 150, 150);
+        decorGradient1.addColorStop(0, 'rgba(168, 85, 247, 0.3)');
+        decorGradient1.addColorStop(1, 'transparent');
+        ctx.fillStyle = decorGradient1;
+        ctx.fillRect(0, 0, 300, 300);
+
+        const decorGradient2 = ctx.createRadialGradient(1050, 480, 0, 1050, 480, 150);
+        decorGradient2.addColorStop(0, 'rgba(59, 130, 246, 0.3)');
+        decorGradient2.addColorStop(1, 'transparent');
+        ctx.fillStyle = decorGradient2;
+        ctx.fillRect(900, 330, 300, 300);
+
+        // 標題區域背景
+        const titleBg = ctx.createLinearGradient(0, 50, 0, 250);
+        titleBg.addColorStop(0, 'rgba(168, 85, 247, 0.1)');
+        titleBg.addColorStop(1, 'transparent');
+        ctx.fillStyle = titleBg;
+        ctx.fillRect(0, 50, canvas.width, 200);
+
+        // 主標題 - 使用陰影效果
+        ctx.save();
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 20;
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 72px Arial';
+        ctx.font = 'bold 80px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('Dungeon Delvers', canvas.width / 2, 150);
+        ctx.fillText('DUNGEON DELVERS', canvas.width / 2, 130);
+        ctx.restore();
 
         // 副標題
-        ctx.fillStyle = '#ffd700';
-        ctx.font = 'bold 36px Arial';
-        ctx.fillText('Web3 地城冒險遊戲', canvas.width / 2, 220);
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = '32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('征服地下城 · 收集 NFT · 賺取獎勵', canvas.width / 2, 180);
 
-        // 特色功能
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '32px Arial';
-        ctx.textAlign = 'left';
+        // 遊戲特色卡片
         const features = [
-            '⚔️ 招募強力英雄',
-            '💎 收集珍稀聖物', 
-            '👥 組建無敵隊伍',
-            '🏰 探索神秘地城',
-            '💰 賺取豐厚獎勵'
+            { icon: '⚔️', title: '英雄收集', desc: '獨特 NFT 英雄' },
+            { icon: '💎', title: '稀有聖物', desc: '強化你的隊伍' },
+            { icon: '🏰', title: '地城探索', desc: '豐厚獎勵等你' }
         ];
-        
+
+        // 繪製特色卡片
         features.forEach((feature, index) => {
-            ctx.fillText(feature, 100, 320 + index * 50);
+            const x = 150 + index * 350;
+            const y = 250;
+            const width = 300;
+            const height = 120;
+
+            // 卡片背景
+            const cardGradient = ctx.createLinearGradient(x, y, x + width, y + height);
+            cardGradient.addColorStop(0, 'rgba(59, 130, 246, 0.2)');
+            cardGradient.addColorStop(1, 'rgba(168, 85, 247, 0.2)');
+            ctx.fillStyle = cardGradient;
+            ctx.fillRect(x, y, width, height);
+
+            // 卡片邊框
+            ctx.strokeStyle = 'rgba(168, 85, 247, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, width, height);
+
+            // 圖標
+            ctx.font = '48px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.fillText(feature.icon, x + 60, y + 65);
+
+            // 標題
+            ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'left';
+            ctx.fillText(feature.title, x + 100, y + 50);
+
+            // 描述
+            ctx.font = '18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.fillStyle = '#9ca3af';
+            ctx.fillText(feature.desc, x + 100, y + 80);
         });
 
-        // 邀請連結
-        ctx.fillStyle = '#ffd700';
-        ctx.font = 'bold 24px Arial';
+        // 推薦碼區域
+        const refY = 420;
+        const refBg = ctx.createLinearGradient(200, refY, 1000, refY + 140);
+        refBg.addColorStop(0, 'rgba(251, 191, 36, 0.1)');
+        refBg.addColorStop(1, 'rgba(245, 158, 11, 0.1)');
+        ctx.fillStyle = refBg;
+        ctx.fillRect(200, refY, 800, 140);
+
+        // 推薦碼邊框
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(200, refY, 800, 140);
+
+        // 推薦碼標題
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = 'bold 28px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('使用邀請連結加入遊戲:', canvas.width / 2, 580);
+        ctx.fillText('🎁 使用我的推薦碼加入遊戲', canvas.width / 2, refY + 40);
+
+        // 推薦地址
+        if (address) {
+            ctx.save();
+            ctx.shadowColor = '#fbbf24';
+            ctx.shadowBlur = 10;
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 36px monospace';
+            ctx.textAlign = 'center';
+            const shortAddress = `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+            ctx.fillText(shortAddress, canvas.width / 2, refY + 85);
+            ctx.restore();
+        }
+
+        // 底部提示
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('推薦人可獲得 5% 永久佣金獎勵', canvas.width / 2, refY + 120);
+
+        // 添加品牌標識
+        ctx.fillStyle = '#374151';
+        ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText('dungeondelvers.io', canvas.width - 30, canvas.height - 20);
         
         // 下載圖片
         canvas.toBlob((blob) => {
