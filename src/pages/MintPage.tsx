@@ -439,6 +439,28 @@ const MintPage: React.FC = () => {
     return (
         <section>
             <h2 className="page-title">鑄造工坊</h2>
+            
+            {/* 收益最大化建議 */}
+            <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4 mb-6 max-w-4xl mx-auto">
+                <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center mt-0.5">
+                        <span className="text-white text-sm">💡</span>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <p className="text-sm text-purple-300 font-semibold">
+                            收益最大化策略
+                        </p>
+                        <ul className="text-xs text-gray-300 space-y-1 list-disc list-inside">
+                            <li>建議每個帳號專注培養 <strong className="text-purple-200">一個精華隊伍</strong></li>
+                            <li>隊伍戰力應達到 <strong className="text-purple-200">3000 以上</strong>，以挑戰最高收益的「混沌深淵」地下城</li>
+                            <li>一般需要鑄造約 <strong className="text-purple-200">100 個聖物</strong> 和 <strong className="text-purple-200">200 個英雄</strong>，才能組建出幾個強力隊伍</li>
+                            <li>優先選擇高容量聖物（4-5 星）和高戰力英雄進行組隊</li>
+                            <li>記得：品質優於數量，一個強力隊伍勝過多個弱隊</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
             {chainId === bsc.id ? <MintingInterface chainId={chainId} /> : <div className="card-bg p-10 rounded-xl text-center text-gray-400"><p>請先連接到支援的網路 (BSC 主網) 以使用鑄造功能。</p></div>}
         </section>
     );

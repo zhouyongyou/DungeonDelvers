@@ -300,6 +300,26 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                 </div>
             </div>
 
+            {/* 收益最大化策略提醒 */}
+            <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-3 mb-4">
+                <div className="flex items-start gap-2">
+                    <div className="flex-shrink-0 w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center mt-0.5">
+                        <span className="text-white text-xs">💰</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <p className="text-xs text-purple-200 font-medium">
+                            收益最大化組隊策略
+                        </p>
+                        <ul className="text-xs text-purple-100 space-y-1 list-disc list-inside">
+                            <li>建議每個帳號培養 <span className="font-semibold text-purple-50">一個精華隊伍</span>，戰力達到 <span className="font-semibold text-purple-50">3000+</span></li>
+                            <li>優先組建能挑戰「混沌深淵」（3000 戰力需求）的隊伍，可獲得最高收益</li>
+                            <li>選擇高容量聖物（4-5 星）搭配高戰力英雄，確保隊伍總戰力最大化</li>
+                            <li>一般需要約 100 個聖物和 200 個英雄，才能篩選出最強組合</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
             <div className="flex flex-col md:grid md:grid-cols-2 gap-6 mb-4">
                 <div>
                     <div className="flex items-center justify-between mb-2">
