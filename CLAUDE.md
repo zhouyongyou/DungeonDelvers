@@ -1,5 +1,20 @@
 # DungeonDelvers 前端 - AI 開發指南
 
+## 🗂️ 專案資料夾位置
+```bash
+# 前端（當前資料夾）
+/Users/sotadic/Documents/GitHub/DungeonDelvers/
+
+# 智能合約
+/Users/sotadic/Documents/DungeonDelversContracts/
+
+# 子圖
+/Users/sotadic/Documents/GitHub/DungeonDelvers/DDgraphql/dungeon-delvers/
+
+# 後端
+/Users/sotadic/Documents/dungeon-delvers-metadata-server/
+```
+
 ## 專案概述
 使用 React + TypeScript + Vite 構建的 Web3 遊戲前端，整合 wagmi v2 進行區塊鏈交互。
 

@@ -8,9 +8,9 @@ dataSources:
     name: Hero
     network: bsc
     source:
-      address: '0x929a4187a462314fCC480ff547019fA122A283f0'
+      address: '0x6f4Bd03ea8607c6e69bCc971b7d3CC9e5801EF5E'
       abi: Hero
-      startBlock: 54455500
+      startBlock: 54670894
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -36,9 +36,9 @@ dataSources:
     name: Relic
     network: bsc
     source:
-      address: '0x1067295025D21f59C8AcB5E777E42F3866a6D2fF'
+      address: '0x853DAAeC0ae354bF40c732C199Eb09F1a0CD3dC1'
       abi: Relic
-      startBlock: 54455500
+      startBlock: 54670894
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -64,9 +64,9 @@ dataSources:
     name: Party
     network: bsc
     source:
-      address: '0xe4A55375f7Aba70785f958E2661E08F9FD5f7ab1'
+      address: '0x847DceaE26aF1CFc09beC195CE87a9b5701863A7'
       abi: Party
-      startBlock: 54563557
+      startBlock: 54670894
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -77,7 +77,7 @@ dataSources:
         - PartyMemberChange
       abis:
         - name: Party
-          file: ./abis/Party.json
+          file: ./abis/PartyV3.json
       eventHandlers:
         - event: 'PartyCreated(indexed uint256,indexed address,uint256[],uint256[],uint256,uint256,uint8)'
           handler: handlePartyCreated
@@ -92,9 +92,9 @@ dataSources:
     name: PlayerProfile
     network: bsc
     source:
-      address: '0xBba4fE0b9Ac0b16786986aF0F39535B37D09Ff1F'
+      address: '0x39b09c3c64D5ada443d2965cb31C7bad7AC66F2f'
       abi: PlayerProfile
-      startBlock: 54455500
+      startBlock: 54670894
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -114,9 +114,9 @@ dataSources:
     name: VIPStaking
     network: bsc
     source:
-      address: '0x7aBEA5b90528a19580A0a2A83e4CF9AD4871880F'
+      address: '0x738eA7A2408F56D47EF127954Db42D37aE6339D5'
       abi: VIPStaking
-      startBlock: 54455500
+      startBlock: 54670894
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -138,9 +138,9 @@ dataSources:
     name: DungeonMaster
     network: bsc
     source:
-      address: '0x108ed6B38D30099E1d2D141Ef0813938E279C0Fe'
+      address: '0xb71f6ED7B13452a99d740024aC17470c1b4F0021'
       abi: DungeonMaster
-      startBlock: 54563557
+      startBlock: 54670894
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -149,7 +149,7 @@ dataSources:
         - Party
       abis:
         - name: DungeonMaster
-          file: ./abis/DungeonMasterV7.json
+          file: ./abis/DungeonMasterV8.json
       eventHandlers:
         - event: 'ExpeditionFulfilled(indexed address,indexed uint256,uint256,bool,uint256,uint256)'
           handler: handleExpeditionFulfilled
@@ -162,9 +162,9 @@ dataSources:
     name: PlayerVault
     network: bsc
     source:
-      address: '0x294Fb94d5a543cd77c9932fD34282462a74bFf1A'
+      address: '0xA5BA5EE03d452eA5e57c72657c8EC03C6F388E1f'
       abi: PlayerVault
-      startBlock: 54455500
+      startBlock: 54670894
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -186,9 +186,9 @@ dataSources:
     name: AltarOfAscension
     network: bsc
     source:
-      address: '0xD26444ec19e567B872824fe0B9c104e45A3a3341'
+      address: '0xB9878bBDcB82926f0D03E0157e8c34AEa35E06cb'
       abi: AltarOfAscension
-      startBlock: 54455500
+      startBlock: 54670894
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -206,9 +206,9 @@ dataSources:
     name: DungeonCore
     network: bsc
     source:
-      address: '0x3dCcbcbf81911A635E2b21e2e49925F6441B08B6'
+      address: '0x2CB2Bd1b18CDd0cbF37cD6F7FF672D03E7a038a5'
       abi: DungeonCore
-      startBlock: 54455500
+      startBlock: 54670894
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
