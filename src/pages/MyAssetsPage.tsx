@@ -291,7 +291,10 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                             創建隊伍後，需要等待 <span className="font-semibold text-amber-100">3-5 分鐘</span> 才會在資產頁面顯示新隊伍。
                         </p>
                         <p className="text-xs text-amber-200">
-                            這是由於區塊鏈數據同步需要時間，請耐心等候。交易完成後可刷新頁面檢查狀態。
+                            這是由於區塊鏈數據同步需要時間，請耐心等候。
+                        </p>
+                        <p className="text-xs text-amber-100 font-medium">
+                            💡 建議：交易完成後，請手動刷新頁面或到「隊伍」頁面查看最新狀態。
                         </p>
                     </div>
                 </div>
@@ -562,6 +565,15 @@ const MyAssetsPageContent: React.FC = () => {
                 5000
             );
             
+            // 延遲 2 秒後顯示刷新提醒
+            setTimeout(() => {
+                showToast(
+                    '💡 提示：建議手動刷新頁面以確保看到最新隊伍', 
+                    'info',
+                    7000
+                );
+            }, 2000);
+            
             // 立即刷新資料
             queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
             queryClient.invalidateQueries({ queryKey: ['playerParties', address, chainId] });
@@ -576,7 +588,7 @@ const MyAssetsPageContent: React.FC = () => {
                 
                 if (checkCount >= 10) {
                     clearInterval(checkInterval);
-                    showToast('✅ 隊伍創建完成！如果還沒看到，請稍後刷新頁面', 'info');
+                    showToast('✅ 隊伍應該已經創建完成！如仍未看到，請手動刷新頁面', 'info');
                 }
             }, 3000);
             

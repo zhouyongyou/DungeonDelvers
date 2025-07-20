@@ -168,6 +168,19 @@ export const Footer: React.FC = () => {
             <div className="grid grid-cols-1">
                 <ContractAddressItem name="$SoulShard" address={soulShardAddress} />
             </div>
+            
+            {/* 重要提醒區域 */}
+            <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <p className="text-xs text-yellow-400 mb-2 font-semibold">
+                    ⚠️ 重要提醒
+                </p>
+                <ul className="text-xs text-gray-400 space-y-1 list-disc list-inside">
+                    <li>目前顯示的代幣地址為測試版本，正式版本將會更新</li>
+                    <li>請關注我們的 <a href="https://x.com/SoulShard_BSC" target="_blank" rel="noreferrer" className="text-yellow-400 hover:text-yellow-300 underline">Twitter</a> 獲取最新消息</li>
+                    <li>遊戲上線初期會有較多測試和更新，建議等待官方公告功能穩定後再進行遊戲</li>
+                    <li>初期建議先持有代幣，待系統穩定後再參與鑄造等功能</li>
+                </ul>
+            </div>
         </div>
 
         <div className="flex justify-center items-center text-sm gap-2 mb-4">
@@ -184,7 +197,7 @@ export const Footer: React.FC = () => {
         </div>
         
         <div className="flex justify-center items-center gap-4 mb-4">
-            <a href="https://twitter.com/your-twitter-handle" target="_blank" rel="noreferrer" className="flex items-center justify-center w-8 h-8 bg-[#1DA1F2] rounded-full transition-transform hover:scale-110" aria-label="Twitter">
+            <a href="https://x.com/SoulShard_BSC" target="_blank" rel="noreferrer" className="flex items-center justify-center w-8 h-8 bg-[#1DA1F2] rounded-full transition-transform hover:scale-110" aria-label="Twitter">
               <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.71v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
               </svg>

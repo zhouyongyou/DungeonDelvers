@@ -56,30 +56,44 @@ export const TransactionProgress: React.FC<TransactionProgressProps> = ({
                 }
               }
             } catch (err) {
+              // 忽略 TransactionReceiptNotFoundError，這是正常的
+              if (err instanceof Error && err.name === 'TransactionReceiptNotFoundError') {
+                // 交易還在等待被包含到區塊中，這是正常的
+                return;
+              }
               console.error('Error checking transaction:', err);
             }
           },
         });
 
-        // 初始檢查
-        const receipt = await publicClient.getTransactionReceipt({ hash });
-        if (receipt) {
-          if (receipt.status === 'reverted') {
-            setStatus('error');
-            setError(new Error('Transaction reverted'));
-            onError?.(new Error('Transaction reverted'));
-          } else {
-            setStatus('confirming');
-            const block = await publicClient.getBlock();
-            const currentConfirmations = Number(block.number - receipt.blockNumber) + 1;
-            setConfirmations(currentConfirmations);
-            
-            if (currentConfirmations >= requiredConfirmations) {
-              setStatus('success');
-              onSuccess?.();
+        // 初始檢查（延遲執行，給交易時間被包含到區塊中）
+        setTimeout(async () => {
+          try {
+            const receipt = await publicClient.getTransactionReceipt({ hash });
+            if (receipt) {
+              if (receipt.status === 'reverted') {
+                setStatus('error');
+                setError(new Error('Transaction reverted'));
+                onError?.(new Error('Transaction reverted'));
+              } else {
+                setStatus('confirming');
+                const block = await publicClient.getBlock();
+                const currentConfirmations = Number(block.number - receipt.blockNumber) + 1;
+                setConfirmations(currentConfirmations);
+                
+                if (currentConfirmations >= requiredConfirmations) {
+                  setStatus('success');
+                  onSuccess?.();
+                }
+              }
+            }
+          } catch (err) {
+            // 初始檢查時忽略找不到收據的錯誤
+            if (err instanceof Error && err.name !== 'TransactionReceiptNotFoundError') {
+              console.error('Initial check error:', err);
             }
           }
-        }
+        }, 3000); // 延遲 3 秒後再檢查，給交易時間被打包
       } catch (err) {
         setStatus('error');
         setError(err as Error);

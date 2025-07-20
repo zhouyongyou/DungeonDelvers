@@ -163,6 +163,8 @@ const MintResultModal: React.FC<{ nft: AnyNft | null; onClose: () => void }> = (
                     <ul className="text-xs text-gray-400 space-y-1">
                         <li>• 您的 NFT 將在 <strong className="text-blue-300">2-3 分鐘</strong> 後可用於組隊</li>
                         <li>• 需等待區塊鏈確認和數據同步完成</li>
+                        <li>• 建議您可以 <strong className="text-yellow-300">手動刷新頁面</strong> 以更新資料</li>
+                        <li>• 或前往 <strong className="text-yellow-300">「隊伍」頁面</strong> 等待片刻後刷新查看</li>
                         <li>• 可在「我的資產」頁面查看最新狀態</li>
                     </ul>
                 </div>
