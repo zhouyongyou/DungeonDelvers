@@ -2,34 +2,35 @@
 
 import { type Address } from 'viem';
 import { bsc } from 'wagmi/chains';
-import { heroABI, relicABI, partyABI, vipStakingABI, playerProfileABI, playerVaultABI, soulShardTokenABI, altarOfAscensionABI, oracleABI, dungeonCoreABI, dungeonStorageABI } from './abis';
-import dungeonMasterV5ABI from './abis/dungeonMasterV5.json';
+import { heroABI, relicABI, vipStakingABI, playerProfileABI, playerVaultABI, soulShardTokenABI, altarOfAscensionABI, oracleABI, dungeonCoreABI, dungeonStorageABI } from './abis';
+import dungeonMasterV8ABI from './abis/dungeonMasterV8.json';
+import partyV3ABI from './abis/partyV3.json';
 
-// 簡化的合約地址配置 - V3 版本 (2025-01-18 修復 interface 不匹配)
+// 簡化的合約地址配置 - V12 版本 (2025-01-20 更新地城配置)
 const CONTRACT_ADDRESSES = {
-  // 核心合約 (4個) - V3 部署地址 (2025-01-18)
+  // 核心合約 (4個) - V12 部署地址
   CORE: {
-    DUNGEON_CORE: import.meta.env.VITE_MAINNET_DUNGEONCORE_ADDRESS || "0x3dCcbcbf81911A635E2b21e2e49925F6441B08B6",
-    ORACLE: import.meta.env.VITE_MAINNET_ORACLE_ADDRESS || "0xFa2255D806C62a68e8b2F4a7e20f3E8aE9a15c06", 
-    PLAYER_VAULT: import.meta.env.VITE_MAINNET_PLAYERVAULT_ADDRESS || "0x294Fb94d5a543cd77c9932fD34282462a74bFf1A",
-    DUNGEON_STORAGE: import.meta.env.VITE_MAINNET_DUNGEONSTORAGE_ADDRESS || "0x40D0DFA394707e26247a1EFfAe0f9C1b248Fff10"
+    DUNGEON_CORE: import.meta.env.VITE_MAINNET_DUNGEONCORE_ADDRESS || "0x2CB2Bd1b18CDd0cbF37cD6F7FF672D03E7a038a5",
+    ORACLE: import.meta.env.VITE_MAINNET_ORACLE_ADDRESS || "0xcF7c97a055CBf8d61Bb57254F0F54A2cbaa09806", 
+    PLAYER_VAULT: import.meta.env.VITE_MAINNET_PLAYERVAULT_ADDRESS || "0xA5BA5EE03d452eA5e57c72657c8EC03C6F388E1f",
+    DUNGEON_STORAGE: import.meta.env.VITE_MAINNET_DUNGEONSTORAGE_ADDRESS || "0xea21D782CefD785B128346F39f1574c8D6eb64C9"
   },
-  // NFT合約 (3個) - V3 部署地址 (2025-01-18)
+  // NFT合約 (3個) - V12 部署地址
   NFTS: {
-    HERO: import.meta.env.VITE_MAINNET_HERO_ADDRESS || "0x929a4187a462314fCC480ff547019fA122A283f0",
-    RELIC: import.meta.env.VITE_MAINNET_RELIC_ADDRESS || "0x1067295025D21f59C8AcB5E777E42F3866a6D2fF",
-    PARTY: import.meta.env.VITE_MAINNET_PARTY_ADDRESS || "0xe4A55375f7Aba70785f958E2661E08F9FD5f7ab1"
+    HERO: import.meta.env.VITE_MAINNET_HERO_ADDRESS || "0x6f4Bd03ea8607c6e69bCc971b7d3CC9e5801EF5E",
+    RELIC: import.meta.env.VITE_MAINNET_RELIC_ADDRESS || "0x853DAAeC0ae354bF40c732C199Eb09F1a0CD3dC1",
+    PARTY: import.meta.env.VITE_MAINNET_PARTY_ADDRESS || "0x847DceaE26aF1CFc09beC195CE87a9b5701863A7"
   },
-  // 遊戲合約 (3個) - V3 部署地址 (2025-01-18)
+  // 遊戲合約 (3個) - V12 部署地址
   GAME: {
-    DUNGEON_MASTER: import.meta.env.VITE_MAINNET_DUNGEONMASTER_ADDRESS || "0x108ed6B38D30099E1d2D141Ef0813938E279C0Fe",
-    ALTAR: import.meta.env.VITE_MAINNET_ALTAROFASCENSION_ADDRESS || "0xD26444ec19e567B872824fe0B9c104e45A3a3341",
-    PLAYER_PROFILE: import.meta.env.VITE_MAINNET_PLAYERPROFILE_ADDRESS || "0xBba4fE0b9Ac0b16786986aF0F39535B37D09Ff1F"
+    DUNGEON_MASTER: import.meta.env.VITE_MAINNET_DUNGEONMASTER_ADDRESS || "0xb71f6ED7B13452a99d740024aC17470c1b4F0021",
+    ALTAR: import.meta.env.VITE_MAINNET_ALTAROFASCENSION_ADDRESS || "0xB9878bBDcB82926f0D03E0157e8c34AEa35E06cb",
+    PLAYER_PROFILE: import.meta.env.VITE_MAINNET_PLAYERPROFILE_ADDRESS || "0x39b09c3c64D5ada443d2965cb31C7bad7AC66F2f"
   },
-  // 代幣合約 (2個) - V3 部署地址 (2025-01-18)
+  // 代幣合約 (2個) - V12 部署地址
   TOKENS: {
     SOUL_SHARD: import.meta.env.VITE_MAINNET_SOULSHARDTOKEN_ADDRESS || "0xc88dAD283Ac209D77Bfe452807d378615AB8B94a",
-    VIP_STAKING: import.meta.env.VITE_MAINNET_VIPSTAKING_ADDRESS || "0x7aBEA5b90528a19580A0a2A83e4CF9AD4871880F"
+    VIP_STAKING: import.meta.env.VITE_MAINNET_VIPSTAKING_ADDRESS || "0x738eA7A2408F56D47EF127954Db42D37aE6339D5"
   }
 } as const;
 
@@ -72,13 +73,13 @@ export const contracts = {
     },
     party: { 
       address: CONTRACT_ADDRESSES.NFTS.PARTY as Address, 
-      abi: partyABI
+      abi: partyV3ABI as any
     },
     
     // 遊戲合約
     dungeonMaster: { 
       address: CONTRACT_ADDRESSES.GAME.DUNGEON_MASTER as Address, 
-      abi: dungeonMasterV5ABI as any
+      abi: dungeonMasterV8ABI as any
     },
     altarOfAscension: { 
       address: CONTRACT_ADDRESSES.GAME.ALTAR as Address, 
