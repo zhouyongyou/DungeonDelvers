@@ -160,7 +160,7 @@ const usePlayerProfile = (targetAddress: Address | undefined) => {
     const level = levelResult ? Number(levelResult.toString()) : 1;
 
     // 調試日誌
-    logger.debug('PlayerProfile Debug:', {
+    logger.info('PlayerProfile Debug:', {
         targetAddress,
         hasProfile,
         hasGraphProfile: !!graphData?.profile,
@@ -169,6 +169,8 @@ const usePlayerProfile = (targetAddress: Address | undefined) => {
         levelResult,
         level,
         contractAddress: playerProfileContract?.address,
+        graphError: isError,
+        graphData,
     });
 
     return {
@@ -238,7 +240,60 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
         }
 
         if (isError) {
-            logger.debug('ProfilePage error details:', { isError, targetAddress, isMyProfile });
+            logger.info('ProfilePage error details:', { isError, targetAddress, isMyProfile, hasProfile, experience: experience.toString(), level });
+            
+            // 如果透過 RPC 查到有 Profile（balance > 0）或有經驗值，但 GraphQL 失敗，顯示基本資訊
+            if (hasProfile || experience > 0n) {
+                return (
+                    <div className="card-bg p-6 rounded-2xl shadow-xl flex flex-col items-center">
+                        <h3 className="section-title">{isMyProfile ? '我的玩家徽章' : '玩家徽章'}</h3>
+                        <p className="font-mono text-xs break-all bg-black/20 p-2 rounded text-gray-400 mb-4">{targetAddress}</p>
+                        
+                        <div className="w-full max-w-lg mb-4 p-4 bg-gray-800/50 rounded-lg">
+                            <div className="text-center mb-3">
+                                <h4 className="text-xl font-bold text-white mb-1">
+                                    玩家檔案
+                                </h4>
+                                
+                                <div className="flex items-center justify-center gap-4 my-2">
+                                    <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-black px-3 py-1 rounded-full font-bold">
+                                        Lv. {level}
+                                    </div>
+                                    <div className="text-sm text-gray-300">
+                                        經驗值: {experience.toString()}
+                                    </div>
+                                </div>
+                                
+                                <div className="w-full mt-2 mb-3">
+                                    <div className="text-xs text-gray-400 mb-1">
+                                        升級進度: {calculateExpProgress(experience, level)}%
+                                    </div>
+                                    <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                                        <div 
+                                            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"
+                                            style={{ width: `${calculateExpProgress(experience, level)}%` }}
+                                        />
+                                    </div>
+                                </div>
+                                
+                                <p className="text-sm text-yellow-500 mt-4">
+                                    ⚠️ 正在同步子圖資料，部分統計資訊可能暫時無法顯示
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div className="w-full max-w-lg my-4 border-4 border-gray-700 rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center aspect-square">
+                            <div className="text-center">
+                                <div className="text-6xl mb-4">👤</div>
+                                <div className="text-xl font-bold text-white">玩家檔案</div>
+                                <div className="text-sm text-gray-400">SBT Profile</div>
+                            </div>
+                        </div>
+                        <p className="text-sm text-gray-400">這是一個動態的 SBT (靈魂綁定代幣)，它記錄了該玩家在遊戲中的光輝歷程。</p>
+                    </div>
+                );
+            }
+            
             // 如果是自己的檔案且出錯，很可能是沒有檔案，顯示提示
             if (isMyProfile) {
                 return (
@@ -255,7 +310,7 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
             return <EmptyState message="讀取玩家檔案時發生錯誤，該玩家可能尚未創建個人檔案。" />;
         }
 
-        if (hasProfile && profileData) {
+        if (hasProfile || profileData || experience > 0n) {
             try {
                 // 使用靜態圖片和實際的 profile 資料
                 const profileImage = '/assets/images/collections/profile-logo.png';
@@ -269,7 +324,7 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                         <div className="w-full max-w-lg mb-4 p-4 bg-gray-800/50 rounded-lg">
                             <div className="text-center mb-3">
                                 <h4 className="text-xl font-bold text-white mb-1">
-                                    {profileData.name || '未命名玩家'}
+                                    {profileData?.name || '未命名玩家'}
                                 </h4>
                                 
                                 {/* 等級和經驗值顯示 */}
@@ -298,31 +353,41 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                                     </div>
                                 </div>
                                 
-                                <p className="text-sm text-gray-400">
-                                    成功遠征次數: {profileData.successfulExpeditions || 0}
-                                </p>
+                                {profileData && (
+                                    <p className="text-sm text-gray-400">
+                                        成功遠征次數: {profileData.successfulExpeditions || 0}
+                                    </p>
+                                )}
                             </div>
                             
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div className="bg-gray-700/50 p-2 rounded">
-                                    <p className="text-gray-400">總獎勵</p>
-                                    <p className="text-white font-mono">
-                                        {profileData.totalRewardsEarned ? 
-                                            (Number(profileData.totalRewardsEarned) / 1e18).toFixed(4) : 
-                                            '0'
-                                        } SS
-                                    </p>
+                            {profileData && (
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div className="bg-gray-700/50 p-2 rounded">
+                                        <p className="text-gray-400">總獎勵</p>
+                                        <p className="text-white font-mono">
+                                            {profileData.totalRewardsEarned ? 
+                                                (Number(profileData.totalRewardsEarned) / 1e18).toFixed(4) : 
+                                                '0'
+                                            } SS
+                                        </p>
+                                    </div>
+                                    <div className="bg-gray-700/50 p-2 rounded">
+                                        <p className="text-gray-400">佣金收入</p>
+                                        <p className="text-white font-mono">
+                                            {profileData.commissionEarned ? 
+                                                (Number(profileData.commissionEarned) / 1e18).toFixed(4) : 
+                                                '0'
+                                            } SS
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="bg-gray-700/50 p-2 rounded">
-                                    <p className="text-gray-400">佣金收入</p>
-                                    <p className="text-white font-mono">
-                                        {profileData.commissionEarned ? 
-                                            (Number(profileData.commissionEarned) / 1e18).toFixed(4) : 
-                                            '0'
-                                        } SS
-                                    </p>
-                                </div>
-                            </div>
+                            )}
+                            
+                            {!profileData && (
+                                <p className="text-sm text-yellow-500 mt-2">
+                                    ⚠️ 子圖資料同步中，部分統計資訊暫時無法顯示
+                                </p>
+                            )}
                         </div>
                         
                         <div className="w-full max-w-lg my-4 border-4 border-gray-700 rounded-lg overflow-hidden">
@@ -338,7 +403,7 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                                         <div class="w-full aspect-square bg-gray-800 flex items-center justify-center">
                                             <div class="text-center">
                                                 <div class="text-6xl mb-4">👤</div>
-                                                <div class="text-xl font-bold text-white">${profileData.name || '玩家檔案'}</div>
+                                                <div class="text-xl font-bold text-white">${profileData?.name || '玩家檔案'}</div>
                                                 <div class="text-sm text-gray-400">SBT Profile</div>
                                             </div>
                                         </div>
