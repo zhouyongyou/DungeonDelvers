@@ -1,7 +1,7 @@
 // src/pages/DungeonPage.tsx (The Graph 改造版)
 
 import React, { useState, useMemo } from 'react';
-import { useAccount, useReadContract, useReadContracts } from 'wagmi';
+import { useAccount, useReadContract, useReadContracts, useWriteContract } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSimpleReadContracts } from '../hooks/useSimpleReadContracts';
 import { formatEther, parseEther } from 'viem';
@@ -23,10 +23,12 @@ import { bsc } from 'wagmi/chains';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 // import { useGlobalLoading } from '../components/core/GlobalLoadingProvider'; // 移除未使用的 Provider
 import { logger } from '../utils/logger';
-import { ExpeditionResults } from '../components/ExpeditionResults';
+import { RewardClaimSection } from '../components/RewardClaimSection';
 import { ExpeditionHistory } from '../components/ExpeditionHistory';
 import { CooldownTimer } from '../components/CooldownTimer';
 import { ExpeditionTracker } from '../components/ExpeditionTracker';
+
+// RewardClaimButton 已移至統一的 RewardClaimSection 組件
 
 // =================================================================
 // Section: 型別定義與 GraphQL 查詢
@@ -56,6 +58,7 @@ const GET_PLAYER_PARTIES_QUERY = `
         heroIds
         contractAddress
         createdAt
+        unclaimedRewards
       }
     }
   }
@@ -119,6 +122,7 @@ const usePlayerParties = () => {
             return parties.map((p: { tokenId: string; [key: string]: unknown }) => ({
                 id: BigInt(p.tokenId),
                 tokenId: BigInt(p.tokenId),
+                entityId: p.id as string, // 子圖中的完整 ID，用於查詢歷史
                 name: `隊伍 #${p.tokenId}`,
                 image: '', 
                 description: '',
@@ -132,7 +136,7 @@ const usePlayerParties = () => {
                 partyRarity: Number(p.partyRarity || 1),
                 // 這些數據需要從合約讀取，不在子圖中
                 cooldownEndsAt: 0n,       // 將從 getPartyStatus 獲取
-                unclaimedRewards: 0n,     // 將從 getPartyStatus 獲取
+                unclaimedRewards: BigInt(p.unclaimedRewards || '0'), // 從子圖獲取
                 // fatigueLevel: 0,       // 已禁用疲勞度系統
             }));
         },
@@ -445,7 +449,12 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
                 </div>
             ) : null}
             
-            <ExpeditionResults partyId={party.id} chainId={chainId} />
+            {/* 統一的獎勵領取組件 */}
+            <RewardClaimSection 
+                partyId={party.id} 
+                chainId={chainId}
+                variant="default"
+            />
             
             {/* 出征歷史紀錄 */}
             <ExpeditionHistory partyId={party.entityId} limit={3} />

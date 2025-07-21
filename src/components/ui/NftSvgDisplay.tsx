@@ -26,28 +26,50 @@ export const NftSvgDisplay: React.FC<NftSvgDisplayProps> = ({
 }) => {
     const svgContent = useMemo(() => {
         try {
+            console.log('Generating SVG for NFT:', { type: nft.type, id: nft.id.toString() });
+            
+            let result: string | null = null;
             switch (nft.type) {
                 case 'hero':
-                    return generateHeroSVG(nft, isCodex);
+                    result = generateHeroSVG(nft, isCodex);
+                    break;
                 case 'relic':
-                    return generateRelicSVG(nft, isCodex);
+                    result = generateRelicSVG(nft, isCodex);
+                    break;
                 case 'party':
-                    return generatePartySVG(nft);
+                    result = generatePartySVG(nft);
+                    break;
                 case 'vip':
-                    return generateVipSVG(nft);
+                    result = generateVipSVG(nft);
+                    break;
                 default:
+                    console.warn('Unknown NFT type:', nft.type);
                     return null;
             }
+            
+            if (!result) {
+                console.error('SVG generation returned null for NFT:', nft.type);
+                return null;
+            }
+            
+            console.log('SVG generated successfully for', nft.type);
+            return result;
         } catch (error) {
-            console.error('Failed to generate SVG:', error);
+            console.error('Failed to generate SVG for NFT:', { 
+                type: nft.type, 
+                id: nft.id.toString(), 
+                error: error.message,
+                stack: error.stack 
+            });
             return null;
         }
-    }, [nft]);
+    }, [nft, isCodex]);
 
     if (!svgContent && showFallback) {
+        console.warn('Showing fallback for NFT:', nft.type);
         // 如果 SVG 生成失敗，顯示備用內容
         return (
-            <div className={`bg-gray-800 rounded-lg flex items-center justify-center ${className}`}>
+            <div className={`bg-red-900/20 border border-red-500/50 rounded-lg flex items-center justify-center ${className}`}>
                 <div className="text-center p-4">
                     <div className="text-4xl mb-2">
                         {nft.type === 'hero' ? '⚔️' : 
@@ -57,6 +79,9 @@ export const NftSvgDisplay: React.FC<NftSvgDisplayProps> = ({
                     </div>
                     <div className="text-sm text-gray-400">
                         {nft.type.toUpperCase()} #{nft.id.toString()}
+                    </div>
+                    <div className="text-xs text-red-400 mt-1">
+                        SVG 載入失敗
                     </div>
                 </div>
             </div>

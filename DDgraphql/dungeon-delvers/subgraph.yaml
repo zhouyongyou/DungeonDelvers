@@ -157,6 +157,8 @@ dataSources:
           handler: handleExpeditionRequested
         - event: 'ProvisionsBought(indexed uint256,uint256,uint256,indexed address)'
           handler: handleProvisionsBought
+        - event: 'RewardsBanked(indexed address,indexed uint256,uint256)'
+          handler: handleRewardsBanked
       file: ./src/dungeon-master.ts
   - kind: ethereum
     name: PlayerVault

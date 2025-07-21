@@ -14,6 +14,7 @@ import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
 import { Icons } from '../components/ui/icons';
 import { bsc } from 'wagmi/chains';
 import { TownBulletin } from '../components/ui/TownBulletin';
+import { ExpeditionTracker } from '../components/ExpeditionTracker';
 import { LocalErrorBoundary, LoadingState, ErrorState } from '../components/ui/ErrorBoundary';
 
 // =================================================================
@@ -52,22 +53,38 @@ const GET_DASHBOARD_STATS_QUERY = `
 // 簡化的 Hook，只獲取必要的金庫和等級數據
 const useDashboardStats = () => {
     const { address, chainId } = useAccount();
+    
+    // 從合約讀取等級
+    const playerProfileContract = getContract(chainId === bsc.id ? chainId : bsc.id, 'playerProfile');
+    const { data: levelResult } = useReadContract({
+        address: playerProfileContract?.address as `0x${string}`,
+        abi: playerProfileContract?.abi,
+        functionName: 'getLevel',
+        args: [address!],
+        query: { 
+            enabled: !!address && !!playerProfileContract && chainId === bsc.id,
+            staleTime: 1000 * 60, // 1分鐘
+        },
+    });
 
     const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ['dashboardSimpleStats', address, chainId],
         queryFn: async () => {
             if (!address || !THE_GRAPH_API_URL) return null;
             
-            // 簡化的查詢，只獲取金庫和等級數據
+            // 簡化的查詢，獲取金庫和隊伍未領取獎勵
             const simplifiedQuery = `
                 query GetSimpleStats($owner: ID!) {
                     player(id: $owner) {
                         id
-                        profile { level }
                         vault { 
                             id
-                            withdrawableBalance
                             pendingRewards
+                            claimedRewards
+                        }
+                        parties {
+                            id
+                            unclaimedRewards
                         }
                     }
                 }
@@ -115,14 +132,21 @@ const useDashboardStats = () => {
 
     // 簡化的統計數據
     const stats = useMemo(() => {
+        // 計算金庫中的待領取獎勵
+        const vaultPendingRewards = data?.vault?.pendingRewards ? BigInt(data.vault.pendingRewards) : 0n;
+        
+        // 計算所有隊伍中的未領取獎勵總額
+        const partyUnclaimedRewards = data?.parties?.reduce((total, party) => {
+            return total + (party.unclaimedRewards ? BigInt(party.unclaimedRewards) : 0n);
+        }, 0n) || 0n;
+        
         return {
-            level: data?.profile?.level ? Number(data.profile.level) : 1,
-            withdrawableBalance: data?.vault?.withdrawableBalance ? BigInt(data.vault.withdrawableBalance) : 
-                                data?.vault?.pendingRewards ? BigInt(data.vault.pendingRewards) : 0n,
+            level: levelResult ? Number(levelResult.toString()) : 1,
+            withdrawableBalance: vaultPendingRewards + partyUnclaimedRewards, // 總可獲得獎勵
         };
     }, [data]);
 
-    return { stats, isLoading, isError, refetch };
+    return { stats, isLoading, isError, refetch, data };
 };
 
 
@@ -202,7 +226,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     
     const [showProgressModal, setShowProgressModal] = useState(false);
     
-    const { stats, isLoading: isLoadingStats, refetch: refetchStats } = useDashboardStats();
+    const { stats, isLoading: isLoadingStats, refetch: refetchStats, data } = useDashboardStats();
     const { taxParams, isLoadingTaxParams, dungeonCoreContract } = useTaxParams();
     
     // 交易進度 Hook - 提領功能
@@ -239,15 +263,20 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
         }
     });
 
-    const withdrawableBalance = stats.withdrawableBalance;
+    // 分別計算金庫餘額和隊伍獎勵
+    const vaultBalance = data?.vault?.pendingRewards ? BigInt(data.vault.pendingRewards) : 0n;
+    const partyRewards = data?.parties?.reduce((total, party) => {
+        return total + (party.unclaimedRewards ? BigInt(party.unclaimedRewards) : 0n);
+    }, 0n) || 0n;
+    const totalDisplayBalance = vaultBalance + partyRewards;
 
     // 先獲取 SoulShard 價值的 USD 金額
     const { data: withdrawableBalanceInUSD } = useReadContract({ 
         address: dungeonCoreContract?.address as `0x${string}`,
         abi: dungeonCoreContract?.abi,
         functionName: 'getUSDForSoulShardAmount',  // 改為正確的函數名
-        args: [withdrawableBalance], 
-        query: { enabled: !!dungeonCoreContract && withdrawableBalance > 0n } 
+        args: [vaultBalance], 
+        query: { enabled: !!dungeonCoreContract && vaultBalance > 0n } 
     });
     
     const currentTaxRate = useMemo(() => {
@@ -295,7 +324,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     const handleWithdraw = async () => {
         if (!chainId || chainId !== bsc.id) return;
         const playerVaultContract = getContract(chainId, 'playerVault');
-        if (!playerVaultContract || withdrawableBalance === 0n) return;
+        if (!playerVaultContract || vaultBalance === 0n) return;
         
         setShowProgressModal(true);
         resetWithdraw();
@@ -309,9 +338,9 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                     address: playerVaultContract.address as `0x${string}`,
                     abi: playerVaultContract.abi,
                     functionName: 'withdraw',
-                    args: [withdrawableBalance]
+                    args: [vaultBalance]
                 },
-                `從金庫提領 ${parseFloat(formatEther(withdrawableBalance)).toFixed(4)} $SoulShard`
+                `從金庫提領 ${parseFloat(formatEther(vaultBalance)).toFixed(4)} $SoulShard`
             );
         } catch (error) {
             // 錯誤已在 hook 中處理
@@ -359,24 +388,50 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                         </div>
                         <div className="card-bg p-6 rounded-xl flex flex-col justify-center">
                             <h3 className="section-title text-xl">我的金庫</h3>
-                            <p className="text-3xl font-bold text-teal-400">{parseFloat(formatEther(withdrawableBalance)).toFixed(4)}</p>
+                            <p className="text-3xl font-bold text-teal-400">{parseFloat(formatEther(totalDisplayBalance)).toFixed(4)}</p>
+                            {partyRewards > 0n && (
+                                <p className="text-xs text-yellow-400">
+                                    包含隊伍未領取獎勵 {parseFloat(formatEther(partyRewards)).toFixed(4)} SOUL
+                                </p>
+                            )}
+                            {vaultBalance > 0n && (
+                                <p className="text-xs text-green-400">
+                                    可提領: {parseFloat(formatEther(vaultBalance)).toFixed(4)} SOUL
+                                </p>
+                            )}
                             <p className="text-xs text-red-400">當前預估稅率: {currentTaxRate.toFixed(2)}%</p>
                             <ActionButton 
                                 onClick={handleWithdraw} 
                                 isLoading={withdrawProgress.status !== 'idle' && withdrawProgress.status !== 'error'} 
-                                disabled={withdrawableBalance === 0n} 
+                                disabled={vaultBalance === 0n} 
                                 className="mt-2 h-10 w-full"
                             >
-                                全部提領
+                                {vaultBalance > 0n ? `提領 ${parseFloat(formatEther(vaultBalance)).toFixed(4)} SOUL` : '請先領取隊伍獎勵'}
                             </ActionButton>
+                            
+                            {/* 隊伍獎勵領取按鈕 */}
+                            {partyRewards > 0n && (
+                                <div className="mt-2 space-y-1">
+                                    <p className="text-xs text-gray-400">需要在地下城頁面逐個領取隊伍獎勵</p>
+                                    <ActionButton 
+                                        onClick={() => setActivePage('dungeon')}
+                                        className="w-full h-8 text-sm bg-yellow-600 hover:bg-yellow-500"
+                                    >
+                                        前往地下城領取獎勵
+                                    </ActionButton>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
             </LocalErrorBoundary>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-2">
                     <TownBulletin />
+                </div>
+                <div className="lg:col-span-1">
+                    <ExpeditionTracker />
                 </div>
             </div>
 

@@ -1,6 +1,6 @@
 // DDgraphql/dungeondelvers/src/dungeon-master.ts (統一配置系統版)
 import { BigInt, log } from "@graphprotocol/graph-ts"
-import { ExpeditionFulfilled, ExpeditionRequested, ProvisionsBought } from "../generated/DungeonMaster/DungeonMaster"
+import { ExpeditionFulfilled, ExpeditionRequested, ProvisionsBought, RewardsBanked } from "../generated/DungeonMaster/DungeonMaster"
 import { Party, PlayerProfile, Expedition } from "../generated/schema"
 import { calculateLevel } from "./utils"
 import { getOrCreatePlayer } from "./common"
@@ -137,5 +137,41 @@ export function handleProvisionsBought(event: ProvisionsBought): void {
     party.provisionsRemaining = party.provisionsRemaining + event.params.amount.toI32()
     party.lastUpdatedAt = event.block.timestamp
     party.save()
+  }
+}
+
+export function handleRewardsBanked(event: RewardsBanked): void {
+  const partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
+  const party = Party.load(partyId)
+  
+  if (party) {
+    // 將未領取獎勵設為 0，因為獎勵已經被領取
+    party.unclaimedRewards = BigInt.fromI32(0)
+    party.lastUpdatedAt = event.block.timestamp
+    party.save()
+    
+    // 更新玩家的總獎勵收入
+    const playerAddress = event.params.player
+    const profile = PlayerProfile.load(playerAddress)
+    
+    if (profile) {
+      // 更新總獎勵收入
+      profile.totalRewardsEarned = profile.totalRewardsEarned.plus(event.params.amount)
+      profile.lastUpdatedAt = event.block.timestamp
+      profile.save()
+      
+      // 更新玩家統計
+      updatePlayerStatsBigInt(playerAddress, "totalRewardsEarned", event.params.amount, event.block.timestamp)
+    } else {
+      log.warning("RewardsBanked for a non-existent profile: {}", [playerAddress.toHexString()])
+    }
+    
+    log.info("Rewards banked - Player: {}, Party: {}, Amount: {}", [
+      playerAddress.toHexString(),
+      event.params.partyId.toString(),
+      event.params.amount.toString()
+    ])
+  } else {
+    log.warning("RewardsBanked for a non-existent party: {}", [partyId])
   }
 }

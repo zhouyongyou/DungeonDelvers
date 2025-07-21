@@ -134,11 +134,11 @@ const NftCard: React.FC<NftCardProps> = memo(({
     return (
       <div className="relative w-full h-full overflow-hidden rounded-lg">
         {renderSyncStatus()}
-        {shouldUseSvg() ? (
+        {true ? ( // 暫時強制使用 SVG 模式進行測試
           <NftSvgDisplay 
             nft={nft} 
             className="w-full h-full rounded-lg"
-            showFallback={false}
+            showFallback={true}
             isCodex={isCodex}
           />
         ) : (

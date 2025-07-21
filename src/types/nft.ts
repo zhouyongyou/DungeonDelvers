@@ -54,6 +54,7 @@ export interface PartyNft extends BaseNft {
   heroIds: bigint[];
   relicIds: bigint[];
   partyRarity: number; // 【新增】新增隊伍稀有度屬性
+  entityId?: string; // 子圖中的完整 ID，用於查詢歷史
 }
 
 // VIP 卡 NFT 的獨有屬性

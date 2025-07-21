@@ -176,7 +176,7 @@ export const Footer: React.FC = () => {
                 </p>
                 <ul className="text-xs text-gray-400 space-y-1 list-disc list-inside">
                     <li>目前顯示的代幣地址為測試版本，正式版本將會更新</li>
-                    <li>請關注我們的 <a href="https://x.com/SoulShard_BSC" target="_blank" rel="noreferrer" className="text-yellow-400 hover:text-yellow-300 underline">Twitter</a> 獲取最新消息</li>
+                    <li>⚠️ 推特帳號暫時被誤封申訴中，請先關注我們的 <a href="https://t.me/soulshard_BSC" target="_blank" rel="noreferrer" className="text-yellow-400 hover:text-yellow-300 underline">Telegram</a> 獲取最新消息</li>
                     <li>遊戲上線初期會有較多測試和更新，建議等待官方公告功能穩定後再進行遊戲</li>
                     <li>初期建議先持有代幣，待系統穩定後再參與鑄造等功能</li>
                 </ul>
