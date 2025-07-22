@@ -7,6 +7,7 @@ import { useRewardManager } from '../hooks/useRewardManager';
 import { LoadingSpinner } from './ui/LoadingSpinner';
 import { useRealtimePartyStatus } from '../hooks/useRealtimePartyStatus';
 import { logger } from '../utils/logger';
+import { formatSoul } from '../utils/formatters';
 
 interface RewardClaimSectionProps {
     partyId: bigint;
@@ -21,6 +22,12 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
     variant = 'default',
     className = ''
 }) => {
+    try {
+    // 檢查輸入參數
+    if (!partyId) {
+        console.error('[RewardClaimSection] partyId is missing');
+        return null;
+    }
     // 使用即時更新的隊伍狀態
     const { party, isRealtime } = useRealtimePartyStatus({ 
         partyId: partyId.toString() 
@@ -35,20 +42,12 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
     } = useRewardManager({ partyId, chainId });
     
     // 優先使用即時數據，回退到合約查詢
-    const unclaimedRewards = party?.unclaimedRewards ? BigInt(party.unclaimedRewards) : contractRewards;
+    const graphRewards = party?.unclaimedRewards ? BigInt(party.unclaimedRewards) : 0n;
+    const unclaimedRewards = graphRewards > 0n ? graphRewards : contractRewards;
+    const actuallyHasRewards = unclaimedRewards > 0n || hasRewards;
     
-    // 調試日誌
-    logger.info('RewardClaimSection - Component status:', {
-        partyId: partyId.toString(),
-        party: party,
-        contractRewards: contractRewards.toString(),
-        unclaimedRewards: unclaimedRewards.toString(),
-        hasRewards,
-        isRealtime
-    });
-    
-    if (!hasRewards) {
-        logger.warn('RewardClaimSection - No rewards to display, component hidden');
+    if (!actuallyHasRewards) {
+        // 沒有獎勵時不顯示組件
         return null;
     }
     
@@ -57,7 +56,7 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
         return (
             <div className={`flex items-center gap-2 ${className}`}>
                 <span className="text-yellow-400 text-sm">
-                    {parseFloat(formatEther(unclaimedRewards)).toFixed(4)} SOUL
+                    {formatSoul(unclaimedRewards)} SOUL
                 </span>
                 <ActionButton
                     onClick={claimRewards}
@@ -83,7 +82,7 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-2xl font-bold text-white">
-                                {parseFloat(formatEther(unclaimedRewards)).toFixed(4)} SOUL
+                                {formatSoul(unclaimedRewards)} SOUL
                             </p>
                             <p className="text-sm text-gray-400 mt-1">
                                 約 ${(parseFloat(formatEther(unclaimedRewards)) * 0.1).toFixed(2)} USD
@@ -110,7 +109,7 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
                 <div>
                     <p className="text-sm text-yellow-300 font-medium">未領取獎勵</p>
                     <p className="text-lg font-bold text-white">
-                        {parseFloat(formatEther(unclaimedRewards)).toFixed(4)} SOUL
+                        {formatSoul(unclaimedRewards)} SOUL
                     </p>
                 </div>
                 <ActionButton
@@ -125,4 +124,18 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
             </div>
         </div>
     );
+    } catch (error) {
+        console.error('[RewardClaimSection] Component error:', {
+            error,
+            partyId: partyId?.toString(),
+            chainId,
+            variant
+        });
+        return (
+            <div className="mt-3 p-3 bg-red-900/20 border border-red-600 rounded-lg text-sm">
+                <p className="text-red-400">獎勵組件載入錯誤</p>
+                <p className="text-xs text-red-300 mt-1">錯誤: {error?.message || '未知錯誤'}</p>
+            </div>
+        );
+    }
 };

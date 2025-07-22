@@ -18,9 +18,9 @@ export function formatSoul(value: bigint, decimals: number = 4, minDecimals: num
         return '0';
     }
     
-    // 如果數值很小，使用科學記號
-    if (numValue < 0.0001 && numValue > 0) {
-        return numValue.toExponential(2);
+    // 如果數值極小（小於 0.0001 SOUL），視為 0
+    if (numValue < 0.0001) {
+        return '0';
     }
     
     // 一般情況，限制小數位數

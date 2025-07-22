@@ -26,7 +26,6 @@ export const NftSvgDisplay: React.FC<NftSvgDisplayProps> = ({
 }) => {
     const svgContent = useMemo(() => {
         try {
-            console.log('Generating SVG for NFT:', { type: nft.type, id: nft.id.toString() });
             
             let result: string | null = null;
             switch (nft.type) {
@@ -52,7 +51,6 @@ export const NftSvgDisplay: React.FC<NftSvgDisplayProps> = ({
                 return null;
             }
             
-            console.log('SVG generated successfully for', nft.type);
             return result;
         } catch (error) {
             console.error('Failed to generate SVG for NFT:', { 
@@ -66,7 +64,6 @@ export const NftSvgDisplay: React.FC<NftSvgDisplayProps> = ({
     }, [nft, isCodex]);
 
     if (!svgContent && showFallback) {
-        console.warn('Showing fallback for NFT:', nft.type);
         // 如果 SVG 生成失敗，顯示備用內容
         return (
             <div className={`bg-red-900/20 border border-red-500/50 rounded-lg flex items-center justify-center ${className}`}>

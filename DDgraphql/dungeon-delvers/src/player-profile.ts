@@ -31,7 +31,8 @@ export function handleExperienceAdded(event: ExperienceAdded): void {
     const profile = PlayerProfile.load(profileId)
 
     if (profile) {
-        profile.totalRewardsEarned = profile.totalRewardsEarned.plus(event.params.newTotalExperience)
+        // 修正：ExperienceAdded 事件不應該影響 totalRewardsEarned
+        // totalRewardsEarned 只應該在獲得 SOUL 獎勵時更新
         profile.lastUpdatedAt = event.block.timestamp
         profile.save()
     } else {

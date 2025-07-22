@@ -244,25 +244,6 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                 </div>
             </div>
 
-            {/* 錢包授權說明 */}
-            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mb-4">
-                <div className="flex items-start gap-2">
-                    <div className="flex-shrink-0 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
-                        <span className="text-white text-xs font-bold">!</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <p className="text-xs text-blue-200">
-                            授權彈窗的語言由您的錢包設定決定。
-                        </p>
-                        <p className="text-xs text-blue-200">
-                            授權完成後狀態會自動更新，約需3-10秒。
-                        </p>
-                        <p className="text-xs text-yellow-300">
-                            ※ 若授權後按鈕仍無法點擊，請手動刷新頁面
-                        </p>
-                    </div>
-                </div>
-            </div>
 
             {/* 統一授權按鈕 */}
             {(!isRelicAuthorized || !isHeroAuthorized) && (
@@ -277,28 +258,6 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                 </div>
             )}
 
-            {/* 隊伍創建延遲提醒 */}
-            <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-3 mb-4">
-                <div className="flex items-start gap-2">
-                    <div className="flex-shrink-0 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center mt-0.5">
-                        <span className="text-white text-xs">⏰</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <p className="text-xs text-amber-200 font-medium">
-                            隊伍創建時間說明
-                        </p>
-                        <p className="text-xs text-amber-200">
-                            創建隊伍後，需要等待 <span className="font-semibold text-amber-100">3-5 分鐘</span> 才會在資產頁面顯示新隊伍。
-                        </p>
-                        <p className="text-xs text-amber-200">
-                            這是由於區塊鏈數據同步需要時間，請耐心等候。
-                        </p>
-                        <p className="text-xs text-amber-100 font-medium">
-                            💡 建議：交易完成後，請手動刷新頁面或到「隊伍」頁面查看最新狀態。
-                        </p>
-                    </div>
-                </div>
-            </div>
 
             {/* 收益最大化策略提醒 */}
             <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-3 mb-4">
@@ -315,6 +274,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
                             <li>優先組建能挑戰「混沌深淵」（3000 戰力需求）的隊伍，可獲得最高收益</li>
                             <li>選擇高容量聖物（4-5 星）搭配高戰力英雄，確保隊伍總戰力最大化</li>
                             <li>一般需要約 100 個聖物和 200 個英雄，才能篩選出最強組合</li>
+                            <li className="text-orange-300">⚠️ <span className="font-semibold">技術限制</span>：為確保頁面流暢度，建議單一地址擁有的英雄和聖物數量各不超過 1000 個</li>
                         </ul>
                     </div>
                 </div>
@@ -940,6 +900,46 @@ const MyAssetsPageContent: React.FC = () => {
                         </button>
                     </div>
                 )}
+            </div>
+
+            {/* 錢包授權說明 */}
+            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mt-4">
+                <div className="flex items-start gap-2">
+                    <div className="flex-shrink-0 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
+                        <span className="text-white text-xs font-bold">!</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <p className="text-xs text-blue-200">
+                            授權完成後狀態會自動更新，約需3-10秒。
+                        </p>
+                        <p className="text-xs text-yellow-300">
+                            ※ 若授權後按鈕仍無法點擊，請手動刷新頁面
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* 隊伍創建延遲提醒 */}
+            <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-3 mt-4">
+                <div className="flex items-start gap-2">
+                    <div className="flex-shrink-0 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center mt-0.5">
+                        <span className="text-white text-xs">⏰</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <p className="text-xs text-amber-200 font-medium">
+                            隊伍創建時間說明
+                        </p>
+                        <p className="text-xs text-amber-200">
+                            創建隊伍後，需要等待 <span className="font-semibold text-amber-100">3-5 分鐘</span> 才會在資產頁面顯示新隊伍。
+                        </p>
+                        <p className="text-xs text-amber-200">
+                            這是由於區塊鏈數據同步需要時間，請耐心等候。
+                        </p>
+                        <p className="text-xs text-amber-100 font-medium">
+                            💡 建議：交易完成後，請手動刷新頁面或到「隊伍」頁面查看最新狀態。
+                        </p>
+                    </div>
+                </div>
             </div>
         </section>
     );

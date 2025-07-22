@@ -29,6 +29,7 @@ import { ExpeditionHistory } from '../components/ExpeditionHistory';
 import { CooldownTimer } from '../components/CooldownTimer';
 import { ExpeditionTracker } from '../components/ExpeditionTracker';
 import { useRealtimeExpeditions } from '../hooks/useRealtimeExpeditions';
+import { useBatchOperations } from '../hooks/useBatchOperations';
 
 // RewardClaimButton 已移至統一的 RewardClaimSection 組件
 
@@ -262,40 +263,18 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
         }
     });
     
-    // 調試日誌
+    // 調試日誌 - 僅在開發模式且有錯誤時顯示
     React.useEffect(() => {
-        if (partyStatus) {
-            console.log(`[DungeonPage] 隊伍 #${party.id} 狀態:`, {
-                raw: partyStatus,
-                type: typeof partyStatus,
-                isArray: Array.isArray(partyStatus),
-                keys: Object.keys(partyStatus),
-                values: Object.values(partyStatus),
-                // 解析具體數值
-                provisionsRemaining: partyStatus[0]?.toString() || partyStatus.provisionsRemaining?.toString(),
-                cooldownEndsAt: partyStatus[1]?.toString() || partyStatus.cooldownEndsAt?.toString(),
-                unclaimedRewards: partyStatus[2]?.toString() || partyStatus.unclaimedRewards?.toString(),
-                fatigueLevel: partyStatus[3]?.toString() || partyStatus.fatigueLevel?.toString(),
-                // 檢查冷卻狀態
-                currentTime: Math.floor(Date.now() / 1000),
-                isInCooldown: partyStatus[1] ? Number(partyStatus[1]) > Math.floor(Date.now() / 1000) : false,
-                // 顯示完整結構
-                fullStructure: JSON.stringify(partyStatus, (key, value) => 
-                    typeof value === 'bigint' ? value.toString() : value
-                )
-            });
-        }
         if (partyStatusError) {
             console.error(`[DungeonPage] 讀取隊伍 #${party.id} 狀態錯誤:`, partyStatusError);
         }
-    }, [partyStatus, partyStatusError, party.id]);
+    }, [partyStatusError, party.id]);
 
     // 使用 RPC 數據或回退到原始數據
     // 已移除儲備檢查和疲勞度系統
     // partyStatus 返回的是一個結構體，在 JS 中可能是對象或數組
     const cooldownEndsAt = (() => {
         if (!partyStatus) {
-            console.log('[DungeonPage] partyStatus 為空，使用原始數據');
             return party.cooldownEndsAt || 0n;
         }
         
@@ -305,7 +284,6 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
                 const cooldownValue = partyStatus.cooldownEndsAt;
                 if (cooldownValue !== undefined) {
                     const cooldownBigInt = BigInt(cooldownValue.toString());
-                    console.log('[DungeonPage] 成功解析 cooldownEndsAt:', cooldownBigInt.toString());
                     return cooldownBigInt;
                 }
             }
@@ -313,14 +291,12 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
             // 備用方案：嘗試數組訪問
             if (partyStatus[1] !== undefined) {
                 const cooldownBigInt = BigInt(partyStatus[1].toString());
-                console.log('[DungeonPage] 成功解析 cooldownEndsAt (從索引):', cooldownBigInt.toString());
                 return cooldownBigInt;
             }
         } catch (error) {
             console.error('[DungeonPage] 解析 cooldownEndsAt 失敗:', error);
         }
         
-        console.warn('[DungeonPage] 無法解析 partyStatus，使用原始數據');
         return party.cooldownEndsAt || 0n;
     })();
     
@@ -340,15 +316,6 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
         const currentTime = BigInt(Math.floor(Date.now() / 1000));
         const onCooldown = currentTime < cooldownEndsAt;
         
-        // 調試日誌
-        console.log(`[DungeonPage] 隊伍 #${party.id} 冷卻檢查:`, {
-            currentTime: currentTime.toString(),
-            cooldownEndsAt: cooldownEndsAt.toString(),
-            isOnCooldown: onCooldown,
-            timeLeft: onCooldown ? (cooldownEndsAt - currentTime).toString() : '0',
-            cooldownEndsAtType: typeof cooldownEndsAt,
-            willShowTimer: onCooldown && cooldownEndsAt > 0n
-        });
         
         return {
             isOnCooldown: onCooldown,
@@ -415,7 +382,6 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
                 <CooldownTimer 
                     cooldownEndsAt={cooldownEndsAt} 
                     onCooldownEnd={() => {
-                        console.log('[DungeonPage] 冷卻結束，重新查詢數據');
                         queryClient.invalidateQueries({ queryKey: ['playerParties'] });
                     }} 
                 />
@@ -434,7 +400,7 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
                 variant="default"
             />
             
-            {/* 出征歷史紀錄 */}
+            {/* 出征歷史紀錄 - 預設顯示1筆，可展開看到3筆 */}
             <ExpeditionHistory partyId={party.entityId} limit={3} />
         </div>
     );
@@ -529,6 +495,14 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
         query: {
             staleTime: 1000 * 60 * 5, // 5分鐘緩存
         }
+    });
+    
+    // 讀取探索費用
+    const { data: explorationFee } = useReadContract({
+        address: dungeonMasterContract?.address as `0x${string}`,
+        abi: dungeonMasterContract?.abi,
+        functionName: 'explorationFee',
+        query: { enabled: !!dungeonMasterContract }
     });
 
     // 🧮 計算獎勵的輔助函數（考慮全局倍率）
@@ -741,35 +715,91 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
         }
     };
 
-    // 已移除疲勞度系統，不再需要休息功能
-    // const handleRest = async (partyId: bigint) => {
-    //     if (!dungeonMasterContract) return;
-    //     
-    //     setCurrentPartyId(partyId);
-    //     setCurrentAction('rest');
-    //     setShowProgressModal(true);
-    //     resetRest();
-    //     
-    //     // 立即執行樂觀更新
-    //     optimisticRestUpdate();
-    //     
-    //     try {
-    //         await executeRest(
-    //             {
-    //                 address: dungeonMasterContract.address as `0x${string}`,
-    //                 abi: dungeonMasterContract.abi,
-    //                 functionName: 'restParty',
-    //                 args: [partyId]
-    //             },
-    //             `隊伍 #${partyId.toString()} 正在休息`
-    //         );
-    //     } catch (error) {
-    //         // 錯誤已在 hook 中處理
-    //     }
-    // };
-
-    // 已移除 handleBuyProvisions 函數
-
+    // 一鍵全部出征
+    const handleExpediteAll = async () => {
+        if (!dungeonMasterContract || !parties || parties.length === 0) return;
+        
+        const availableParties = parties.filter(party => {
+            const cooldownEndsAt = party.cooldownEndsAt || 0n;
+            const isOnCooldown = cooldownEndsAt > BigInt(Math.floor(Date.now() / 1000));
+            const isPending = checkPendingTxForParty(party.id);
+            return !isOnCooldown && !isPending;
+        });
+        
+        if (availableParties.length === 0) {
+            showToast('沒有可用的隊伍可以出征', 'info');
+            return;
+        }
+        
+        showToast(`正在派遣 ${availableParties.length} 支隊伍出征...`, 'info');
+        
+        // 為每個可用隊伍選擇適合的地城
+        let successCount = 0;
+        let errorCount = 0;
+        
+        for (const party of availableParties) {
+            // 再次檢查冷卻狀態（避免競態條件）
+            const currentCooldown = party.cooldownEndsAt || 0n;
+            const currentTime = BigInt(Math.floor(Date.now() / 1000));
+            if (currentCooldown > currentTime) {
+                console.log(`[一鍵出征] 隊伍 #${party.id} 仍在冷卻中，跳過`);
+                continue;
+            }
+            
+            // 計算有效戰力
+            const effectivePower = party.totalPower || 0n;
+            
+            // 找到適合的地城（戰力要求最接近但不超過隊伍戰力的）
+            const suitableDungeon = [...dungeons]
+                .filter(d => d.requiredPower <= effectivePower)
+                .sort((a, b) => Number(b.requiredPower - a.requiredPower))[0];
+            
+            if (suitableDungeon) {
+                try {
+                    // 使用從合約讀取的費用
+                    const fee = explorationFee || 0n;
+                    await handleStartExpedition(party.id, suitableDungeon.id, fee);
+                    successCount++;
+                    // 短暫延遲避免太快發送交易
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                } catch (error) {
+                    console.error(`[一鍵出征] 隊伍 #${party.id} 出征失敗:`, error);
+                    errorCount++;
+                }
+            } else {
+                console.log(`[一鍵出征] 隊伍 #${party.id} 找不到適合的地城`);
+            }
+        }
+        
+        // 顯示結果總結
+        if (successCount > 0) {
+            showToast(`成功派遣 ${successCount} 支隊伍出征！`, 'success');
+        }
+        if (errorCount > 0) {
+            showToast(`${errorCount} 支隊伍出征失敗`, 'error');
+        }
+    };
+    
+    // 使用批量操作 Hook
+    const { 
+        claimAllRewards: batchClaimRewards, 
+        hasClaimableRewards,
+        isProcessing: isBatchProcessing 
+    } = useBatchOperations({ parties, chainId: bsc.id });
+    
+    // 一鍵領取所有獎勵
+    const handleClaimAllRewards = async () => {
+        await batchClaimRewards();
+    };
+    
+    // 檢查是否有可用的隊伍
+    const hasAvailableParties = parties && parties.some(party => {
+        const cooldownEndsAt = party.cooldownEndsAt || 0n;
+        const isOnCooldown = cooldownEndsAt > BigInt(Math.floor(Date.now() / 1000));
+        const isPending = checkPendingTxForParty(party.id);
+        return !isOnCooldown && !isPending;
+    });
+    
     const isLoading = isLoadingParties || isLoadingDungeons;
 
     if (partiesError) {
@@ -789,9 +819,6 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
 
     return (
         <section className="space-y-8">
-            {/* Expedition Tracker for showing recent results */}
-            <ExpeditionTracker />
-            
             <TransactionProgressModal
                 isOpen={showProgressModal}
                 onClose={() => setShowProgressModal(false)}
@@ -800,7 +827,29 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
             />
             {/* 已移除儲備購買 Modal */}
             <div>
-                <h2 className="page-title">遠征指揮中心</h2>
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="page-title mb-0">遠征指揮中心</h2>
+                    {parties && parties.length > 0 && (
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleExpediteAll}
+                                disabled={isTxPending || !hasAvailableParties}
+                                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-lg text-sm font-semibold transition-colors duration-200 flex items-center gap-2 disabled:opacity-50"
+                            >
+                                <span>🚀</span>
+                                <span>一鍵全部出征</span>
+                            </button>
+                            <button
+                                onClick={handleClaimAllRewards}
+                                disabled={isTxPending || !hasClaimableRewards || isBatchProcessing}
+                                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg text-sm font-semibold transition-colors duration-200 flex items-center gap-2 disabled:opacity-50"
+                            >
+                                <span>💰</span>
+                                <span>一鍵領取獎勵</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
                 {(!parties || parties.length === 0) ? (
                     <EmptyState message="您還沒有任何隊伍可以派遣。">
                         <div className="flex flex-col sm:flex-row gap-4 justify-center mt-4">
@@ -825,6 +874,10 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
                     </div>
                 )}
             </div>
+            
+            {/* Expedition Tracker - 移到可挑戰的地下城上方 */}
+            <ExpeditionTracker />
+            
             <div>
                 <h2 className="page-title">可挑戰的地下城</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

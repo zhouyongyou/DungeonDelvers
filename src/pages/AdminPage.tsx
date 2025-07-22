@@ -319,7 +319,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       // 鑄造價格設定
       { key: 'heroMintPrice', label: "英雄鑄造價", contract: validatedContracts.hero, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] },
       { key: 'relicMintPrice', label: "聖物鑄造價", contract: validatedContracts.relic, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] },
-      { key: 'provisionPrice', label: "儲備購買價", contract: validatedContracts.dungeonMaster, getter: 'provisionPriceUSD', setter: 'setProvisionPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] },
+      // { key: 'provisionPrice', label: "儲備購買價", contract: validatedContracts.dungeonMaster, getter: 'provisionPriceUSD', setter: 'setProvisionPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] }, // 暫時注釋
       
       // 平台費用設定
       { key: 'heroFee', label: "英雄平台費", contract: validatedContracts.hero, getter: 'platformFee', setter: 'setPlatformFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
@@ -328,7 +328,8 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       { key: 'explorationFee', label: "遠征探索費", contract: validatedContracts.dungeonMaster, getter: 'explorationFee', setter: 'setExplorationFee', unit: 'BNB', placeholders: ['新費用 (BNB)'] },
       
       // 遊戲機制參數
-      { key: 'restDivisor', label: "休息成本係數", contract: validatedContracts.dungeonMaster, getter: 'restCostPowerDivisor', setter: 'setRestCostPowerDivisor', unit: '無', placeholders: ['新係數 (戰力/USD)'] },
+      // { key: 'restDivisor', label: "休息成本係數", contract: validatedContracts.dungeonMaster, getter: 'restCostPowerDivisor', setter: 'setRestCostPowerDivisor', unit: '無', placeholders: ['新係數 (戰力/USD)'] }, // 暫時沒這功能
+      { key: 'dungeonCooldown', label: "地下城挑戰冷卻 (秒)", contract: validatedContracts.dungeonMaster, getter: 'cooldownPeriod', setter: 'setCooldownPeriod', unit: '無', placeholders: ['新冷卻時間 (秒)'] },
       { key: 'vipCooldown', label: "VIP 取消質押冷卻 (秒)", contract: validatedContracts.vipStaking, getter: 'unstakeCooldown', setter: 'setUnstakeCooldown', unit: '無', placeholders: ['新冷卻時間 (秒)'] },
       { key: 'globalRewardMultiplier', label: "全域獎勵倍率", contract: validatedContracts.dungeonMaster, getter: 'globalRewardMultiplier', setter: 'setGlobalRewardMultiplier', unit: '‱', placeholders: ['新倍率 (1000=100%)'] },
       
@@ -744,6 +745,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         <DungeonManager chainId={chainId} />
       </AdminSection>
       
+      {/* 暫時沒有祭壇功能
       <AdminSection 
         title="升星祭壇規則管理"
         defaultExpanded={false}
@@ -751,6 +753,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       >
         <AltarRuleManager chainId={chainId} />
       </AdminSection>
+      */}
       
       <AdminSection 
         title="VIP 質押設定管理"
@@ -790,7 +793,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         })}
       </AdminSection>
 
-      {/* 診斷區塊 - 生產環境請移除 */}
+      {/* 診斷區塊 - 暫時注釋
       {import.meta.env.DEV && (
         <AdminSection title="診斷信息" defaultExpanded={true}>
           <div className="p-4 bg-gray-800 rounded">
@@ -806,6 +809,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
           </div>
         </AdminSection>
       )}
+      */}
 
       <AdminSection 
         title="平台費用管理 (BNB)"

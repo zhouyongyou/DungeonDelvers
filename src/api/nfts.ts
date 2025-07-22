@@ -29,37 +29,42 @@ import { logger } from '../utils/logger';
 const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
 
 const GET_PLAYER_ASSETS_QUERY = `
-  query GetPlayerAssets($owner: ID!) {
-    player(id: $owner) {
+  query GetPlayerAssets($owner: ID!, $skip: Int!, $first: Int!) {
+    heros(where: { owner: $owner }, skip: $skip, first: $first, orderBy: tokenId, orderDirection: asc) { 
+      id 
+      tokenId 
+      power 
+      rarity 
+      contractAddress
+      createdAt
+    }
+    relics(where: { owner: $owner }, skip: $skip, first: $first, orderBy: tokenId, orderDirection: asc) { 
+      id 
+      tokenId 
+      capacity 
+      rarity 
+      contractAddress
+      createdAt
+    }
+    parties(where: { owner: $owner }, skip: $skip, first: $first, orderBy: tokenId, orderDirection: asc) {
       id
-      heros { 
-        id 
-        tokenId 
-        power 
-        rarity 
-        contractAddress
-        createdAt
-      }
-      relics { 
-        id 
-        tokenId 
-        capacity 
-        rarity 
-        contractAddress
-        createdAt
-      }
-      parties {
-        id
-        tokenId
-        totalPower
-        totalCapacity
-        partyRarity
-        contractAddress
-        heroIds
-        # NOTE: relicIds 欄位被暫時移除，因為子圖 schema 中 Party 實體沒有此欄位
-        # TODO: 需要在子圖中添加 relicIds 欄位並重新部署
-        createdAt
-      }
+      tokenId
+      totalPower
+      totalCapacity
+      partyRarity
+      contractAddress
+      heroIds
+      # NOTE: relicIds 欄位被暫時移除，因為子圖 schema 中 Party 實體沒有此欄位
+      # TODO: 需要在子圖中添加 relicIds 欄位並重新部署
+      createdAt
+    }
+  }
+`;
+
+// 單獨的 VIP 查詢（因為 VIP 是一對一關係）
+const GET_PLAYER_VIP_QUERY = `
+  query GetPlayerVIP($owner: ID!) {
+    player(id: $owner) {
       vip { 
         id 
         stakedAmount 
@@ -672,42 +677,102 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
     }
 
     try {
-        // 使用請求去重
-        const data = await dedupeGraphQLQuery(
-            GET_PLAYER_ASSETS_QUERY,
-            { owner: owner.toLowerCase() },
-            async () => {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
-                
-                const response = await fetch(THE_GRAPH_API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        query: GET_PLAYER_ASSETS_QUERY,
-                        variables: { owner: owner.toLowerCase() },
-                    }),
-                    signal: controller.signal
-                });
+        // 分頁參數
+        const pageSize = 1000; // The Graph 最大允許 1000
+        let allHeros: any[] = [];
+        let allRelics: any[] = [];
+        let allParties: any[] = [];
+        let hasMore = true;
+        let skip = 0;
 
-                clearTimeout(timeoutId);
+        // 循環獲取所有 NFT，直到沒有更多數據
+        while (hasMore) {
+            const data = await dedupeGraphQLQuery(
+                GET_PLAYER_ASSETS_QUERY,
+                { owner: owner.toLowerCase(), skip, first: pageSize },
+                async () => {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 15000); // 增加超時時間
+                    
+                    const response = await fetch(THE_GRAPH_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            query: GET_PLAYER_ASSETS_QUERY,
+                            variables: { 
+                                owner: owner.toLowerCase(),
+                                skip,
+                                first: pageSize
+                            },
+                        }),
+                        signal: controller.signal
+                    });
 
-                if (!response.ok) {
-                    throw new Error(`GraphQL 請求失敗: ${response.status} ${response.statusText}`);
+                    clearTimeout(timeoutId);
+
+                    if (!response.ok) {
+                        throw new Error(`GraphQL 請求失敗: ${response.status} ${response.statusText}`);
+                    }
+                    
+                    const { data, errors } = await response.json();
+                    
+                    if (errors) {
+                        logger.error('GraphQL 錯誤:', errors);
+                        throw new Error(`GraphQL 查詢錯誤: ${errors.map((e: { message: string }) => e.message).join(', ')}`);
+                    }
+                    
+                    return data;
                 }
-                
-                const { data, errors } = await response.json();
-                
-                if (errors) {
-                    logger.error('GraphQL 錯誤:', errors);
-                    throw new Error(`GraphQL 查詢錯誤: ${errors.map((e: { message: string }) => e.message).join(', ')}`);
-                }
-                
-                return data;
+            );
+            
+            // 收集數據
+            const heros = data?.heros || [];
+            const relics = data?.relics || [];
+            const parties = data?.parties || [];
+            
+            allHeros = [...allHeros, ...heros];
+            allRelics = [...allRelics, ...relics];
+            allParties = [...allParties, ...parties];
+            
+            // 檢查是否還有更多數據
+            hasMore = heros.length === pageSize || relics.length === pageSize || parties.length === pageSize;
+            skip += pageSize;
+            
+            // 防止無限循環
+            if (skip > 10000) {
+                logger.warn('達到最大查詢限制 10000 個 NFT');
+                break;
             }
-        );
+        }
+
+        // 獲取 VIP 信息（單獨查詢）
+        let vipData = null;
+        try {
+            const vipResponse = await fetch(THE_GRAPH_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    query: GET_PLAYER_VIP_QUERY,
+                    variables: { owner: owner.toLowerCase() },
+                }),
+            });
+            
+            const { data: vipResult } = await vipResponse.json();
+            vipData = vipResult?.player?.vip;
+        } catch (error) {
+            logger.error('獲取 VIP 信息失敗:', error);
+        }
+
+        logger.info(`成功獲取 NFT 數據: ${allHeros.length} 英雄, ${allRelics.length} 聖物, ${allParties.length} 隊伍`);
+
+        // 處理數據（原有邏輯保持不變）
+        const playerAssets = {
+            heros: allHeros,
+            relics: allRelics,
+            parties: allParties,
+            vip: vipData
+        };
         
-        const playerAssets = data?.player;
         if (!playerAssets) {
 
             return emptyResult;

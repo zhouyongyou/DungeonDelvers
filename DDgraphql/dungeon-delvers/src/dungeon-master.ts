@@ -92,7 +92,11 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
     
     const profile = PlayerProfile.load(playerAddress);
     if (profile) {
-      profile.totalRewardsEarned = profile.totalRewardsEarned.plus(event.params.expGained);
+      // 注意：獎勵已經在第 90 行通過 updatePlayerStatsBigInt 更新了
+      // 這裡只更新成功遠征次數，避免重複計算獎勵
+      if (event.params.success) {
+        profile.successfulExpeditions = profile.successfulExpeditions + 1;
+      }
       profile.lastUpdatedAt = event.block.timestamp;
       profile.save();
     } else {
@@ -155,13 +159,14 @@ export function handleRewardsBanked(event: RewardsBanked): void {
     const profile = PlayerProfile.load(playerAddress)
     
     if (profile) {
-      // 更新總獎勵收入
-      profile.totalRewardsEarned = profile.totalRewardsEarned.plus(event.params.amount)
+      // 注意：RewardsBanked 不應該增加 totalRewardsEarned
+      // 因為這些獎勵在 ExpeditionFulfilled 時已經計算過了
+      // 這裡只是把獎勵從隊伍轉移到金庫
       profile.lastUpdatedAt = event.block.timestamp
       profile.save()
       
-      // 更新玩家統計
-      updatePlayerStatsBigInt(playerAddress, "totalRewardsEarned", event.params.amount, event.block.timestamp)
+      // 不需要更新 totalRewardsEarned，避免重複計算
+      // updatePlayerStatsBigInt(playerAddress, "totalRewardsEarned", event.params.amount, event.block.timestamp)
     } else {
       log.warning("RewardsBanked for a non-existent profile: {}", [playerAddress.toHexString()])
     }

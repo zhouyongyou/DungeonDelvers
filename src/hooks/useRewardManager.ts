@@ -116,19 +116,12 @@ export const useRewardManager = ({ partyId, chainId }: UseRewardManagerProps) =>
         },
     });
     
+    
     const unclaimedRewards = partyStatus?.[2] || 0n;
     const hasRewards = unclaimedRewards > 0n;
     
-    // 調試日誌
-    logger.info('useRewardManager - Party rewards status:', {
-        partyId: partyId.toString(),
-        partyStatus: partyStatus,
-        unclaimedRewards: unclaimedRewards.toString(),
-        hasRewards
-    });
-    
     const handleClaimRewards = () => {
-        if (!dungeonMasterContract || !hasRewards) return;
+        if (!hasRewards || !dungeonMasterContract) return;
         
         claimRewards({
             address: dungeonMasterContract.address as `0x${string}`,

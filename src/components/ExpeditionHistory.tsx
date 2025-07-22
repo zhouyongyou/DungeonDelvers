@@ -1,11 +1,12 @@
 // src/components/ExpeditionHistory.tsx
 // 顯示隊伍出征歷史紀錄的組件
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { formatEther } from 'viem';
 import { LoadingSpinner } from './ui/LoadingSpinner';
 import { logger } from '../utils/logger';
+import { formatSoul } from '../utils/formatters';
 
 const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
 
@@ -51,6 +52,8 @@ const GET_EXPEDITION_HISTORY_QUERY = `
 `;
 
 export const ExpeditionHistory: React.FC<ExpeditionHistoryProps> = ({ partyId, limit = 5 }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const displayLimit = isExpanded ? limit : 1; // 預設只顯示 1 筆
     const { data, isLoading, error } = useQuery({
         queryKey: ['expeditionHistory', partyId, limit],
         queryFn: async () => {
@@ -113,23 +116,52 @@ export const ExpeditionHistory: React.FC<ExpeditionHistoryProps> = ({ partyId, l
 
     const formatTimestamp = (timestamp: string) => {
         const date = new Date(parseInt(timestamp) * 1000);
-        return date.toLocaleString('zh-TW', {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffSeconds = Math.floor(diffMs / 1000);
+        const diffMinutes = Math.floor(diffSeconds / 60);
+        const diffHours = Math.floor(diffMinutes / 60);
+        const diffDays = Math.floor(diffHours / 24);
+        
+        if (diffSeconds < 60) {
+            return '剛剛';
+        } else if (diffMinutes < 60) {
+            return `${diffMinutes} 分鐘前`;
+        } else if (diffHours < 24) {
+            return `${diffHours} 小時前`;
+        } else if (diffDays < 7) {
+            return `${diffDays} 天前`;
+        } else {
+            // 超過一週才顯示日期
+            return date.toLocaleString('zh-TW', {
+                month: 'short',
+                day: 'numeric'
+            });
+        }
     };
 
     const formatTxHash = (hash: string) => {
         return `${hash.slice(0, 6)}...${hash.slice(-4)}`;
     };
 
+    const displayedData = data.slice(0, displayLimit);
+    const hasMore = data.length > displayLimit;
+
     return (
         <div className="mt-3 p-3 bg-gray-800/50 rounded-lg border border-gray-700">
-            <h5 className="text-sm font-semibold text-gray-300 mb-2">最近出征紀錄</h5>
+            <div className="flex justify-between items-center mb-2">
+                <h5 className="text-sm font-semibold text-gray-300">最近出征紀錄</h5>
+                {data.length > 1 && (
+                    <button
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                        {isExpanded ? '收起 ▲' : `展開全部 (${data.length}) ▼`}
+                    </button>
+                )}
+            </div>
             <div className="space-y-2">
-                {data.map((expedition: ExpeditionRecord) => (
+                {displayedData.map((expedition: ExpeditionRecord) => (
                     <div 
                         key={expedition.id} 
                         className={`p-2 rounded-lg border ${
@@ -159,7 +191,7 @@ export const ExpeditionHistory: React.FC<ExpeditionHistoryProps> = ({ partyId, l
                             </div>
                             <div className="text-right">
                                 <p className="text-xs font-medium text-white">
-                                    +{formatEther(BigInt(expedition.reward))} SOUL
+                                    +{formatSoul(BigInt(expedition.reward))} SOUL
                                 </p>
                                 <p className="text-xs text-blue-400">
                                     +{expedition.expGained} EXP
@@ -195,7 +227,7 @@ export const ExpeditionHistory: React.FC<ExpeditionHistoryProps> = ({ partyId, l
                         <div>
                             <p className="text-gray-500">總獲得</p>
                             <p className="font-medium text-white">
-                                {formatEther(
+                                {formatSoul(
                                     data.reduce((sum: bigint, e: ExpeditionRecord) => 
                                         sum + BigInt(e.reward), 0n
                                     )

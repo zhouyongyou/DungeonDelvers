@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useReadContracts } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatEther } from 'viem';
+import { formatSoul, formatLargeNumber } from '../utils/formatters';
 import { getContract, contracts } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import type { Page } from '../types/page';
@@ -64,17 +65,14 @@ const useDashboardStats = () => {
             // 簡化的查詢，獲取金庫和隊伍未領取獎勵
             const simplifiedQuery = `
                 query GetSimpleStats($owner: ID!) {
-                    player(id: $owner) {
+                    playerVaults(where: { owner: $owner }) {
                         id
-                        vault { 
-                            id
-                            pendingRewards
-                            claimedRewards
-                        }
-                        parties {
-                            id
-                            unclaimedRewards
-                        }
+                        pendingRewards
+                        claimedRewards
+                    }
+                    parties(where: { owner: $owner }) {
+                        id
+                        unclaimedRewards
                     }
                 }
             `;
@@ -102,7 +100,7 @@ const useDashboardStats = () => {
                     throw new Error(`GraphQL errors: ${errors.map((e: { message: string }) => e.message).join(', ')}`);
                 }
                 
-                return data.player;
+                return data;
             } catch (error) {
                 clearTimeout(timeoutId);
                 if (error instanceof Error && error.name === 'AbortError') {
@@ -112,7 +110,7 @@ const useDashboardStats = () => {
             }
         },
         enabled: !!address && chainId === bsc.id && !!THE_GRAPH_API_URL,
-        staleTime: 1000 * 60 * 5, // 5分鐘
+        staleTime: 1000 * 60, // 1分鐘（減少快取時間）
         retry: 2, // 減少重試次數
         retryDelay: (attemptIndex: number) => Math.min(2000 * 2 ** attemptIndex, 8000),
         refetchOnWindowFocus: false,
@@ -122,7 +120,8 @@ const useDashboardStats = () => {
     // 簡化的統計數據
     const stats = useMemo(() => {
         // 計算金庫中的待領取獎勵
-        const vaultPendingRewards = data?.vault?.pendingRewards ? BigInt(data.vault.pendingRewards) : 0n;
+        const vault = data?.playerVaults?.[0];
+        const vaultPendingRewards = vault?.pendingRewards ? BigInt(vault.pendingRewards) : 0n;
         
         // 計算所有隊伍中的未領取獎勵總額
         const partyUnclaimedRewards = data?.parties?.reduce((total, party) => {
@@ -253,9 +252,12 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     });
 
     // 分別計算金庫餘額和隊伍獎勵
-    const vaultBalance = data?.vault?.pendingRewards ? BigInt(data.vault.pendingRewards) : 0n;
+    const vault = data?.playerVaults?.[0];
+    const vaultBalance = vault?.pendingRewards ? BigInt(vault.pendingRewards) : 0n;
     const partyRewards = data?.parties?.reduce((total, party) => {
-        return total + (party.unclaimedRewards ? BigInt(party.unclaimedRewards) : 0n);
+        const rewards = party.unclaimedRewards ? BigInt(party.unclaimedRewards) : 0n;
+        // 過濾掉極小值（小於 0.0001 SOUL = 100000000000000 wei）
+        return rewards > 100000000000000n ? total + rewards : total;
     }, 0n) || 0n;
     const totalDisplayBalance = vaultBalance + partyRewards;
 
@@ -322,6 +324,12 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
         optimisticWithdrawUpdate();
         
         try {
+            console.log('提領嘗試:', {
+                address: playerVaultContract.address,
+                amount: vaultBalance.toString(),
+                amountInEther: formatEther(vaultBalance)
+            });
+            
             await executeWithdraw(
                 {
                     address: playerVaultContract.address as `0x${string}`,
@@ -332,6 +340,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                 `從金庫提領 ${parseFloat(formatEther(vaultBalance)).toFixed(4)} $SoulShard`
             );
         } catch (error) {
+            console.error('提領失敗詳情:', error);
             // 錯誤已在 hook 中處理
         }
     };
@@ -373,19 +382,38 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                             </div>
                         </div>
                         <div className="card-bg p-6 rounded-xl flex flex-col justify-center">
-                            <h3 className="section-title text-xl">我的金庫</h3>
-                            <p className="text-3xl font-bold text-teal-400">{parseFloat(formatEther(totalDisplayBalance)).toFixed(4)}</p>
+                            <div className="flex items-center gap-2 mb-1">
+                                <h3 className="section-title text-xl">我的金庫</h3>
+                                <div className="group relative">
+                                    <span className="text-gray-500 hover:text-gray-300 cursor-help text-sm">ⓘ</span>
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-2 bg-gray-900 border border-gray-700 rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
+                                        <p className="font-semibold text-white mb-1">金庫餘額說明：</p>
+                                        <p>• 包含可提領餘額</p>
+                                        <p>• 包含隊伍未領取獎勵</p>
+                                        <p>• 不包含其他玩家的推薦獎勵</p>
+                                        <p className="mt-1 text-yellow-400">總獎勵 = 金庫餘額 + 已提領 + 推薦獎勵</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <p className="text-3xl font-bold text-teal-400">{formatSoul(totalDisplayBalance)}</p>
                             {partyRewards > 0n && (
                                 <p className="text-xs text-yellow-400">
-                                    包含隊伍未領取獎勵 {parseFloat(formatEther(partyRewards)).toFixed(4)} SOUL
+                                    包含隊伍未領取獎勵 {formatSoul(partyRewards)} SOUL
                                 </p>
                             )}
                             {vaultBalance > 0n && (
                                 <p className="text-xs text-green-400">
-                                    可提領: {parseFloat(formatEther(vaultBalance)).toFixed(4)} SOUL
+                                    可提領: {formatSoul(vaultBalance)} SOUL
                                 </p>
                             )}
                             <p className="text-xs text-red-400">當前預估稅率: {currentTaxRate.toFixed(2)}%</p>
+                            {/* 手動刷新按鈕 */}
+                            <button
+                                onClick={() => refetchStats()}
+                                className="text-xs text-gray-400 hover:text-white underline mt-1"
+                            >
+                                刷新數據
+                            </button>
                             <ActionButton 
                                 onClick={handleWithdraw} 
                                 isLoading={withdrawProgress.status !== 'idle' && withdrawProgress.status !== 'error'} 
@@ -423,9 +451,9 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
 
             <div>
                 <h3 className="section-title">快捷操作</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                     <QuickActionButton title="鑄造 NFT" description="獲取新的英雄與聖物" onAction={() => setActivePage('mint')} icon={<Icons.Mint className="w-8 h-8"/>} />
-                    <QuickActionButton title="升星祭壇" description="提升你的 NFT 星級" onAction={() => setActivePage('altar')} icon={<Icons.Altar className="w-8 h-8"/>}/>
+                    {/* <QuickActionButton title="升星祭壇" description="提升你的 NFT 星級" onAction={() => setActivePage('altar')} icon={<Icons.Altar className="w-8 h-8"/>}/> */}
                     <QuickActionButton title="資產管理" description="創建隊伍、查看資產" onAction={() => setActivePage('party')} icon={<Icons.Assets className="w-8 h-8"/>}/>
                     <QuickActionButton title="前往地下城" description="開始你的冒險" onAction={() => setActivePage('dungeon')} icon={<Icons.Dungeon className="w-8 h-8"/>}/>
                 </div>

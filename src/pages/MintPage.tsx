@@ -456,6 +456,7 @@ const MintPage: React.FC = () => {
                             <li>一般需要鑄造約 <strong className="text-purple-200">100 個聖物</strong> 和 <strong className="text-purple-200">200 個英雄</strong>，才能組建出幾個強力隊伍</li>
                             <li>優先選擇高容量聖物（4-5 星）和高戰力英雄進行組隊</li>
                             <li>記得：品質優於數量，一個強力隊伍勝過多個弱隊</li>
+                            <li className="text-orange-300">⚠️ <strong>技術限制</strong>：為確保系統穩定性，建議單一地址擁有的英雄和聖物數量各不超過 1000 個</li>
                         </ul>
                     </div>
                 </div>

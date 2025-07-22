@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
 import { getContract } from '../config/contracts';
+import { formatSoul, formatLargeNumber } from '../utils/formatters';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ActionButton } from '../components/ui/ActionButton';
@@ -380,22 +381,35 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                             
                             {profileData && (
                                 <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div className="bg-gray-700/50 p-2 rounded">
-                                        <p className="text-gray-400">總獎勵</p>
+                                    <div className="bg-gray-700/50 p-2 rounded relative">
+                                        <div className="flex items-center gap-1">
+                                            <p className="text-gray-400">總獎勵</p>
+                                            <div className="group relative">
+                                                <span className="text-gray-500 hover:text-gray-300 cursor-help text-xs">ⓘ</span>
+                                                <div className="absolute bottom-full left-0 mb-1 w-48 p-2 bg-gray-900 border border-gray-700 rounded text-xs text-gray-300 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
+                                                    <p className="font-semibold text-white mb-1">包含：</p>
+                                                    <p>• 遠征獎勵</p>
+                                                    <p>• 任務獎勵</p>
+                                                    <p>• 活動獎勵</p>
+                                                    <p>• 空投獎勵</p>
+                                                    <p className="mt-1 text-yellow-400">不含推薦佣金</p>
+                                                </div>
+                                            </div>
+                                        </div>
                                         <p className="text-white font-mono">
                                             {profileData.totalRewardsEarned ? 
-                                                (Number(profileData.totalRewardsEarned) / 1e18).toFixed(4) : 
+                                                formatLargeNumber(BigInt(profileData.totalRewardsEarned)) : 
                                                 '0'
-                                            } SS
+                                            } SOUL
                                         </p>
                                     </div>
                                     <div className="bg-gray-700/50 p-2 rounded">
                                         <p className="text-gray-400">佣金收入</p>
                                         <p className="text-white font-mono">
                                             {profileData.commissionEarned ? 
-                                                (Number(profileData.commissionEarned) / 1e18).toFixed(4) : 
+                                                formatLargeNumber(BigInt(profileData.commissionEarned)) : 
                                                 '0'
-                                            } SS
+                                            } SOUL
                                         </p>
                                     </div>
                                 </div>

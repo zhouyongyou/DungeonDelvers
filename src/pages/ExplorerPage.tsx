@@ -119,19 +119,19 @@ const GET_PLAYER_BASIC_INFO_QUERY = `
   query GetPlayerBasicInfo($address: ID!) {
     player(id: $address) {
       id
-      heros {
+      heros(first: 1000) {
         id
         tokenId
         rarity
         power
       }
-      relics {
+      relics(first: 1000) {
         id
         tokenId
         rarity
         capacity
       }
-      parties {
+      parties(first: 1000) {
         id
         tokenId
         totalPower

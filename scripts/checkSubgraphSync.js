@@ -2,7 +2,7 @@
 
 import fetch from 'node-fetch';
 
-const SUBGRAPH_URL = 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.7';
+const SUBGRAPH_URL = 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.8';
 
 async function checkSubgraphSync() {
   const query = `

@@ -189,12 +189,25 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
     }
 
     // Recent results widget (for sidebar or dedicated section)
+    const [isExpanded, setIsExpanded] = React.useState(false);
+    const displayLimit = isExpanded ? 10 : 3; // 預設顯示3筆，展開顯示10筆
+    
     if (recentResults.length > 0) {
         return (
             <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-                <h4 className="text-sm font-semibold text-gray-300 mb-3">最近的遠征結果</h4>
+                <div className="flex justify-between items-center mb-3">
+                    <h4 className="text-sm font-semibold text-gray-300">最近的遠征結果</h4>
+                    {recentResults.length > 3 && (
+                        <button
+                            onClick={() => setIsExpanded(!isExpanded)}
+                            className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                        >
+                            {isExpanded ? '收起 ▲' : `展開更多 (${recentResults.length}) ▼`}
+                        </button>
+                    )}
+                </div>
                 <div className="space-y-2">
-                    {recentResults.slice(0, 3).map((result, index) => (
+                    {recentResults.slice(0, displayLimit).map((result, index) => (
                         <div 
                             key={`${result.partyId}-${result.timestamp}`}
                             className={`flex items-center justify-between p-2 rounded ${
