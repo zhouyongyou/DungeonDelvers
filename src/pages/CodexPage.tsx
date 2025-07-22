@@ -72,14 +72,20 @@ const useOwnedCodexIdentifiers = () => {
     const { data, isLoading } = useQuery<{ ownedHeroRarities: Set<number>, ownedRelicRarities: Set<number> }>({
         queryKey: ['ownedCodexIdentifiers', address, chainId],
         queryFn: async () => {
-            if (!address || !import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL) {
+            const { THE_GRAPH_API_URL } = await import('../config/graphConfig');
+            
+            if (!address || !THE_GRAPH_API_URL) {
                 return { ownedHeroRarities: new Set(), ownedRelicRarities: new Set() };
             }
             
-            const response = await fetch(import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+            // 使用限流器來避免 429 錯誤
+            const { graphQLRateLimiter } = await import('../utils/rateLimiter');
+            
+            const response = await graphQLRateLimiter.execute(async () => {
+                return fetch(THE_GRAPH_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
                     query: `
                         query GetOwnedRarities($owner: ID!) {
                             player(id: $owner) {
@@ -96,10 +102,16 @@ const useOwnedCodexIdentifiers = () => {
                         }
                     `,
                     variables: { owner: address.toLowerCase() }
-                }),
+                    }),
+                });
             });
             
-            if (!response.ok) throw new Error('GraphQL Network response was not ok');
+            if (!response.ok) {
+                if (response.status === 429) {
+                    throw new Error('子圖 API 請求過於頻繁，請稍後再試');
+                }
+                throw new Error(`GraphQL 請求失敗: ${response.status} ${response.statusText}`);
+            }
             const json = await response.json();
             
             // 檢查是否有錯誤
@@ -123,7 +135,11 @@ const useOwnedCodexIdentifiers = () => {
         },
         enabled: !!address && chainId === bsc.id,
         // ★★★ 網路優化：增加 staleTime，避免不必要的重複請求 ★★★
-        staleTime: 1000 * 60, // 60 秒
+        staleTime: 1000 * 60 * 10, // 10分鐘（大幅增加）
+        gcTime: 1000 * 60 * 30, // 30分鐘垃圾回收
+        refetchOnWindowFocus: false,
+        retry: 2, // 減少重試次數
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // 指數退避
     });
     return { identifiers: data, isLoadingIdentifiers: isLoading };
 };

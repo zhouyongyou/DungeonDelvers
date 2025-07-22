@@ -8,7 +8,7 @@ import { LoadingSpinner } from './ui/LoadingSpinner';
 import { logger } from '../utils/logger';
 import { formatSoul } from '../utils/formatters';
 
-const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
+import { THE_GRAPH_API_URL } from '../config/graphConfig';
 
 interface ExpeditionRecord {
     id: string;

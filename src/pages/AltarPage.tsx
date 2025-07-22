@@ -26,7 +26,7 @@ import { logger } from '../utils/logger';
 // Section: GraphQL 查詢與數據獲取 Hooks
 // =================================================================
 
-const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
+import { THE_GRAPH_API_URL } from '../config/graphConfig';
 
 // ★ 核心修正: 查詢語句現在直接查詢頂層的 heroes 和 relics，並使用正確的變數類型
 const GET_FILTERED_NFTS_QUERY = `

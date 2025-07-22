@@ -96,9 +96,9 @@ export class RateLimiter {
 // 創建 The Graph API 的速率限制器
 // Studio 版本的限制比較嚴格
 export const graphQLRateLimiter = new RateLimiter({
-  maxRequests: 10, // 每分鐘最多 10 個請求
+  maxRequests: 5, // 每分鐘最多 5 個請求（降低頻率）
   windowMs: 60000, // 1 分鐘
-  retryAfterMs: 120000 // 遇到 429 後等待 2 分鐘
+  retryAfterMs: 300000 // 遇到 429 後等待 5 分鐘
 });
 
 // NFT API 的速率限制器

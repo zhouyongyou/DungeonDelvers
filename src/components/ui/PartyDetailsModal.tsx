@@ -8,7 +8,7 @@ import { NftCard } from './NftCard';
 import type { PartyNft, HeroNft, RelicNft } from '../../types/nft';
 import { logger } from '../../utils/logger';
 
-const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
+import { THE_GRAPH_API_URL } from '../../config/graphConfig';
 
 interface PartyDetailsModalProps {
   party: PartyNft | null;

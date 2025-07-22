@@ -26,7 +26,7 @@ import { logger } from '../utils/logger';
 // Section 1: The Graph API 設定 (保持不變)
 // =================================================================
 
-const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
+import { THE_GRAPH_API_URL } from '../config/graphConfig';
 
 const GET_PLAYER_ASSETS_QUERY = `
   query GetPlayerAssets($owner: ID!, $skip: Int!, $first: Int!) {
@@ -694,23 +694,31 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 15000); // 增加超時時間
                     
-                    const response = await fetch(THE_GRAPH_API_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            query: GET_PLAYER_ASSETS_QUERY,
-                            variables: { 
-                                owner: owner.toLowerCase(),
-                                skip,
-                                first: pageSize
-                            },
-                        }),
-                        signal: controller.signal
+                    // 使用限流器來避免 429 錯誤
+                    const { graphQLRateLimiter } = await import('../utils/rateLimiter');
+                    
+                    const response = await graphQLRateLimiter.execute(async () => {
+                        return fetch(THE_GRAPH_API_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                query: GET_PLAYER_ASSETS_QUERY,
+                                variables: { 
+                                    owner: owner.toLowerCase(),
+                                    skip,
+                                    first: pageSize
+                                },
+                            }),
+                            signal: controller.signal
+                        });
                     });
 
                     clearTimeout(timeoutId);
 
                     if (!response.ok) {
+                        if (response.status === 429) {
+                            throw new Error('子圖 API 請求過於頻繁，請稍後再試');
+                        }
                         throw new Error(`GraphQL 請求失敗: ${response.status} ${response.statusText}`);
                     }
                     

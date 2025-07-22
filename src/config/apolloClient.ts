@@ -9,7 +9,7 @@ import { onError } from '@apollo/client/link/error';
 import { logger } from '../utils/logger';
 
 // 獲取 GraphQL 端點
-const GRAPHQL_ENDPOINT = import.meta.env.VITE_THE_GRAPH_API_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.7';
+const GRAPHQL_ENDPOINT = import.meta.env.VITE_THE_GRAPH_API_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.8';
 
 // 將 HTTP URL 轉換為 WebSocket URL
 const getWebSocketUrl = (httpUrl: string) => {

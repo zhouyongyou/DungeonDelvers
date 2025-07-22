@@ -19,7 +19,7 @@ import { formatLargeNumber } from '../utils/formatters';
 // Section: GraphQL 查詢與數據獲取 Hook
 // =================================================================
 
-const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
+import { THE_GRAPH_API_URL } from '../config/graphConfig';
 
 // 查詢玩家的邀請人與佣金數據
 const GET_REFERRAL_DATA_QUERY = `
@@ -59,20 +59,37 @@ const useReferralData = () => {
         queryKey: ['referralData', address],
         queryFn: async () => {
             if (!address || !THE_GRAPH_API_URL) return null;
-            const response = await fetch(THE_GRAPH_API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    query: GET_REFERRAL_DATA_QUERY,
-                    variables: { owner: address.toLowerCase() },
-                }),
+            
+            // 使用限流器來避免 429 錯誤
+            const { graphQLRateLimiter } = await import('../utils/rateLimiter');
+            
+            const response = await graphQLRateLimiter.execute(async () => {
+                return fetch(THE_GRAPH_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: GET_REFERRAL_DATA_QUERY,
+                        variables: { owner: address.toLowerCase() },
+                    }),
+                });
             });
-            if (!response.ok) throw new Error('GraphQL Network response was not ok');
+            
+            if (!response.ok) {
+                if (response.status === 429) {
+                    throw new Error('子圖 API 請求過於頻繁，請稍後再試');
+                }
+                throw new Error(`GraphQL 請求失敗: ${response.status} ${response.statusText}`);
+            }
             const { data } = await response.json();
             // ★★★ 核心修正：確保在找不到資料時回傳 null 而不是 undefined ★★★
             return data.player?.vault ?? null;
         },
         enabled: !!address && chainId === bsc.id,
+        staleTime: 1000 * 60 * 10, // 10分鐘快取
+        gcTime: 1000 * 60 * 30, // 30分鐘垃圾回收
+        refetchOnWindowFocus: false,
+        retry: 2, // 減少重試次數
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // 指數退避
     });
 };
 

@@ -222,8 +222,8 @@ const usePlayerParties = () => {
         },
         enabled: !!address && chainId === bsc.id,
         // 🔥 更保守的快取策略以減少 429 錯誤
-        staleTime: 1000 * 60 * 2, // 2分鐘內認為資料新鮮（增加）
-        gcTime: 1000 * 60 * 10, // 10分鐘垃圾回收（增加）
+        staleTime: 1000 * 60 * 10, // 10分鐘內認為資料新鮮（大幅增加）
+        gcTime: 1000 * 60 * 30, // 30分鐘垃圾回收（大幅增加）
         refetchOnWindowFocus: false, // 關閉視窗聚焦重新獲取
         refetchOnMount: false, // 關閉組件掛載重新獲取
         refetchOnReconnect: true, // 重新連接時重新獲取
@@ -634,7 +634,7 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
                 try {
                     // partyStatus 可能是數組或物件，取決於合約返回格式
                     if (Array.isArray(statusData)) {
-                        cooldownEndsAt = BigInt(statusData[2] || 0); // 假設第3個元素是冷卻時間
+                        cooldownEndsAt = BigInt(statusData[1] || 0); // 索引1是 cooldownEndsAt
                     } else if (typeof statusData === 'object' && statusData !== null) {
                         cooldownEndsAt = BigInt(statusData.cooldownEndsAt || statusData.cooldown || 0);
                     }
@@ -934,14 +934,33 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
     const isLoading = isLoadingParties || isLoadingDungeons;
 
     if (partiesError) {
+        const errorMessage = (partiesError as Error).message;
+        const is429Error = errorMessage.includes('429') || errorMessage.includes('Rate limit');
+        
         return (
             <EmptyState 
                 message="載入隊伍失敗" 
-                description={(partiesError as Error).message}
+                description={
+                    is429Error 
+                        ? "子圖 API 請求過於頻繁，請稍後再試。建議等待 5 分鐘後重新載入。" 
+                        : errorMessage
+                }
             >
-                <ActionButton onClick={() => refetchParties()} className="mt-4">
-                    重新載入
-                </ActionButton>
+                <div className="flex flex-col items-center gap-4 mt-4">
+                    <ActionButton onClick={() => refetchParties()} className="min-w-[120px]">
+                        重新載入
+                    </ActionButton>
+                    {is429Error && (
+                        <div className="text-sm text-yellow-400 bg-yellow-900/20 px-4 py-2 rounded-lg">
+                            💡 提示：如果持續遇到此問題，請嘗試：
+                            <ul className="list-disc list-inside mt-2 text-left">
+                                <li>減少頁面刷新頻率</li>
+                                <li>避免同時開啟多個頁籤</li>
+                                <li>等待幾分鐘後再試</li>
+                            </ul>
+                        </div>
+                    )}
+                </div>
             </EmptyState>
         );
     }

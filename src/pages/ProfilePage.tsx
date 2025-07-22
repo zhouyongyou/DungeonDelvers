@@ -37,6 +37,16 @@ const GET_PLAYER_PROFILE_QUERY = `
         createdAt
         lastUpdatedAt
       }
+      stats {
+        totalHeroes
+        totalRelics
+        totalParties
+        totalExpeditions
+        successfulExpeditions
+        totalRewardsEarned
+        highestPartyPower
+        totalUpgradeAttempts
+      }
     }
   }
 `;
@@ -197,6 +207,7 @@ const usePlayerProfile = (targetAddress: Address | undefined) => {
         isError,
         hasProfile: hasProfile || !!graphData?.profile,
         profileData: graphData?.profile,
+        playerStats: graphData?.stats,
         experience,
         level,
     };
@@ -242,7 +253,7 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
     const [showRewardDetails, setShowRewardDetails] = useState(false);
     const [showCommissionDetails, setShowCommissionDetails] = useState(false);
 
-    const { tokenURI, isLoading, isError, hasProfile, profileData, experience, level } = usePlayerProfile(targetAddress);
+    const { tokenURI, isLoading, isError, hasProfile, profileData, playerStats, experience, level } = usePlayerProfile(targetAddress);
 
     if (!chainId || chainId !== bsc.id) {
         return (
@@ -320,10 +331,10 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                                     nextLevelExp: BigInt(getExpRequiredForLevel(level + 1)),
                                     currentLevelExp: BigInt(getExpRequiredForLevel(level)),
                                     progress: calculateExpProgress(experience, level),
-                                    heroCount: 0, // TODO: 從數據中獲取
-                                    relicCount: 0, // TODO: 從數據中獲取
-                                    partyCount: 0, // TODO: 從數據中獲取
-                                    expeditionCount: 0, // TODO: 從數據中獲取
+                                    heroCount: playerStats?.totalHeroes || 0,
+                                    relicCount: playerStats?.totalRelics || 0,
+                                    partyCount: playerStats?.totalParties || 0,
+                                    expeditionCount: playerStats?.totalExpeditions || 0
                                 };
                                 const svg = generateProfileSVG(profileData);
                                 return (
@@ -494,10 +505,10 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                                     nextLevelExp: BigInt(getExpRequiredForLevel(level + 1)),
                                     currentLevelExp: BigInt(getExpRequiredForLevel(level)),
                                     progress: calculateExpProgress(experience, level),
-                                    heroCount: profileData?.heroesOwned || 0,
-                                    relicCount: profileData?.relicsOwned || 0,
-                                    partyCount: profileData?.partiesOwned || 0,
-                                    expeditionCount: profileData?.successfulExpeditions || 0,
+                                    heroCount: playerStats?.totalHeroes || 0,
+                                    relicCount: playerStats?.totalRelics || 0,
+                                    partyCount: playerStats?.totalParties || 0,
+                                    expeditionCount: playerStats?.totalExpeditions || 0,
                                     totalRewards: profileData?.totalRewardsEarned ? BigInt(profileData.totalRewardsEarned) : 0n,
                                 };
                                 const svg = generateProfileSVG(profileDataForSvg);
@@ -507,15 +518,38 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                             })()}
                         </div>
                         
-                        {/* 統計數據顯示在 SVG 外面 - 簡化版只顯示探險次數 */}
-                        {profileData && (
+                        {/* 統計數據顯示在 SVG 外面 - 顯示所有統計數據 */}
+                        {playerStats && (
                             <div className="w-full max-w-lg mb-4">
-                                <div className="text-center bg-gray-800/50 rounded-lg p-4">
-                                    <div className="text-3xl mb-2">🗺️</div>
-                                    <div className="text-2xl text-white font-bold mb-1">
-                                        {profileData.successfulExpeditions || 0}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <div className="text-center bg-gray-800/50 rounded-lg p-3">
+                                        <div className="text-2xl mb-1">⚔️</div>
+                                        <div className="text-xl text-white font-bold">
+                                            {playerStats.totalHeroes || 0}
+                                        </div>
+                                        <div className="text-xs text-gray-400">英雄</div>
                                     </div>
-                                    <div className="text-sm text-gray-400">成功探險次數</div>
+                                    <div className="text-center bg-gray-800/50 rounded-lg p-3">
+                                        <div className="text-2xl mb-1">💎</div>
+                                        <div className="text-xl text-white font-bold">
+                                            {playerStats.totalRelics || 0}
+                                        </div>
+                                        <div className="text-xs text-gray-400">聖物</div>
+                                    </div>
+                                    <div className="text-center bg-gray-800/50 rounded-lg p-3">
+                                        <div className="text-2xl mb-1">👥</div>
+                                        <div className="text-xl text-white font-bold">
+                                            {playerStats.totalParties || 0}
+                                        </div>
+                                        <div className="text-xs text-gray-400">隊伍</div>
+                                    </div>
+                                    <div className="text-center bg-gray-800/50 rounded-lg p-3">
+                                        <div className="text-2xl mb-1">🗺️</div>
+                                        <div className="text-xl text-white font-bold">
+                                            {playerStats.successfulExpeditions || 0}
+                                        </div>
+                                        <div className="text-xs text-gray-400">成功探險</div>
+                                    </div>
                                 </div>
                             </div>
                         )}
