@@ -1,6 +1,6 @@
 // src/pages/ProfilePage.tsx (移除 SVG 邏輯版)
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
 import { getContract } from '../config/contracts';
@@ -12,12 +12,15 @@ import type { Page } from '../types/page';
 import { bsc } from 'wagmi/chains';
 import { isAddress, type Address } from 'viem';
 import { logger } from '../utils/logger';
+import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
+import { generateProfileSVG, type ProfileData } from '../utils/svgGenerators';
+import { graphQLRateLimiter } from '../utils/rateLimiter';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取 Hooks
 // =================================================================
 
-const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
+import { THE_GRAPH_API_URL } from '../config/graphConfig';
 
 // 查詢玩家的個人檔案核心數據
 const GET_PLAYER_PROFILE_QUERY = `
@@ -72,18 +75,22 @@ const usePlayerProfile = (targetAddress: Address | undefined) => {
                     address: targetAddress.toLowerCase() 
                 });
                 
-                const response = await fetch(THE_GRAPH_API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        query: GET_PLAYER_PROFILE_QUERY,
-                        variables: { owner: targetAddress.toLowerCase() },
-                    }),
+                const response = await graphQLRateLimiter.execute(async () => {
+                    return fetch(THE_GRAPH_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            query: GET_PLAYER_PROFILE_QUERY,
+                            variables: { owner: targetAddress.toLowerCase() },
+                        }),
+                    });
                 });
                 
                 if (!response.ok) {
                     logger.error('GraphQL Network response error:', response.status, response.statusText);
-                    throw new Error(`GraphQL Network response was not ok: ${response.status}`);
+                    const error = new Error(`GraphQL Network response was not ok: ${response.status}`) as any;
+                    error.status = response.status;
+                    throw error;
                 }
                 
                 const result = await response.json();
@@ -230,6 +237,10 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
     const { address: connectedAddress, chainId } = useAccount();
     const targetAddress = useTargetAddress();
     const isMyProfile = targetAddress?.toLowerCase() === connectedAddress?.toLowerCase();
+    
+    // 展開狀態管理
+    const [showRewardDetails, setShowRewardDetails] = useState(false);
+    const [showCommissionDetails, setShowCommissionDetails] = useState(false);
 
     const { tokenURI, isLoading, isError, hasProfile, profileData, experience, level } = usePlayerProfile(targetAddress);
 
@@ -257,7 +268,6 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                 hasProfile, 
                 experience: experience.toString(), 
                 level,
-                graphError: graphError?.message,
                 THE_GRAPH_API_URL
             });
             
@@ -302,11 +312,24 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                         </div>
                         
                         <div className="w-full max-w-lg my-4 border-4 border-gray-700 rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center aspect-square">
-                            <div className="text-center">
-                                <div className="text-6xl mb-4">👤</div>
-                                <div className="text-xl font-bold text-white">玩家檔案</div>
-                                <div className="text-sm text-gray-400">SBT Profile</div>
-                            </div>
+                            {(() => {
+                                const profileData: ProfileData = {
+                                    address: targetAddress || '0x0000000000000000000000000000000000000000',
+                                    level: level,
+                                    experience: experience,
+                                    nextLevelExp: BigInt(getExpRequiredForLevel(level + 1)),
+                                    currentLevelExp: BigInt(getExpRequiredForLevel(level)),
+                                    progress: calculateExpProgress(experience, level),
+                                    heroCount: 0, // TODO: 從數據中獲取
+                                    relicCount: 0, // TODO: 從數據中獲取
+                                    partyCount: 0, // TODO: 從數據中獲取
+                                    expeditionCount: 0, // TODO: 從數據中獲取
+                                };
+                                const svg = generateProfileSVG(profileData);
+                                return (
+                                    <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: svg }} />
+                                );
+                            })()}
                         </div>
                         <p className="text-sm text-gray-400">這是一個動態的 SBT (靈魂綁定代幣)，它記錄了該玩家在遊戲中的光輝歷程。</p>
                     </div>
@@ -382,19 +405,27 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                             {profileData && (
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div className="bg-gray-700/50 p-2 rounded relative">
-                                        <div className="flex items-center gap-1">
-                                            <p className="text-gray-400">總獎勵</p>
-                                            <div className="group relative">
-                                                <span className="text-gray-500 hover:text-gray-300 cursor-help text-xs">ⓘ</span>
-                                                <div className="absolute bottom-full left-0 mb-1 w-48 p-2 bg-gray-900 border border-gray-700 rounded text-xs text-gray-300 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
-                                                    <p className="font-semibold text-white mb-1">包含：</p>
-                                                    <p>• 遠征獎勵</p>
-                                                    <p>• 任務獎勵</p>
-                                                    <p>• 活動獎勵</p>
-                                                    <p>• 空投獎勵</p>
-                                                    <p className="mt-1 text-yellow-400">不含推薦佣金</p>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-1">
+                                                <p className="text-gray-400">總獎勵</p>
+                                                <div className="group relative">
+                                                    <span className="text-gray-500 hover:text-gray-300 cursor-help text-xs">ⓘ</span>
+                                                    <div className="absolute bottom-full left-0 mb-1 w-48 p-2 bg-gray-900 border border-gray-700 rounded text-xs text-gray-300 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
+                                                        <p className="font-semibold text-white mb-1">包含：</p>
+                                                        <p>• 遠征獎勵</p>
+                                                        <p>• 任務獎勵</p>
+                                                        <p>• 活動獎勵</p>
+                                                        <p>• 空投獎勵</p>
+                                                        <p className="mt-1 text-yellow-400">不含推薦佣金</p>
+                                                    </div>
                                                 </div>
                                             </div>
+                                            <button
+                                                onClick={() => setShowRewardDetails(!showRewardDetails)}
+                                                className="text-gray-400 hover:text-white transition-colors p-1"
+                                            >
+                                                {showRewardDetails ? <ChevronUpIcon className="w-4 h-4" /> : <ChevronDownIcon className="w-4 h-4" />}
+                                            </button>
                                         </div>
                                         <p className="text-white font-mono">
                                             {profileData.totalRewardsEarned ? 
@@ -402,15 +433,47 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                                                 '0'
                                             } SOUL
                                         </p>
+                                        
+                                        {/* 獎勵明細 */}
+                                        {showRewardDetails && (
+                                            <div className="mt-3 pt-3 border-t border-gray-600 space-y-2 text-xs">
+                                                <p className="text-gray-400 text-center">
+                                                    獎勵明細功能即將推出
+                                                </p>
+                                                <p className="text-gray-500 text-center italic">
+                                                    未來將顯示遠征、任務、活動等各類獎勵的詳細統計
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="bg-gray-700/50 p-2 rounded">
-                                        <p className="text-gray-400">佣金收入</p>
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-gray-400">傭金收入</p>
+                                            <button
+                                                onClick={() => setShowCommissionDetails(!showCommissionDetails)}
+                                                className="text-gray-400 hover:text-white transition-colors p-1"
+                                            >
+                                                {showCommissionDetails ? <ChevronUpIcon className="w-4 h-4" /> : <ChevronDownIcon className="w-4 h-4" />}
+                                            </button>
+                                        </div>
                                         <p className="text-white font-mono">
                                             {profileData.commissionEarned ? 
                                                 formatLargeNumber(BigInt(profileData.commissionEarned)) : 
                                                 '0'
                                             } SOUL
                                         </p>
+                                        
+                                        {/* 傭金明細 */}
+                                        {showCommissionDetails && (
+                                            <div className="mt-3 pt-3 border-t border-gray-600 space-y-2 text-xs">
+                                                <p className="text-gray-400 text-center">
+                                                    傭金明細功能即將推出
+                                                </p>
+                                                <p className="text-gray-500 text-center italic">
+                                                    未來將顯示各級推薦的詳細收益統計
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -422,27 +485,41 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                             )}
                         </div>
                         
-                        <div className="w-full max-w-lg my-4 border-4 border-gray-700 rounded-lg overflow-hidden">
-                            <img 
-                                src={profileImage} 
-                                alt="玩家檔案" 
-                                className="w-full h-auto"
-                                onError={(e) => {
-                                    // 如果圖片載入失敗，顯示預設內容
-                                    const target = e.target as HTMLImageElement;
-                                    target.style.display = 'none';
-                                    target.parentElement!.innerHTML = `
-                                        <div class="w-full aspect-square bg-gray-800 flex items-center justify-center">
-                                            <div class="text-center">
-                                                <div class="text-6xl mb-4">👤</div>
-                                                <div class="text-xl font-bold text-white">${profileData?.name || '玩家檔案'}</div>
-                                                <div class="text-sm text-gray-400">SBT Profile</div>
-                                            </div>
-                                        </div>
-                                    `;
-                                }}
-                            />
+                        <div className="w-full max-w-lg my-4 border-4 border-gray-700 rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center aspect-square">
+                            {(() => {
+                                const profileDataForSvg: ProfileData = {
+                                    address: targetAddress || '0x0000000000000000000000000000000000000000',
+                                    level: level,
+                                    experience: experience,
+                                    nextLevelExp: BigInt(getExpRequiredForLevel(level + 1)),
+                                    currentLevelExp: BigInt(getExpRequiredForLevel(level)),
+                                    progress: calculateExpProgress(experience, level),
+                                    heroCount: profileData?.heroesOwned || 0,
+                                    relicCount: profileData?.relicsOwned || 0,
+                                    partyCount: profileData?.partiesOwned || 0,
+                                    expeditionCount: profileData?.successfulExpeditions || 0,
+                                    totalRewards: profileData?.totalRewardsEarned ? BigInt(profileData.totalRewardsEarned) : 0n,
+                                };
+                                const svg = generateProfileSVG(profileDataForSvg);
+                                return (
+                                    <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: svg }} />
+                                );
+                            })()}
                         </div>
+                        
+                        {/* 統計數據顯示在 SVG 外面 - 簡化版只顯示探險次數 */}
+                        {profileData && (
+                            <div className="w-full max-w-lg mb-4">
+                                <div className="text-center bg-gray-800/50 rounded-lg p-4">
+                                    <div className="text-3xl mb-2">🗺️</div>
+                                    <div className="text-2xl text-white font-bold mb-1">
+                                        {profileData.successfulExpeditions || 0}
+                                    </div>
+                                    <div className="text-sm text-gray-400">成功探險次數</div>
+                                </div>
+                            </div>
+                        )}
+                        
                         <p className="text-sm text-gray-400">這是一個動態的 SBT (靈魂綁定代幣)，它記錄了該玩家在遊戲中的光輝歷程。</p>
                     </div>
                 );

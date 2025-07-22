@@ -22,7 +22,8 @@ import { LocalErrorBoundary, LoadingState, ErrorState } from '../components/ui/E
 // Section: GraphQL 查詢與數據獲取 Hook
 // =================================================================
 
-const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
+import { THE_GRAPH_API_URL } from '../config/graphConfig';
+import { graphQLRateLimiter } from '../utils/rateLimiter';
 
 // 專為儀表板設計的 GraphQL 查詢
 const GET_DASHBOARD_STATS_QUERY = `
@@ -81,14 +82,16 @@ const useDashboardStats = () => {
             const timeoutId = setTimeout(() => controller.abort(), 10000);
             
             try {
-                const response = await fetch(THE_GRAPH_API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        query: simplifiedQuery,
-                        variables: { owner: address.toLowerCase() },
-                    }),
-                    signal: controller.signal
+                const response = await graphQLRateLimiter.execute(async () => {
+                    return fetch(THE_GRAPH_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            query: simplifiedQuery,
+                            variables: { owner: address.toLowerCase() },
+                        }),
+                        signal: controller.signal
+                    });
                 });
                 
                 clearTimeout(timeoutId);

@@ -25,7 +25,9 @@ interface ExpeditionTrackerProps {
 }
 
 const MAX_RESULTS = 5;
-const GRAPHQL_URL = import.meta.env.VITE_THE_GRAPH_API_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.7';
+import { THE_GRAPH_API_URL } from '../config/graphConfig';
+
+const GRAPHQL_URL = THE_GRAPH_API_URL;
 
 // GraphQL query for recent expedition results
 const GET_RECENT_EXPEDITIONS = gql`
@@ -58,11 +60,28 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
 
     const dungeonMasterContract = getContract(chainId === bsc.id ? chainId : bsc.id, 'dungeonMaster');
 
-    // Fetch recent expeditions from subgraph
+    // Fetch recent expeditions from subgraph with caching
     const { data: graphResults, refetch } = useQuery({
         queryKey: ['recentExpeditions', address],
         queryFn: async () => {
             if (!address) return [];
+            
+            // Check local cache first
+            const cacheKey = `expeditions_${address}`;
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                const { data, timestamp } = JSON.parse(cached);
+                // Use cache if less than 5 minutes old
+                if (Date.now() - timestamp < 5 * 60 * 1000) {
+                    logger.info('Using cached expedition data');
+                    // Convert string back to BigInt
+                    return data.map((r: any) => ({
+                        ...r,
+                        partyId: BigInt(r.partyId),
+                        reward: BigInt(r.reward)
+                    }));
+                }
+            }
             
             try {
                 const data = await request(GRAPHQL_URL, GET_RECENT_EXPEDITIONS, {
@@ -71,7 +90,7 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
                     skip: 0
                 });
                 
-                return data.expeditions.map((exp: any) => ({
+                const results = data.expeditions.map((exp: any) => ({
                     partyId: BigInt(exp.party.id.split('-')[1] || '0'),
                     success: exp.success,
                     reward: BigInt(exp.reward || '0'),
@@ -79,14 +98,41 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
                     timestamp: Number(exp.timestamp) * 1000, // Convert to milliseconds
                     dungeonName: exp.dungeonName
                 }));
+                
+                // Save to cache - convert BigInt to string for JSON serialization
+                const cacheableResults = results.map(r => ({
+                    ...r,
+                    partyId: r.partyId.toString(),
+                    reward: r.reward.toString()
+                }));
+                
+                localStorage.setItem(cacheKey, JSON.stringify({
+                    data: cacheableResults,
+                    timestamp: Date.now()
+                }));
+                
+                return results;
             } catch (error) {
                 logger.error('Error fetching expeditions from subgraph:', error);
+                // Try to use stale cache if available
+                if (cached) {
+                    const { data } = JSON.parse(cached);
+                    logger.info('Using stale cache due to API error');
+                    // Convert string back to BigInt
+                    return data.map((r: any) => ({
+                        ...r,
+                        partyId: BigInt(r.partyId),
+                        reward: BigInt(r.reward)
+                    }));
+                }
                 return [];
             }
         },
         enabled: !!address && chainId === bsc.id,
-        refetchInterval: 30000, // Refetch every 30 seconds
-        staleTime: 20000, // Consider data stale after 20 seconds
+        refetchInterval: 60000, // Increase to 60 seconds
+        staleTime: 50000, // Consider data stale after 50 seconds
+        retry: 2, // Reduce retries
+        retryDelay: (attemptIndex) => Math.min(10000 * 2 ** attemptIndex, 60000),
     });
 
     const recentResults = graphResults || [];

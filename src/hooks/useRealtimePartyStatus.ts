@@ -32,7 +32,7 @@ interface UseRealtimePartyStatusOptions {
 
 export function useRealtimePartyStatus({
   partyId,
-  pollInterval = 10000,
+  pollInterval = 30000, // 增加到 30 秒以減少 API 請求
   enableSubscription = true,
 }: UseRealtimePartyStatusOptions) {
   const [isWebSocketConnected, setIsWebSocketConnected] = useState(connectionStatus.isConnected);

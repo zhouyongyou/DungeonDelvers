@@ -2,7 +2,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAccount, useReadContract, useReadContracts, useWriteContract } from 'wagmi';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useQueries } from '@tanstack/react-query';
+import { readContract } from '@wagmi/core';
+import { wagmiConfig as config } from '../wagmi';
 import { useSimpleReadContracts } from '../hooks/useSimpleReadContracts';
 import { formatEther, parseEther } from 'viem';
 import { formatSoul, formatLargeNumber } from '../utils/formatters';
@@ -37,7 +39,12 @@ import { useBatchOperations } from '../hooks/useBatchOperations';
 // Section: 型別定義與 GraphQL 查詢
 // =================================================================
 
-const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
+import { THE_GRAPH_API_URL, isGraphConfigured } from '../config/graphConfig';
+
+// 檢查 Graph 是否已配置
+if (!isGraphConfigured()) {
+    console.warn('[DungeonPage] The Graph is not properly configured');
+}
 
 interface Dungeon {
   id: number;
@@ -71,14 +78,44 @@ const GET_PLAYER_PARTIES_QUERY = `
 // Section: 數據獲取 Hooks
 // =================================================================
 
+// 創建一個全局的查詢追蹤器來避免重複查詢
+const queryTracker = new Map<string, Promise<any>>();
+
 // 新的 Hook，用於從 The Graph 獲取所有隊伍的數據
 const usePlayerParties = () => {
     const { address, chainId } = useAccount();
     // const { setLoading } = useGlobalLoading(); // 移除未使用的 hook
     
+    // 添加 useRef 來追蹤是否正在查詢，避免重複查詢
+    const isQueryingRef = React.useRef(false);
+    
     return useQuery<PartyNft[]>({
         queryKey: ['playerParties', address, chainId],
         queryFn: async () => {
+            // 使用全局追蹤器防止並發查詢
+            const queryKey = `parties_${address}_${chainId}`;
+            const existingQuery = queryTracker.get(queryKey);
+            
+            if (existingQuery) {
+                logger.warn('[usePlayerParties] 檢測到重複查詢，等待現有查詢完成');
+                return await existingQuery;
+            }
+            
+            // 創建新的查詢 Promise
+            const queryPromise = (async () => {
+                logger.info(`[usePlayerParties] 開始新查詢 (address: ${address?.slice(0, 6)}...${address?.slice(-4)})`);
+                try {
+            // 先檢查本地儲存
+            const cacheKey = `parties_${address}_${chainId}`;
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                const { data, timestamp } = JSON.parse(cached);
+                // 如果快取在 5 分鐘內，直接使用
+                if (Date.now() - timestamp < 5 * 60 * 1000) {
+                    logger.info('[usePlayerParties] 使用本地快取的隊伍資料');
+                    return data;
+                }
+            }
             // setLoading(true, '載入你的隊伍資料...'); // 移除未使用的 loading
             if (!address || !THE_GRAPH_API_URL) return [];
             
@@ -117,14 +154,19 @@ const usePlayerParties = () => {
                 logger.info(`地城頁面找到 ${parties.length} 個隊伍`);
             } else {
                 logger.error('GraphQL 請求失敗:', graphqlResponse);
+                // 429 錯誤時，使用空數據但不要使查詢失敗
+                // 這樣 React Query 會自動重試
+                if (graphqlResponse.status === 'fulfilled' && graphqlResponse.value?.status === 429) {
+                    throw new Error('Rate limit exceeded - will retry');
+                }
                 return [];
             }
             
             // 將資料轉換為前端格式
             // setLoading(false); // 移除未使用的 loading
-            logger.info('Converting party data from The Graph:', parties);
-            return parties.map((p: { tokenId: string; [key: string]: unknown }) => {
-                logger.info(`Converting party #${p.tokenId}:`, {
+            logger.debug('Converting party data from The Graph:', parties);
+            const formattedParties = parties.map((p: { tokenId: string; [key: string]: unknown }) => {
+                logger.debug(`Converting party #${p.tokenId}:`, {
                     raw: p,
                     unclaimedRewards: p.unclaimedRewards
                 });
@@ -149,16 +191,50 @@ const usePlayerParties = () => {
                 // fatigueLevel: 0,       // 已禁用疲勞度系統
             }
             });
+            
+            // 儲存到本地快取
+            if (address && formattedParties.length > 0) {
+                const cacheKey = `parties_${address}_${chainId}`;
+                localStorage.setItem(cacheKey, JSON.stringify({
+                    data: formattedParties,
+                    timestamp: Date.now()
+                }));
+                logger.info('已儲存隊伍資料到本地快取');
+            }
+            
+            return formattedParties;
+                } finally {
+                    // 清理追蹤器
+                    queryTracker.delete(queryKey);
+                }
+            })();
+            
+            // 將 Promise 存入追蹤器
+            queryTracker.set(queryKey, queryPromise);
+            
+            try {
+                return await queryPromise;
+            } catch (error) {
+                // 確保錯誤也被正確清理
+                queryTracker.delete(queryKey);
+                throw error;
+            }
         },
         enabled: !!address && chainId === bsc.id,
-        // 🔥 更積極的快取策略
-        staleTime: 1000 * 30, // 30秒內認為資料新鮮
-        gcTime: 1000 * 60 * 5, // 5分鐘垃圾回收
-        refetchOnWindowFocus: true, // 視窗聚焦時重新獲取
-        refetchOnMount: true, // 組件掛載時重新獲取
+        // 🔥 更保守的快取策略以減少 429 錯誤
+        staleTime: 1000 * 60 * 2, // 2分鐘內認為資料新鮮（增加）
+        gcTime: 1000 * 60 * 10, // 10分鐘垃圾回收（增加）
+        refetchOnWindowFocus: false, // 關閉視窗聚焦重新獲取
+        refetchOnMount: false, // 關閉組件掛載重新獲取
         refetchOnReconnect: true, // 重新連接時重新獲取
-        retry: 3,
-        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
+        retry: (failureCount, error) => {
+            // 429 錯誤時才重試，其他錯誤不重試
+            if (error instanceof Error && error.message.includes('Rate limit')) {
+                return failureCount < 3;
+            }
+            return false;
+        },
+        retryDelay: (attemptIndex) => Math.min(5000 * 2 ** attemptIndex, 30000), // 更長的重試延遲
     });
 };
 
@@ -259,7 +335,7 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
         args: [party.id],
         query: { 
             enabled: !!dungeonStorageContract,
-            refetchInterval: 10000, // 每10秒刷新一次
+            refetchInterval: 30000, // 減少到每30秒刷新一次
         }
     });
     
@@ -517,7 +593,62 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
     };
 
     // ★ 核心改造：使用新的 Hook 獲取隊伍數據
-    const { data: parties, isLoading: isLoadingParties, refetch: refetchParties, error: partiesError } = usePlayerParties();
+    const { data: partiesFromGraph, isLoading: isLoadingParties, refetch: refetchParties, error: partiesError } = usePlayerParties();
+    
+    // 獲取所有隊伍的冷卻時間
+    const dungeonStorageContractForCooldown = getContract(chainId, 'dungeonStorage');
+    
+    // 使用 useQueries 批量獲取所有隊伍的狀態
+    const partyCooldownQueries = useQueries({
+        queries: (partiesFromGraph || []).map(party => ({
+            queryKey: ['partyStatus', party.id.toString()],
+            queryFn: async () => {
+                if (!dungeonStorageContractForCooldown) return null;
+                try {
+                    const status = await readContract(config, {
+                        address: dungeonStorageContractForCooldown.address as `0x${string}`,
+                        abi: dungeonStorageContractForCooldown.abi,
+                        functionName: 'getPartyStatus',
+                        args: [party.id],
+                    });
+                    return status;
+                } catch (error) {
+                    console.error(`Failed to get party status for ${party.id}:`, error);
+                    return null;
+                }
+            },
+            enabled: !!dungeonStorageContractForCooldown && !!party.id,
+            staleTime: 30000, // 30秒緩存
+        }))
+    });
+    
+    // 合併隊伍數據和冷卻時間
+    const parties = useMemo(() => {
+        if (!partiesFromGraph) return [];
+        
+        return partiesFromGraph.map((party, index) => {
+            const statusData = partyCooldownQueries[index]?.data;
+            let cooldownEndsAt = 0n;
+            
+            if (statusData) {
+                try {
+                    // partyStatus 可能是數組或物件，取決於合約返回格式
+                    if (Array.isArray(statusData)) {
+                        cooldownEndsAt = BigInt(statusData[2] || 0); // 假設第3個元素是冷卻時間
+                    } else if (typeof statusData === 'object' && statusData !== null) {
+                        cooldownEndsAt = BigInt(statusData.cooldownEndsAt || statusData.cooldown || 0);
+                    }
+                } catch (error) {
+                    console.error('Failed to parse cooldown:', error);
+                }
+            }
+            
+            return {
+                ...party,
+                cooldownEndsAt,
+            };
+        });
+    }, [partiesFromGraph, partyCooldownQueries]);
 
     // 交易進度 Hooks
     const { execute: executeExpedition, progress: expeditionProgress, reset: resetExpedition } = useTransactionWithProgress({

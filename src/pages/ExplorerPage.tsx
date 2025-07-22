@@ -13,7 +13,12 @@ import { getContract } from '../config/contracts';
 // Section: GraphQL 查詢與數據獲取
 // =================================================================
 
-const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
+import { THE_GRAPH_API_URL, isGraphConfigured } from '../config/graphConfig';
+
+// 檢查 Graph 是否已配置
+if (!isGraphConfigured()) {
+    console.warn('[ExplorerPage] The Graph is not properly configured');
+}
 
 // 查詢特定 ID 的英雄
 const GET_HERO_BY_ID_QUERY = `

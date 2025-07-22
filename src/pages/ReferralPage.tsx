@@ -12,6 +12,8 @@ import { bsc } from 'wagmi/chains';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Icons } from '../components/ui/icons';
 import { logger } from '../utils/logger';
+import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
+import { formatLargeNumber } from '../utils/formatters';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取 Hook
@@ -90,6 +92,7 @@ const ReferralPage: React.FC = () => {
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [autoDetectedRef, setAutoDetectedRef] = useState<string | null>(null);
     const [urlRefParam, setUrlRefParam] = useState<string | null>(null);
+    const [showCommissionDetails, setShowCommissionDetails] = useState(false);
 
     // ★ 核心改造：使用新的 Hook 獲取數據
     const { data: referralData, isLoading } = useReferralData();
@@ -479,15 +482,63 @@ ${referralLink}
             
             {/* 邀請收益展示 */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="card-bg p-6 rounded-xl text-center">
-                    <Icons.Copy className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
-                    <h3 className="font-bold text-lg text-white mb-2">我的邀請收益</h3>
-                    {isLoading ? <LoadingSpinner size="h-8 w-8" /> : (
-                        <p className="text-2xl font-bold text-yellow-400">
-                            {formatEther(totalCommission)} $SoulShard
-                        </p>
+                <div className="card-bg p-6 rounded-xl">
+                    <div className="text-center">
+                        <Icons.Copy className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                            <h3 className="font-bold text-lg text-white">我的邀請收益</h3>
+                            <button
+                                onClick={() => setShowCommissionDetails(!showCommissionDetails)}
+                                className="text-gray-400 hover:text-white transition-colors p-1"
+                            >
+                                {showCommissionDetails ? <ChevronUpIcon className="w-4 h-4" /> : <ChevronDownIcon className="w-4 h-4" />}
+                            </button>
+                        </div>
+                        {isLoading ? <LoadingSpinner size="h-8 w-8" /> : (
+                            <p className="text-2xl font-bold text-yellow-400">
+                                {formatEther(totalCommission)} $SoulShard
+                            </p>
+                        )}
+                        <p className="text-sm text-gray-400 mt-2">累計佣金總額</p>
+                    </div>
+                    
+                    {/* 傭金明細 */}
+                    {showCommissionDetails && (
+                        <div className="mt-4 pt-4 border-t border-gray-700 space-y-2 text-sm">
+                            <div className="flex justify-between">
+                                <span className="text-gray-400">一級推薦收益：</span>
+                                <span className="text-gray-300 font-mono">
+                                    {referralData?.level1Commission ? 
+                                        formatLargeNumber(BigInt(referralData.level1Commission)) : 
+                                        '0'
+                                    } SOUL
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-400">二級推薦收益：</span>
+                                <span className="text-gray-300 font-mono">
+                                    {referralData?.level2Commission ? 
+                                        formatLargeNumber(BigInt(referralData.level2Commission)) : 
+                                        '0'
+                                    } SOUL
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-400">總推薦人數：</span>
+                                <span className="text-gray-300">
+                                    {referralData?.totalReferrals || 0} 人
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-400">活躍推薦人數：</span>
+                                <span className="text-gray-300">
+                                    {referralData?.activeReferrals || 0} 人
+                                </span>
+                            </div>
+                            {/* 暫時顯示開發中提示 */}
+                            <p className="text-xs text-gray-500 mt-2 italic text-center">* 明細功能開發中</p>
+                        </div>
                     )}
-                    <p className="text-sm text-gray-400 mt-2">累計佣金總額</p>
                 </div>
                 
                 <div className="card-bg p-6 rounded-xl text-center">

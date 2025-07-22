@@ -29,8 +29,8 @@ export const useRewardManager = ({ partyId, chainId }: UseRewardManagerProps) =>
         args: [partyId],
         query: {
             enabled: !!dungeonStorageContract && !!partyId,
-            refetchInterval: 10000, // 每10秒刷新
-            staleTime: 5000,
+            refetchInterval: 30000, // 減少到每30秒刷新
+            staleTime: 20000, // 增加快取時間
         }
     });
     
@@ -117,11 +117,24 @@ export const useRewardManager = ({ partyId, chainId }: UseRewardManagerProps) =>
     });
     
     
+    // Debug log
+    if (partyStatus) {
+        logger.info('[useRewardManager] Party status:', {
+            partyId: partyId.toString(),
+            partyStatus,
+            provisionsRemaining: partyStatus[0]?.toString(),
+            cooldownEndsAt: partyStatus[1]?.toString(),
+            unclaimedRewards: partyStatus[2]?.toString(),
+            fatigueLevel: partyStatus[3]?.toString(),
+        });
+    }
+    
     const unclaimedRewards = partyStatus?.[2] || 0n;
     const hasRewards = unclaimedRewards > 0n;
     
     const handleClaimRewards = () => {
-        if (!hasRewards || !dungeonMasterContract) return;
+        // 移除 hasRewards 檢查，讓玩家即使在顯示 0 時也能嘗試領取
+        if (!dungeonMasterContract) return;
         
         claimRewards({
             address: dungeonMasterContract.address as `0x${string}`,

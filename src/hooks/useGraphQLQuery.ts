@@ -4,8 +4,7 @@ import { getQueryConfig, queryKeys } from '../config/queryConfig';
 import { dedupeGraphQLQuery } from '../utils/requestDeduper';
 import { logger } from '../utils/logger';
 import { APP_CONSTANTS } from '../config/constants';
-
-const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
+import { THE_GRAPH_API_URL } from '../config/graphConfig';
 
 interface GraphQLQueryOptions<T> extends Omit<UseQueryOptions<T>, 'queryKey' | 'queryFn'> {
   variables?: Record<string, any>;

@@ -21,14 +21,7 @@ export const CooldownTimer: React.FC<CooldownTimerProps> = ({
             const remaining = Math.max(0, endTime - now);
             setTimeLeft(remaining);
             
-            // 調試日誌
-            console.log('[CooldownTimer] 計算剩餘時間:', {
-                cooldownEndsAt: cooldownEndsAt.toString(),
-                endTime,
-                now,
-                remaining,
-                willRender: remaining > 0
-            });
+            // 已移除調試日誌
             
             if (remaining === 0 && onCooldownEnd) {
                 onCooldownEnd();

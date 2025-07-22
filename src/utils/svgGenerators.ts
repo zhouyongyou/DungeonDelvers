@@ -348,6 +348,86 @@ export function svgToDataURL(svg: string): string {
     return `data:image/svg+xml;base64,${base64}`;
 }
 
+// ============= 個人檔案 SVG 生成器 =============
+
+export interface ProfileData {
+    address: string;
+    level: number;
+    experience: bigint;
+    nextLevelExp: bigint;
+    currentLevelExp: bigint;
+    progress: number; // 0-100
+    heroCount?: number;
+    relicCount?: number;
+    partyCount?: number;
+    expeditionCount?: number;
+    totalRewards?: bigint;
+    joinDate?: Date;
+}
+
+export function generateProfileSVG(profile: ProfileData): string {
+    const primaryColor = '#8b5cf6'; // 紫色主題
+    const accentColor = '#a78bfa';
+    const bgPattern = `
+        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5" opacity="0.3"/>
+        </pattern>
+        <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse">
+            <circle cx="10" cy="10" r="1" fill="${primaryColor}" opacity="0.2" class="breathe"/>
+        </pattern>
+    `;
+    
+    // 格式化地址
+    const shortAddress = `${profile.address.slice(0, 6)}...${profile.address.slice(-4)}`;
+    
+    return `${getSVGHeader()}
+        ${getGlobalStyles()}
+        ${getGradientDefs(primaryColor, accentColor)}
+        ${bgPattern}
+        
+        <!-- 背景 -->
+        <rect width="400" height="400" fill="url(#bg-gradient)" />
+        <rect width="400" height="400" fill="url(#dots)" />
+        
+        <!-- 裝飾邊框 -->
+        <rect x="10" y="10" width="380" height="380" fill="none" stroke="${primaryColor}" stroke-width="2" opacity="0.3" rx="20" />
+        <rect x="20" y="20" width="360" height="360" fill="none" stroke="${accentColor}" stroke-width="1" opacity="0.2" rx="15" />
+        
+        <!-- 標題區域 -->
+        <g transform="translate(200, 70)">
+            <text class="title" text-anchor="middle" y="0">Player Profile</text>
+            <text class="subtitle" text-anchor="middle" y="25" fill="${accentColor}">${shortAddress}</text>
+        </g>
+        
+        <!-- 等級顯示 (居中) -->
+        <g transform="translate(200, 180)">
+            <!-- 等級背景裝飾 -->
+            <rect x="-80" y="-40" width="160" height="80" fill="${primaryColor}" fill-opacity="0.1" rx="20" />
+            <!-- 等級文字 -->
+            <text class="stat-value" text-anchor="middle" y="10" fill="${accentColor}" font-size="48">Lv.${profile.level}</text>
+        </g>
+        
+        <!-- 進度百分比 -->
+        <g transform="translate(200, 240)">
+            <text class="stat-label" text-anchor="middle" y="0" font-size="16" fill="${accentColor}">Progress: ${profile.progress}%</text>
+        </g>
+        
+        <!-- 經驗值條 -->
+        <g transform="translate(50, 310)">
+            <rect x="0" y="0" width="300" height="24" fill="#1e293b" rx="12" />
+            <rect x="0" y="0" width="${profile.progress * 3}" height="24" fill="${primaryColor}" rx="12" class="glow" />
+            <text class="stat-label" x="150" y="45" text-anchor="middle" font-size="12">
+                ${profile.experience.toString()} / ${profile.nextLevelExp.toString()} EXP
+            </text>
+        </g>
+        
+        <!-- 靈魂綁定標記 -->
+        <g transform="translate(200, 370)">
+            <text class="stat-label" text-anchor="middle" y="0" font-size="12" fill="${accentColor}">Soulbound NFT</text>
+        </g>
+    </svg>`;
+}
+
 // ============= 輔助函數：生成完整的 metadata JSON =============
 
 export function generateMetadataJSON(nft: HeroNft | RelicNft | PartyNft | VipNft): string {

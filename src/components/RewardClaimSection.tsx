@@ -46,10 +46,8 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
     const unclaimedRewards = graphRewards > 0n ? graphRewards : contractRewards;
     const actuallyHasRewards = unclaimedRewards > 0n || hasRewards;
     
-    if (!actuallyHasRewards) {
-        // 沒有獎勵時不顯示組件
-        return null;
-    }
+    // 修改：總是顯示組件，讓玩家可以嘗試領取（可能有未同步的獎勵）
+    // 即使顯示為 0，也允許玩家點擊領取按鈕
     
     // Compact variant - for inline display
     if (variant === 'compact') {
