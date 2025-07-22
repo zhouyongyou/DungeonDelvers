@@ -5,6 +5,7 @@ import { useAccount, useReadContract, useReadContracts, useWriteContract } from 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSimpleReadContracts } from '../hooks/useSimpleReadContracts';
 import { formatEther, parseEther } from 'viem';
+import { formatSoul, formatLargeNumber } from '../utils/formatters';
 // 不再需要從 nfts.ts 獲取數據
 // import { fetchAllOwnedNfts } from '../api/nfts';
 import { getContract } from '../config/contracts';
@@ -120,7 +121,13 @@ const usePlayerParties = () => {
             
             // 將資料轉換為前端格式
             // setLoading(false); // 移除未使用的 loading
-            return parties.map((p: { tokenId: string; [key: string]: unknown }) => ({
+            logger.info('Converting party data from The Graph:', parties);
+            return parties.map((p: { tokenId: string; [key: string]: unknown }) => {
+                logger.info(`Converting party #${p.tokenId}:`, {
+                    raw: p,
+                    unclaimedRewards: p.unclaimedRewards
+                });
+                return {
                 id: BigInt(p.tokenId),
                 tokenId: BigInt(p.tokenId),
                 entityId: p.id as string, // 子圖中的完整 ID，用於查詢歷史
@@ -139,7 +146,8 @@ const usePlayerParties = () => {
                 cooldownEndsAt: 0n,       // 將從 getPartyStatus 獲取
                 unclaimedRewards: BigInt(p.unclaimedRewards || '0'), // 從子圖獲取
                 // fatigueLevel: 0,       // 已禁用疲勞度系統
-            }));
+            }
+            });
         },
         enabled: !!address && chainId === bsc.id,
         // 🔥 更積極的快取策略
@@ -228,31 +236,7 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
         }
     });
     
-    // 讀取玩家經驗值和等級
-    const { data: experienceResult } = useReadContract({
-        address: playerProfileContract?.address as `0x${string}`,
-        abi: playerProfileContract?.abi,
-        functionName: 'getExperience',
-        args: [address!],
-        query: { 
-            enabled: !!address && !!playerProfileContract,
-            staleTime: 1000 * 60, // 1分鐘
-        },
-    });
-    
-    const { data: levelResult } = useReadContract({
-        address: playerProfileContract?.address as `0x${string}`,
-        abi: playerProfileContract?.abi,
-        functionName: 'getLevel',
-        args: [address!],
-        query: { 
-            enabled: !!address && !!playerProfileContract,
-            staleTime: 1000 * 60, // 1分鐘
-        },
-    });
-    
-    const playerExp = experienceResult ? BigInt(experienceResult.toString()) : 0n;
-    const playerLevel = levelResult ? Number(levelResult.toString()) : 0;
+    // 等級和經驗查詢已移除，節省資源 - 只在個人檔案頁面顯示
 
     // 🧮 計算獎勵的輔助函數 (這個版本在 PartyStatusCard 中使用，也需要考慮全局倍率)
     const calculateSoulReward = (usdAmount: bigint): bigint => {
@@ -399,14 +383,7 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
                 {renderStatus()}
             </div>
             
-            {/* 顯示玩家等級 */}
-            {playerLevel > 0 && (
-                <div className="flex justify-center mb-2">
-                    <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-black px-3 py-1 rounded-full text-sm font-bold">
-                        Lv. {playerLevel}
-                    </div>
-                </div>
-            )}
+            {/* 等級顯示已移除，節省查詢資源 - 可在個人檔案頁面查看 */}
             
             <div className="grid grid-cols-1 gap-2 mb-4 text-center">
                 <div><p className="text-sm text-gray-400">戰力</p><p className="font-bold text-2xl text-indigo-400">{effectivePower.toString()}</p></div>
@@ -488,7 +465,7 @@ const DungeonInfoCard: React.FC<{ dungeon: Dungeon; calculateSoulReward: (usdAmo
             <p className="text-gray-300">要求戰力: <span className="font-semibold text-white">{dungeon.requiredPower.toString()}</span></p>
             <p className="text-gray-300">基礎獎勵: 
                 <span className="font-semibold text-white">
-                    ~{parseFloat(formatEther(calculateSoulReward(dungeon.rewardAmountUSD))).toFixed(0)} SOUL
+                    ~{formatSoul(calculateSoulReward(dungeon.rewardAmountUSD), 0)} SOUL
                 </span>
                 <span className="text-gray-400 text-sm ml-2">
                     (${parseFloat(formatEther(dungeon.rewardAmountUSD)).toFixed(2)})

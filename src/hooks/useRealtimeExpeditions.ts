@@ -21,7 +21,13 @@ export function useRealtimeExpeditions({
   const { showToast } = useAppToast();
   const lastTimestampRef = useRef<string>(Math.floor(Date.now() / 1000).toString());
   
-  // 訂閱新的遠征結果
+  // 暫時禁用訂閱 - The Graph Studio 不支援 WebSocket
+  // TODO: 當遷移到去中心化網路時重新啟用
+  const data = null;
+  const loading = false;
+  const error = null;
+  
+  /* 原始訂閱代碼 - 保留供未來使用
   const { data, loading, error } = useSubscription(
     PLAYER_EXPEDITIONS_SUBSCRIPTION,
     {
@@ -64,6 +70,7 @@ export function useRealtimeExpeditions({
       },
     }
   );
+  */
   
   // 當地址改變時重置時間戳
   useEffect(() => {

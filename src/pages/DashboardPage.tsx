@@ -54,18 +54,7 @@ const GET_DASHBOARD_STATS_QUERY = `
 const useDashboardStats = () => {
     const { address, chainId } = useAccount();
     
-    // 從合約讀取等級
-    const playerProfileContract = getContract(chainId === bsc.id ? chainId : bsc.id, 'playerProfile');
-    const { data: levelResult } = useReadContract({
-        address: playerProfileContract?.address as `0x${string}`,
-        abi: playerProfileContract?.abi,
-        functionName: 'getLevel',
-        args: [address!],
-        query: { 
-            enabled: !!address && !!playerProfileContract && chainId === bsc.id,
-            staleTime: 1000 * 60, // 1分鐘
-        },
-    });
+    // 等級查詢已移除，節省資源 - 只在個人檔案頁面顯示
 
     const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ['dashboardSimpleStats', address, chainId],
@@ -141,7 +130,7 @@ const useDashboardStats = () => {
         }, 0n) || 0n;
         
         return {
-            level: levelResult ? Number(levelResult.toString()) : 1,
+            level: 1, // 預設值，實際等級請查看個人檔案頁面
             withdrawableBalance: vaultPendingRewards + partyUnclaimedRewards, // 總可獲得獎勵
         };
     }, [data]);
@@ -377,10 +366,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                 ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-2 card-bg p-6 rounded-xl flex flex-col sm:flex-row items-center gap-6">
-                            <div className="text-center flex-shrink-0">
-                                <p className="text-sm text-gray-400">等級</p>
-                                <p className="text-6xl font-bold text-yellow-400">{stats.level}</p>
-                            </div>
+                            {/* 等級顯示已移除，節省查詢資源 - 可在個人檔案頁面查看 */}
                             <div className="w-full">
                                 <h3 className="section-title text-xl mb-2">我的檔案</h3>
                                 <p className="font-mono text-xs break-all bg-black/20 p-2 rounded">{address}</p>

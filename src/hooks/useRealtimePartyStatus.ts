@@ -51,11 +51,16 @@ export function useRealtimePartyStatus({
   } = useQuery(PARTY_STATUS_QUERY, {
     variables: { partyId },
     skip: !partyId,
-    // 如果 WebSocket 斷開，啟用輪詢
-    pollInterval: !isWebSocketConnected ? pollInterval : 0,
+    // 總是啟用輪詢，因為沒有 WebSocket 支援
+    pollInterval: pollInterval,
   });
 
-  // 使用訂閱獲取即時更新
+  // 暫時禁用訂閱 - The Graph Studio 不支援 WebSocket
+  const subscriptionData = null;
+  const subscriptionLoading = false;
+  const subscriptionError = null;
+  
+  /* 原始訂閱代碼 - 保留供未來使用
   const {
     data: subscriptionData,
     loading: subscriptionLoading,
@@ -75,6 +80,7 @@ export function useRealtimePartyStatus({
       }
     },
   });
+  */
 
   // 優先使用訂閱數據，回退到查詢數據
   const party = subscriptionData?.party || queryData?.party;
@@ -86,7 +92,7 @@ export function useRealtimePartyStatus({
     loading,
     error,
     refetch,
-    isRealtime: isWebSocketConnected && enableSubscription && !subscriptionError,
-    connectionStatus: isWebSocketConnected ? 'connected' : 'polling',
+    isRealtime: false, // 暫時禁用，直到支援 WebSocket
+    connectionStatus: 'polling', // 總是輪詢模式
   };
 }

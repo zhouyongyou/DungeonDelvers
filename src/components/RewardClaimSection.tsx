@@ -6,6 +6,7 @@ import { ActionButton } from './ui/ActionButton';
 import { useRewardManager } from '../hooks/useRewardManager';
 import { LoadingSpinner } from './ui/LoadingSpinner';
 import { useRealtimePartyStatus } from '../hooks/useRealtimePartyStatus';
+import { logger } from '../utils/logger';
 
 interface RewardClaimSectionProps {
     partyId: bigint;
@@ -36,7 +37,20 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
     // 優先使用即時數據，回退到合約查詢
     const unclaimedRewards = party?.unclaimedRewards ? BigInt(party.unclaimedRewards) : contractRewards;
     
-    if (!hasRewards) return null;
+    // 調試日誌
+    logger.info('RewardClaimSection - Component status:', {
+        partyId: partyId.toString(),
+        party: party,
+        contractRewards: contractRewards.toString(),
+        unclaimedRewards: unclaimedRewards.toString(),
+        hasRewards,
+        isRealtime
+    });
+    
+    if (!hasRewards) {
+        logger.warn('RewardClaimSection - No rewards to display, component hidden');
+        return null;
+    }
     
     // Compact variant - for inline display
     if (variant === 'compact') {
