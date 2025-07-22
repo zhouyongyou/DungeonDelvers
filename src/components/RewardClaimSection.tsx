@@ -5,6 +5,7 @@ import { formatEther } from 'viem';
 import { ActionButton } from './ui/ActionButton';
 import { useRewardManager } from '../hooks/useRewardManager';
 import { LoadingSpinner } from './ui/LoadingSpinner';
+import { useRealtimePartyStatus } from '../hooks/useRealtimePartyStatus';
 
 interface RewardClaimSectionProps {
     partyId: bigint;
@@ -19,13 +20,21 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
     variant = 'default',
     className = ''
 }) => {
+    // 使用即時更新的隊伍狀態
+    const { party, isRealtime } = useRealtimePartyStatus({ 
+        partyId: partyId.toString() 
+    });
+    
     const {
-        unclaimedRewards,
+        unclaimedRewards: contractRewards,
         hasRewards,
         claimRewards,
         isClaimPending,
         isClaimSuccess,
     } = useRewardManager({ partyId, chainId });
+    
+    // 優先使用即時數據，回退到合約查詢
+    const unclaimedRewards = party?.unclaimedRewards ? BigInt(party.unclaimedRewards) : contractRewards;
     
     if (!hasRewards) return null;
     

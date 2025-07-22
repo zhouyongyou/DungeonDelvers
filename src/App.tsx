@@ -21,6 +21,9 @@ import PerformanceDashboard from './components/debug/PerformanceDashboard';
 import { preloadCriticalImages, setupSmartPreloading } from './utils/imagePreloadStrategy';
 import { usePagePerformance } from './utils/performanceMonitor';
 import { quickDiagnose } from './utils/simpleDiagnostics';
+import { ApolloProvider } from '@apollo/client';
+import { apolloClient } from './config/apolloClient';
+import { WebSocketIndicator } from './components/WebSocketIndicator';
 
 // 動態導入所有頁面
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -145,11 +148,13 @@ function App() {
   };
 
   return (
-    <GlobalErrorBoundary>
-      <GlobalLoadingProvider>
-        <ErrorBoundary>
-          <div className="min-h-screen flex flex-col bg-gray-900">
-            <Header 
+    <ApolloProvider client={apolloClient}>
+      <GlobalErrorBoundary>
+        <GlobalLoadingProvider>
+          <ErrorBoundary>
+            <div className="min-h-screen flex flex-col bg-gray-900">
+              <WebSocketIndicator />
+              <Header 
               activePage={activePage} 
               setActivePage={handleSetPage}
               onHoverMint={prefetchNftData}
@@ -183,6 +188,7 @@ function App() {
         </ErrorBoundary>
       </GlobalLoadingProvider>
     </GlobalErrorBoundary>
+    </ApolloProvider>
   );
 }
 

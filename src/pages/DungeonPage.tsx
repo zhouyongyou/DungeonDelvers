@@ -27,6 +27,7 @@ import { RewardClaimSection } from '../components/RewardClaimSection';
 import { ExpeditionHistory } from '../components/ExpeditionHistory';
 import { CooldownTimer } from '../components/CooldownTimer';
 import { ExpeditionTracker } from '../components/ExpeditionTracker';
+import { useRealtimeExpeditions } from '../hooks/useRealtimeExpeditions';
 
 // RewardClaimButton 已移至統一的 RewardClaimSection 組件
 
@@ -506,10 +507,21 @@ const DungeonInfoCard: React.FC<{ dungeon: Dungeon; calculateSoulReward: (usdAmo
 
 const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setActivePage }) => {
     // const { setLoading } = useGlobalLoading(); // 移除未使用的 hook
-    const { chainId } = useAccount();
+    const { chainId, address } = useAccount();
     const { showToast } = useAppToast();
     const { transactions } = useTransactionStore();
     const queryClient = useQueryClient();
+    
+    // 使用即時遠征通知
+    const { } = useRealtimeExpeditions({
+        playerAddress: address || '',
+        showNotifications: true,
+        onNewExpedition: (expedition) => {
+            // 當收到新的遠征結果時，刷新相關數據
+            queryClient.invalidateQueries({ queryKey: ['playerParties'] });
+            queryClient.invalidateQueries({ queryKey: ['recentExpeditions'] });
+        }
+    });
 
     // 已移除儲備 Modal 狀態
     const [showProgressModal, setShowProgressModal] = useState(false);

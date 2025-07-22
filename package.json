@@ -43,11 +43,12 @@
     "validate-addresses": "node -e \"const config = JSON.parse(require('fs').readFileSync('contract-config.json', 'utf8')); Object.entries(config.contracts).forEach(([type, contracts]) => { Object.entries(contracts).forEach(([name, contract]) => { if (!/^0x[a-fA-F0-9]{40}$/.test(contract.address)) { console.error('❌ 無效地址:', name, contract.address); process.exit(1); } }); }); console.log('✅ 所有地址格式正確');\""
   },
   "dependencies": {
-    "@apollo/client": "^3.8.8",
+    "@apollo/client": "^3.13.8",
     "@tanstack/react-query": "^5.8.4",
     "dotenv": "^17.2.0",
     "graphql": "^16.8.1",
     "graphql-request": "^7.2.0",
+    "graphql-ws": "^6.0.6",
     "lucide-react": "^0.525.0",
     "node-fetch": "^2.7.0",
     "react": "^18.2.0",

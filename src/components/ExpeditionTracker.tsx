@@ -25,7 +25,7 @@ interface ExpeditionTrackerProps {
 }
 
 const MAX_RESULTS = 5;
-const GRAPHQL_URL = import.meta.env.VITE_GRAPHQL_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.2';
+const GRAPHQL_URL = import.meta.env.VITE_THE_GRAPH_API_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.7';
 
 // GraphQL query for recent expedition results
 const GET_RECENT_EXPEDITIONS = gql`
