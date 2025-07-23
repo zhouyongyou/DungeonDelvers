@@ -10,7 +10,7 @@ export const RpcStatusMonitor: React.FC = () => {
 
   useEffect(() => {
     // 只在開發環境顯示
-    if (process.env.NODE_ENV !== 'development') return;
+    if (import.meta.env.PROD) return;
 
     const updateStats = () => {
       setNodeStats(rpcHealthManager.getNodeStats());
@@ -25,7 +25,7 @@ export const RpcStatusMonitor: React.FC = () => {
   }, []);
 
   // 只在開發環境渲染
-  if (process.env.NODE_ENV !== 'development') return null;
+  if (import.meta.env.PROD) return null;
 
   return (
     <>

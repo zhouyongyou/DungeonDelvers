@@ -1,7 +1,7 @@
 // src/utils/contractValidator.ts
 
 import { logger } from './logger';
-import type { ContractConfig } from '../config/contracts';
+import type { ContractConfig } from '../config/contractsWithABI';
 
 interface ValidationResult {
   isValid: boolean;
@@ -73,16 +73,31 @@ export function validateAdminContracts(
     'playerVault',
     'vipStaking',
     'oracle',
-    'altarOfAscension',
     'playerProfile'
+  ];
+
+  // Optional contracts (may not be deployed yet)
+  const optionalContracts = [
+    'altarOfAscension'
   ];
 
   const allErrors: string[] = [];
   const allWarnings: string[] = [];
 
+  // Validate required contracts
   for (const contractName of requiredContracts) {
     const validation = validateContract(contractName, contracts[contractName]);
     allErrors.push(...validation.errors);
+    allWarnings.push(...validation.warnings);
+  }
+
+  // Validate optional contracts (only warn if not configured)
+  for (const contractName of optionalContracts) {
+    const validation = validateContract(contractName, contracts[contractName]);
+    // Convert errors to warnings for optional contracts
+    if (!validation.isValid) {
+      allWarnings.push(`[Optional] ${contractName} is not configured or invalid`);
+    }
     allWarnings.push(...validation.warnings);
   }
 

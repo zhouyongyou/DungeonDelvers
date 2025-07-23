@@ -245,7 +245,7 @@ export const monitorRuntimePerformance = () => {
 
 // 檢查當前環境是否為生產環境
 export const isProduction = () => {
-  return process.env.NODE_ENV === 'production';
+  return import.meta.env.PROD;
 };
 
 // 在開發環境中顯示 bundle 分析

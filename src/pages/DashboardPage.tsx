@@ -305,14 +305,12 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     
     const externalMarkets = useMemo(() => {
         if (!chainId || chainId !== bsc.id) return [];
-        const currentContracts = contracts[bsc.id];
-        if (!currentContracts) return [];
         return [
-            { title: '英雄市場', address: currentContracts.hero?.address ?? '', icon: <Icons.Hero className="w-8 h-8"/> },
-            { title: '聖物市場', address: currentContracts.relic?.address ?? '', icon: <Icons.Relic className="w-8 h-8"/> },
-            { title: '隊伍市場', address: currentContracts.party?.address ?? '', icon: <Icons.Party className="w-8 h-8"/> },
+            { title: '英雄市場', address: CONTRACT_ADDRESSES.HERO, icon: <Icons.Hero className="w-8 h-8"/> },
+            { title: '聖物市場', address: CONTRACT_ADDRESSES.RELIC, icon: <Icons.Relic className="w-8 h-8"/> },
+            { title: '隊伍市場', address: CONTRACT_ADDRESSES.PARTY, icon: <Icons.Party className="w-8 h-8"/> },
             // VIP市場已移除，因為VIP卡是靈魂代幣，無法轉移
-        ].filter(m => m.address && typeof m.address === 'string' && !m.address.includes('YOUR_'));
+        ].filter(m => m.address && typeof m.address === 'string' && !m.address.includes('0x0000000000000000000000000000000000000000'));
     }, [chainId]);
 
     const handleWithdraw = async () => {

@@ -16,7 +16,7 @@ export const CONTRACT_ADDRESSES = {
   PLAYERPROFILE: '0x5d4582266654CBEA6cC6Bdf696B68B8473521b63',
   VIPSTAKING: '0x9c2fdD1c692116aB5209983e467286844B3b9921',
   ORACLE: '0x623caa925445BeACd54Cc6C62Bb725B5d93698af',
-  ALTAROFASCENSION: '0x0000000000000000000000000000000000000000',
+  ALTAROFASCENSION: '0xbA76D9E0063280d4B0F6e139B5dD45A47BBD1e4e',
   DUNGEONMASTERWALLET: '0x10925A7138649C7E1794CE646182eeb5BF8ba647',
 } as const;
 
@@ -35,7 +35,7 @@ export const NETWORK_CONFIG = {
 export const SUBGRAPH_CONFIG = {
   studio: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.1.0',
   decentralized: 'https://gateway.thegraph.com/api/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs',
-  useDecentralized: process.env.NODE_ENV === 'production'
+  useDecentralized: import.meta.env.PROD
 };
 
 // Contract helper functions

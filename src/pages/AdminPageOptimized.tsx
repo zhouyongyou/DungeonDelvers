@@ -5,7 +5,8 @@ import { useAccount, useWriteContract } from 'wagmi';
 import { useMonitoredReadContracts } from '../hooks/useMonitoredContract';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatEther, isAddress } from 'viem';
-import { getContract, CONTRACT_ADDRESSES as contractConfigs } from '../config/contracts';
+import { getContractWithABI, CONTRACT_ADDRESSES as contractConfigs, type ContractName } from '../config/contractsWithABI';
+import { getContract } from '../config/contracts'; // 保留原有函數供地址查詢使用
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -35,7 +36,6 @@ import GlobalRewardSettings from '../components/admin/GlobalRewardSettings';
 
 type SupportedChainId = typeof bsc.id;
 type Address = `0x${string}`;
-import type { ContractName } from '../config/contracts';
 
 // 開發者地址常量
 const DEVELOPER_ADDRESS = import.meta.env.VITE_DEVELOPER_ADDRESS || '0x10925A7138649C7E1794CE646182eeb5BF8ba647';
@@ -101,9 +101,9 @@ const AdminPageOptimizedContent: React.FC<{ chainId: SupportedChainId }> = ({ ch
 
   // 使用優化的合約讀取配置
   const contractsToRead = useMemo(() => {
-    const coreContract = getContract(chainId, 'dungeonCore');
+    const coreContract = getContractWithABI(chainId, 'dungeonCore');
     const configs = setupConfig.map(c => {
-      const contract = getContract(chainId, c.targetContractName);
+      const contract = getContractWithABI(chainId, c.targetContractName);
       if (!contract) return null;
       return { ...contract, functionName: c.getterFunctionName };
     });
@@ -163,7 +163,7 @@ const AdminPageOptimizedContent: React.FC<{ chainId: SupportedChainId }> = ({ ch
   });
 
   // 使用優化的 Vault 參數讀取
-  const playerVaultContract = getContract(chainId, 'playerVault');
+  const playerVaultContract = getContractWithABI(chainId, 'playerVault');
   const vaultContracts = useMemo(() => {
     if (!playerVaultContract) return [];
     return [
@@ -209,15 +209,59 @@ const AdminPageOptimizedContent: React.FC<{ chainId: SupportedChainId }> = ({ ch
 
   // 環境地址映射
   const envAddressMap: Record<string, { name: ContractName, address?: Address }> = useMemo(() => {
-    const getAddr = (name: ContractName) => ({ name, address: contractConfigs[name] as Address });
+    if (!setupConfig || !Array.isArray(setupConfig) || !chainId) return {};
+    
+    // 建立環境變數名稱到合約地址的映射
+    const envVarMapping: Record<ContractName, string> = {
+      'TESTUSD': import.meta.env.VITE_TESTUSD_ADDRESS,
+      'SOULSHARD': import.meta.env.VITE_SOULSHARD_ADDRESS,
+      'HERO': import.meta.env.VITE_HERO_ADDRESS,
+      'RELIC': import.meta.env.VITE_RELIC_ADDRESS,
+      'PARTY': import.meta.env.VITE_PARTY_ADDRESS,
+      'DUNGEONCORE': import.meta.env.VITE_DUNGEONCORE_ADDRESS,
+      'DUNGEONMASTER': import.meta.env.VITE_DUNGEONMASTER_ADDRESS,
+      'DUNGEONSTORAGE': import.meta.env.VITE_DUNGEONSTORAGE_ADDRESS,
+      'PLAYERVAULT': import.meta.env.VITE_PLAYERVAULT_ADDRESS,
+      'PLAYERPROFILE': import.meta.env.VITE_PLAYERPROFILE_ADDRESS,
+      'VIPSTAKING': import.meta.env.VITE_VIPSTAKING_ADDRESS,
+      'ORACLE': import.meta.env.VITE_ORACLE_ADDRESS,
+      'ALTAROFASCENSION': import.meta.env.VITE_ALTAROFASCENSION_ADDRESS,
+      'DUNGEONMASTERWALLET': import.meta.env.VITE_DUNGEONMASTERWALLET_ADDRESS,
+    };
+
+    // 調試環境變數載入情況
+    if (import.meta.env.DEV) {
+      console.log('環境變數調試:', {
+        oracle: import.meta.env.VITE_ORACLE_ADDRESS,
+        dungeonCore: import.meta.env.VITE_DUNGEONCORE_ADDRESS,
+        envVarMapping
+      });
+    }
+    
+    const getAddr = (name: ContractName) => {
+      // 優先使用環境變數，如果沒有則使用配置文件
+      const envAddress = envVarMapping[name];
+      const configAddress = contractConfigs[name];
+      const finalAddress = envAddress || configAddress;
+      
+      return { 
+        name, 
+        address: finalAddress && finalAddress !== '0x0000000000000000000000000000000000000000' 
+          ? finalAddress as Address 
+          : undefined 
+      };
+    };
+    
     return setupConfig.reduce((acc, config) => {
-      acc[config.key] = getAddr(config.valueToSetContractName);
+      if (config && config.key && config.valueToSetContractName) {
+        acc[config.key] = getAddr(config.valueToSetContractName);
+      }
       return acc;
     }, {} as Record<string, { name: ContractName, address?: Address }>);
   }, [chainId, setupConfig]);
 
   // 優化的設定處理函數
-  const handleSet = useCallback(async (key: string, targetContract: NonNullable<ReturnType<typeof getContract>>, functionName: string) => {
+  const handleSet = useCallback(async (key: string, targetContract: NonNullable<ReturnType<typeof getContractWithABI>>, functionName: string) => {
     const newAddress = inputs[key];
     if (!isAddress(newAddress)) {
       showToast('請輸入有效的地址', 'error');
@@ -282,7 +326,7 @@ const AdminPageOptimizedContent: React.FC<{ chainId: SupportedChainId }> = ({ ch
         const currentAddress = currentAddressMap[config.key];
         
         if (newAddress && isAddress(newAddress) && currentAddress && newAddress.toLowerCase() !== currentAddress.toLowerCase()) {
-          const contract = getContract(chainId, config.targetContractName);
+          const contract = getContractWithABI(chainId, config.targetContractName);
           if (contract) {
             await handleSet(config.key, contract, config.setterFunctionName);
           }
@@ -422,7 +466,7 @@ const AdminPageOptimizedContent: React.FC<{ chainId: SupportedChainId }> = ({ ch
                 isLoading={isLoadingSettings} 
                 inputValue={inputs[config.key] || ''} 
                 onInputChange={(val) => setInputs(prev => ({ ...prev, [config.key]: val }))} 
-                onSet={() => handleSet(config.key, getContract(chainId, config.targetContractName)!, config.setterFunctionName)} 
+                onSet={() => handleSet(config.key, getContractWithABI(chainId, config.targetContractName)!, config.setterFunctionName)} 
                 isSetting={pendingTx === config.key} 
               />
             ))}
@@ -442,7 +486,7 @@ const AdminPageOptimizedContent: React.FC<{ chainId: SupportedChainId }> = ({ ch
                 isLoading={isLoadingSettings} 
                 inputValue={inputs[config.key] || ''} 
                 onInputChange={(val) => setInputs(prev => ({ ...prev, [config.key]: val }))} 
-                onSet={() => handleSet(config.key, getContract(chainId, config.targetContractName)!, config.setterFunctionName)} 
+                onSet={() => handleSet(config.key, getContractWithABI(chainId, config.targetContractName)!, config.setterFunctionName)} 
                 isSetting={pendingTx === config.key} 
               />
             ))}
@@ -600,7 +644,7 @@ const AdminPageOptimizedContent: React.FC<{ chainId: SupportedChainId }> = ({ ch
             <h4 className="text-lg font-semibold">合約暫停/恢復</h4>
             <div className="space-y-2">
               {['hero', 'relic', 'party', 'dungeonMaster', 'vipStaking'].map(contractName => {
-                const contract = getContract(chainId, contractName);
+                const contract = getContractWithABI(chainId, contractName);
                 if (!contract) return null;
                 
                 return (

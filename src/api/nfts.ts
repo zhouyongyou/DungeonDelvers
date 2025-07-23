@@ -3,7 +3,7 @@
 import { createPublicClient, http, type Address } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { Buffer } from 'buffer';
-import { getContract } from '../config/contracts.js';
+import { getContract, CONTRACT_ADDRESSES } from '../config/contracts.js';
 import { nftMetadataCache } from '../cache/nftMetadataCache.js';
 import { nftMetadataPersistentCache } from '../cache/persistentCache';
 import { nftMetadataBatcher } from '../utils/requestBatcher';
@@ -79,10 +79,10 @@ const GET_PLAYER_VIP_QUERY = `
 // Section 2: 輔助函式 (保持不變)
 // =================================================================
 
-type SupportedChainId = keyof typeof contracts;
+type SupportedChainId = 56; // BSC mainnet
 
 function isSupportedChain(chainId: number): chainId is SupportedChainId {
-    return chainId in contracts;
+    return chainId === 56; // BSC mainnet
 }
 
 const getClient = (chainId: number) => {
@@ -105,14 +105,13 @@ export async function fetchMetadata(
     const baseTimeout = 5000; // 增加基礎超時時間以適應 IPFS 網關
     const timeout = baseTimeout + (retryCount * 1000); // 更長的漸進式超時
     
-    // 識別 NFT 類型 - 使用當前環境變數中的合約地址
+    // 識別 NFT 類型 - 使用合約地址配置
     const addressLower = contractAddress.toLowerCase();
-    const currentContracts = contracts[56]; // BSC mainnet
     const nftType = 
-        addressLower === currentContracts.hero.address.toLowerCase() ? 'hero' :
-        addressLower === currentContracts.relic.address.toLowerCase() ? 'relic' :
-        addressLower === currentContracts.party.address.toLowerCase() ? 'party' :
-        addressLower === currentContracts.vipStaking.address.toLowerCase() ? 'vip' :
+        addressLower === CONTRACT_ADDRESSES.HERO.toLowerCase() ? 'hero' :
+        addressLower === CONTRACT_ADDRESSES.RELIC.toLowerCase() ? 'relic' :
+        addressLower === CONTRACT_ADDRESSES.PARTY.toLowerCase() ? 'party' :
+        addressLower === CONTRACT_ADDRESSES.VIPSTAKING.toLowerCase() ? 'vip' :
         'unknown';
 
     // 🔥 1. 先检查持久化缓存
@@ -537,16 +536,16 @@ async function parseNfts<T extends AssetWithTokenId>(
 ): Promise<Array<HeroNft | RelicNft | PartyNft | VipNft>> {
     if (!assets || assets.length === 0) return [];
 
-    const contractKeyMap: Record<NftType, keyof typeof contracts[typeof bsc.id]> = {
+    const contractTypeMap: Record<NftType, 'hero' | 'relic' | 'party' | 'vipStaking'> = {
         hero: 'hero',
         relic: 'relic',
         party: 'party',
         vip: 'vipStaking',
     };
 
-    const contract = getContract(chainId, contractKeyMap[type]);
+    const contract = getContract(chainId, contractTypeMap[type]);
     if (!contract) {
-        logger.warn(`在 chainId: ${chainId} 上找不到 '${contractKeyMap[type]}' 的合約設定`);
+        logger.warn(`在 chainId: ${chainId} 上找不到 '${contractTypeMap[type]}' 的合約設定`);
         return [];
     }
     const contractAddress = contract.address;

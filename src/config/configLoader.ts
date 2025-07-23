@@ -45,7 +45,7 @@ const DEFAULT_CONFIG: AppConfig = {
   subgraph: {
     studio: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.9',
     decentralized: 'https://gateway.thegraph.com/api/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs',
-    useDecentralized: process.env.NODE_ENV === 'production'
+    useDecentralized: import.meta.env.PROD
   },
   network: {
     chainId: 56,
@@ -73,10 +73,10 @@ class ConfigLoader {
   private loadFromEnv(): Partial<AppConfig> {
     const contracts: { [key: string]: string } = {};
     
-    // 載入所有 REACT_APP_*_ADDRESS 環境變數
+    // 載入所有 VITE_*_ADDRESS 環境變數
     Object.keys(import.meta.env).forEach(key => {
-      if (key.startsWith('REACT_APP_') && key.endsWith('_ADDRESS')) {
-        const contractName = key.replace('REACT_APP_', '').replace('_ADDRESS', '');
+      if (key.startsWith('VITE_') && key.endsWith('_ADDRESS')) {
+        const contractName = key.replace('VITE_', '').replace('_ADDRESS', '');
         const value = import.meta.env[key];
         if (value) {
           contracts[contractName] = value;
@@ -87,9 +87,9 @@ class ConfigLoader {
     return {
       contracts: Object.keys(contracts).length > 0 ? contracts : undefined,
       subgraph: {
-        studio: import.meta.env.REACT_APP_GRAPH_STUDIO_URL || DEFAULT_CONFIG.subgraph.studio,
-        decentralized: import.meta.env.REACT_APP_GRAPH_DECENTRALIZED_URL || DEFAULT_CONFIG.subgraph.decentralized,
-        useDecentralized: process.env.NODE_ENV === 'production'
+        studio: import.meta.env.VITE_GRAPH_STUDIO_URL || DEFAULT_CONFIG.subgraph.studio,
+        decentralized: import.meta.env.VITE_GRAPH_DECENTRALIZED_URL || DEFAULT_CONFIG.subgraph.decentralized,
+        useDecentralized: import.meta.env.PROD
       }
     };
   }
@@ -115,7 +115,7 @@ class ConfigLoader {
         subgraph: {
           studio: remoteConfig.subgraph.studio.url,
           decentralized: remoteConfig.subgraph.decentralized.url,
-          useDecentralized: process.env.NODE_ENV === 'production'
+          useDecentralized: import.meta.env.PROD
         },
         network: remoteConfig.network
       };

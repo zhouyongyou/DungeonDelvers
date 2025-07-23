@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { useAccount } from 'wagmi';
-import { getContract } from '../../config/contracts';
+import { getContractWithABI } from '../../config/contractsWithABI';
 import { validateAdminContracts } from '../../utils/contractValidator';
 import { Icons } from '../ui/icons';
 import { bsc } from 'wagmi/chains';
@@ -13,16 +13,16 @@ export const ContractHealthCheck: React.FC = () => {
 
   const healthCheck = useMemo(() => {
     const contracts = {
-      dungeonCore: getContract(currentChainId, 'dungeonCore'),
-      hero: getContract(currentChainId, 'hero'),
-      relic: getContract(currentChainId, 'relic'),
-      party: getContract(currentChainId, 'party'),
-      dungeonMaster: getContract(currentChainId, 'dungeonMaster'),
-      playerVault: getContract(currentChainId, 'playerVault'),
-      vipStaking: getContract(currentChainId, 'vipStaking'),
-      oracle: getContract(currentChainId, 'oracle'),
-      altarOfAscension: getContract(currentChainId, 'altarOfAscension'),
-      playerProfile: getContract(currentChainId, 'playerProfile')
+      dungeonCore: getContractWithABI(currentChainId, 'dungeonCore'),
+      hero: getContractWithABI(currentChainId, 'hero'),
+      relic: getContractWithABI(currentChainId, 'relic'),
+      party: getContractWithABI(currentChainId, 'party'),
+      dungeonMaster: getContractWithABI(currentChainId, 'dungeonMaster'),
+      playerVault: getContractWithABI(currentChainId, 'playerVault'),
+      vipStaking: getContractWithABI(currentChainId, 'vipStaking'),
+      oracle: getContractWithABI(currentChainId, 'oracle'),
+      altarOfAscension: getContractWithABI(currentChainId, 'altarOfAscension'),
+      playerProfile: getContractWithABI(currentChainId, 'playerProfile')
     };
 
     return validateAdminContracts(contracts);

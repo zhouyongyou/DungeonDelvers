@@ -12,7 +12,7 @@ import { logger } from '../utils/logger';
 import { THE_GRAPH_API_URL } from './graphConfig';
 
 // Use decentralized network in production, Studio for development
-const GRAPHQL_ENDPOINT = process.env.NODE_ENV === 'production'
+const GRAPHQL_ENDPOINT = import.meta.env.PROD
   ? (import.meta.env.VITE_GRAPH_DECENTRALIZED_URL || 'https://gateway.thegraph.com/api/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs')
   : (THE_GRAPH_API_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.9');
 

@@ -31,7 +31,9 @@ const AddressSettingRow: React.FC<AddressSettingRowProps> = ({
   isSetting
 }) => {
   const isConfigured = currentAddress && currentAddress !== '0x0000000000000000000000000000000000000000';
-  const isEnvSet = envAddress && envAddress !== '0x0000000000000000000000000000000000000000';
+  const isEnvSet = envAddress && 
+                   envAddress !== '0x0000000000000000000000000000000000000000' && 
+                   envAddress.trim() !== '';
   const isMatched = isConfigured && isEnvSet && currentAddress?.toLowerCase() === envAddress?.toLowerCase();
 
   return (

@@ -7,7 +7,7 @@ import {
     generateVipSVG 
 } from '../utils/svgGenerators';
 
-const THE_GRAPH_API_URL = process.env.THE_GRAPH_STUDIO_API_URL || '';
+const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_API_URL || import.meta.env.VITE_GRAPH_STUDIO_URL || '';
 
 // GraphQL 查詢
 const GET_NFT_DATA_QUERY = `

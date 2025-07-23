@@ -8,7 +8,7 @@ import { useAppToast } from '../contexts/SimpleToastContext';
 import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';
 import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
 import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
-import { getContractLegacy } from '../config/contracts';
+import { getContractLegacy } from '../config/contractsWithABI';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useTransactionStore } from '../stores/useTransactionStore';

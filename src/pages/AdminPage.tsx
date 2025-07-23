@@ -8,8 +8,8 @@ import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
 // import { useAdminContracts } from '../hooks/useAdminContracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatEther, isAddress } from 'viem';
-import type { ContractName } from '../config/contracts';
-import { getContract, CONTRACT_ADDRESSES as contractConfigs } from '../config/contracts';
+import { getContractWithABI, CONTRACT_ADDRESSES as contractConfigs, type ContractName } from '../config/contractsWithABI';
+import { getContract } from '../config/contracts'; // 保留原有函數供地址查詢使用
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -32,6 +32,8 @@ import DungeonManager from '../components/admin/DungeonManager';
 import AltarRuleManager from '../components/admin/AltarRuleManager';
 import FundsWithdrawal from '../components/admin/FundsWithdrawal';
 import VipSettingsManager from '../components/admin/VipSettingsManager';
+import ContractHealthPanel from '../components/admin/ContractHealthPanel';
+import OraclePriceTest from '../components/admin/OraclePriceTest';
 // RPC監控已移除以解決循環依賴問題
 import { ContractHealthCheck } from '../components/admin/ContractHealthCheck';
 import { validateContract, getSafeContract } from '../utils/contractValidator';
@@ -40,7 +42,7 @@ type SupportedChainId = typeof bsc.id;
 type Address = `0x${string}`;
 
 // 開發者地址從環境變數讀取
-const DEVELOPER_ADDRESS = import.meta.env.VITE_DEVELOPER_ADDRESS;
+const DEVELOPER_ADDRESS = import.meta.env.VITE_DEVELOPER_ADDRESS?.trim() || null;
 if (!DEVELOPER_ADDRESS) {
   logger.warn('開發者地址未在環境變數中設定 (VITE_DEVELOPER_ADDRESS)');
 }
@@ -121,7 +123,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         return [];
       }
       
-      const coreContract = getContract(chainId, 'dungeonCore');
+      const coreContract = getContractWithABI(chainId, 'dungeonCore');
       if (!coreContract || !coreContract.address) {
         logger.warn('DungeonCore 合約未找到或地址無效', { chainId, coreContract });
         return [];
@@ -133,7 +135,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
           return null;
         }
         
-        const contract = getContract(chainId, c.targetContractName);
+        const contract = getContractWithABI(chainId, c.targetContractName);
         if (!contract || !contract.address) {
           logger.warn(`合約未找到: ${c.targetContractName}`, { chainId, contract });
           return null;
@@ -265,7 +267,47 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   const envAddressMap: Record<string, { name: ContractName, address?: Address }> = useMemo(() => {
     if (!setupConfig || !Array.isArray(setupConfig) || !chainId) return {};
     
-    const getAddr = (name: ContractName) => ({ name, address: contractConfigs[name] as Address });
+    // 建立環境變數名稱到合約地址的映射
+    const envVarMapping: Record<ContractName, string> = {
+      'TESTUSD': import.meta.env.VITE_TESTUSD_ADDRESS,
+      'SOULSHARD': import.meta.env.VITE_SOULSHARD_ADDRESS,
+      'HERO': import.meta.env.VITE_HERO_ADDRESS,
+      'RELIC': import.meta.env.VITE_RELIC_ADDRESS,
+      'PARTY': import.meta.env.VITE_PARTY_ADDRESS,
+      'DUNGEONCORE': import.meta.env.VITE_DUNGEONCORE_ADDRESS,
+      'DUNGEONMASTER': import.meta.env.VITE_DUNGEONMASTER_ADDRESS,
+      'DUNGEONSTORAGE': import.meta.env.VITE_DUNGEONSTORAGE_ADDRESS,
+      'PLAYERVAULT': import.meta.env.VITE_PLAYERVAULT_ADDRESS,
+      'PLAYERPROFILE': import.meta.env.VITE_PLAYERPROFILE_ADDRESS,
+      'VIPSTAKING': import.meta.env.VITE_VIPSTAKING_ADDRESS,
+      'ORACLE': import.meta.env.VITE_ORACLE_ADDRESS,
+      'ALTAROFASCENSION': import.meta.env.VITE_ALTAROFASCENSION_ADDRESS,
+      'DUNGEONMASTERWALLET': import.meta.env.VITE_DUNGEONMASTERWALLET_ADDRESS,
+    };
+
+    // 調試環境變數載入情況
+    if (import.meta.env.DEV) {
+      console.log('AdminPage 環境變數調試:', {
+        oracle: import.meta.env.VITE_ORACLE_ADDRESS,
+        dungeonCore: import.meta.env.VITE_DUNGEONCORE_ADDRESS,
+        envVarMapping
+      });
+    }
+    
+    const getAddr = (name: ContractName) => {
+      // 優先使用環境變數，如果沒有則使用配置文件
+      const envAddress = envVarMapping[name];
+      const configAddress = contractConfigs[name];
+      const finalAddress = envAddress || configAddress;
+      
+      return { 
+        name, 
+        address: finalAddress && finalAddress !== '0x0000000000000000000000000000000000000000' 
+          ? finalAddress as Address 
+          : undefined 
+      };
+    };
+    
     return setupConfig.reduce((acc, config) => {
       if (config && config.key && config.valueToSetContractName) {
         acc[config.key] = getAddr(config.valueToSetContractName);
@@ -277,7 +319,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   type ParameterConfigItem = {
     key: string;
     label: string;
-    contract: NonNullable<ReturnType<typeof getContract>>;
+    contract: NonNullable<ReturnType<typeof getContractWithABI>>;
     getter: string;
     setter: string;
     unit?: 'USD' | 'BNB' | '‱' | '無';
@@ -292,18 +334,18 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       }
       
       const contracts = {
-        hero: getContract(chainId, 'hero'),
-        relic: getContract(chainId, 'relic'),
-        party: getContract(chainId, 'party'),
-        dungeonMaster: getContract(chainId, 'dungeonMaster'),
-        playerVault: getContract(chainId, 'playerVault'),
-        vipStaking: getContract(chainId, 'vipStaking'),
-        oracle: getContract(chainId, 'oracle'),
-        altarOfAscension: getContract(chainId, 'altarOfAscension'),
+        hero: getContractWithABI(chainId, 'hero'),
+        relic: getContractWithABI(chainId, 'relic'),
+        party: getContractWithABI(chainId, 'party'),
+        dungeonMaster: getContractWithABI(chainId, 'dungeonMaster'),
+        playerVault: getContractWithABI(chainId, 'playerVault'),
+        vipStaking: getContractWithABI(chainId, 'vipStaking'),
+        oracle: getContractWithABI(chainId, 'oracle'),
+        altarOfAscension: getContractWithABI(chainId, 'altarOfAscension'),
       };
       
       // 驗證所有合約
-      const validatedContracts: Record<string, NonNullable<ReturnType<typeof getContract>>> = {};
+      const validatedContracts: Record<string, NonNullable<ReturnType<typeof getContractWithABI>>> = {};
       for (const [name, contract] of Object.entries(contracts)) {
         const validation = validateContract(name, contract);
         if (validation.isValid && contract) {
@@ -430,7 +472,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   }, [params, parameterConfig]);
 
   // 讀取 PlayerVault 的稅務參數
-  const playerVaultContract = getContract(chainId, 'playerVault');
+  const playerVaultContract = getContractWithABI(chainId, 'playerVault');
   const vaultContracts = useMemo(() => {
     try {
       if (!playerVaultContract || !playerVaultContract.address) {
@@ -519,7 +561,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       const contractNames = ['dungeonCore', 'oracle', 'playerVault', 'hero', 'relic', 'party', 'dungeonMaster', 'altarOfAscension', 'playerProfile', 'soulShard', 'vipStaking'] as const;
       
       const healthStatus = contractNames.map(name => {
-        const contract = getContract(chainId, name);
+        const contract = getContractWithABI(chainId, name);
         const isValid = contract && contract.address && contract.address !== '0x0000000000000000000000000000000000000000';
         
         if (!isValid) {
@@ -558,7 +600,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     performHealthCheck();
   }, [chainId]); // 移除 showToast 依賴以避免重複執行 // 只在 chainId 變化時執行
 
-  const handleSet = async (key: string, targetContract: NonNullable<ReturnType<typeof getContract>>, functionName: string) => {
+  const handleSet = async (key: string, targetContract: NonNullable<ReturnType<typeof getContractWithABI>>, functionName: string) => {
     const newAddress = inputs[key];
     if (!isAddress(newAddress)) { showToast('請輸入有效的地址', 'error'); return; }
     setPendingTx(key);
@@ -587,7 +629,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       const currentAddress = currentAddressMap[config.key];
       if (newAddress && isAddress(newAddress) && currentAddress && newAddress.toLowerCase() !== currentAddress.toLowerCase()) {
         showToast(`正在設定 ${config.title}...`, 'info');
-        const contract = getContract(chainId, config.targetContractName);
+        const contract = getContractWithABI(chainId, config.targetContractName);
         if(contract) {
           await handleSet(config.key, contract, config.setterFunctionName);
         }
@@ -689,7 +731,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   }
 
   // 優化權限檢查邏輯 - 允許開發者地址和合約擁有者訪問
-  const isDeveloper = address?.toLowerCase() === DEVELOPER_ADDRESS.toLowerCase();
+  const isDeveloper = DEVELOPER_ADDRESS && address?.toLowerCase() === DEVELOPER_ADDRESS.toLowerCase();
   const isOwner = ownerAddress && ownerAddress.toLowerCase() === address?.toLowerCase();
   
   // 如果沒有權限，顯示錯誤
@@ -701,6 +743,12 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     <>
       {/* Contract Health Check */}
       <ContractHealthCheck />
+      
+      {/* Contract Health Panel */}
+      <ContractHealthPanel />
+      
+      {/* Oracle Price Test */}
+      <OraclePriceTest />
       
       <AdminSection 
         title="合約串接中心"
@@ -731,7 +779,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                 inputValue={inputs[config.key] || ''} 
                 onInputChange={(val) => setInputs(prev => ({ ...prev, [config.key]: val }))} 
                 onSet={() => {
-                  const contract = getContract(chainId, config.targetContractName);
+                  const contract = getContractWithABI(chainId, config.targetContractName);
                   if (contract && contract.address) {
                     handleSet(config.key, contract, config.setterFunctionName);
                   } else {
@@ -757,7 +805,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                 inputValue={inputs[config.key] || ''} 
                 onInputChange={(val) => setInputs(prev => ({ ...prev, [config.key]: val }))} 
                 onSet={() => {
-                  const contract = getContract(chainId, config.targetContractName);
+                  const contract = getContractWithABI(chainId, config.targetContractName);
                   if (contract && contract.address) {
                     handleSet(config.key, contract, config.setterFunctionName);
                   } else {
@@ -1025,7 +1073,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
             <div className="space-y-2">
               {/* 只有支援 pause/unpause 的合約 */}
               {['party', 'dungeonMaster'].map(contractName => {
-                const contract = getContract(chainId, contractName);
+                const contract = getContractWithABI(chainId, contractName);
                 if (!contract || !contract.address) return null;
                 return (
                   <div key={contractName} className="flex gap-2">

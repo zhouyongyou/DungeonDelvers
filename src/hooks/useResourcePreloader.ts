@@ -218,7 +218,7 @@ export function useResourcePreloader(options: PreloaderOptions = {}) {
 
 // Service Worker 註冊（可選）
 export const registerServiceWorker = async () => {
-  if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+  if ('serviceWorker' in navigator && import.meta.env.PROD) {
     try {
       await navigator.serviceWorker.register('/sw.js');
     } catch (registrationError) {
