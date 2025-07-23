@@ -31,6 +31,7 @@ export const ENV = {
     BSC_RPC: import.meta.env.VITE_BSC_RPC || 'https://bsc-dataseed1.binance.org/',
     ALCHEMY_KEYS: [
       import.meta.env.VITE_ALCHEMY_KEY,
+      import.meta.env.VITE_ALCHEMY_KEY_PUBLIC, // 混合策略：直接暴露的 key
       import.meta.env.VITE_ALCHEMY_KEY_1,
       import.meta.env.VITE_ALCHEMY_KEY_2,
       import.meta.env.VITE_ALCHEMY_KEY_3,

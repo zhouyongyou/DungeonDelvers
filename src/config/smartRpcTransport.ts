@@ -33,6 +33,11 @@ function getAlchemyKeys(): string[] {
     keys.push(import.meta.env.VITE_ALCHEMY_KEY);
   }
   
+  // 混合策略：直接暴露的 public key（優先使用）
+  if (import.meta.env.VITE_ALCHEMY_KEY_PUBLIC) {
+    keys.push(import.meta.env.VITE_ALCHEMY_KEY_PUBLIC);
+  }
+  
   // 檢查多個 VITE_ALCHEMY_KEY_N（本地開發）
   for (let i = 1; i <= 5; i++) {
     const key = import.meta.env[`VITE_ALCHEMY_KEY_${i}`];

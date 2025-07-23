@@ -37,3 +37,71 @@ export const SUBGRAPH_CONFIG = {
   decentralized: 'https://gateway.thegraph.com/api/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs',
   useDecentralized: process.env.NODE_ENV === 'production'
 };
+
+// Contract helper functions
+export type ContractName = keyof typeof CONTRACT_ADDRESSES;
+
+export interface ContractInfo {
+  address: string;
+  name: string;
+}
+
+/**
+ * Get contract information by chain ID and contract name
+ * @param chainId - The chain ID (56 for BSC Mainnet)
+ * @param contractName - The name of the contract
+ * @returns Contract information or undefined if not found
+ */
+export function getContract(chainId: number, contractName: ContractName): ContractInfo | undefined {
+  // Only support BSC Mainnet for now
+  if (chainId !== 56) {
+    return undefined;
+  }
+
+  const address = CONTRACT_ADDRESSES[contractName];
+  if (!address || address === '0x0000000000000000000000000000000000000000') {
+    return undefined;
+  }
+
+  return {
+    address,
+    name: contractName
+  };
+}
+
+/**
+ * Get contract address by name (legacy compatibility)
+ * @param contractName - The name of the contract
+ * @returns Contract address or undefined
+ */
+export function getContractAddress(contractName: ContractName): string | undefined {
+  const address = CONTRACT_ADDRESSES[contractName];
+  return (address && address !== '0x0000000000000000000000000000000000000000') ? address : undefined;
+}
+
+// Legacy contract name mappings for backward compatibility
+export const LEGACY_CONTRACT_NAMES = {
+  soulShard: 'SOULSHARD',
+  hero: 'HERO',
+  relic: 'RELIC',
+  party: 'PARTY',
+  dungeonCore: 'DUNGEONCORE',
+  dungeonMaster: 'DUNGEONMASTER',
+  dungeonStorage: 'DUNGEONSTORAGE',
+  playerVault: 'PLAYERVAULT',
+  playerProfile: 'PLAYERPROFILE',
+  vipStaking: 'VIPSTAKING',
+  oracle: 'ORACLE',
+  altarOfAscension: 'ALTAROFASCENSION'
+} as const;
+
+/**
+ * Get contract with legacy name support
+ * @param chainId - The chain ID
+ * @param legacyName - Legacy contract name (camelCase)
+ * @returns Contract information
+ */
+export function getContractLegacy(chainId: number, legacyName: keyof typeof LEGACY_CONTRACT_NAMES): ContractInfo | undefined {
+  const contractName = LEGACY_CONTRACT_NAMES[legacyName] as ContractName;
+  return getContract(chainId, contractName);
+}
