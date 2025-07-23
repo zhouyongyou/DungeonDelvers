@@ -55,23 +55,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const keys = getProtectedAlchemyKeys();
+  
+  if (keys.length === 0) {
+    console.error('No protected Alchemy keys configured for proxy');
+    errorCount++;
+    return res.status(500).json({ 
+      jsonrpc: '2.0',
+      error: { 
+        code: -32603, 
+        message: 'No protected RPC keys configured',
+        data: 'Please configure ALCHEMY_API_KEY_1 through ALCHEMY_API_KEY_5'
+      },
+      id: req.body?.id || null
+    });
+  }
+
   try {
-    const keys = getProtectedAlchemyKeys();
-    
-    if (keys.length === 0) {
-      console.error('No protected Alchemy keys configured for proxy');
-      errorCount++;
-      return res.status(500).json({ 
-        jsonrpc: '2.0',
-        error: { 
-          code: -32603, 
-          message: 'No protected RPC keys configured',
-          data: 'Please configure ALCHEMY_API_KEY_1 through ALCHEMY_API_KEY_5'
-        },
-        id: req.body?.id || null
-      });
-    }
-    
     requestCount++;
 
     // 記錄請求類型（用於監控）
@@ -104,7 +104,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('RPC proxy error:', {
       message: error.message,
       method: req.body?.method,
-      keyIndex: (currentKeyIndex - 1) % keys.length,
+      keyIndex: keys.length > 0 ? (currentKeyIndex - 1) % keys.length : -1,
       totalErrors: errorCount
     });
     
