@@ -8,8 +8,8 @@ import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
 // import { useAdminContracts } from '../hooks/useAdminContracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatEther, isAddress } from 'viem';
-type ContractName = keyof typeof import('../config/contracts').contracts[typeof bsc.id];
-import { getContract, contracts as contractConfigs } from '../config/contracts';
+import type { ContractName } from '../config/contracts';
+import { getContract, CONTRACT_ADDRESSES as contractConfigs } from '../config/contracts';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -265,7 +265,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   const envAddressMap: Record<string, { name: ContractName, address?: Address }> = useMemo(() => {
     if (!setupConfig || !Array.isArray(setupConfig) || !chainId) return {};
     
-    const getAddr = (name: ContractName) => ({ name, address: contractConfigs[chainId]?.[name]?.address });
+    const getAddr = (name: ContractName) => ({ name, address: contractConfigs[name] as Address });
     return setupConfig.reduce((acc, config) => {
       if (config && config.key && config.valueToSetContractName) {
         acc[config.key] = getAddr(config.valueToSetContractName);

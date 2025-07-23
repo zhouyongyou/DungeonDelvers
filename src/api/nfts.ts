@@ -3,7 +3,7 @@
 import { createPublicClient, http, type Address } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { Buffer } from 'buffer';
-import { getContract, contracts } from '../config/contracts.js';
+import { getContract } from '../config/contracts.js';
 import { nftMetadataCache } from '../cache/nftMetadataCache.js';
 import { nftMetadataPersistentCache } from '../cache/persistentCache';
 import { nftMetadataBatcher } from '../utils/requestBatcher';

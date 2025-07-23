@@ -5,7 +5,7 @@ import { useAccount, useWriteContract } from 'wagmi';
 import { useMonitoredReadContracts } from '../hooks/useMonitoredContract';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatEther, isAddress } from 'viem';
-import { getContract, contracts as contractConfigs } from '../config/contracts';
+import { getContract, CONTRACT_ADDRESSES as contractConfigs } from '../config/contracts';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -35,7 +35,7 @@ import GlobalRewardSettings from '../components/admin/GlobalRewardSettings';
 
 type SupportedChainId = typeof bsc.id;
 type Address = `0x${string}`;
-type ContractName = keyof typeof import('../config/contracts').contracts[typeof bsc.id];
+import type { ContractName } from '../config/contracts';
 
 // 開發者地址常量
 const DEVELOPER_ADDRESS = import.meta.env.VITE_DEVELOPER_ADDRESS || '0x10925A7138649C7E1794CE646182eeb5BF8ba647';
@@ -209,7 +209,7 @@ const AdminPageOptimizedContent: React.FC<{ chainId: SupportedChainId }> = ({ ch
 
   // 環境地址映射
   const envAddressMap: Record<string, { name: ContractName, address?: Address }> = useMemo(() => {
-    const getAddr = (name: ContractName) => ({ name, address: contractConfigs[chainId]?.[name]?.address });
+    const getAddr = (name: ContractName) => ({ name, address: contractConfigs[name] as Address });
     return setupConfig.reduce((acc, config) => {
       acc[config.key] = getAddr(config.valueToSetContractName);
       return acc;
