@@ -8,7 +8,7 @@ import { useAppToast } from '../contexts/SimpleToastContext';
 import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';
 import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
 import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
-import { getContract } from '../config/contracts';
+import { getContractLegacy } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useTransactionStore } from '../stores/useTransactionStore';
@@ -40,9 +40,9 @@ type PaymentSource = 'wallet' | 'vault';
  */
 const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: PaymentSource, chainId: typeof bsc.id) => {
     const { address } = useAccount();
-    const contractConfig = getContract(chainId, type);
-    const soulShardContract = getContract(chainId, 'soulShard');
-    const playerVaultContract = getContract(chainId, 'playerVault');
+    const contractConfig = getContractLegacy(chainId, type);
+    const soulShardContract = getContractLegacy(chainId, 'soulShard');
+    const playerVaultContract = getContractLegacy(chainId, 'playerVault');
 
     // ★★★【核心優化】★★★
     // 直接呼叫 Hero/Relic 合約的 getRequiredSoulShardAmount 函式。
@@ -326,8 +326,8 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
     const currentProgress = needsApproval && paymentSource === 'wallet' ? approveProgress : mintProgress;
     const isProcessing = currentProgress.status !== 'idle' && currentProgress.status !== 'error';
     
-    const contractConfig = getContract(chainId, type);
-    const soulShardContract = getContract(chainId, 'soulShard');
+    const contractConfig = getContractLegacy(chainId, type);
+    const soulShardContract = getContractLegacy(chainId, 'soulShard');
 
     if (!contractConfig || !soulShardContract) {
         return <div className="card-bg p-6 rounded-xl shadow-lg flex flex-col items-center justify-center h-full text-center"><h3 className="text-xl font-bold text-red-500">設定錯誤</h3><p className="text-gray-400 mt-2">找不到 '{type}' 或 '$SoulShard' 的合約地址。</p><p className="text-gray-400 text-xs mt-1">請檢查您的 <code>.env</code> 環境變數設定是否正確。</p></div>;

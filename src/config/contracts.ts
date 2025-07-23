@@ -49,23 +49,32 @@ export interface ContractInfo {
 /**
  * Get contract information by chain ID and contract name
  * @param chainId - The chain ID (56 for BSC Mainnet)
- * @param contractName - The name of the contract
+ * @param contractName - The name of the contract (supports both uppercase and lowercase)
  * @returns Contract information or undefined if not found
  */
-export function getContract(chainId: number, contractName: ContractName): ContractInfo | undefined {
+export function getContract(chainId: number, contractName: ContractName | keyof typeof LEGACY_CONTRACT_NAMES): ContractInfo | undefined {
   // Only support BSC Mainnet for now
   if (chainId !== 56) {
     return undefined;
   }
 
-  const address = CONTRACT_ADDRESSES[contractName];
+  // Try to get address directly (uppercase format)
+  let address = CONTRACT_ADDRESSES[contractName as ContractName];
+  let finalContractName = contractName as ContractName;
+
+  // If not found, try legacy name mapping (lowercase format)
+  if (!address && contractName in LEGACY_CONTRACT_NAMES) {
+    finalContractName = LEGACY_CONTRACT_NAMES[contractName as keyof typeof LEGACY_CONTRACT_NAMES] as ContractName;
+    address = CONTRACT_ADDRESSES[finalContractName];
+  }
+
   if (!address || address === '0x0000000000000000000000000000000000000000') {
     return undefined;
   }
 
   return {
     address,
-    name: contractName
+    name: finalContractName
   };
 }
 
