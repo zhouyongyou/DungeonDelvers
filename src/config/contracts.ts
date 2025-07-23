@@ -1,7 +1,7 @@
 // DungeonDelvers Contract Configuration
 // Auto-generated from master-config.json
 // Version: V15
-// Updated: 2025-07-23T12:15:59.460Z
+// Updated: 2025-07-23T13:37:15.810Z
 
 export const CONTRACT_ADDRESSES = {
   TESTUSD: '0xa095B8c9D9964F62A7dbA3f60AA91dB381A3e074',
@@ -33,7 +33,7 @@ export const NETWORK_CONFIG = {
 
 // Subgraph Configuration
 export const SUBGRAPH_CONFIG = {
-  studio: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.9',
+  studio: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.1.0',
   decentralized: 'https://gateway.thegraph.com/api/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs',
   useDecentralized: process.env.NODE_ENV === 'production'
 };
