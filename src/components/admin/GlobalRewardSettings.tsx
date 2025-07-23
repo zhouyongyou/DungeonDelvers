@@ -91,6 +91,7 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
 
   return (
     <div className="space-y-6">
+      {/* 獎勵計算公式 - 暫時註釋
       <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-4">
         <h4 className="text-blue-300 font-semibold mb-2">獎勵計算公式</h4>
         <p className="text-sm text-gray-300">
@@ -100,7 +101,9 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
           例如：globalRewardMultiplier = 1000 表示 100% 獎勵
         </p>
       </div>
+      */}
 
+      {/* 全局獎勵倍率 - 暫時註釋
       <SimpleSettingRow
         title="全局獎勵倍率"
         description="控制所有地下城獎勵的最終倍率 (1000 = 100%)"
@@ -114,6 +117,7 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
         placeholder="例如: 1000 (100%)"
         inputType="number"
       />
+      */}
 
 
       <SimpleSettingRow
@@ -131,6 +135,7 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
         step="0.0001"
       />
 
+      {/* 休息成本除數 - 暫時註釋
       <SimpleSettingRow
         title="休息成本除數"
         description="休息成本 = 隊伍戰力 ÷ 此除數"
@@ -141,7 +146,9 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
         placeholder="例如: 200"
         inputType="number"
       />
+      */}
 
+      {/* 快速設定建議 - 暫時註釋
       <div className="mt-6 p-4 bg-gray-800/50 rounded-lg">
         <h4 className="text-yellow-400 font-semibold mb-2">快速設定建議</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -173,6 +180,7 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
           </div>
         </div>
       </div>
+      */}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 // src/pages/AdminPage.tsx
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
 // 移除循環依賴的 hooks
 // import { useMonitoredReadContracts } from '../hooks/useMonitoredContract';
@@ -36,7 +36,6 @@ import GlobalRewardSettings from '../components/admin/GlobalRewardSettings';
 // RPC監控已移除以解決循環依賴問題
 import { ContractHealthCheck } from '../components/admin/ContractHealthCheck';
 import { validateContract, getSafeContract } from '../utils/contractValidator';
-import PartyOwnershipDiagnostic from '../components/admin/PartyOwnershipDiagnostic';
 
 type SupportedChainId = typeof bsc.id;
 type Address = `0x${string}`;
@@ -63,16 +62,16 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   // 懶加載狀態 - 追蹤哪些區塊應該加載數據
   const [loadedSections, setLoadedSections] = useState<Record<string, boolean>>({
     contractCenter: true, // 合約串接中心默認展開
-    globalReward: false,
-    dungeonParams: false,
-    altarRules: false,
-    vipSettings: false,
-    corePrice: false,
-    platformFee: false,
-    taxSystem: false,
-    gameParams: false,
-    oracle: false,
-    contractControl: false,
+    globalReward: true,
+    dungeonParams: true,
+    altarRules: true,
+    vipSettings: true,
+    corePrice: true,
+    platformFee: true,
+    taxSystem: true,
+    gameParams: true,
+    oracle: true,
+    contractControl: true,
     // rpcMonitor: false, // 移除RPC監控
   });
 
@@ -330,14 +329,14 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       // 遊戲機制參數
       // { key: 'restDivisor', label: "休息成本係數", contract: validatedContracts.dungeonMaster, getter: 'restCostPowerDivisor', setter: 'setRestCostPowerDivisor', unit: '無', placeholders: ['新係數 (戰力/USD)'] }, // 暫時沒這功能
       { key: 'dungeonCooldown', label: "地下城挑戰冷卻 (秒)", contract: validatedContracts.dungeonMaster, getter: 'cooldownPeriod', setter: 'setCooldownPeriod', unit: '無', placeholders: ['新冷卻時間 (秒)'] },
-      { key: 'vipCooldown', label: "VIP 取消質押冷卻 (秒)", contract: validatedContracts.vipStaking, getter: 'unstakeCooldown', setter: 'setUnstakeCooldown', unit: '無', placeholders: ['新冷卻時間 (秒)'] },
-      { key: 'globalRewardMultiplier', label: "全域獎勵倍率", contract: validatedContracts.dungeonMaster, getter: 'globalRewardMultiplier', setter: 'setGlobalRewardMultiplier', unit: '‱', placeholders: ['新倍率 (1000=100%)'] },
+      // { key: 'vipCooldown', label: "VIP 取消質押冷卻 (秒)", contract: validatedContracts.vipStaking, getter: 'unstakeCooldown', setter: 'setUnstakeCooldown', unit: '無', placeholders: ['新冷卻時間 (秒)'] }, // 暫時註釋 - 與 VipSettingsManager 重複
+      // { key: 'globalRewardMultiplier', label: "全域獎勵倍率", contract: validatedContracts.dungeonMaster, getter: 'globalRewardMultiplier', setter: 'setGlobalRewardMultiplier', unit: '‱', placeholders: ['新倍率 (1000=100%)'] }, // 暫時註釋 - 在 GlobalRewardSettings 中處理
       
       // 稅務與提現系統
       { key: 'commissionRate', label: "邀請佣金率", contract: validatedContracts.playerVault, getter: 'commissionRate', setter: 'setCommissionRate', unit: '‱', placeholders: ['新佣金率 (萬分位)'] },
       
       // Oracle 設定
-      { key: 'twapPeriod', label: "Oracle TWAP 週期", contract: validatedContracts.oracle, getter: 'twapPeriod', setter: 'setTwapPeriod', unit: '無', placeholders: ['新週期 (秒)'] },
+      // { key: 'twapPeriod', label: "Oracle TWAP 週期", contract: validatedContracts.oracle, getter: 'twapPeriod', setter: 'setTwapPeriod', unit: '無', placeholders: ['新週期 (秒)'] }, // 暫時註釋 - 固定值
     ];
     
       const filteredConfig = config.filter((c) => {
@@ -377,7 +376,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         })
         .map(p => ({ ...p.contract, functionName: p.getter }));
       
-      logger.info(`過濾後的參數合約數量: ${contracts.length}/${parameterConfig.length}`);
+      // 移除日誌以避免重複輸出
       return contracts;
     } catch (error) {
       logger.error('parameterContracts 計算失敗:', error);
@@ -417,7 +416,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         functionName: functionName as const
       }));
       
-      logger.info(`Vault 合約配置完成: ${contracts.length} 個函數`);
+      // 移除日誌以避免重複輸出
       return contracts;
     } catch (error) {
       logger.error('vaultContracts 計算失敗:', error);
@@ -466,10 +465,14 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     logVaultContracts();
   }, [logVaultContracts]);
 
+  // 使用 useRef 來跟踪是否已執行健康檢查
+  const healthCheckExecuted = useRef(false);
+  
   // 合約健康檢查 - 在組件首次加載時檢查所有合約
   useEffect(() => {
     const performHealthCheck = async () => {
-      if (!chainId) return;
+      if (!chainId || healthCheckExecuted.current) return;
+      healthCheckExecuted.current = true;
       
       logger.info('🏥 開始合約健康檢查...');
       
@@ -514,7 +517,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     };
     
     performHealthCheck();
-  }, [chainId, showToast]); // 只在 chainId 變化時執行
+  }, [chainId]); // 移除 showToast 依賴以避免重複執行 // 只在 chainId 變化時執行
 
   const handleSet = async (key: string, targetContract: NonNullable<ReturnType<typeof getContract>>, functionName: string) => {
     const newAddress = inputs[key];
@@ -731,7 +734,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
 
       <AdminSection 
         title="全局獎勵設定"
-        defaultExpanded={false}
+        defaultExpanded={true}
         onExpand={() => setLoadedSections(prev => ({ ...prev, globalReward: true }))}
       >
         <GlobalRewardSettings chainId={chainId} />
@@ -739,7 +742,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
 
       <AdminSection 
         title="地城參數管理"
-        defaultExpanded={false}
+        defaultExpanded={true}
         onExpand={() => setLoadedSections(prev => ({ ...prev, dungeonParams: true }))}
       >
         <DungeonManager chainId={chainId} />
@@ -757,7 +760,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       
       <AdminSection 
         title="VIP 質押設定管理"
-        defaultExpanded={false}
+        defaultExpanded={true}
         onExpand={() => setLoadedSections(prev => ({ ...prev, vipSettings: true }))}
       >
         <VipSettingsManager chainId={chainId} />
@@ -765,7 +768,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       
       <AdminSection 
         title="核心價格管理 (USD)"
-        defaultExpanded={false}
+        defaultExpanded={true}
         onExpand={() => setLoadedSections(prev => ({ ...prev, corePrice: true }))}
         isLoading={isLoadingParams && loadedSections.corePrice}
         headerActions={paramsError && import.meta.env.DEV ? (
@@ -813,7 +816,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
 
       <AdminSection 
         title="平台費用管理 (BNB)"
-        defaultExpanded={false}
+        defaultExpanded={true}
         onExpand={() => setLoadedSections(prev => ({ ...prev, platformFee: true }))}
         isLoading={isLoadingParams && loadedSections.platformFee}
       >
@@ -854,7 +857,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
 
       <AdminSection 
         title="稅務與提現系統"
-        defaultExpanded={false}
+        defaultExpanded={true}
         onExpand={() => setLoadedSections(prev => ({ ...prev, taxSystem: true }))}
         isLoading={(isLoadingParams || isLoadingVaultParams) && loadedSections.taxSystem}
       >
@@ -911,11 +914,11 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
 
       <AdminSection 
         title="遊戲機制參數"
-        defaultExpanded={false}
+        defaultExpanded={true}
         onExpand={() => setLoadedSections(prev => ({ ...prev, gameParams: true }))}
         isLoading={isLoadingParams && loadedSections.gameParams}
       >
-        {parameterConfig && Array.isArray(parameterConfig) && parameterConfig.filter(p => p && ['restDivisor', 'vipCooldown', 'globalRewardMultiplier'].includes(p.key)).map((p) => {
+        {parameterConfig && Array.isArray(parameterConfig) && parameterConfig.filter(p => p && ['dungeonCooldown'].includes(p.key)).map((p) => {
           const { key, setter, ...rest } = p;
           const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
           return (
@@ -931,6 +934,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         })}
       </AdminSection>
 
+      {/* Oracle TWAP 週期設定 - 暫時註釋
       <AdminSection 
         title="Oracle 設定"
         defaultExpanded={false}
@@ -952,17 +956,19 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
           );
         })}
       </AdminSection>
+      */}
 
       <AdminSection 
         title="合約控制"
-        defaultExpanded={false}
+        defaultExpanded={true}
         onExpand={() => setLoadedSections(prev => ({ ...prev, contractControl: true }))}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-4">
             <h4 className="text-lg font-semibold">合約暫停/恢復</h4>
             <div className="space-y-2">
-              {['hero', 'relic', 'party', 'dungeonMaster', 'vipStaking', 'altarOfAscension'].map(contractName => {
+              {/* 只有支援 pause/unpause 的合約 */}
+              {['party', 'dungeonMaster'].map(contractName => {
                 const contract = getContract(chainId, contractName);
                 if (!contract || !contract.address) return null;
                 return (
@@ -989,7 +995,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                       }}
                       className="flex-1 bg-red-600 hover:bg-red-700"
                     >
-                      暫停 {contractName}
+                      暫停 {contractName === 'dungeonMaster' ? '地城主' : contractName === 'party' ? '隊伍' : contractName}
                     </ActionButton>
                     <ActionButton 
                       onClick={async () => {
@@ -1013,7 +1019,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                       }}
                       className="flex-1 bg-green-600 hover:bg-green-700"
                     >
-                      恢復 {contractName}
+                      恢復 {contractName === 'dungeonMaster' ? '地城主' : contractName === 'party' ? '隊伍' : contractName}
                     </ActionButton>
                   </div>
                 );
@@ -1034,15 +1040,6 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         <RpcMonitoringPanel />
       </AdminSection>
       */}
-
-
-      <AdminSection 
-        title="隊伍擁有權診斷"
-        defaultExpanded={false}
-        onExpand={() => setLoadedSections(prev => ({ ...prev, partyOwnership: true }))}
-      >
-        <PartyOwnershipDiagnostic />
-      </AdminSection>
     </>
   );
 };

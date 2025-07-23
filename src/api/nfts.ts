@@ -551,8 +551,6 @@ async function parseNfts<T extends AssetWithTokenId>(
     }
     const contractAddress = contract.address;
 
-    logger.info(`📊 使用純子圖數據流處理 ${assets.length} 個 ${type} NFT`);
-
     // 直接從子圖數據構建 NFT 對象，無需額外的合約調用
     const results = assets.map((asset: T) => {
         // 生成基本的 metadata 結構

@@ -39,12 +39,22 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
         claimRewards,
         isClaimPending,
         isClaimSuccess,
+        isLoadingRewards,
     } = useRewardManager({ partyId, chainId });
     
-    // 優先使用即時數據，回退到合約查詢
-    const graphRewards = party?.unclaimedRewards ? BigInt(party.unclaimedRewards) : 0n;
-    const unclaimedRewards = graphRewards > 0n ? graphRewards : contractRewards;
+    // 優先使用合約數據（更準確），子圖數據作為備用
+    // 因為子圖可能有延遲，特別是去中心化版本
+    const unclaimedRewards = contractRewards;
     const actuallyHasRewards = unclaimedRewards > 0n || hasRewards;
+    
+    // Debug log
+    logger.info('[RewardClaimSection] 獎勵數據比較:', {
+        partyId: partyId.toString(),
+        contractRewards: contractRewards.toString(),
+        graphRewards: party?.unclaimedRewards,
+        使用數據: '合約數據',
+        原因: '合約數據更準確即時'
+    });
     
     // 修改：總是顯示組件，讓玩家可以嘗試領取（可能有未同步的獎勵）
     // 即使顯示為 0，也允許玩家點擊領取按鈕
@@ -107,7 +117,11 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
                 <div>
                     <p className="text-sm text-yellow-300 font-medium">未領取獎勵</p>
                     <p className="text-lg font-bold text-white">
-                        {formatSoul(unclaimedRewards)} SOUL
+                        {isLoadingRewards ? (
+                            <span className="text-gray-400">載入中...</span>
+                        ) : (
+                            `${formatSoul(unclaimedRewards)} SOUL`
+                        )}
                     </p>
                 </div>
                 <ActionButton

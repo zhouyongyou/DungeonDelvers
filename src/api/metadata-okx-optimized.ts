@@ -17,9 +17,11 @@ interface MetadataOptions {
     marketOptimized?: 'okx' | 'element' | 'general';
 }
 
+// 引入配置
+import { THE_GRAPH_API_URL } from '../config/graphConfig';
+
 // 從 The Graph 獲取 NFT 數據
 async function fetchNftDataFromGraph(contractAddress: string, tokenId: string): Promise<any> {
-    const THE_GRAPH_API_URL = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.3';
     
     // 判斷 NFT 類型
     const nftType = getNftTypeFromContract(contractAddress);

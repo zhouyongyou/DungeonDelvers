@@ -21,9 +21,7 @@ import PerformanceDashboard from './components/debug/PerformanceDashboard';
 import { preloadCriticalImages, setupSmartPreloading } from './utils/imagePreloadStrategy';
 import { usePagePerformance } from './utils/performanceMonitor';
 import { quickDiagnose } from './utils/simpleDiagnostics';
-import { ApolloProvider } from '@apollo/client';
-import { apolloClient } from './config/apolloClient';
-import { WebSocketIndicator } from './components/WebSocketIndicator';
+// import { WebSocketIndicator } from './components/WebSocketIndicator'; // 移除，因為不再使用 Apollo
 
 // 動態導入所有頁面
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -148,12 +146,10 @@ function App() {
   };
 
   return (
-    <ApolloProvider client={apolloClient}>
-      <GlobalErrorBoundary>
-        <GlobalLoadingProvider>
-          <ErrorBoundary>
-            <div className="min-h-screen flex flex-col bg-gray-900">
-              <WebSocketIndicator />
+    <GlobalErrorBoundary>
+      <GlobalLoadingProvider>
+        <ErrorBoundary>
+          <div className="min-h-screen flex flex-col bg-gray-900">
               <Header 
               activePage={activePage} 
               setActivePage={handleSetPage}
@@ -188,7 +184,6 @@ function App() {
         </ErrorBoundary>
       </GlobalLoadingProvider>
     </GlobalErrorBoundary>
-    </ApolloProvider>
   );
 }
 

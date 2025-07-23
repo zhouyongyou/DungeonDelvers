@@ -136,11 +136,22 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
 
     // 一鍵選擇最大容量聖物
     const handleAutoSelectRelics = () => {
+        logger.info('[handleAutoSelectRelics] 開始自動選擇聖物');
+        logger.info(`[handleAutoSelectRelics] 可用聖物數量: ${relics.length}`);
+        
+        if (relics.length === 0) {
+            showToast('沒有可選擇的聖物', 'error');
+            return;
+        }
+        
         const sortedRelics = [...relics].sort((a, b) => b.capacity - a.capacity);
         const selected = sortedRelics.slice(0, 5).map(r => r.id);
+        
+        logger.info(`[handleAutoSelectRelics] 選擇了 ${selected.length} 個聖物:`, selected);
+        
         setSelectedRelics(selected);
-        setCurrentStep('select-hero');
         showToast(`已自動選擇 ${selected.length} 個最大容量聖物`, 'success');
+        setCurrentStep('select-hero');
     };
 
     const canCreate = selectedHeroes.length > 0 && selectedRelics.length > 0 && selectedHeroes.length <= totalCapacity && isHeroAuthorized && isRelicAuthorized;
@@ -803,11 +814,9 @@ const MyAssetsPageContent: React.FC = () => {
         }
     };
     
+    // 只顯示隊伍，避免載入太多 NFT 導致卡死
     const filterOptions: { key: NftType; label: string }[] = [
         { key: 'party', label: '我的隊伍' },
-        { key: 'hero', label: '我的英雄' },
-        { key: 'relic', label: '我的聖物' },
-        { key: 'vip', label: '我的VIP卡' },
     ];
 
     if (error) {
@@ -874,17 +883,9 @@ const MyAssetsPageContent: React.FC = () => {
 
             <div className="card-bg p-4 md:p-6 rounded-2xl shadow-xl">
                 <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
-                    <h3 className="section-title">我的收藏</h3>
-                    <div className="flex items-center gap-1 sm:gap-2 bg-gray-900/50 p-1 rounded-lg mt-2 sm:mt-0">
-                        {filterOptions.map(({ key, label }) => (
-                            <button 
-                                key={key}
-                                onClick={() => setFilter(key)}
-                                className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition ${filter === key ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'}`}
-                            >
-                                {label}
-                            </button>
-                        ))}
+                    <h3 className="section-title">我的隊伍</h3>
+                    <div className="text-sm text-gray-400">
+                        共 {filteredNfts.length} 支隊伍
                     </div>
                 </div>
                 {filteredNfts.length > 0 ? (
@@ -900,46 +901,6 @@ const MyAssetsPageContent: React.FC = () => {
                         </button>
                     </div>
                 )}
-            </div>
-
-            {/* 錢包授權說明 */}
-            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mt-4">
-                <div className="flex items-start gap-2">
-                    <div className="flex-shrink-0 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
-                        <span className="text-white text-xs font-bold">!</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <p className="text-xs text-blue-200">
-                            授權完成後狀態會自動更新，約需3-10秒。
-                        </p>
-                        <p className="text-xs text-yellow-300">
-                            ※ 若授權後按鈕仍無法點擊，請手動刷新頁面
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            {/* 隊伍創建延遲提醒 */}
-            <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-3 mt-4">
-                <div className="flex items-start gap-2">
-                    <div className="flex-shrink-0 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center mt-0.5">
-                        <span className="text-white text-xs">⏰</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <p className="text-xs text-amber-200 font-medium">
-                            隊伍創建時間說明
-                        </p>
-                        <p className="text-xs text-amber-200">
-                            創建隊伍後，需要等待 <span className="font-semibold text-amber-100">3-5 分鐘</span> 才會在資產頁面顯示新隊伍。
-                        </p>
-                        <p className="text-xs text-amber-200">
-                            這是由於區塊鏈數據同步需要時間，請耐心等候。
-                        </p>
-                        <p className="text-xs text-amber-100 font-medium">
-                            💡 建議：交易完成後，請手動刷新頁面或到「隊伍」頁面查看最新狀態。
-                        </p>
-                    </div>
-                </div>
             </div>
         </section>
     );

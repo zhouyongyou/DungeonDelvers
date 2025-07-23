@@ -29,14 +29,14 @@ export const FEATURE_ENDPOINT_MAP: Record<string, GraphQLEndpointType> = {
 export const GRAPHQL_ENDPOINTS = {
   [GraphQLEndpointType.STUDIO]: {
     url: import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL || 
-         'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.0',
+         'https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs',
     description: '免費版本 - 有 15-30 分鐘延遲',
     features: ['探索者', '數據瀏覽', '歷史記錄', '排行榜']
   },
   [GraphQLEndpointType.DECENTRALIZED]: {
     url: import.meta.env.VITE_THE_GRAPH_DECENTRALIZED_API_URL || 
          import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL || // fallback to studio if not configured
-         'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.0',
+         'https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs',
     description: '付費版本 - 即時數據',
     features: ['隊伍管理', '戰鬥', '市場', '獎勵']
   }

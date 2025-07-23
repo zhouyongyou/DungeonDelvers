@@ -19,14 +19,17 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
   const { writeContractAsync } = useWriteContract();
   const [isExpanded, setIsExpanded] = useState(true);
 
+  // 只有 dungeonMaster 合約支援提取功能
   const contracts = [
-    { name: 'hero', label: '英雄合約' },
-    { name: 'relic', label: '聖物合約' },
-    { name: 'party', label: '隊伍合約' },
-    { name: 'playerVault', label: '玩家金庫' },
-    { name: 'vipStaking', label: 'VIP質押' },
-    { name: 'dungeonCore', label: '地城核心' },
-    { name: 'altarOfAscension', label: '升星祭壇' }
+    { name: 'dungeonMaster', label: '地城主', hasWithdraw: true },
+    // 其他合約只顯示餘額，但不支援提取
+    { name: 'hero', label: '英雄合約', hasWithdraw: false },
+    { name: 'relic', label: '聖物合約', hasWithdraw: false },
+    { name: 'party', label: '隊伍合約', hasWithdraw: false },
+    { name: 'playerVault', label: '玩家金庫', hasWithdraw: false },
+    { name: 'vipStaking', label: 'VIP質押', hasWithdraw: false },
+    { name: 'dungeonCore', label: '地城核心', hasWithdraw: false },
+    { name: 'altarOfAscension', label: '升星祭壇', hasWithdraw: false }
   ];
 
   // 獲取所有合約的 BNB 餘額
@@ -46,7 +49,12 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
     }
   });
 
-  const handleWithdrawSoulShard = async (contractName: string, label: string) => {
+  const handleWithdrawSoulShard = async (contractName: string, label: string, hasWithdraw: boolean) => {
+    if (!hasWithdraw) {
+      showToast(`${label} 不支援提取功能`, 'warning');
+      return;
+    }
+    
     try {
       const contract = getContract(chainId, contractName as any);
       if (!contract) return;
@@ -65,7 +73,12 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
     }
   };
 
-  const handleWithdrawBNB = async (contractName: string, label: string) => {
+  const handleWithdrawBNB = async (contractName: string, label: string, hasWithdraw: boolean) => {
+    if (!hasWithdraw) {
+      showToast(`${label} 不支援提取功能`, 'warning');
+      return;
+    }
+    
     try {
       const contract = getContract(chainId, contractName as any);
       if (!contract) return;
@@ -116,7 +129,7 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
       {isExpanded && (
         <div className="space-y-2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {contracts.map(({ name, label }) => {
+            {contracts.map(({ name, label, hasWithdraw }) => {
               const contract = getContract(chainId, name as any);
               if (!contract) return null;
 
@@ -129,8 +142,9 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-400">SoulShard:</span>
                       <ActionButton
-                        onClick={() => handleWithdrawSoulShard(name, label)}
-                        className="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-700"
+                        onClick={() => handleWithdrawSoulShard(name, label, hasWithdraw)}
+                        className={`text-xs px-3 py-1 ${hasWithdraw ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 cursor-not-allowed'}`}
+                        disabled={!hasWithdraw}
                       >
                         提取 SOUL
                       </ActionButton>
@@ -140,8 +154,9 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-400">BNB:</span>
                       <ActionButton
-                        onClick={() => handleWithdrawBNB(name, label)}
-                        className="text-xs px-3 py-1 bg-yellow-600 hover:bg-yellow-700"
+                        onClick={() => handleWithdrawBNB(name, label, hasWithdraw)}
+                        className={`text-xs px-3 py-1 ${hasWithdraw ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-gray-600 cursor-not-allowed'}`}
+                        disabled={!hasWithdraw}
                       >
                         提取 BNB
                       </ActionButton>
@@ -159,7 +174,7 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
           
           <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-600/30 rounded-lg">
             <p className="text-sm text-yellow-200">
-              ⚠️ 注意：並非所有合約都支援 BNB 提取功能。如果合約不支援，提取將失敗。
+              ⚠️ 注意：目前只有地城主合約支援提取功能。其他合約的提取按鈕已禁用。
             </p>
           </div>
         </div>

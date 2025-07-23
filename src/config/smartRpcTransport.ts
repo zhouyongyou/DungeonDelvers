@@ -17,6 +17,11 @@ const PUBLIC_BSC_RPCS = [
 // 輪換索引
 let currentKeyIndex = 0;
 
+// 記錄最後使用的 key 索引，避免重複日誌
+let lastLoggedKeyIndex = -1;
+let lastLogTime = 0;
+const LOG_THROTTLE_MS = 30000; // 30 秒內不重複記錄相同 key
+
 /**
  * 獲取所有可用的 Alchemy API keys
  */
@@ -136,8 +141,17 @@ export function createSmartRpcTransport(): Transport {
           const key = alchemyKeys[keyIndex];
           primaryRpcUrl = `https://bnb-mainnet.g.alchemy.com/v2/${key}`;
           
+          // 智能日誌：只在 key 切換或超過節流時間時記錄
           if (i === 0) {
-            logger.info(`🔑 使用 Alchemy Key ${keyIndex + 1}/${alchemyKeys.length}`);
+            const now = Date.now();
+            const shouldLog = keyIndex !== lastLoggedKeyIndex || 
+                             (now - lastLogTime) > LOG_THROTTLE_MS;
+            
+            if (shouldLog) {
+              logger.info(`🔑 使用 Alchemy Key ${keyIndex + 1}/${alchemyKeys.length}`);
+              lastLoggedKeyIndex = keyIndex;
+              lastLogTime = now;
+            }
           }
         } else {
           // 使用公共節點

@@ -57,8 +57,9 @@ interface Dungeon {
 
 // 查詢玩家擁有的隊伍基本信息（不包含動態狀態）
 const GET_PLAYER_PARTIES_QUERY = `
-  query GetPlayerParties($owner: ID!) {
+  query GetPlayerParties($owner: Bytes!) {
     player(id: $owner) {
+      id
       parties {
         id
         tokenId
@@ -78,57 +79,68 @@ const GET_PLAYER_PARTIES_QUERY = `
 // Section: 數據獲取 Hooks
 // =================================================================
 
-// 創建一個全局的查詢追蹤器來避免重複查詢
-const queryTracker = new Map<string, Promise<any>>();
-
 // 新的 Hook，用於從 The Graph 獲取所有隊伍的數據
 const usePlayerParties = () => {
     const { address, chainId } = useAccount();
     // const { setLoading } = useGlobalLoading(); // 移除未使用的 hook
     
-    // 添加 useRef 來追蹤是否正在查詢，避免重複查詢
-    const isQueryingRef = React.useRef(false);
-    
-    return useQuery<PartyNft[]>({
+    return useQuery({
         queryKey: ['playerParties', address, chainId],
-        queryFn: async () => {
-            // 使用全局追蹤器防止並發查詢
-            const queryKey = `parties_${address}_${chainId}`;
-            const existingQuery = queryTracker.get(queryKey);
+        queryFn: async (): Promise<PartyNft[]> => {
+            logger.info(`[usePlayerParties] 開始查詢 (address: ${address?.slice(0, 6)}...${address?.slice(-4)})`);
             
-            if (existingQuery) {
-                logger.warn('[usePlayerParties] 檢測到重複查詢，等待現有查詢完成');
-                return await existingQuery;
-            }
-            
-            // 創建新的查詢 Promise
-            const queryPromise = (async () => {
-                logger.info(`[usePlayerParties] 開始新查詢 (address: ${address?.slice(0, 6)}...${address?.slice(-4)})`);
-                try {
-            // 先檢查本地儲存
+            try {
+            // 先檢查本地儲存（縮短快取時間，避免過期數據）
             const cacheKey = `parties_${address}_${chainId}`;
             const cached = localStorage.getItem(cacheKey);
             if (cached) {
-                const { data, timestamp } = JSON.parse(cached);
-                // 如果快取在 5 分鐘內，直接使用
-                if (Date.now() - timestamp < 5 * 60 * 1000) {
-                    logger.info('[usePlayerParties] 使用本地快取的隊伍資料');
-                    return data;
+                try {
+                    const { data, timestamp } = JSON.parse(cached);
+                    // 縮短快取時間為 1 分鐘，確保數據新鮮
+                    if (Date.now() - timestamp < 1 * 60 * 1000 && data && data.length > 0) {
+                        logger.info('[usePlayerParties] 使用本地快取的隊伍資料');
+                        // 反序列化時將字串轉回 BigInt
+                        return data.map((party: any) => ({
+                            ...party,
+                            id: BigInt(party.id),
+                            totalPower: BigInt(party.totalPower),
+                            totalCapacity: BigInt(party.totalCapacity),
+                            heroIds: party.heroIds.map((id: string) => BigInt(id)),
+                            cooldownEndsAt: BigInt(party.cooldownEndsAt),
+                            unclaimedRewards: BigInt(party.unclaimedRewards),
+                        }));
+                    } else {
+                        // 清理過期快取
+                        localStorage.removeItem(cacheKey);
+                    }
+                } catch (e) {
+                    // 快取數據損壞，清理它
+                    logger.warn('[usePlayerParties] 快取數據損壞，清理快取');
+                    localStorage.removeItem(cacheKey);
                 }
             }
             // setLoading(true, '載入你的隊伍資料...'); // 移除未使用的 loading
             if (!address || !THE_GRAPH_API_URL) return [];
             
             // 嘗試從多個來源獲取資料
+            logger.info(`[usePlayerParties] 使用 Graph URL: ${THE_GRAPH_API_URL}`);
+            logger.info(`[usePlayerParties] 查詢地址: ${address.toLowerCase()}`);
+            
+            const requestBody = {
+                query: GET_PLAYER_PARTIES_QUERY,
+                variables: { owner: address.toLowerCase() },
+            };
+            logger.debug('[usePlayerParties] GraphQL 請求:', requestBody);
+            
             const sources = [
                 // 主要來源：The Graph
                 fetch(THE_GRAPH_API_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        query: GET_PLAYER_PARTIES_QUERY,
-                        variables: { owner: address.toLowerCase() },
-                    }),
+                    headers: { 
+                        'Content-Type': 'application/json',
+                    },
+                    mode: 'cors',
+                    body: JSON.stringify(requestBody),
                 }),
                 // 備用來源：我們的metadata server（已移除，因為經常連線失敗）
                 // fetch(`${import.meta.env.VITE_METADATA_SERVER_URL || 'https://dungeon-delvers-metadata-server.onrender.com'}/api/player/${address.toLowerCase()}/assets?type=party`, {
@@ -147,28 +159,81 @@ const usePlayerParties = () => {
                 
                 if (response.errors) {
                     logger.error('GraphQL 查詢錯誤:', response.errors);
-                    return [];
+                    // 提供更詳細的錯誤信息
+                    const errorMessage = response.errors.map((e: any) => e.message).join(', ');
+                    
+                    // 特殊處理各種錯誤
+                    if (errorMessage.includes('no handler for query') || errorMessage.includes('Subgraph not found')) {
+                        throw new Error('子圖尚未部署或版本不正確，請聯繫管理員');
+                    }
+                    if (errorMessage.includes('invalid escape') || errorMessage.includes('bad query')) {
+                        throw new Error('查詢語法錯誤，請聯繫管理員');
+                    }
+                    
+                    throw new Error(`GraphQL 查詢失敗: ${errorMessage}`);
                 }
                 
                 parties = response.data?.player?.parties || [];
                 logger.info(`地城頁面找到 ${parties.length} 個隊伍`);
+                
+                // 如果玩家沒有隊伍，檢查是否是新玩家
+                if (parties.length === 0) {
+                    if (!response.data?.player) {
+                        logger.info('新玩家尚未創建任何隊伍');
+                    } else {
+                        logger.info('玩家存在但沒有隊伍');
+                    }
+                    // 返回空數組而不是拋出錯誤，讓介面顯示「沒有可用隊伍」
+                    return [];
+                }
             } else {
                 logger.error('GraphQL 請求失敗:', graphqlResponse);
+                
+                // 檢查具體的錯誤類型
+                if (graphqlResponse.status === 'rejected') {
+                    const error = graphqlResponse.reason;
+                    logger.error('請求被拒絕:', error);
+                    
+                    // 網路錯誤
+                    if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
+                        throw new Error('網路連接失敗，請檢查您的網路連接');
+                    }
+                    
+                    // CORS 錯誤
+                    if (error.message?.includes('CORS')) {
+                        throw new Error('跨域請求被拒絕，請聯繫管理員');
+                    }
+                }
+                
                 // 429 錯誤時，使用空數據但不要使查詢失敗
                 // 這樣 React Query 會自動重試
                 if (graphqlResponse.status === 'fulfilled' && graphqlResponse.value?.status === 429) {
-                    throw new Error('Rate limit exceeded - will retry');
+                    throw new Error('子圖 API 請求頻率限制，請稍後再試');
                 }
-                return [];
+                
+                // 404 錯誤
+                if (graphqlResponse.status === 'fulfilled' && graphqlResponse.value?.status === 404) {
+                    throw new Error('子圖端點不存在，請檢查配置');
+                }
+                
+                // 500 錯誤
+                if (graphqlResponse.status === 'fulfilled' && graphqlResponse.value?.status >= 500) {
+                    throw new Error('子圖服務器錯誤，請稍後再試');
+                }
+                
+                // 使用更友好的錯誤信息
+                logger.warn('GraphQL 查詢失敗');
+                throw new Error('無法載入隊伍數據，請檢查網路連接或稍後再試');
             }
             
             // 將資料轉換為前端格式
             // setLoading(false); // 移除未使用的 loading
-            logger.debug('Converting party data from The Graph:', parties);
+            logger.debug('[usePlayerParties] 轉換隊伍數據:', parties);
             const formattedParties = parties.map((p: { tokenId: string; [key: string]: unknown }) => {
-                logger.debug(`Converting party #${p.tokenId}:`, {
+                logger.debug(`[usePlayerParties] 轉換隊伍 #${p.tokenId}:`, {
                     raw: p,
-                    unclaimedRewards: p.unclaimedRewards
+                    unclaimedRewards: p.unclaimedRewards,
+                    heroIds: p.heroIds
                 });
                 return {
                 id: BigInt(p.tokenId),
@@ -192,31 +257,40 @@ const usePlayerParties = () => {
             }
             });
             
-            // 儲存到本地快取
+            // 只有在有有效數據時才儲存到本地快取
             if (address && formattedParties.length > 0) {
-                const cacheKey = `parties_${address}_${chainId}`;
-                localStorage.setItem(cacheKey, JSON.stringify({
-                    data: formattedParties,
-                    timestamp: Date.now()
-                }));
-                logger.info('已儲存隊伍資料到本地快取');
+                try {
+                    const cacheKey = `parties_${address}_${chainId}`;
+                    // 轉換 BigInt 為字串以便序列化
+                    const serializableParties = formattedParties.map(party => ({
+                        ...party,
+                        id: party.id.toString(),
+                        totalPower: party.totalPower.toString(),
+                        totalCapacity: party.totalCapacity.toString(),
+                        heroIds: party.heroIds.map(id => id.toString()),
+                        cooldownEndsAt: party.cooldownEndsAt.toString(),
+                        unclaimedRewards: party.unclaimedRewards.toString(),
+                    }));
+                    
+                    localStorage.setItem(cacheKey, JSON.stringify({
+                        data: serializableParties,
+                        timestamp: Date.now()
+                    }, (key, value) => {
+                        // BigInt 序列化處理
+                        if (typeof value === 'bigint') {
+                            return value.toString();
+                        }
+                        return value;
+                    }));
+                    logger.info(`已儲存 ${formattedParties.length} 個隊伍資料到本地快取`);
+                } catch (e) {
+                    logger.warn('無法儲存到本地快取:', e);
+                }
             }
             
             return formattedParties;
-                } finally {
-                    // 清理追蹤器
-                    queryTracker.delete(queryKey);
-                }
-            })();
-            
-            // 將 Promise 存入追蹤器
-            queryTracker.set(queryKey, queryPromise);
-            
-            try {
-                return await queryPromise;
             } catch (error) {
-                // 確保錯誤也被正確清理
-                queryTracker.delete(queryKey);
+                logger.error('[usePlayerParties] 查詢失敗:', error);
                 throw error;
             }
         },
@@ -225,16 +299,24 @@ const usePlayerParties = () => {
         staleTime: 1000 * 60 * 10, // 10分鐘內認為資料新鮮（大幅增加）
         gcTime: 1000 * 60 * 30, // 30分鐘垃圾回收（大幅增加）
         refetchOnWindowFocus: false, // 關閉視窗聚焦重新獲取
-        refetchOnMount: false, // 關閉組件掛載重新獲取
-        refetchOnReconnect: true, // 重新連接時重新獲取
+        // 智能重試策略
         retry: (failureCount, error) => {
-            // 429 錯誤時才重試，其他錯誤不重試
-            if (error instanceof Error && error.message.includes('Rate limit')) {
+            // 429 錯誤：使用指數退避
+            if (error.message.includes('429') || error.message.includes('頻率限制')) {
                 return failureCount < 3;
             }
-            return false;
+            // 其他錯誤：重試一次
+            return failureCount < 1;
         },
-        retryDelay: (attemptIndex) => Math.min(5000 * 2 ** attemptIndex, 30000), // 更長的重試延遲
+        retryDelay: (attemptIndex, error) => {
+            // 429 錯誤：指數退避
+            if (error.message.includes('429') || error.message.includes('頻率限制')) {
+                return Math.min(1000 * 2 ** attemptIndex, 30000); // 2s, 4s, 8s...最多30s
+            }
+            return 1000; // 其他錯誤：1秒後重試
+        },
+        refetchOnMount: false, // 關閉組件掛載重新獲取
+        refetchOnReconnect: true, // 重新連接時重新獲取
     });
 };
 
@@ -475,6 +557,14 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
                 chainId={chainId}
                 variant="default"
             />
+            
+            {/* 臨時調試：顯示子圖數據 */}
+            {party.unclaimedRewards > 0n && (
+                <div className="mt-2 p-2 bg-blue-900/20 rounded-lg border border-blue-600/30 text-xs">
+                    <p className="text-blue-400">子圖數據: {formatSoul(party.unclaimedRewards)} SOUL</p>
+                    <p className="text-gray-500">（此為子圖緩存數據，可能有延遲）</p>
+                </div>
+            )}
             
             {/* 出征歷史紀錄 - 預設顯示1筆，可展開看到3筆 */}
             <ExpeditionHistory partyId={party.entityId} limit={3} />
@@ -915,7 +1005,8 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
     const { 
         claimAllRewards: batchClaimRewards, 
         hasClaimableRewards,
-        isProcessing: isBatchProcessing 
+        isProcessing: isBatchProcessing,
+        isLoadingStatuses 
     } = useBatchOperations({ parties, chainId: bsc.id });
     
     // 一鍵領取所有獎勵
@@ -935,14 +1026,18 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
 
     if (partiesError) {
         const errorMessage = (partiesError as Error).message;
-        const is429Error = errorMessage.includes('429') || errorMessage.includes('Rate limit');
+        const is429Error = errorMessage.includes('429') || errorMessage.includes('頻率限制');
+        const isGraphQLError = errorMessage.includes('GraphQL');
+        const isRetrying = errorMessage.includes('retry');
         
         return (
             <EmptyState 
                 message="載入隊伍失敗" 
                 description={
                     is429Error 
-                        ? "子圖 API 請求過於頻繁，請稍後再試。建議等待 5 分鐘後重新載入。" 
+                        ? "子圖 API 請求過於頻繁，正在自動重試..."
+                        : isGraphQLError
+                        ? "無法連接到數據服務，請檢查網路連線"
                         : errorMessage
                 }
             >
@@ -982,6 +1077,18 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
                     {parties && parties.length > 0 && (
                         <div className="flex gap-3">
                             <button
+                                onClick={() => {
+                                    refetchParties();
+                                    queryClient.invalidateQueries({ queryKey: ['partyStatus'] });
+                                    showToast('正在刷新數據...', 'info');
+                                }}
+                                disabled={isLoadingParties}
+                                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-600 text-white rounded-lg text-sm font-semibold transition-colors duration-200 flex items-center gap-2 disabled:opacity-50"
+                            >
+                                <span>🔄</span>
+                                <span>刷新數據</span>
+                            </button>
+                            <button
                                 onClick={handleExpediteAll}
                                 disabled={isTxPending || !hasAvailableParties}
                                 className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-lg text-sm font-semibold transition-colors duration-200 flex items-center gap-2 disabled:opacity-50"
@@ -991,11 +1098,17 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
                             </button>
                             <button
                                 onClick={handleClaimAllRewards}
-                                disabled={isTxPending || !hasClaimableRewards || isBatchProcessing}
+                                disabled={isTxPending || (!hasClaimableRewards && !isLoadingStatuses) || isBatchProcessing}
                                 className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg text-sm font-semibold transition-colors duration-200 flex items-center gap-2 disabled:opacity-50"
+                                title={
+                                    isLoadingStatuses ? '檢查獎勵中...' :
+                                    !hasClaimableRewards ? '沒有可領取的獎勵' :
+                                    isBatchProcessing ? '處理中...' :
+                                    '點擊領取所有獎勵'
+                                }
                             >
                                 <span>💰</span>
-                                <span>一鍵領取獎勵</span>
+                                <span>{isLoadingStatuses ? '檢查中...' : '一鍵領取獎勵'}</span>
                             </button>
                         </div>
                     )}

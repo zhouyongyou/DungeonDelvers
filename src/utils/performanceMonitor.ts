@@ -17,6 +17,7 @@ class PerformanceMonitor {
   private metrics: PerformanceMetric[] = [];
   private observers: Record<string, PerformanceObserver> = {};
   private isEnabled = true;
+  private showWarnings = false; // 默認關閉性能警告
 
   constructor() {
     this.initializeObservers();
@@ -95,8 +96,8 @@ class PerformanceMonitor {
       this.metrics = this.metrics.slice(-100);
     }
 
-    // 記錄警告級別的性能問題
-    if (this.isPerformanceIssue(metric)) {
+    // 記錄警告級別的性能問題（僅在啟用警告時）
+    if (this.showWarnings && this.isPerformanceIssue(metric)) {
       logger.warn(`性能警告: ${metric.name} = ${metric.value}${metric.unit}`, metric);
     }
   }
@@ -307,10 +308,41 @@ class PerformanceMonitor {
       this.initializeObservers();
     }
   }
+
+  // 設置是否顯示性能警告
+  setShowWarnings(show: boolean): void {
+    this.showWarnings = show;
+    logger.info(`性能警告已${show ? '啟用' : '禁用'}`);
+  }
+
+  // 獲取當前配置
+  getConfig(): { isEnabled: boolean; showWarnings: boolean } {
+    return {
+      isEnabled: this.isEnabled,
+      showWarnings: this.showWarnings
+    };
+  }
 }
 
 // 創建全局實例
 export const performanceMonitor = new PerformanceMonitor();
+
+// 將性能監控器暴露到全局，方便在控制台調試
+if (typeof window !== 'undefined') {
+  (window as any).performanceMonitor = performanceMonitor;
+  
+  // 提供便捷的控制台命令
+  (window as any).disablePerformanceWarnings = () => performanceMonitor.setShowWarnings(false);
+  (window as any).enablePerformanceWarnings = () => performanceMonitor.setShowWarnings(true);
+  (window as any).disablePerformanceMonitoring = () => performanceMonitor.setEnabled(false);
+  (window as any).enablePerformanceMonitoring = () => performanceMonitor.setEnabled(true);
+  
+  logger.info('性能監控器已載入。使用以下命令控制：');
+  logger.info('- disablePerformanceWarnings() - 關閉性能警告');
+  logger.info('- enablePerformanceWarnings() - 開啟性能警告');
+  logger.info('- disablePerformanceMonitoring() - 完全關閉性能監控');
+  logger.info('- enablePerformanceMonitoring() - 開啟性能監控');
+}
 
 // 工具函數
 export function withPerformanceMonitoring<T>(

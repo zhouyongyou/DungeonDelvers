@@ -22,7 +22,7 @@ export const useRewardManager = ({ partyId, chainId }: UseRewardManagerProps) =>
     const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
     
     // 讀取隊伍狀態（包含未領取獎勵）
-    const { data: partyStatus, refetch: refetchStatus } = useReadContract({
+    const { data: partyStatus, refetch: refetchStatus, isLoading: isLoadingStatus } = useReadContract({
         address: dungeonStorageContract?.address,
         abi: dungeonStorageContract?.abi,
         functionName: 'getPartyStatus',
@@ -122,6 +122,8 @@ export const useRewardManager = ({ partyId, chainId }: UseRewardManagerProps) =>
         logger.info('[useRewardManager] Party status:', {
             partyId: partyId.toString(),
             partyStatus,
+            isArray: Array.isArray(partyStatus),
+            length: Array.isArray(partyStatus) ? partyStatus.length : 'not array',
             provisionsRemaining: partyStatus[0]?.toString(),
             cooldownEndsAt: partyStatus[1]?.toString(),
             unclaimedRewards: partyStatus[2]?.toString(),
@@ -129,8 +131,23 @@ export const useRewardManager = ({ partyId, chainId }: UseRewardManagerProps) =>
         });
     }
     
-    const unclaimedRewards = partyStatus?.[2] || 0n;
+    // 處理不同的數據結構（可能是對象或數組）
+    let unclaimedRewards = 0n;
+    if (partyStatus) {
+        if (Array.isArray(partyStatus) && partyStatus.length >= 3) {
+            unclaimedRewards = BigInt(partyStatus[2].toString());
+        } else if (typeof partyStatus === 'object' && 'unclaimedRewards' in partyStatus) {
+            unclaimedRewards = BigInt(partyStatus.unclaimedRewards.toString());
+        }
+    }
+    
     const hasRewards = unclaimedRewards > 0n;
+    
+    logger.info('[useRewardManager] 解析後的獎勵:', {
+        partyId: partyId.toString(),
+        unclaimedRewards: unclaimedRewards.toString(),
+        hasRewards
+    });
     
     const handleClaimRewards = () => {
         // 移除 hasRewards 檢查，讓玩家即使在顯示 0 時也能嘗試領取
@@ -152,5 +169,6 @@ export const useRewardManager = ({ partyId, chainId }: UseRewardManagerProps) =>
         isClaimSuccess,
         claimError,
         refetchStatus,
+        isLoadingRewards: isLoadingStatus,
     };
 };
