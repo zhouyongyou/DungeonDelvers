@@ -40,7 +40,10 @@ const CONTRACT_ABIS = {
   vipStaking: vipStakingABI,
   oracle: oracleABI,
   altarOfAscension: altarOfAscensionABI,
-  dungeonStorage: dungeonStorageABI
+  dungeonStorage: dungeonStorageABI,
+  // 添加測試代幣的 ABI 映射
+  testUsd: soulShardTokenABI, // TestUSD 使用標準 ERC20 ABI
+  soulShardToken: soulShardTokenABI // 明確的 soulShard 映射
 } as const;
 
 /**
@@ -104,6 +107,12 @@ export function getContractWithABI(
         break;
       case 'dungeonStorage':
         address = CONTRACT_ADDRESSES.DUNGEONSTORAGE;
+        break;
+      case 'testUsd':
+        address = CONTRACT_ADDRESSES.TESTUSD;
+        break;
+      case 'soulShardToken':
+        address = CONTRACT_ADDRESSES.SOULSHARD;
         break;
     }
   }

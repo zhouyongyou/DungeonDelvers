@@ -26,14 +26,15 @@ import { logger } from '../utils/logger';
 // Import newly created admin components
 import AdminSection from '../components/admin/AdminSection';
 import ReadOnlyRow from '../components/admin/ReadOnlyRow';
-import AddressSettingRow from '../components/admin/AddressSettingRow';
-import SettingRow from '../components/admin/SettingRow';
-import DungeonManager from '../components/admin/DungeonManager';
-import AltarRuleManager from '../components/admin/AltarRuleManager';
-import FundsWithdrawal from '../components/admin/FundsWithdrawal';
-import VipSettingsManager from '../components/admin/VipSettingsManager';
-import ContractHealthPanel from '../components/admin/ContractHealthPanel';
-import OraclePriceTest from '../components/admin/OraclePriceTest';
+import AddressSettingRow from '../components/admin/AddressSettingRowDark';
+import SettingRow from '../components/admin/SettingRowDark';
+import DungeonManager from '../components/admin/DungeonManagerDark';
+import AltarRuleManager from '../components/admin/AltarRuleManagerDark';
+import FundsWithdrawal from '../components/admin/FundsWithdrawalDark';
+import VipSettingsManager from '../components/admin/VipSettingsManagerDark';
+import ContractHealthPanel from '../components/admin/ContractHealthPanelDark';
+import OraclePriceTest from '../components/admin/OraclePriceTestDark';
+import GameFlowTest from '../components/admin/GameFlowTestDark';
 // RPC監控已移除以解決循環依賴問題
 import { ContractHealthCheck } from '../components/admin/ContractHealthCheck';
 import { validateContract, getSafeContract } from '../utils/contractValidator';
@@ -267,43 +268,15 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   const envAddressMap: Record<string, { name: ContractName, address?: Address }> = useMemo(() => {
     if (!setupConfig || !Array.isArray(setupConfig) || !chainId) return {};
     
-    // 建立環境變數名稱到合約地址的映射
-    const envVarMapping: Record<ContractName, string> = {
-      'TESTUSD': import.meta.env.VITE_TESTUSD_ADDRESS,
-      'SOULSHARD': import.meta.env.VITE_SOULSHARD_ADDRESS,
-      'HERO': import.meta.env.VITE_HERO_ADDRESS,
-      'RELIC': import.meta.env.VITE_RELIC_ADDRESS,
-      'PARTY': import.meta.env.VITE_PARTY_ADDRESS,
-      'DUNGEONCORE': import.meta.env.VITE_DUNGEONCORE_ADDRESS,
-      'DUNGEONMASTER': import.meta.env.VITE_DUNGEONMASTER_ADDRESS,
-      'DUNGEONSTORAGE': import.meta.env.VITE_DUNGEONSTORAGE_ADDRESS,
-      'PLAYERVAULT': import.meta.env.VITE_PLAYERVAULT_ADDRESS,
-      'PLAYERPROFILE': import.meta.env.VITE_PLAYERPROFILE_ADDRESS,
-      'VIPSTAKING': import.meta.env.VITE_VIPSTAKING_ADDRESS,
-      'ORACLE': import.meta.env.VITE_ORACLE_ADDRESS,
-      'ALTAROFASCENSION': import.meta.env.VITE_ALTAROFASCENSION_ADDRESS,
-      'DUNGEONMASTERWALLET': import.meta.env.VITE_DUNGEONMASTERWALLET_ADDRESS,
-    };
-
-    // 調試環境變數載入情況
-    if (import.meta.env.DEV) {
-      console.log('AdminPage 環境變數調試:', {
-        oracle: import.meta.env.VITE_ORACLE_ADDRESS,
-        dungeonCore: import.meta.env.VITE_DUNGEONCORE_ADDRESS,
-        envVarMapping
-      });
-    }
-    
+    // 從 CONTRACT_ADDRESSES 獲取實際配置的地址
     const getAddr = (name: ContractName) => {
-      // 優先使用環境變數，如果沒有則使用配置文件
-      const envAddress = envVarMapping[name];
+      // 直接使用配置文件中的地址
       const configAddress = contractConfigs[name];
-      const finalAddress = envAddress || configAddress;
       
       return { 
         name, 
-        address: finalAddress && finalAddress !== '0x0000000000000000000000000000000000000000' 
-          ? finalAddress as Address 
+        address: configAddress && configAddress !== '0x0000000000000000000000000000000000000000' 
+          ? configAddress as Address 
           : undefined 
       };
     };
@@ -750,6 +723,9 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       {/* Oracle Price Test */}
       <OraclePriceTest />
       
+      {/* Game Flow Test */}
+      <GameFlowTest />
+      
       <AdminSection 
         title="合約串接中心"
         defaultExpanded={true}
@@ -827,15 +803,13 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         <DungeonManager chainId={chainId} />
       </AdminSection>
       
-      {/* 暫時沒有祭壇功能
       <AdminSection 
-        title="升星祭壇規則管理"
+        title="⚔️ 升星祭壇規則管理"
         defaultExpanded={false}
         onExpand={() => setLoadedSections(prev => ({ ...prev, altarRules: true }))}
       >
         <AltarRuleManager chainId={chainId} />
       </AdminSection>
-      */}
       
       <AdminSection 
         title="VIP 質押設定管理"
@@ -1071,8 +1045,8 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
           <div className="space-y-4">
             <h4 className="text-lg font-semibold">合約暫停/恢復</h4>
             <div className="space-y-2">
-              {/* 只有支援 pause/unpause 的合約 */}
-              {['party', 'dungeonMaster'].map(contractName => {
+              {/* 支援 pause/unpause 的合約 */}
+              {['party', 'dungeonMaster', 'hero', 'relic', 'altarOfAscension'].map(contractName => {
                 const contract = getContractWithABI(chainId, contractName);
                 if (!contract || !contract.address) return null;
                 return (
@@ -1099,7 +1073,14 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                       }}
                       className="flex-1 bg-red-600 hover:bg-red-700"
                     >
-                      暫停 {contractName === 'dungeonMaster' ? '地城主' : contractName === 'party' ? '隊伍' : contractName}
+                      暫停 {
+                        contractName === 'dungeonMaster' ? '地城主' : 
+                        contractName === 'party' ? '隊伍' : 
+                        contractName === 'hero' ? '英雄' :
+                        contractName === 'relic' ? '聖物' :
+                        contractName === 'altarOfAscension' ? '祭壇' :
+                        contractName
+                      }
                     </ActionButton>
                     <ActionButton 
                       onClick={async () => {
@@ -1123,7 +1104,14 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
                       }}
                       className="flex-1 bg-green-600 hover:bg-green-700"
                     >
-                      恢復 {contractName === 'dungeonMaster' ? '地城主' : contractName === 'party' ? '隊伍' : contractName}
+                      恢復 {
+                        contractName === 'dungeonMaster' ? '地城主' : 
+                        contractName === 'party' ? '隊伍' : 
+                        contractName === 'hero' ? '英雄' :
+                        contractName === 'relic' ? '聖物' :
+                        contractName === 'altarOfAscension' ? '祭壇' :
+                        contractName
+                      }
                     </ActionButton>
                   </div>
                 );

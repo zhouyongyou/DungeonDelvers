@@ -13,14 +13,22 @@ const OraclePriceTest: React.FC = () => {
   // 獲取 Oracle 合約配置
   const oracleContract = getContractWithABI('ORACLE');
   const dungeonCoreContract = getContractWithABI('DUNGEONCORE');
+  
+  // 獲取正確的代幣地址
+  const testUsdContract = getContractWithABI('TESTUSD');
+  const soulShardContract = getContractWithABI('SOULSHARD');
 
   // 測試 Oracle 直接價格查詢
   const { data: directPrice, isLoading: directLoading, error: directError } = useReadContract({
     ...oracleContract,
     functionName: 'getAmountOut',
-    args: [parseEther(testAmount), '0x7C67Af4EBC6651c95dF78De11cfe325660d935FE', '0xc88dAD283Ac209D77Bfe452807d378615AB8B94a'],
+    args: [
+      parseEther(testAmount || '0'), 
+      testUsdContract?.address || '0x0000000000000000000000000000000000000000',
+      soulShardContract?.address || '0x0000000000000000000000000000000000000000'
+    ],
     query: {
-      enabled: !!oracleContract && !!testAmount && !isNaN(Number(testAmount)),
+      enabled: !!oracleContract && !!testAmount && !isNaN(Number(testAmount)) && !!testUsdContract && !!soulShardContract,
     }
   });
 
@@ -42,10 +50,14 @@ const OraclePriceTest: React.FC = () => {
   };
 
   const formatPrice = (price: any) => {
-    if (!price) return 'N/A';
+    if (!price && price !== 0n) return 'N/A';
     try {
-      return formatEther(price as bigint);
-    } catch {
+      const formatted = formatEther(price as bigint);
+      // 格式化顯示，最多顯示 6 位小數
+      const num = parseFloat(formatted);
+      return num.toFixed(6).replace(/\.?0+$/, '');
+    } catch (error) {
+      console.error('Price formatting error:', error);
       return 'Invalid';
     }
   };

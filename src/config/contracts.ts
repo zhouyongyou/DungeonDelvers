@@ -101,7 +101,13 @@ export const LEGACY_CONTRACT_NAMES = {
   playerProfile: 'PLAYERPROFILE',
   vipStaking: 'VIPSTAKING',
   oracle: 'ORACLE',
-  altarOfAscension: 'ALTAROFASCENSION'
+  altarOfAscension: 'ALTAROFASCENSION',
+  // 測試代幣映射
+  testUsd: 'TESTUSD',
+  TESTUSD: 'TESTUSD',
+  SOULSHARD: 'SOULSHARD',
+  ORACLE: 'ORACLE',
+  DUNGEONCORE: 'DUNGEONCORE'
 } as const;
 
 /**

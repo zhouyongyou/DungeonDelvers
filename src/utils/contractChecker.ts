@@ -1,8 +1,8 @@
 // src/utils/contractChecker.ts - 直接檢查合約狀態的工具
 
-import { createPublicClient, http } from 'viem';
+import { createPublicClient, http, isAddress } from 'viem';
 import { bsc } from 'wagmi/chains';
-import { getContract } from '../config/contracts';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { dungeonMasterABI } from '../config/abis';
 
 export class ContractChecker {
@@ -21,13 +21,18 @@ export class ContractChecker {
     isSet: boolean;
     dungeonMasterAddress: string;
   }> {
-    const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
+    const dungeonMasterContract = getContractWithABI(bsc.id, 'dungeonMaster');
     
     if (!dungeonMasterContract) {
       throw new Error('DungeonMaster 合約配置不存在');
     }
 
     try {
+      // 確保地址有效
+      if (!isAddress(dungeonMasterContract.address)) {
+        throw new Error('DungeonMaster 地址無效');
+      }
+
       const soulShardToken = await this.publicClient.readContract({
         address: dungeonMasterContract.address as `0x${string}`,
         abi: dungeonMasterContract.abi,
@@ -49,7 +54,7 @@ export class ContractChecker {
     isPaused: boolean;
     dungeonMasterAddress: string;
   }> {
-    const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
+    const dungeonMasterContract = getContractWithABI(bsc.id, 'dungeonMaster');
     
     if (!dungeonMasterContract) {
       throw new Error('DungeonMaster 合約配置不存在');
@@ -58,7 +63,7 @@ export class ContractChecker {
     try {
       const isPaused = await this.publicClient.readContract({
         address: dungeonMasterContract.address as `0x${string}`,
-        abi: dungeonMasterABI,
+        abi: dungeonMasterContract.abi,
         functionName: 'paused',
       });
 
@@ -76,7 +81,7 @@ export class ContractChecker {
     provisionPriceUSD: bigint;
     dungeonMasterAddress: string;
   }> {
-    const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
+    const dungeonMasterContract = getContractWithABI(bsc.id, 'dungeonMaster');
     
     if (!dungeonMasterContract) {
       throw new Error('DungeonMaster 合約配置不存在');
@@ -85,7 +90,7 @@ export class ContractChecker {
     try {
       const provisionPriceUSD = await this.publicClient.readContract({
         address: dungeonMasterContract.address as `0x${string}`,
-        abi: dungeonMasterABI,
+        abi: dungeonMasterContract.abi,
         functionName: 'provisionPriceUSD',
       });
 
@@ -104,7 +109,7 @@ export class ContractChecker {
     isSet: boolean;
     dungeonMasterAddress: string;
   }> {
-    const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
+    const dungeonMasterContract = getContractWithABI(bsc.id, 'dungeonMaster');
     
     if (!dungeonMasterContract) {
       throw new Error('DungeonMaster 合約配置不存在');
@@ -113,7 +118,7 @@ export class ContractChecker {
     try {
       const dungeonCoreAddress = await this.publicClient.readContract({
         address: dungeonMasterContract.address as `0x${string}`,
-        abi: dungeonMasterABI,
+        abi: dungeonMasterContract.abi,
         functionName: 'dungeonCore',
       });
 
@@ -137,7 +142,7 @@ export class ContractChecker {
     error?: string;
     estimatedGas?: bigint;
   }> {
-    const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
+    const dungeonMasterContract = getContractWithABI(bsc.id, 'dungeonMaster');
     
     if (!dungeonMasterContract) {
       throw new Error('DungeonMaster 合約配置不存在');
@@ -146,7 +151,7 @@ export class ContractChecker {
     try {
       const result = await this.publicClient.simulateContract({
         address: dungeonMasterContract.address as `0x${string}`,
-        abi: dungeonMasterABI,
+        abi: dungeonMasterContract.abi,
         functionName: 'buyProvisions',
         args: [partyId, amount],
         account: userAddress as `0x${string}`,
@@ -178,7 +183,7 @@ export class ContractChecker {
     isSet: boolean;
     dungeonMasterAddress: string;
   }> {
-    const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
+    const dungeonMasterContract = getContractWithABI(bsc.id, 'dungeonMaster');
     
     if (!dungeonMasterContract) {
       throw new Error('DungeonMaster 合約配置不存在');
@@ -187,7 +192,7 @@ export class ContractChecker {
     try {
       const dungeonStorageAddress = await this.publicClient.readContract({
         address: dungeonMasterContract.address as `0x${string}`,
-        abi: dungeonMasterABI,
+        abi: dungeonMasterContract.abi,
         functionName: 'dungeonStorage',
       });
 
