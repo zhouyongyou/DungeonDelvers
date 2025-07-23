@@ -81,12 +81,31 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
       const contractData = currentDungeonsData?.[i - 1]?.result;
       const defaultData = defaultDungeons.find(d => d.id === i);
       
-      if (contractData && contractData[3] === true) { // isInitialized
+      // 調試：查看合約返回的數據
+      if (i === 1 && contractData) {
+        console.log('🔍 地城 #1 合約數據:', {
+          raw: contractData,
+          requiredPower: contractData.requiredPower,
+          rewardAmountUSD: contractData.rewardAmountUSD,
+          baseSuccessRate: contractData.baseSuccessRate,
+          isInitialized: contractData.isInitialized,
+          // 也嘗試數組訪問
+          arrayAccess: {
+            0: contractData[0],
+            1: contractData[1],
+            2: contractData[2],
+            3: contractData[3]
+          }
+        });
+      }
+      
+      // 使用結構體屬性訪問而非數組索引
+      if (contractData && contractData.isInitialized === true) {
         // 使用合約中的實際數據
         initialInputs[i] = {
-          requiredPower: contractData[0].toString(),
-          rewardAmountUSD: formatEther(contractData[1]),
-          baseSuccessRate: contractData[2].toString()
+          requiredPower: contractData.requiredPower.toString(),
+          rewardAmountUSD: formatEther(contractData.rewardAmountUSD),
+          baseSuccessRate: contractData.baseSuccessRate.toString()
         };
       } else if (defaultData) {
         // 使用預設數據
@@ -211,7 +230,7 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
         const defaultDungeon = defaultDungeons.find(d => d.id === dungeonId);
         const dungeonName = defaultDungeon?.name || `地城 #${dungeonId}`;
         const contractData = currentDungeonsData?.[i]?.result;
-        const isInitialized = contractData?.[3] === true;
+        const isInitialized = contractData?.isInitialized === true;
         
         const inputs = dungeonInputs[dungeonId] || {
           requiredPower: '',

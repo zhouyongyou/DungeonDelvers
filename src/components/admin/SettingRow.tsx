@@ -106,11 +106,22 @@ const SettingRow: React.FC<SettingRowProps> = ({
     }
   };
 
+  // 調試日誌
+  if (label === "地下城挑戰冷卻 (秒)") {
+    console.log('🔍 SettingRow 地下城冷卻:', {
+      label,
+      currentValue,
+      currentValueType: typeof currentValue,
+      isLoading,
+      unit
+    });
+  }
+
   // 顯示邏輯保持不變，依然使用 formatEther 來美化顯示
   const displayValue = isLoading ? (
     <LoadingSpinner size="h-4 w-4" />
   ) : currentValue === undefined || currentValue === null ? (
-    '載入中...'
+    '讀取失敗'
   ) : unit === 'USD' || unit === 'BNB' ? (
     `${formatEther(typeof currentValue === 'bigint' ? currentValue : BigInt(currentValue || 0))}`
   ) : unit === '‱' ? (

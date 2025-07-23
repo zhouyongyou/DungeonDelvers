@@ -22,7 +22,6 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
   
   const [inputs, setInputs] = useState({
     globalRewardMultiplier: '',
-    explorationFee: '',
     restCostPowerDivisor: ''
   });
 
@@ -34,10 +33,6 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
       {
         ...dungeonMasterContract,
         functionName: 'globalRewardMultiplier'
-      },
-      {
-        ...dungeonMasterContract,
-        functionName: 'explorationFee'
       },
       {
         ...dungeonMasterContract,
@@ -55,8 +50,7 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
 
   const currentValues = useMemo(() => ({
     globalRewardMultiplier: currentParams?.[0]?.result as bigint | undefined,
-    explorationFee: currentParams?.[1]?.result as bigint | undefined,
-    restCostPowerDivisor: currentParams?.[2]?.result as bigint | undefined
+    restCostPowerDivisor: currentParams?.[1]?.result as bigint | undefined
   }), [currentParams]);
 
   const handleSet = async (key: keyof typeof inputs, functionName: string, processValue?: (val: string) => any) => {
@@ -119,22 +113,6 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
       />
       */}
 
-
-      <SimpleSettingRow
-        title="探索費用 (BNB)"
-        description="每次探索需要支付的 BNB 費用"
-        currentValue={currentValues.explorationFee !== undefined ? 
-          `${formatEther(currentValues.explorationFee)} BNB` : 
-          '載入中...'
-        }
-        inputValue={inputs.explorationFee}
-        onInputChange={(val) => setInputs(prev => ({ ...prev, explorationFee: val }))}
-        onSet={() => handleSet('explorationFee', 'setExplorationFee', (val) => parseEther(val))}
-        placeholder="例如: 0.0015"
-        inputType="number"
-        step="0.0001"
-      />
-
       {/* 休息成本除數 - 暫時註釋
       <SimpleSettingRow
         title="休息成本除數"
@@ -157,7 +135,6 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
             <ActionButton
               onClick={() => setInputs({
                 globalRewardMultiplier: '500',
-                explorationFee: '0.001',
                 restCostPowerDivisor: '100'
               })}
               className="w-full text-xs"
@@ -170,7 +147,6 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
             <ActionButton
               onClick={() => setInputs({
                 globalRewardMultiplier: '1000',
-                explorationFee: '0.0015',
                 restCostPowerDivisor: '200'
               })}
               className="w-full text-xs"

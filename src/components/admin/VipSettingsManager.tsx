@@ -90,31 +90,17 @@ const VipSettingsManager: React.FC<VipSettingsManagerProps> = ({ chainId }) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h4 className="text-lg font-semibold">VIP 質押設定</h4>
-        <button 
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="text-sm text-gray-400 hover:text-white"
-        >
-          {isExpanded ? '收起' : '展開'}
-        </button>
-      </div>
-      
-      {isExpanded && (
-        <div className="space-y-4">
           {/* 冷卻期設定 */}
           <div className="p-4 bg-gray-800 rounded-lg">
             <h5 className="font-medium text-white mb-3">質押冷卻期設定</h5>
             
-            <div className="mb-3">
-              <p className="text-sm text-gray-400">
-                當前冷卻期：
-                {isLoading ? (
-                  <LoadingSpinner />
-                ) : (
-                  <span className="text-yellow-400 font-bold ml-1">{formatCooldownDisplay(currentCooldownSeconds)}</span>
-                )}
-              </p>
+            <div className="mb-3 text-sm text-gray-400">
+              當前冷卻期：
+              {isLoading ? (
+                <LoadingSpinner />
+              ) : (
+                <span className="text-yellow-400 font-bold ml-1">{formatCooldownDisplay(currentCooldownSeconds)}</span>
+              )}
             </div>
             
             <div className="flex gap-2">
@@ -163,8 +149,6 @@ const VipSettingsManager: React.FC<VipSettingsManagerProps> = ({ chainId }) => {
               <li>緊急暫停/恢復功能</li>
             </ul>
           </div>
-        </div>
-      )}
     </div>
   );
 };

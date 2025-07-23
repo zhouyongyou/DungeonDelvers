@@ -32,7 +32,6 @@ import DungeonManager from '../components/admin/DungeonManager';
 import AltarRuleManager from '../components/admin/AltarRuleManager';
 import FundsWithdrawal from '../components/admin/FundsWithdrawal';
 import VipSettingsManager from '../components/admin/VipSettingsManager';
-import GlobalRewardSettings from '../components/admin/GlobalRewardSettings';
 // RPC監控已移除以解決循環依賴問題
 import { ContractHealthCheck } from '../components/admin/ContractHealthCheck';
 import { validateContract, getSafeContract } from '../utils/contractValidator';
@@ -376,7 +375,18 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         })
         .map(p => ({ ...p.contract, functionName: p.getter }));
       
-      // 移除日誌以避免重複輸出
+      // 調試：輸出 dungeonCooldown 的配置
+      const cooldownConfig = parameterConfig.find(p => p.key === 'dungeonCooldown');
+      if (cooldownConfig) {
+        console.log('🔍 dungeonCooldown 配置:', {
+          key: cooldownConfig.key,
+          contract: cooldownConfig.contract?.address,
+          getter: cooldownConfig.getter,
+          index: parameterConfig.findIndex(p => p.key === 'dungeonCooldown'),
+          totalConfigs: parameterConfig.length
+        });
+      }
+      
       return contracts;
     } catch (error) {
       logger.error('parameterContracts 計算失敗:', error);
@@ -387,8 +397,37 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   // 直接使用 wagmi 的 useReadContracts，移除循環依賴
   const { data: params, isLoading: isLoadingParams, error: paramsError, refetch: refetchParams } = useReadContracts({
     contracts: parameterContracts,
-    query: { enabled: loadedSections.gameParams }
+    query: { 
+      enabled: parameterContracts.length > 0,
+      staleTime: 1000 * 60 * 5, // 5分鐘緩存
+      refetchOnWindowFocus: false,
+    }
   });
+
+  // 調試：檢查 params 數據
+  useEffect(() => {
+    if (params && params.length > 0) {
+      const cooldownIndex = parameterConfig.findIndex(p => p.key === 'dungeonCooldown');
+      console.log('🔍 參數讀取結果:', {
+        totalParams: params.length,
+        cooldownIndex,
+        cooldownData: params[cooldownIndex],
+        cooldownDataDetails: {
+          status: params[cooldownIndex]?.status,
+          result: params[cooldownIndex]?.result,
+          error: params[cooldownIndex]?.error,
+          resultType: typeof params[cooldownIndex]?.result
+        },
+        allParams: params.map((p, i) => ({
+          index: i,
+          key: parameterConfig[i]?.key,
+          result: p.result,
+          status: p.status,
+          error: p.error
+        }))
+      });
+    }
+  }, [params, parameterConfig]);
 
   // 讀取 PlayerVault 的稅務參數
   const playerVaultContract = getContract(chainId, 'playerVault');
@@ -733,14 +772,6 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       </AdminSection>
 
       <AdminSection 
-        title="全局獎勵設定"
-        defaultExpanded={true}
-        onExpand={() => setLoadedSections(prev => ({ ...prev, globalReward: true }))}
-      >
-        <GlobalRewardSettings chainId={chainId} />
-      </AdminSection>
-
-      <AdminSection 
         title="地城參數管理"
         defaultExpanded={true}
         onExpand={() => setLoadedSections(prev => ({ ...prev, dungeonParams: true }))}
@@ -918,20 +949,45 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         onExpand={() => setLoadedSections(prev => ({ ...prev, gameParams: true }))}
         isLoading={isLoadingParams && loadedSections.gameParams}
       >
-        {parameterConfig && Array.isArray(parameterConfig) && parameterConfig.filter(p => p && ['dungeonCooldown'].includes(p.key)).map((p) => {
-          const { key, setter, ...rest } = p;
-          const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
-          return (
-            <SettingRow
-              key={key}
-              {...rest}
-              functionName={setter}
-              readSource={`${p.contract.address}.${p.getter}()`}
-              currentValue={params && paramIndex >= 0 && params[paramIndex] ? params[paramIndex].result : undefined}
-              isLoading={isLoadingParams}
-            />
-          );
-        })}
+        {(() => {
+          const filteredParams = parameterConfig?.filter(p => p && ['dungeonCooldown'].includes(p.key)) || [];
+          
+          console.log('🔍 遊戲機制參數篩選結果:', {
+            parameterConfig: parameterConfig?.length,
+            filtered: filteredParams,
+            filteredLength: filteredParams.length,
+            params: params?.length,
+            isLoadingParams
+          });
+          
+          return filteredParams.map((p) => {
+            const { key, setter, ...rest } = p;
+            const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
+            const currentValue = params?.[paramIndex]?.result;
+            
+            console.log('🔍 dungeonCooldown 渲染數據:', {
+              key,
+              paramIndex,
+              paramData: params?.[paramIndex],
+              paramDataStatus: params?.[paramIndex]?.status,
+              paramDataResult: params?.[paramIndex]?.result,
+              paramDataError: params?.[paramIndex]?.error,
+              currentValue,
+              isLoading: isLoadingParams
+            });
+            
+            return (
+              <SettingRow
+                key={key}
+                {...rest}
+                functionName={setter}
+                readSource={`${p.contract.address}.${p.getter}()`}
+                currentValue={currentValue}
+                isLoading={isLoadingParams}
+              />
+            );
+          });
+        })()}
       </AdminSection>
 
       {/* Oracle TWAP 週期設定 - 暫時註釋
