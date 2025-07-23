@@ -2,6 +2,10 @@
 // 用於鑄造頁面等需要完整合約配置的地方
 
 import { CONTRACT_ADDRESSES, LEGACY_CONTRACT_NAMES } from './contracts';
+
+// 重新導出 CONTRACT_ADDRESSES 以供其他文件使用
+export { CONTRACT_ADDRESSES, LEGACY_CONTRACT_NAMES };
+export type { ContractName } from './contracts';
 import { 
   heroABI, 
   relicABI, 
