@@ -16,9 +16,9 @@ export const ENV = {
     
     // 各版本 URL（保留以供特殊需求）
     STUDIO_URL: import.meta.env.VITE_THE_GRAPH_API_URL || 
-                'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.8',
+                'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.9',
     NETWORK_URL: import.meta.env.VITE_THE_GRAPH_NETWORK_URL ||
-                 'https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs',
+                 'https://gateway.thegraph.com/api/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs',
     
     // 配置標記
     USE_DECENTRALIZED: useDecentralized,

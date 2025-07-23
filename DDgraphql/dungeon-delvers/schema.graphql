@@ -154,6 +154,8 @@ type VIP @entity(immutable: false) {
   unlockTime: BigInt
   " 是否正在解鎖中 "
   isUnlocking: Boolean!
+  " 請求解鎖的時間戳 "
+  unlockRequestedAt: BigInt
   " 創建時間戳 "
   createdAt: BigInt!
   " 最後更新時間戳 "

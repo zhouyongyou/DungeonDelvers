@@ -1,5 +1,5 @@
 // DDgraphql/dungeondelvers/src/vip-staking.ts (最終加固版)
-import { Staked, UnstakeRequested, Transfer } from "../generated/VIPStaking/VIPStaking"
+import { Staked, UnstakeRequested, UnstakeClaimed, Transfer } from "../generated/VIPStaking/VIPStaking"
 import { VIP } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { BigInt, log } from "@graphprotocol/graph-ts"
@@ -29,7 +29,21 @@ export function handleUnstakeRequested(event: UnstakeRequested): void {
     const vipId = event.params.user
     const vip = VIP.load(vipId)
     if (vip) {
+        vip.isUnlocking = true
+        vip.unlockRequestedAt = event.block.timestamp
+        vip.save()
+    } else {
+        log.warning("UnstakeRequested handled for a VIP that doesn't exist: {}", [vipId.toHexString()])
+    }
+}
+
+export function handleUnstakeClaimed(event: UnstakeClaimed): void {
+    const vipId = event.params.user
+    const vip = VIP.load(vipId)
+    if (vip) {
         vip.stakedAmount = vip.stakedAmount.minus(event.params.amount)
+        vip.isUnlocking = false
+        vip.unlockRequestedAt = null
         if (vip.stakedAmount.isZero()) {
             const player = getOrCreatePlayer(event.params.user)
             player.vip = null
@@ -37,7 +51,7 @@ export function handleUnstakeRequested(event: UnstakeRequested): void {
         }
         vip.save()
     } else {
-        log.warning("Unstake handled for a VIP that doesn't exist: {}", [vipId.toHexString()])
+        log.warning("UnstakeClaimed handled for a VIP that doesn't exist: {}", [vipId.toHexString()])
     }
 }
 

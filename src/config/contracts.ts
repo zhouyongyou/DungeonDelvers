@@ -1,113 +1,39 @@
-// src/config/contracts.ts (支援多網路最終版)
+// DungeonDelvers Contract Configuration
+// Auto-generated from master-config.json
+// Version: V15
+// Updated: 2025-07-23T12:15:59.460Z
 
-import { type Address } from 'viem';
-import { bsc } from 'wagmi/chains';
-import { heroABI, relicABI, vipStakingABI, playerProfileABI, playerVaultABI, soulShardTokenABI, altarOfAscensionABI, oracleABI, dungeonCoreABI, dungeonStorageABI } from './abis';
-import dungeonMasterV8ABI from './abis/dungeonMasterV8.json';
-import partyV3ABI from './abis/partyV3.json';
-
-// 簡化的合約地址配置 - V12 版本 (2025-01-20 更新地城配置)
-const CONTRACT_ADDRESSES = {
-  // 核心合約 (4個) - V12 部署地址
-  CORE: {
-    DUNGEON_CORE: import.meta.env.VITE_MAINNET_DUNGEONCORE_ADDRESS || "0x2CB2Bd1b18CDd0cbF37cD6F7FF672D03E7a038a5",
-    ORACLE: import.meta.env.VITE_MAINNET_ORACLE_ADDRESS || "0xcF7c97a055CBf8d61Bb57254F0F54A2cbaa09806", 
-    PLAYER_VAULT: import.meta.env.VITE_MAINNET_PLAYERVAULT_ADDRESS || "0xA5BA5EE03d452eA5e57c72657c8EC03C6F388E1f",
-    DUNGEON_STORAGE: import.meta.env.VITE_MAINNET_DUNGEONSTORAGE_ADDRESS || "0xea21D782CefD785B128346F39f1574c8D6eb64C9"
-  },
-  // NFT合約 (3個) - V12 部署地址
-  NFTS: {
-    HERO: import.meta.env.VITE_MAINNET_HERO_ADDRESS || "0x6f4Bd03ea8607c6e69bCc971b7d3CC9e5801EF5E",
-    RELIC: import.meta.env.VITE_MAINNET_RELIC_ADDRESS || "0x853DAAeC0ae354bF40c732C199Eb09F1a0CD3dC1",
-    PARTY: import.meta.env.VITE_MAINNET_PARTY_ADDRESS || "0x847DceaE26aF1CFc09beC195CE87a9b5701863A7"
-  },
-  // 遊戲合約 (3個) - V12 部署地址
-  GAME: {
-    DUNGEON_MASTER: import.meta.env.VITE_MAINNET_DUNGEONMASTER_ADDRESS || "0xb71f6ED7B13452a99d740024aC17470c1b4F0021",
-    ALTAR: import.meta.env.VITE_MAINNET_ALTAROFASCENSION_ADDRESS || "0xB9878bBDcB82926f0D03E0157e8c34AEa35E06cb",
-    PLAYER_PROFILE: import.meta.env.VITE_MAINNET_PLAYERPROFILE_ADDRESS || "0x39b09c3c64D5ada443d2965cb31C7bad7AC66F2f"
-  },
-  // 代幣合約 (2個) - V12 部署地址
-  TOKENS: {
-    SOUL_SHARD: import.meta.env.VITE_MAINNET_SOULSHARDTOKEN_ADDRESS || "0xc88dAD283Ac209D77Bfe452807d378615AB8B94a",
-    VIP_STAKING: import.meta.env.VITE_MAINNET_VIPSTAKING_ADDRESS || "0x738eA7A2408F56D47EF127954Db42D37aE6339D5"
-  }
+export const CONTRACT_ADDRESSES = {
+  TESTUSD: '0xa095B8c9D9964F62A7dbA3f60AA91dB381A3e074',
+  SOULSHARD: '0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF',
+  HERO: '0x2b6CB00D10EFB1aF0125a26dfcbd9EBa87e07CD2',
+  RELIC: '0xaEa78C3FC4bc50966aC41D76331fD0bf219D00ac',
+  PARTY: '0x514AFBb114fa6c77CC025720A31aaeE038fBbcd7',
+  DUNGEONCORE: '0xA43edd46Eb4416195bc1BAA3575358EA92CE49dD',
+  DUNGEONMASTER: '0xaeBd33846a4a88Afd1B1c3ACB5D8C5872796E316',
+  DUNGEONSTORAGE: '0xAfA453cdca0245c858DAeb4d3e21C6360F4d62Eb',
+  PLAYERVAULT: '0x34d94193aa59f8a7E34040Ed4F0Ea5B231811388',
+  PLAYERPROFILE: '0x5d4582266654CBEA6cC6Bdf696B68B8473521b63',
+  VIPSTAKING: '0x9c2fdD1c692116aB5209983e467286844B3b9921',
+  ORACLE: '0x623caa925445BeACd54Cc6C62Bb725B5d93698af',
+  ALTAROFASCENSION: '0x0000000000000000000000000000000000000000',
+  DUNGEONMASTERWALLET: '0x10925A7138649C7E1794CE646182eeb5BF8ba647',
 } as const;
 
-// 調試：檢查最終地址
-console.log('📋 最終使用的合約地址:', {
-  DUNGEONMASTER_FINAL: CONTRACT_ADDRESSES.GAME.DUNGEON_MASTER,
-  SOULSHARD_FINAL: CONTRACT_ADDRESSES.TOKENS.SOUL_SHARD,
-  DUNGEONCORE_FINAL: CONTRACT_ADDRESSES.CORE.DUNGEON_CORE
-});
+export const DEPLOYMENT_VERSION = 'V15';
+export const DEPLOYMENT_DATE = '2025-07-23';
 
-// 簡化的合約配置
-export const contracts = {
-  [bsc.id]: {
-    // 核心合約
-    dungeonCore: { 
-      address: CONTRACT_ADDRESSES.CORE.DUNGEON_CORE as Address, 
-      abi: dungeonCoreABI
-    },
-    oracle: { 
-      address: CONTRACT_ADDRESSES.CORE.ORACLE as Address, 
-      abi: oracleABI
-    },
-    playerVault: { 
-      address: CONTRACT_ADDRESSES.CORE.PLAYER_VAULT as Address, 
-      abi: playerVaultABI
-    },
-    dungeonStorage: { 
-      address: CONTRACT_ADDRESSES.CORE.DUNGEON_STORAGE as Address, 
-      abi: dungeonStorageABI
-    },
-    
-    // NFT合約
-    hero: { 
-      address: CONTRACT_ADDRESSES.NFTS.HERO as Address, 
-      abi: heroABI
-    },
-    relic: { 
-      address: CONTRACT_ADDRESSES.NFTS.RELIC as Address, 
-      abi: relicABI
-    },
-    party: { 
-      address: CONTRACT_ADDRESSES.NFTS.PARTY as Address, 
-      abi: partyV3ABI as any
-    },
-    
-    // 遊戲合約
-    dungeonMaster: { 
-      address: CONTRACT_ADDRESSES.GAME.DUNGEON_MASTER as Address, 
-      abi: dungeonMasterV8ABI as any
-    },
-    altarOfAscension: { 
-      address: CONTRACT_ADDRESSES.GAME.ALTAR as Address, 
-      abi: altarOfAscensionABI
-    },
-    playerProfile: { 
-      address: CONTRACT_ADDRESSES.GAME.PLAYER_PROFILE as Address, 
-      abi: playerProfileABI
-    },
-    
-    // 代幣合約
-    soulShard: { 
-      address: CONTRACT_ADDRESSES.TOKENS.SOUL_SHARD as Address, 
-      abi: soulShardTokenABI
-    },
-    vipStaking: { 
-      address: CONTRACT_ADDRESSES.TOKENS.VIP_STAKING as Address, 
-      abi: vipStakingABI
-    }
-  }
-} as const;
-
-// 簡化的獲取合約函數
-export const getContract = (chainId: number, contractName: keyof typeof contracts[typeof bsc.id]) => {
-  return contracts[chainId as keyof typeof contracts]?.[contractName];
+// Network Configuration
+export const NETWORK_CONFIG = {
+  chainId: 56,
+  name: 'BSC Mainnet',
+  rpc: 'https://bsc-dataseed.binance.org/',
+  explorer: 'https://bscscan.com'
 };
 
-// 簡化的地址獲取函數
-export const getContractAddress = (contractName: keyof typeof contracts[typeof bsc.id]) => {
-  return contracts[bsc.id][contractName]?.address;
+// Subgraph Configuration
+export const SUBGRAPH_CONFIG = {
+  studio: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.9',
+  decentralized: 'https://gateway.thegraph.com/api/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs',
+  useDecentralized: process.env.NODE_ENV === 'production'
 };

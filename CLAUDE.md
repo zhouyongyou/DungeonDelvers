@@ -27,14 +27,40 @@
 - **狀態管理**: Zustand
 - **UI 組件**: 自定義組件庫
 
-## 環境變數
+## 環境變數（2025-07-23 簡化版）
 ```bash
-# 必要的環境變數
+# Vercel 上只需要這一個環境變數！
 VITE_WALLETCONNECT_PROJECT_ID=你的WalletConnect項目ID
-VITE_ALCHEMY_KEY=你的Alchemy API金鑰（可選）
-VITE_GRAPHQL_URL=https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.2
-VITE_SERVER_URL=https://dungeondelvers-backend.onrender.com
+
+# 其他配置都從 CDN 自動載入
+# 不再需要設置合約地址、API URLs 等
 ```
+
+## 🔄 配置管理系統
+
+### 自動配置載入
+前端現在使用 `configLoader.ts` 自動從 CDN 載入所有配置：
+- 合約地址
+- The Graph URLs
+- 網路設定
+
+### 配置優先級
+1. CDN 配置文件 (`/public/config/v15.json`)
+2. 環境變數（作為備份）
+3. 默認值（硬編碼）
+
+### 本地開發
+```bash
+# 開發時可選設置（通常不需要）
+VITE_HERO_ADDRESS=0x...  # 覆蓋特定合約地址
+VITE_USE_TESTNET=true    # 使用測試網
+```
+
+### 配置更新流程
+1. 合約團隊更新 `master-config.json`
+2. 執行 `npm run sync:config`
+3. 前端自動從 CDN 載入新配置
+4. 無需重新部署！
 
 ## 目錄結構
 ```

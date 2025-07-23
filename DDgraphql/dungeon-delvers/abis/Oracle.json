@@ -8,12 +8,12 @@
       },
       {
         "internalType": "address",
-        "name": "_soulShardTokenAddress",
+        "name": "_soulShardToken",
         "type": "address"
       },
       {
         "internalType": "address",
-        "name": "_usdTokenAddress",
+        "name": "_usdToken",
         "type": "address"
       }
     ],
@@ -65,14 +65,63 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "address",
+        "name": "tokenIn",
+        "type": "address"
+      },
+      {
         "indexed": false,
+        "internalType": "uint256",
+        "name": "amountIn",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amountOut",
+        "type": "uint256"
+      }
+    ],
+    "name": "PriceQueried",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "TWAP_DURATION",
+    "outputs": [
+      {
         "internalType": "uint32",
-        "name": "newTwapPeriod",
+        "name": "",
         "type": "uint32"
       }
     ],
-    "name": "TwapPeriodUpdated",
-    "type": "event"
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "tokenIn",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amountIn",
+        "type": "uint256"
+      }
+    ],
+    "name": "_getAmountOutInternal",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
   },
   {
     "inputs": [
@@ -91,24 +140,11 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "amountOut",
+        "name": "",
         "type": "uint256"
       }
     ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getSoulShardPriceInUSD",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "price",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -126,10 +162,10 @@
   },
   {
     "inputs": [],
-    "name": "pool",
+    "name": "poolAddress",
     "outputs": [
       {
-        "internalType": "contract IUniswapV3Pool",
+        "internalType": "address",
         "name": "",
         "type": "address"
       }
@@ -140,19 +176,6 @@
   {
     "inputs": [],
     "name": "renounceOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint32",
-        "name": "_newTwapPeriod",
-        "type": "uint32"
-      }
-    ],
-    "name": "setTwapPeriod",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -185,7 +208,7 @@
   },
   {
     "inputs": [],
-    "name": "twapPeriod",
+    "name": "updateTwapDuration",
     "outputs": [
       {
         "internalType": "uint32",
@@ -193,7 +216,7 @@
         "type": "uint32"
       }
     ],
-    "stateMutability": "view",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {

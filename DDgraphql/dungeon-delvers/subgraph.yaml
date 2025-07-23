@@ -1,228 +1,121 @@
-specVersion: 1.3.0
-indexerHints:
-  prune: auto
+specVersion: "0.0.4"
 schema:
-  file: ./schema.graphql
+  file: "./schema.graphql"
 dataSources:
-  - kind: ethereum
-    name: Hero
-    network: bsc
+  - kind: "ethereum/contract"
+    name: "Hero"
+    network: "bsc"
     source:
-      address: '0xAA3734B376eDf4E92402Df4328AA6C1B8254144e'
-      abi: Hero
+      address: "0x2b6CB00D10EFB1aF0125a26dfcbd9EBa87e07CD2"
+      abi: "Hero"
       startBlock: 55018576
     mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.9
-      language: wasm/assemblyscript
+      kind: "ethereum/events"
+      apiVersion: "0.0.6"
+      language: "wasm/assemblyscript"
       entities:
-        - Hero
-        - Player
-        - HeroUpgrade
+        - "Hero"
+        - "Transfer"
       abis:
-        - name: Hero
-          file: ./abis/Hero.json
+        - name: "Hero"
+          file: "./abis/Hero.json"
       eventHandlers:
-        - event: 'HeroMinted(indexed uint256,indexed address,uint8,uint256)'
-          handler: handleHeroMinted
-        - event: 'Transfer(indexed address,indexed address,indexed uint256)'
-          handler: handleTransfer
-        - event: 'HeroUpgraded(indexed uint256,indexed address,uint8,uint8,uint256)'
-          handler: handleHeroUpgraded
-        - event: 'HeroBurned(indexed uint256,indexed address,uint8,uint256)'
-          handler: handleHeroBurned
-      file: ./src/hero.ts
-  - kind: ethereum
-    name: Relic
-    network: bsc
+        - event: "Transfer(indexed address,indexed address,indexed uint256)"
+          handler: "handleTransfer"
+        - event: "HeroMinted(indexed uint256,indexed address,uint8,uint256)"
+          handler: "handleHeroMinted"
+      file: "./src/hero.ts"
+  - kind: "ethereum/contract"
+    name: "Relic"
+    network: "bsc"
     source:
-      address: '0xD73D7D5D279ac033c9D8639A15CcEa6B6BE2C786'
-      abi: Relic
+      address: "0xaEa78C3FC4bc50966aC41D76331fD0bf219D00ac"
+      abi: "Relic"
       startBlock: 55018576
     mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.9
-      language: wasm/assemblyscript
+      kind: "ethereum/events"
+      apiVersion: "0.0.6"
+      language: "wasm/assemblyscript"
       entities:
-        - Relic
-        - Player
-        - RelicUpgrade
+        - "Relic"
+        - "Transfer"
       abis:
-        - name: Relic
-          file: ./abis/Relic.json
+        - name: "Relic"
+          file: "./abis/Relic.json"
       eventHandlers:
-        - event: 'RelicMinted(indexed uint256,indexed address,uint8,uint8)'
-          handler: handleRelicMinted
-        - event: 'Transfer(indexed address,indexed address,indexed uint256)'
-          handler: handleTransfer
-        - event: 'RelicUpgraded(indexed uint256,indexed address,uint8,uint8,uint8)'
-          handler: handleRelicUpgraded
-        - event: 'RelicBurned(indexed uint256,indexed address,uint8,uint8)'
-          handler: handleRelicBurned
-      file: ./src/relic.ts
-  - kind: ethereum
-    name: Party
-    network: bsc
+        - event: "Transfer(indexed address,indexed address,indexed uint256)"
+          handler: "handleTransfer"
+        - event: "RelicMinted(indexed uint256,indexed address,uint8,uint8)"
+          handler: "handleRelicMinted"
+      file: "./src/relic.ts"
+  - kind: "ethereum/contract"
+    name: "PartyV3"
+    network: "bsc"
     source:
-      address: '0x54025749950137d64469fb11263B475F6A346b83'
-      abi: Party
+      address: "0x514AFBb114fa6c77CC025720A31aaeE038fBbcd7"
+      abi: "PartyV3"
       startBlock: 55018576
     mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.9
-      language: wasm/assemblyscript
+      kind: "ethereum/events"
+      apiVersion: "0.0.6"
+      language: "wasm/assemblyscript"
       entities:
-        - Party
-        - Player
-        - PartyMemberChange
+        - "Party"
+        - "Transfer"
       abis:
-        - name: Party
-          file: ./abis/PartyV3.json
+        - name: "PartyV3"
+          file: "./abis/PartyV3.json"
       eventHandlers:
-        - event: 'PartyCreated(indexed uint256,indexed address,uint256[],uint256[],uint256,uint256,uint8)'
-          handler: handlePartyCreated
-        - event: 'Transfer(indexed address,indexed address,indexed uint256)'
-          handler: handlePartyTransfer
-        - event: 'PartyMemberAdded(indexed uint256,indexed address,indexed uint256)'
-          handler: handlePartyMemberAdded
-        - event: 'PartyMemberRemoved(indexed uint256,indexed address,indexed uint256)'
-          handler: handlePartyMemberRemoved
-      file: ./src/party.ts
-  - kind: ethereum
-    name: PlayerProfile
-    network: bsc
+        - event: "Transfer(indexed address,indexed address,indexed uint256)"
+          handler: "handlePartyTransfer"
+        - event: "PartyCreated(indexed uint256,indexed address,uint256[],uint256[],uint256,uint256,uint8)"
+          handler: "handlePartyCreated"
+      file: "./src/party.ts"
+  - kind: "ethereum/contract"
+    name: "VIPStaking"
+    network: "bsc"
     source:
-      address: '0x0dEf83dbD501fC7D96Bb24FcA2eAAc06c6DD5db9'
-      abi: PlayerProfile
+      address: "0x9c2fdD1c692116aB5209983e467286844B3b9921"
+      abi: "VIPStaking"
       startBlock: 55018576
     mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.9
-      language: wasm/assemblyscript
+      kind: "ethereum/events"
+      apiVersion: "0.0.6"
+      language: "wasm/assemblyscript"
       entities:
-        - PlayerProfile
+        - "VIPStake"
+        - "User"
       abis:
-        - name: PlayerProfile
-          file: ./abis/PlayerProfile.json
+        - name: "VIPStaking"
+          file: "./abis/VIPStaking.json"
       eventHandlers:
-        - event: 'ProfileCreated(indexed address,indexed uint256)'
-          handler: handleProfileCreated
-        - event: 'ExperienceAdded(indexed address,indexed uint256,uint256,uint256)'
-          handler: handleExperienceAdded
-      file: ./src/player-profile.ts
-  - kind: ethereum
-    name: VIPStaking
-    network: bsc
+        - event: "Staked(indexed address,uint256,uint256)"
+          handler: "handleStaked"
+        - event: "UnstakeRequested(indexed address,uint256,uint256)"
+          handler: "handleUnstakeRequested"
+        - event: "UnstakeClaimed(indexed address,uint256)"
+          handler: "handleUnstakeClaimed"
+      file: "./src/vip-staking.ts"
+  - kind: "ethereum/contract"
+    name: "PlayerProfile"
+    network: "bsc"
     source:
-      address: '0x56350F90a26A844B3248F55dbd5043C3B3F27927'
-      abi: VIPStaking
+      address: "0x5d4582266654CBEA6cC6Bdf696B68B8473521b63"
+      abi: "PlayerProfile"
       startBlock: 55018576
     mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.9
-      language: wasm/assemblyscript
+      kind: "ethereum/events"
+      apiVersion: "0.0.6"
+      language: "wasm/assemblyscript"
       entities:
-        - VIP
+        - "Player"
+        - "Referral"
       abis:
-        - name: VIPStaking
-          file: ./abis/VIPStaking.json
+        - name: "PlayerProfile"
+          file: "./abis/PlayerProfile.json"
       eventHandlers:
-        - event: 'Staked(indexed address,uint256,uint256)'
-          handler: handleStaked
-        - event: 'UnstakeRequested(indexed address,uint256,uint256)'
-          handler: handleUnstakeRequested
-        - event: 'Transfer(indexed address,indexed address,indexed uint256)'
-          handler: handleVipTransfer
-      file: ./src/vip-staking.ts
-  - kind: ethereum
-    name: DungeonMaster
-    network: bsc
-    source:
-      address: '0xA54104946c08E78fC9df1dB6db01f8C38a0a0fF6'
-      abi: DungeonMaster
-      startBlock: 55018576
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.9
-      language: wasm/assemblyscript
-      entities:
-        - Party
-      abis:
-        - name: DungeonMaster
-          file: ./abis/DungeonMasterV8.json
-      eventHandlers:
-        - event: 'ExpeditionFulfilled(indexed address,indexed uint256,uint256,bool,uint256,uint256)'
-          handler: handleExpeditionFulfilled
-        - event: 'ExpeditionRequested(indexed address,indexed uint256,indexed uint256,uint256,uint256)'
-          handler: handleExpeditionRequested
-        - event: 'ProvisionsBought(indexed uint256,uint256,uint256,indexed address)'
-          handler: handleProvisionsBought
-        - event: 'RewardsBanked(indexed address,indexed uint256,uint256)'
-          handler: handleRewardsBanked
-      file: ./src/dungeon-master.ts
-  - kind: ethereum
-    name: PlayerVault
-    network: bsc
-    source:
-      address: '0xe7f2B5C1544a7C2530F4094AF1E492574B66bAa2'
-      abi: PlayerVault
-      startBlock: 55018576
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.9
-      language: wasm/assemblyscript
-      entities:
-        - PlayerVault
-      abis:
-        - name: PlayerVault
-          file: ./abis/PlayerVault.json
-      eventHandlers:
-        - event: 'Deposited(indexed address,uint256)'
-          handler: handleDeposited
-        - event: 'Withdrawn(indexed address,uint256,uint256)'
-          handler: handleWithdrawn
-        - event: 'CommissionPaid(indexed address,indexed address,uint256)'
-          handler: handleCommissionPaid
-      file: ./src/player-vault.ts
-  - kind: ethereum
-    name: AltarOfAscension
-    network: bsc
-    source:
-      address: '0xc598B642aA41e5286aC9e2F64d5a2CBBbc35288b'
-      abi: AltarOfAscension
-      startBlock: 55018576
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.9
-      language: wasm/assemblyscript
-      entities:
-        - UpgradeAttempt
-      abis:
-        - name: AltarOfAscension
-          file: ./abis/AltarOfAscension.json
-      eventHandlers:
-        - event: 'UpgradeProcessed(indexed address,indexed address,uint8,uint8)'
-          handler: handleUpgradeProcessed
-      file: ./src/altar-of-ascension.ts
-  - kind: ethereum
-    name: DungeonCore
-    network: bsc
-    source:
-      address: '0xC880c8253A617FaBe83bACd010E9E26369e12aDB'
-      abi: DungeonCore
-      startBlock: 55018576
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.9
-      language: wasm/assemblyscript
-      entities:
-        - GlobalStats
-      abis:
-        - name: DungeonCore
-          file: ./abis/DungeonCore.json
-      eventHandlers:
-        - event: OracleSet(indexed address)
-          handler: handleOracleSet
-        - event: PlayerVaultSet(indexed address)
-          handler: handlePlayerVaultSet
-      file: ./src/dungeon-core.ts
+        - event: "ProfileCreated(indexed address,indexed uint256)"
+          handler: "handleProfileCreated"
+        - event: "ExperienceAdded(indexed address,indexed uint256,uint256,uint256)"
+          handler: "handleExperienceAdded"
+      file: "./src/player-profile.ts"
