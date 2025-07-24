@@ -1,9 +1,9 @@
 // DungeonDelvers Subgraph Configuration
-// V15 - Decentralized Network
+// V18 - Decentralized Network
 
 export const SUBGRAPH_CONFIG = {
   // Studio endpoint (for development/testing)
-  STUDIO_URL: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.9',
+  STUDIO_URL: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.1.1',
   
   // Decentralized network endpoint (for production)
   DECENTRALIZED_URL: 'https://gateway.thegraph.com/api/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs',
@@ -14,7 +14,7 @@ export const SUBGRAPH_CONFIG = {
   // Current active endpoint
   ACTIVE_URL: import.meta.env.PROD 
     ? 'https://gateway.thegraph.com/api/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs'
-    : 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.9'
+    : 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.1.1'
 };
 
 // Helper function to get query URL with API key

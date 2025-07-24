@@ -14,7 +14,7 @@ import { THE_GRAPH_API_URL } from './graphConfig';
 // Use decentralized network in production, Studio for development
 const GRAPHQL_ENDPOINT = import.meta.env.PROD
   ? (import.meta.env.VITE_GRAPH_DECENTRALIZED_URL || 'https://gateway.thegraph.com/api/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs')
-  : (THE_GRAPH_API_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.9');
+  : (THE_GRAPH_API_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.1.1');
 
 // 將 HTTP URL 轉換為 WebSocket URL
 const getWebSocketUrl = (httpUrl: string) => {

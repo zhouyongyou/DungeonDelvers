@@ -16,7 +16,7 @@ export const ENV = {
     
     // 各版本 URL（保留以供特殊需求）
     STUDIO_URL: import.meta.env.VITE_THE_GRAPH_API_URL || 
-                'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.9',
+                'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.1.1',
     NETWORK_URL: import.meta.env.VITE_THE_GRAPH_NETWORK_URL ||
                  'https://gateway.thegraph.com/api/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs',
     
