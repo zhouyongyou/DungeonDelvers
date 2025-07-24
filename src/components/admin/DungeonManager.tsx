@@ -85,27 +85,32 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
       if (i === 1 && contractData) {
         console.log('🔍 地城 #1 合約數據:', {
           raw: contractData,
-          requiredPower: contractData.requiredPower,
-          rewardAmountUSD: contractData.rewardAmountUSD,
-          baseSuccessRate: contractData.baseSuccessRate,
-          isInitialized: contractData.isInitialized,
-          // 也嘗試數組訪問
+          // wagmi 返回的數據可能是數組格式
           arrayAccess: {
-            0: contractData[0],
-            1: contractData[1],
-            2: contractData[2],
-            3: contractData[3]
+            0: contractData[0], // requiredPower
+            1: contractData[1], // rewardAmountUSD
+            2: contractData[2], // baseSuccessRate
+            3: contractData[3]  // isInitialized
           }
         });
       }
       
-      // 使用結構體屬性訪問而非數組索引
-      if (contractData && contractData.isInitialized === true) {
+      // wagmi v2 的 readContracts 返回數組格式而非對象格式
+      // 檢查多種可能的數據結構
+      const isInitialized = contractData && (
+        contractData[3] === true || 
+        contractData.isInitialized === true ||
+        // 檢查是否有有效的數據（requiredPower > 0）
+        (contractData[0] && BigInt(contractData[0]) > 0n) ||
+        (contractData.requiredPower && BigInt(contractData.requiredPower) > 0n)
+      );
+      
+      if (isInitialized && contractData) {
         // 使用合約中的實際數據
         initialInputs[i] = {
-          requiredPower: contractData.requiredPower.toString(),
-          rewardAmountUSD: formatEther(contractData.rewardAmountUSD),
-          baseSuccessRate: contractData.baseSuccessRate.toString()
+          requiredPower: (contractData[0] || contractData.requiredPower)?.toString() || '0',
+          rewardAmountUSD: formatEther(contractData[1] || contractData.rewardAmountUSD || 0n),
+          baseSuccessRate: (contractData[2] || contractData.baseSuccessRate)?.toString() || '0'
         };
       } else if (defaultData) {
         // 使用預設數據
@@ -230,7 +235,15 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
         const defaultDungeon = defaultDungeons.find(d => d.id === dungeonId);
         const dungeonName = defaultDungeon?.name || `地城 #${dungeonId}`;
         const contractData = currentDungeonsData?.[i]?.result;
-        const isInitialized = contractData?.isInitialized === true;
+        // wagmi v2 返回數組格式，第4個元素（索引3）是 isInitialized
+        // 檢查多種可能的數據結構
+        const isInitialized = contractData && (
+          contractData[3] === true || 
+          contractData.isInitialized === true ||
+          // 檢查是否有有效的數據（requiredPower > 0）
+          (contractData[0] && BigInt(contractData[0]) > 0n) ||
+          (contractData.requiredPower && BigInt(contractData.requiredPower) > 0n)
+        );
         
         const inputs = dungeonInputs[dungeonId] || {
           requiredPower: '',

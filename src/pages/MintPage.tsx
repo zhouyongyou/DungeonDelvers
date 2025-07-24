@@ -66,6 +66,42 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
         },
     });
     
+    // 🔍 價格調試信息
+    useEffect(() => {
+        if (requiredAmount) {
+            const priceInEther = Number(formatEther(requiredAmount));
+            const pricePerUnit = priceInEther / quantity;
+            
+            console.log(`[MintPage] ${type} 價格調試:`, {
+                requiredAmount: requiredAmount.toString(),
+                requiredAmountHex: '0x' + requiredAmount.toString(16),
+                requiredAmountDecimal: requiredAmount.toString(),
+                priceInEther,
+                pricePerUnit,
+                quantity,
+                contractAddress: contractConfig?.address,
+                // 顯示計算過程
+                calculation: {
+                    raw: requiredAmount.toString(),
+                    divided_by_1e18: (Number(requiredAmount) / 1e18).toString(),
+                    per_unit: (Number(requiredAmount) / 1e18 / quantity).toString()
+                }
+            });
+            
+            // 價格異常警告 - 根據用戶反饋調整閾值
+            // 英雄約 33000 SOUL，聖物也約 33000 SOUL
+            const expectedRange = type === 'hero' ? { min: 20000, max: 50000 } : { min: 15000, max: 40000 };
+            
+            if (pricePerUnit < expectedRange.min || pricePerUnit > expectedRange.max) {
+                console.warn(`[MintPage] ⚠️ 價格可能異常！${type} 單價: ${pricePerUnit.toFixed(2)} SoulShard`, {
+                    expectedRange,
+                    actualPrice: pricePerUnit,
+                    possibleIssue: pricePerUnit > 1e18 ? 'Oracle 可能返回了錯誤的值' : '價格計算可能有誤'
+                });
+            }
+        }
+    }, [requiredAmount, quantity, type, contractConfig]);
+    
     // 平台費用 (platformFee) 的讀取
     const { data: platformFee, isLoading: isLoadingFee } = useReadContract({
         address: contractConfig?.address,
@@ -191,6 +227,18 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
     const debouncedQuantity = useDebounce(quantity, 300);
     
     const { requiredAmount, balance, needsApproval, isLoading, isError, error, platformFee, refetchAllowance } = useMintLogic(type, debouncedQuantity, paymentSource, chainId);
+    
+    // 計算價格合理性
+    const pricePerUnit = useMemo(() => {
+        if (!requiredAmount || quantity === 0) return 0;
+        return Number(formatEther(requiredAmount)) / quantity;
+    }, [requiredAmount, quantity]);
+    
+    const isPriceAbnormal = useMemo(() => {
+        if (pricePerUnit === 0) return false;
+        const expectedRange = type === 'hero' ? { min: 20000, max: 50000 } : { min: 15000, max: 40000 };
+        return pricePerUnit < expectedRange.min || pricePerUnit > expectedRange.max;
+    }, [pricePerUnit, type]);
     
     // 樂觀更新 Hook
     const { optimisticUpdate, confirmUpdate, rollback } = useOptimisticUpdate({
@@ -414,7 +462,16 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
             <div className="text-center mb-4 min-h-[72px] flex-grow flex flex-col justify-center">
                 {isLoading ? <div className="flex flex-col items-center justify-center"><LoadingSpinner color="border-gray-500" /><p className="text-sm text-gray-400 mt-2">讀取價格中...</p></div>
                 : isError ? <div className="text-red-500 text-center"><p className="font-bold">價格讀取失敗</p><p className="text-xs mt-1">{(error as { shortMessage?: string })?.shortMessage || '請檢查合約狀態或網路連線。'}</p></div>
-                : (<div><p className="text-lg text-gray-400">總價:</p><p className="font-bold text-yellow-400 text-2xl">{parseFloat(formatEther(typeof requiredAmount === 'bigint' ? requiredAmount : 0n)).toFixed(4)}</p><p className="text-xs text-gray-500">$SoulShard + {formatEther(typeof platformFee === 'bigint' ? platformFee * BigInt(quantity) : 0n)} BNB</p></div>)}
+                : (<div>
+                    <p className="text-lg text-gray-400">總價:</p>
+                    <p className="font-bold text-yellow-400 text-2xl">
+                        {requiredAmount && requiredAmount > 10n ** 21n 
+                            ? `${(Number(requiredAmount) / 10 ** 18).toExponential(2)}` 
+                            : parseFloat(formatEther(typeof requiredAmount === 'bigint' ? requiredAmount : 0n)).toFixed(4)
+                        }
+                    </p>
+                    <p className="text-xs text-gray-500">$SoulShard + {formatEther(typeof platformFee === 'bigint' ? platformFee * BigInt(quantity) : 0n)} BNB</p>
+                </div>)}
             </div>
             {actionButton}
             <a href={contractConfig.address ? `https://www.okx.com/web3/nft/markets/collection/bscn/${contractConfig.address}` : '#'} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500 dark:text-indigo-400 hover:underline mt-2">前往市場交易</a>

@@ -71,7 +71,7 @@ VITE_USE_DECENTRALIZED_GRAPH=true
 # 通常不需要，CDN 會自動載入
 # 只在需要覆蓋特定值時使用
 VITE_HERO_ADDRESS=0x...（覆蓋英雄合約地址）
-VITE_CONFIG_VERSION=V15-hotfix（標記特殊版本）
+VITE_CONFIG_VERSION=V18（標記當前版本）
 ```
 
 ## 🔥 混合策略配置（速度與風險平衡）

@@ -37,6 +37,7 @@ const VipPage = lazy(() => import('./pages/VipPage'));
 const ReferralPage = lazy(() => import('./pages/ReferralPage'));
 const CodexPage = lazy(() => import('./pages/CodexPage'));
 const DebugContractPage = lazy(() => import('./pages/DebugContractPage'));
+const PriceDebugPage = lazy(() => import('./pages/PriceDebugPage'));
 
 
 const PageLoader: React.FC = () => {
@@ -141,6 +142,7 @@ function App() {
         case 'referral': return <ReferralPage />;
         case 'codex': return <CodexPage />;
         case 'debug': return <DebugContractPage />;
+        case 'priceDebug': return <PriceDebugPage />;
         default: return <MintPage />; // 預設頁面也改為 MintPage
     }
   };

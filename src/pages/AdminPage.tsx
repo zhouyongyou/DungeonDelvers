@@ -266,24 +266,25 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   // 調試信息將在 parameterContracts 和 vaultContracts 定義之後添加
   
   const envAddressMap: Record<string, { name: ContractName, address?: Address }> = useMemo(() => {
-    if (!setupConfig || !Array.isArray(setupConfig) || !chainId) return {};
+    if (!setupConfig || !Array.isArray(setupConfig)) return {};
     
-    // 從 CONTRACT_ADDRESSES 獲取實際配置的地址
-    const getAddr = (name: ContractName) => {
-      // 直接使用配置文件中的地址
-      const configAddress = contractConfigs[name];
+    // 從環境變數獲取地址（這才是真正的環境變數地址）
+    const getEnvAddr = (name: ContractName) => {
+      // 將合約名稱轉換為環境變數名稱
+      const envVarName = `VITE_MAINNET_${name.toUpperCase()}_ADDRESS`;
+      const envAddress = import.meta.env[envVarName];
       
       return { 
         name, 
-        address: configAddress && configAddress !== '0x0000000000000000000000000000000000000000' 
-          ? configAddress as Address 
+        address: envAddress && envAddress !== '0x0000000000000000000000000000000000000000' 
+          ? envAddress as Address 
           : undefined 
       };
     };
     
     return setupConfig.reduce((acc, config) => {
       if (config && config.key && config.valueToSetContractName) {
-        acc[config.key] = getAddr(config.valueToSetContractName);
+        acc[config.key] = getEnvAddr(config.valueToSetContractName);
       }
       return acc;
     }, {} as Record<string, { name: ContractName, address?: Address }>);
@@ -330,8 +331,8 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
     
     const config = [
       // 鑄造價格設定
-      { key: 'heroMintPrice', label: "英雄鑄造價", contract: validatedContracts.hero, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] },
-      { key: 'relicMintPrice', label: "聖物鑄造價", contract: validatedContracts.relic, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] },
+      { key: 'heroMintPrice', label: "英雄鑄造價", contract: validatedContracts.hero, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'], isWei: true },
+      { key: 'relicMintPrice', label: "聖物鑄造價", contract: validatedContracts.relic, getter: 'mintPriceUSD', setter: 'setMintPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'], isWei: true },
       // { key: 'provisionPrice', label: "儲備購買價", contract: validatedContracts.dungeonMaster, getter: 'provisionPriceUSD', setter: 'setProvisionPriceUSD', unit: 'USD', placeholders: ['新價格 (USD)'] }, // 暫時注釋
       
       // 平台費用設定

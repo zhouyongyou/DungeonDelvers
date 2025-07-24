@@ -43,7 +43,7 @@ graph deploy --studio dungeon-delvers
 ```
 
 ## 當前版本
-- V15 - 用於 V15 合約（區塊 55018576 開始）
+- V18 - 用於 V18 合約（區塊 55134953 開始）
 - 生成時間: 2025-07-23T13:03:51.179Z
 - 自動從 master-config.json 生成
 ## 查詢端點
@@ -80,7 +80,7 @@ npx hardhat run scripts/check-subgraph-sync-current.js --network bsc
 
 ```bash
 # 使用自動生成的部署腳本
-npm run deploy:v15
+npm run deploy:v18
 
 # 或者
 npm run deploy:current

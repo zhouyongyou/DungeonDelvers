@@ -1,4 +1,4 @@
-# Dungeon Delvers (地下城探索者) - V15
+# Dungeon Delvers (地下城探索者) - V18
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Blockchain: BSC](https://img.shields.io/badge/Blockchain-BSC-yellow.svg)](https://www.bscscan.com/)
@@ -178,9 +178,9 @@ src/
 
 ## 🗺️ 專案藍圖
 
-### ✅ 已完成（V15 版本）
+### ✅ 已完成（V18 版本）
 * **企業級技術基礎**
-  * [x] 完成 V15 合約架構部署
+  * [x] 完成 V18 合約架構部署（包含 V2Fixed 祭壇）
   * [x] 推出 React + TypeScript 前端
   * [x] 實施企業級配置管理系統
   * [x] 達成 50% 查詢效能提升
