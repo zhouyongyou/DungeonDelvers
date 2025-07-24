@@ -19,6 +19,42 @@ import type { AnyNft, NftAttribute } from '../types/nft';
 import { fetchMetadata } from '../api/nfts';
 
 // =================================================================
+// Section: 工具函數
+// =================================================================
+
+// 格式化價格顯示，避免科學記數法
+function formatPriceDisplay(amount: bigint | undefined | null): string {
+    if (!amount) return '0';
+    
+    const amountInEther = Number(formatEther(amount));
+    
+    // 對於超大數字（如錢包餘額），使用更友好的格式
+    if (amountInEther >= 1000000) {
+        const millions = amountInEther / 1000000;
+        return millions.toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+        }) + 'M';
+    }
+    
+    // 對於大數字，使用逗號分隔
+    if (amountInEther >= 1000) {
+        return amountInEther.toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        });
+    }
+    
+    // 對於小數字，顯示適當的小數位
+    if (amountInEther < 1) {
+        return amountInEther.toFixed(4);
+    }
+    
+    // 對於中等數字
+    return amountInEther.toFixed(2);
+}
+
+// =================================================================
 // Section: 數據獲取 Hooks
 // =================================================================
 
@@ -457,7 +493,7 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
                     <button onClick={() => setPaymentSource('wallet')} className={`px-4 py-2 rounded-md text-sm font-semibold transition ${paymentSource === 'wallet' ? 'bg-gray-700 text-white shadow' : 'text-gray-300'}`}>錢包支付</button>
                     <button onClick={() => setPaymentSource('vault')} className={`px-4 py-2 rounded-md text-sm font-semibold transition ${paymentSource === 'vault' ? 'bg-gray-700 text-white shadow' : 'text-gray-300'}`}>金庫支付 (免稅)</button>
                 </div>
-                <p className="text-xs text-center mt-2 text-gray-500">{paymentSource === 'wallet' ? '錢包餘額' : '金庫餘額'}: {address ? parseFloat(formatEther(balance)).toFixed(4) : '0.00'} $SoulShard</p>
+                <p className="text-xs text-center mt-2 text-gray-500">{paymentSource === 'wallet' ? '錢包餘額' : '金庫餘額'}: {address ? formatPriceDisplay(balance) : '0.00'} $SoulShard</p>
             </div>
             <div className="text-center mb-4 min-h-[72px] flex-grow flex flex-col justify-center">
                 {isLoading ? <div className="flex flex-col items-center justify-center"><LoadingSpinner color="border-gray-500" /><p className="text-sm text-gray-400 mt-2">讀取價格中...</p></div>
@@ -465,10 +501,7 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
                 : (<div>
                     <p className="text-lg text-gray-400">總價:</p>
                     <p className="font-bold text-yellow-400 text-2xl">
-                        {requiredAmount && requiredAmount > 10n ** 21n 
-                            ? `${(Number(requiredAmount) / 10 ** 18).toExponential(2)}` 
-                            : parseFloat(formatEther(typeof requiredAmount === 'bigint' ? requiredAmount : 0n)).toFixed(4)
-                        }
+                        {formatPriceDisplay(requiredAmount)}
                     </p>
                     <p className="text-xs text-gray-500">$SoulShard + {formatEther(typeof platformFee === 'bigint' ? platformFee * BigInt(quantity) : 0n)} BNB</p>
                 </div>)}
