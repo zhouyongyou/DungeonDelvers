@@ -6,9 +6,9 @@ dataSources:
     name: "Hero"
     network: "bsc"
     source:
-      address: "0x6E4dF8F5413B42EC7b82D2Bc20254Db5A11DB374"
+      address: "0x2b6CB00D10EFB1aF0125a26dfcbd9EBa87e07CD2"
       abi: "Hero"
-      startBlock: 55134953
+      startBlock: 55018576
     mapping:
       kind: "ethereum/events"
       apiVersion: "0.0.6"
@@ -29,9 +29,9 @@ dataSources:
     name: "Relic"
     network: "bsc"
     source:
-      address: "0x40e001D24aD6a28FC40870901DbF843D921fe56C"
+      address: "0xaEa78C3FC4bc50966aC41D76331fD0bf219D00ac"
       abi: "Relic"
-      startBlock: 55134953
+      startBlock: 55018576
     mapping:
       kind: "ethereum/events"
       apiVersion: "0.0.6"
@@ -52,9 +52,9 @@ dataSources:
     name: "PartyV3"
     network: "bsc"
     source:
-      address: "0xb26466A44f51CfFF8C13837dA8B2aD6BA82c62dF"
+      address: "0x514AFBb114fa6c77CC025720A31aaeE038fBbcd7"
       abi: "PartyV3"
-      startBlock: 55134953
+      startBlock: 55018576
     mapping:
       kind: "ethereum/events"
       apiVersion: "0.0.6"
@@ -75,9 +75,9 @@ dataSources:
     name: "VIPStaking"
     network: "bsc"
     source:
-      address: "0xe4B6C86748b49D91ac635A56a9DF25af963F8fdd"
+      address: "0x9c2fdD1c692116aB5209983e467286844B3b9921"
       abi: "VIPStaking"
-      startBlock: 55134953
+      startBlock: 55018576
     mapping:
       kind: "ethereum/events"
       apiVersion: "0.0.6"
@@ -100,32 +100,31 @@ dataSources:
     name: "PlayerProfile"
     network: "bsc"
     source:
-      address: "0xE5E85233082827941A9E9cb215bDB83407d7534b"
+      address: "0xbBF2f98aD7f7AC64E04A0aa8bE8a56C82fE09a65"
       abi: "PlayerProfile"
-      startBlock: 55134953
+      startBlock: 55018576
     mapping:
       kind: "ethereum/events"
       apiVersion: "0.0.6"
       language: "wasm/assemblyscript"
       entities:
         - "Player"
-        - "Referral"
       abis:
         - name: "PlayerProfile"
           file: "./abis/PlayerProfile.json"
       eventHandlers:
-        - event: "ProfileCreated(indexed address,indexed uint256)"
-          handler: "handleProfileCreated"
-        - event: "ExperienceAdded(indexed address,indexed uint256,uint256,uint256)"
+        - event: "ProfileRegistered(indexed address,string,indexed address)"
+          handler: "handleProfileRegistered"
+        - event: "ExperienceAdded(indexed address,uint256,uint256)"
           handler: "handleExperienceAdded"
       file: "./src/player-profile.ts"
   - kind: "ethereum/contract"
     name: "AltarOfAscension"
     network: "bsc"
     source:
-      address: "0xCA4f59E6ccDEe6c8D0Ef239c2b8b007BFcd935E0"
+      address: "0xTBD_V2FIXED_ADDRESS"  # 待更新為 V2Fixed 地址
       abi: "AltarOfAscensionV2Fixed"
-      startBlock: 55134953
+      startBlock: 99999999  # 待更新為 V18 部署區塊
     mapping:
       kind: "ethereum/events"
       apiVersion: "0.0.6"
@@ -133,10 +132,18 @@ dataSources:
       entities:
         - "UpgradeAttempt"
         - "Player"
+        - "PlayerUpgradeStats"
+        - "GlobalUpgradeStats"
       abis:
         - name: "AltarOfAscensionV2Fixed"
           file: "./abis/AltarOfAscensionV2Fixed.json"
       eventHandlers:
+        # V1 事件（保留向後相容）
+        - event: "UpgradeProcessed(indexed address,indexed address,uint8,uint8)"
+          handler: "handleUpgradeProcessed"
+        # V2Fixed 新事件
         - event: "UpgradeAttempted(indexed address,indexed address,uint8,uint8,uint256[],uint256[],uint8,uint256)"
           handler: "handleUpgradeAttempted"
-      file: "./src/altar-of-ascension.ts"
+        - event: "PlayerStatsUpdated(indexed address,uint256,uint256,uint256)"
+          handler: "handlePlayerStatsUpdated"
+      file: "./src/altar-of-ascension-v2.ts"

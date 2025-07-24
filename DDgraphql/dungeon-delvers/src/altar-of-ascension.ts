@@ -1,10 +1,11 @@
-// DDgraphql/dungeondelvers/src/altar-of-ascension.ts (穩定性加固版)
-import { UpgradeProcessed } from "../generated/AltarOfAscension/AltarOfAscension"
+// DDgraphql/dungeondelvers/src/altar-of-ascension.ts (V2Fixed)
+import { BigInt } from "@graphprotocol/graph-ts"
+import { UpgradeAttempted } from "../generated/AltarOfAscension/AltarOfAscensionV2Fixed"
 import { UpgradeAttempt } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { updateGlobalStats, updatePlayerStats, TOTAL_UPGRADE_ATTEMPTS, SUCCESSFUL_UPGRADES, TOTAL_UPGRADE_ATTEMPTS_PLAYER, SUCCESSFUL_UPGRADES_PLAYER } from "./stats"
 
-export function handleUpgradeProcessed(event: UpgradeProcessed): void {
+export function handleUpgradeAttempted(event: UpgradeAttempted): void {
     // 使用 getOrCreatePlayer 確保玩家實體存在
     const player = getOrCreatePlayer(event.params.player)
     
@@ -14,12 +15,12 @@ export function handleUpgradeProcessed(event: UpgradeProcessed): void {
     const upgradeAttempt = new UpgradeAttempt(attemptId)
     upgradeAttempt.player = player.id
     upgradeAttempt.type = event.params.tokenContract.toHexString() // 使用合約地址來確定類型
-    upgradeAttempt.targetId = event.params.targetRarity.toString() // 將目標稀有度轉換為字符串
-    upgradeAttempt.materialIds = [] // 無法從事件中獲取，設為空陣列
-    upgradeAttempt.materials = [] // 無法從事件中獲取，設為空陣列
-    upgradeAttempt.isSuccess = event.params.outcome >= 2
+    upgradeAttempt.targetId = event.params.targetRarity.toString() // 使用目標稀有度作為 ID
+    upgradeAttempt.materialIds = event.params.burnedTokenIds.map<string>((id: BigInt) => id.toString()) // 燒毀的 NFT IDs
+    upgradeAttempt.materials = [] // 無法從事件中獲取材料實體，設為空陣列
+    upgradeAttempt.isSuccess = event.params.outcome >= 2 // 2 = success, 3 = great success
     if (event.params.outcome >= 2) {
-        upgradeAttempt.newRarity = event.params.targetRarity
+        upgradeAttempt.newRarity = event.params.targetRarity // 成功升級到目標稀有度
     }
     upgradeAttempt.timestamp = event.block.timestamp
     upgradeAttempt.save()

@@ -200,6 +200,13 @@ type UpgradeAttempt @entity(immutable: true) {
   newRarity: Int
   " 時間戳 "
   timestamp: BigInt!
+  
+  " V2Fixed new fields "
+  baseRarity: Int!
+  outcome: Int!
+  fee: BigInt!
+  burnedTokenIds: [BigInt!]!
+  mintedTokenIds: [BigInt!]!
 }
 
 type GlobalStats @entity(immutable: false) {
@@ -252,6 +259,38 @@ type PlayerStats @entity(immutable: false) {
   successfulUpgrades: Int!
   " 最後活動時間戳 "
   lastActivityAt: BigInt!
+}
+
+" V2Fixed Player Upgrade Stats "
+type PlayerUpgradeStats @entity(immutable: false) {
+  " Player address as ID "
+  id: String!
+  " Total upgrade attempts "
+  totalAttempts: BigInt!
+  " Total NFTs burned "
+  totalBurned: BigInt!
+  " Total NFTs minted "
+  totalMinted: BigInt!
+  " Total fees spent "
+  totalFeesSpent: BigInt!
+  " Last updated timestamp "
+  lastUpdated: BigInt!
+}
+
+" V2Fixed Global Upgrade Stats "
+type GlobalUpgradeStats @entity(immutable: false) {
+  " Fixed ID = 'global' "
+  id: String!
+  " Total upgrade attempts "
+  totalAttempts: BigInt!
+  " Total NFTs burned "
+  totalBurned: BigInt!
+  " Total NFTs minted "
+  totalMinted: BigInt!
+  " Total fees collected "
+  totalFeesCollected: BigInt!
+  " Last updated timestamp "
+  lastUpdated: BigInt!
 }
 
 type HeroUpgrade @entity(immutable: true) {
