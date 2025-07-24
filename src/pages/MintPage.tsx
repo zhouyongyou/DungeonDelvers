@@ -31,26 +31,27 @@ function formatPriceDisplay(amount: bigint | undefined | null): string {
     // 對於超大數字（如錢包餘額），使用更友好的格式
     if (amountInEther >= 1000000) {
         const millions = amountInEther / 1000000;
+        // 始終顯示兩位小數，讓用戶清楚看到具體金額
         return millions.toLocaleString('en-US', {
-            minimumFractionDigits: 0,
+            minimumFractionDigits: 2,
             maximumFractionDigits: 2
         }) + 'M';
     }
     
-    // 對於大數字，使用逗號分隔
+    // 對於大數字，使用逗號分隔並顯示兩位小數
     if (amountInEther >= 1000) {
         return amountInEther.toLocaleString('en-US', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
         });
     }
     
-    // 對於小數字，顯示適當的小數位
+    // 對於小數字，顯示四位小數
     if (amountInEther < 1) {
         return amountInEther.toFixed(4);
     }
     
-    // 對於中等數字
+    // 對於中等數字，顯示兩位小數
     return amountInEther.toFixed(2);
 }
 
@@ -508,6 +509,17 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
             </div>
             {actionButton}
             <a href={contractConfig.address ? `https://www.okx.com/web3/nft/markets/collection/bscn/${contractConfig.address}` : '#'} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500 dark:text-indigo-400 hover:underline mt-2">前往市場交易</a>
+            {contractConfig.address && (
+                <p className="text-xs text-gray-500 mt-1">
+                    {type === 'hero' ? '英雄' : '聖物'}合約地址: 
+                    <a href={`https://bscscan.com/address/${contractConfig.address}`} 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       className="ml-1 hover:text-gray-400 font-mono">
+                        {contractConfig.address.slice(0, 6)}...{contractConfig.address.slice(-4)}
+                    </a>
+                </p>
+            )}
             <RarityProbabilities />
         </div>
     );

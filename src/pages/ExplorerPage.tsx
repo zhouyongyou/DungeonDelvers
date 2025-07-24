@@ -336,6 +336,167 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
 
 
 // =================================================================
+// Section: 合約地址展示組件
+// =================================================================
+
+const ContractAddressSection: React.FC = () => {
+  const contracts = [
+    {
+      category: "核心合約",
+      items: [
+        {
+          name: "DungeonCore",
+          address: "0x4D353aFC420E6187bfA5F99f0DdD8F7F137c20E9",
+          description: "總機合約，管理所有模組的地址和權限，是整個遊戲的中央控制器"
+        },
+        {
+          name: "Oracle",
+          address: "0x54Ff2524C996d7608CaE9F3D9dd2075A023472E9",
+          description: "價格預言機，從 Uniswap V3 獲取即時價格，計算 USD 價值"
+        }
+      ]
+    },
+    {
+      category: "NFT 合約",
+      items: [
+        {
+          name: "Hero",
+          address: "0x141F081922D4015b3157cdA6eE970dff34bb8AAb",
+          description: "英雄 NFT (ERC721)，每個英雄有不同的稀有度和戰力值"
+        },
+        {
+          name: "Relic",
+          address: "0xB1eb505426e852B8Dca4BF41454a7A22D2B6F3D3",
+          description: "聖物 NFT (ERC721)，提供容量加成，用於地城探索"
+        },
+        {
+          name: "Party",
+          address: "0xf240c4fD2651Ba41ff09eB26eE01b21f42dD9957",
+          description: "隊伍 NFT (ERC721)，將英雄和聖物組合成隊伍進行探索"
+        }
+      ]
+    },
+    {
+      category: "遊戲機制合約",
+      items: [
+        {
+          name: "DungeonMaster",
+          address: "0xd34ddc336071FE7Da3c636C3Df7C3BCB77B1044a",
+          description: "地城探索邏輯，處理隊伍探索、戰鬥和獎勵計算"
+        },
+        {
+          name: "DungeonStorage",
+          address: "0x6B85882ab32471Ce4a6599A7256E50B8Fb1fD43e",
+          description: "地城數據存儲，記錄所有地城的狀態和探索記錄"
+        },
+        {
+          name: "AltarOfAscension",
+          address: "0xb53c51Dc426c2Bd29da78Ac99426c55A6D6a51Ab",
+          description: "升星祭壇，使用 SOUL 代幣提升英雄和聖物的稀有度"
+        }
+      ]
+    },
+    {
+      category: "經濟系統合約",
+      items: [
+        {
+          name: "PlayerVault",
+          address: "0xF68cEa7E171A5caF151A85D7BEb2E862B83Ccf78",
+          description: "玩家金庫，管理玩家的 SOUL 代幣存取和餘額"
+        },
+        {
+          name: "VIPStaking",
+          address: "0x43A6C6cC9D15f2C68C7ec98deb01f2b69a618470",
+          description: "VIP 質押系統，質押 SOUL 獲得 VIP NFT 和特權"
+        },
+        {
+          name: "PlayerProfile",
+          address: "0x1d36C2F3f0C9212422B94608cAA72080CBf34A41",
+          description: "玩家檔案系統，管理經驗值、等級和邀請關係"
+        }
+      ]
+    },
+    {
+      category: "代幣合約",
+      items: [
+        {
+          name: "SoulShard (SOUL)",
+          address: "0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF",
+          description: "遊戲代幣 (ERC20)，用於鑄造、升級和質押等所有遊戲活動"
+        },
+        {
+          name: "USD Token",
+          address: "0x7C67Af4EBC6651c95dF78De11cfe325660d935FE",
+          description: "測試用 USD 代幣，用於價格計算和測試"
+        }
+      ]
+    },
+    {
+      category: "相關資源",
+      items: [
+        {
+          name: "Uniswap V3 Pool",
+          address: "0x1e5Cd5F386Fb6F39cD8788675dd3A5ceB6521C82",
+          description: "SOUL/USD 交易對，提供即時價格數據"
+        },
+        {
+          name: "DungeonMaster Wallet",
+          address: "0x10925A7138649C7E1794CE646182eeb5BF8ba647",
+          description: "遊戲營運錢包，收取平台費用"
+        }
+      ]
+    }
+  ];
+
+  return (
+    <div className="mt-12 card-bg p-6 rounded-xl shadow-md">
+      <h3 className="text-2xl font-bold text-gray-200 mb-6">智能合約地址與說明</h3>
+      <div className="space-y-8">
+        {contracts.map((category, idx) => (
+          <div key={idx}>
+            <h4 className="text-lg font-semibold text-indigo-400 mb-3">{category.category}</h4>
+            <div className="space-y-3">
+              {category.items.map((contract, contractIdx) => (
+                <div key={contractIdx} className="bg-gray-800/50 p-4 rounded-lg">
+                  <div className="flex items-start justify-between mb-2">
+                    <h5 className="font-semibold text-gray-200">{contract.name}</h5>
+                    <a 
+                      href={`https://bscscan.com/address/${contract.address}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                    >
+                      查看合約
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </div>
+                  <p className="text-sm text-gray-400 mb-2">{contract.description}</p>
+                  <p className="font-mono text-xs text-gray-500 break-all">{contract.address}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      <div className="mt-8 p-4 bg-blue-900/20 border border-blue-600/30 rounded-lg">
+        <h4 className="font-semibold text-blue-400 mb-2">遊戲經濟模型</h4>
+        <ul className="text-sm text-gray-300 space-y-1 list-disc list-inside">
+          <li>使用 SOUL 代幣作為主要遊戲貨幣</li>
+          <li>鑄造 NFT 需要支付 SOUL 代幣和 3% 平台費</li>
+          <li>地城探索可獲得 SOUL 獎勵，獎勵根據隊伍戰力和地城難度計算</li>
+          <li>升星系統消耗 SOUL 提升 NFT 稀有度和屬性</li>
+          <li>VIP 質押系統鎖定 SOUL 獲得特權和加成</li>
+          <li>所有價格通過 Oracle 從 Uniswap V3 獲取即時報價</li>
+        </ul>
+      </div>
+    </div>
+  );
+};
+
+// =================================================================
 // Section: ExplorerPage 主頁面
 // =================================================================
 
@@ -353,6 +514,7 @@ const ExplorerPage: React.FC = () => {
           <NftQuery type="relic" />
         </div>
       </div>
+      <ContractAddressSection />
     </section>
   );
 };
