@@ -1,27 +1,26 @@
-// Generated from v22-config.js on 2025-07-25
-// DO NOT EDIT MANUALLY - Use npm run sync:config
-// Version: V22 - Adaptive TWAP Oracle
+// DungeonDelvers Contract Configuration
+// Version: V19 Production
+// Updated: 2025-07-24T23:00:00.000Z
 
 export const CONTRACT_ADDRESSES = {
   USD: '0x7C67Af4EBC6651c95dF78De11cfe325660d935FE',
   SOULSHARD: '0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF',
-  ORACLE: '0xb9317179466fd7fb253669538dE1c4635E81eAc4', // V22 Adaptive TWAP
-  PLAYERVAULT: '0xe4654796E4C03F88776a666f3a47e16f5D6BE4fa',
   HERO: '0x141F081922D4015b3157cdA6eE970dff34bb8AAb',
   RELIC: '0xB1eb505426e852B8Dca4BF41454a7A22D2B6F3D3',
-  PARTY: '0x096aa1e0F9c87E57e8b69a7DD35D893D13BbA8F5',
-  VIPSTAKING: '0x43F03C89AF6091090bE05c00A65Cc4934Cf5f90D',
-  PLAYERPROFILE: '0xc5A972b7186562f768c8Ac97d3B4Ca15a019657d',
+  PARTY: '0xf240c4fD2651Ba41ff09eB26eE01b21f42dD9957',
   DUNGEONCORE: '0x4D353aFC420E6187bfA5F99f0DdD8F7F137c20E9',
-  DUNGEONMASTER: '0xd13250E0F0766006816d7AfE95EaEEc5e215d082',
-  DUNGEONSTORAGE: '0x2fcd1bbbB88cce8040A2DE92E97d5375d8B088da',
-  ALTAROFASCENSION: '0xFaEDa7886cc9dF32A96EBc7DAf4da1A27d3FB3de',
+  DUNGEONMASTER: '0xd34ddc336071FE7Da3c636C3Df7C3BCB77B1044a',
+  DUNGEONSTORAGE: '0x6B85882ab32471Ce4a6599A7256E50B8Fb1fD43e',
+  PLAYERVAULT: '0xF68cEa7E171A5caF151A85D7BEb2E862B83Ccf78',
+  PLAYERPROFILE: '0x1d36C2F3f0C9212422B94608cAA72080CBf34A41',
+  VIPSTAKING: '0x43A6C6cC9D15f2C68C7ec98deb01f2b69a618470',
+  ORACLE: '0x570ab1b068FB8ca51c995e78d2D62189B6201284', // V20 Oracle_Final
+  ALTAROFASCENSION: '0xb53c51Dc426c2Bd29da78Ac99426c55A6D6a51Ab',
   DUNGEONMASTERWALLET: '0x10925A7138649C7E1794CE646182eeb5BF8ba647',
-  UNISWAP_POOL: '0x1e5Cd5F386Fb6F39cD8788675dd3A5ceB6521C82',
 } as const;
 
-export const DEPLOYMENT_VERSION = 'V22';
-export const DEPLOYMENT_DATE = '2025-07-25';
+export const DEPLOYMENT_VERSION = 'V19';
+export const DEPLOYMENT_DATE = '2025-07-24';
 
 // Network Configuration
 export const NETWORK_CONFIG = {
@@ -38,18 +37,6 @@ export const SUBGRAPH_CONFIG = {
   useDecentralized: import.meta.env.PROD
 };
 
-// Oracle V22 Configuration
-export const ORACLE_CONFIG = {
-  version: "V22",
-  adaptivePeriods: [1800, 900, 300, 60], // 30min, 15min, 5min, 1min
-  features: [
-    "自適應 TWAP 週期",
-    "自動降級機制",
-    "永不失敗查詢",
-    "向後兼容 V21"
-  ]
-};
-
 // Contract helper functions
 export type ContractName = keyof typeof CONTRACT_ADDRESSES;
 
@@ -61,7 +48,7 @@ export interface ContractInfo {
 /**
  * Get contract information by chain ID and contract name
  * @param chainId - The chain ID (56 for BSC Mainnet)
- * @param contractName - The name of the contract
+ * @param contractName - The name of the contract (supports both uppercase and lowercase)
  * @returns Contract information or undefined if not found
  */
 export function getContract(chainId: number, contractName: ContractName | keyof typeof LEGACY_CONTRACT_NAMES): ContractInfo | undefined {
@@ -114,7 +101,21 @@ export const LEGACY_CONTRACT_NAMES = {
   vipStaking: 'VIPSTAKING',
   oracle: 'ORACLE',
   altarOfAscension: 'ALTAROFASCENSION',
-  dungeonMasterWallet: 'DUNGEONMASTERWALLET',
-  uniswapPool: 'UNISWAP_POOL',
-  usd: 'USD'
+  // 測試代幣映射
+  testUsd: 'TESTUSD',
+  TESTUSD: 'TESTUSD',
+  SOULSHARD: 'SOULSHARD',
+  ORACLE: 'ORACLE',
+  DUNGEONCORE: 'DUNGEONCORE'
 } as const;
+
+/**
+ * Get contract with legacy name support
+ * @param chainId - The chain ID
+ * @param legacyName - Legacy contract name (camelCase)
+ * @returns Contract information
+ */
+export function getContractLegacy(chainId: number, legacyName: keyof typeof LEGACY_CONTRACT_NAMES): ContractInfo | undefined {
+  const contractName = LEGACY_CONTRACT_NAMES[legacyName] as ContractName;
+  return getContract(chainId, contractName);
+}

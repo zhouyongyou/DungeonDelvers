@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear DungeonDelvers Cache</title>
+</head>
+<body>
+    <h1>清除 DungeonDelvers 緩存</h1>
+    <button onclick="clearCache()">點擊清除所有緩存</button>
+    <div id="result"></div>
+    
+    <script>
+        function clearCache() {
+            // 清除 localStorage
+            localStorage.clear();
+            
+            // 清除 sessionStorage
+            sessionStorage.clear();
+            
+            // 清除所有 cookies
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            
+            document.getElementById('result').innerHTML = '<p>✅ 緩存已清除！請關閉此頁面並重新載入 DungeonDelvers。</p>';
+        }
+    </script>
+</body>
+</html>

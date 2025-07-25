@@ -17,7 +17,7 @@ import {
   vipStakingABI,
   oracleABI,
   altarOfAscensionABI,
-  partyABI,
+  partyV3ABI,
   dungeonStorageABI
 } from './abis';
 
@@ -31,7 +31,7 @@ export interface ContractConfig {
 const CONTRACT_ABIS = {
   hero: heroABI,
   relic: relicABI,
-  party: partyABI,
+  party: partyV3ABI,
   soulShard: soulShardTokenABI,
   playerVault: playerVaultABI,
   dungeonCore: dungeonCoreABI,
@@ -109,7 +109,7 @@ export function getContractWithABI(
         address = CONTRACT_ADDRESSES.DUNGEONSTORAGE;
         break;
       case 'testUsd':
-        address = CONTRACT_ADDRESSES.TESTUSD;
+        address = CONTRACT_ADDRESSES.USD;
         break;
       case 'soulShardToken':
         address = CONTRACT_ADDRESSES.SOULSHARD;

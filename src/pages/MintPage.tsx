@@ -17,6 +17,7 @@ import { Modal } from '../components/ui/Modal';
 import { NftCard } from '../components/ui/NftCard';
 import type { AnyNft, NftAttribute } from '../types/nft';
 import { fetchMetadata } from '../api/nfts';
+import { PRICE_OVERRIDE, logPriceOverride } from '../config/priceOverride';
 
 // =================================================================
 // Section: 工具函數
@@ -28,31 +29,12 @@ function formatPriceDisplay(amount: bigint | undefined | null): string {
     
     const amountInEther = Number(formatEther(amount));
     
-    // 對於超大數字（如錢包餘額），使用更友好的格式
-    if (amountInEther >= 1000000) {
-        const millions = amountInEther / 1000000;
-        // 始終顯示兩位小數，讓用戶清楚看到具體金額
-        return millions.toLocaleString('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }) + 'M';
-    }
-    
-    // 對於大數字，使用逗號分隔並顯示兩位小數
-    if (amountInEther >= 1000) {
-        return amountInEther.toLocaleString('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
-    }
-    
-    // 對於小數字，顯示四位小數
-    if (amountInEther < 1) {
-        return amountInEther.toFixed(4);
-    }
-    
-    // 對於中等數字，顯示兩位小數
-    return amountInEther.toFixed(2);
+    // 對於所有數字，使用逗號分隔並顯示四位小數
+    // 不使用 M 縮寫，保持完整數字顯示
+    return amountInEther.toLocaleString('en-US', {
+        minimumFractionDigits: 4,
+        maximumFractionDigits: 4
+    });
 }
 
 // =================================================================
@@ -84,13 +66,13 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     // ★★★【核心優化】★★★
     // 直接呼叫 Hero/Relic 合約的 getRequiredSoulShardAmount 函式。
     // 這個函式內部會處理所有 USD 到 SoulShard 的轉換，將兩次鏈上讀取合併為一次。
-    const { data: requiredAmount, isLoading: isLoadingPrice, isError, error, refetch: refetchPrice } = useReadContract({
+    const { data: contractRequiredAmount, isLoading: isLoadingPrice, isError, error, refetch: refetchPrice } = useReadContract({
         address: contractConfig?.address,
         abi: contractConfig?.abi,
         functionName: 'getRequiredSoulShardAmount',
         args: [BigInt(quantity)],
         query: { 
-            enabled: !!contractConfig && quantity > 0,
+            enabled: !!contractConfig && quantity > 0 && !PRICE_OVERRIDE.enabled,
             staleTime: 1000 * 60 * 2, // 2分鐘 - 縮短快取時間，平衡性能與準確性
             gcTime: 1000 * 60 * 10,   // 10分鐘
             refetchOnWindowFocus: false,
@@ -102,6 +84,15 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
             },
         },
     });
+    
+    // 使用價格覆蓋（當 Oracle 失敗時）
+    const requiredAmount = useMemo(() => {
+        if (PRICE_OVERRIDE.enabled) {
+            logPriceOverride(type, quantity);
+            return PRICE_OVERRIDE.calculateSoulRequired(quantity);
+        }
+        return contractRequiredAmount;
+    }, [contractRequiredAmount, quantity, type]);
     
     // 🔍 價格調試信息
     useEffect(() => {

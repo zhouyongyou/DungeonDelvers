@@ -1,0 +1,44 @@
+{
+  "network": "bsc",
+  "dungeonCore": {
+    "address": "0x4D353aFC420E6187bfA5F99f0DdD8F7F137c20E9",
+    "startBlock": 0
+  },
+  "oracle": {
+    "address": "0xb9317179466fd7fb253669538dE1c4635E81eAc4",
+    "startBlock": 0,
+    "version": "V22"
+  },
+  "hero": {
+    "address": "0x141F081922D4015b3157cdA6eE970dff34bb8AAb",
+    "startBlock": 0
+  },
+  "relic": {
+    "address": "0xB1eb505426e852B8Dca4BF41454a7A22D2B6F3D3",
+    "startBlock": 0
+  },
+  "party": {
+    "address": "0x096aA1e0f9c87e57e8B69a7DD35D893d13Bba8f5",
+    "startBlock": 0
+  },
+  "dungeonMaster": {
+    "address": "0xbC7eCa65F0D0BA6f7aDDC5C6C956FE926d3344CE",
+    "startBlock": 0
+  },
+  "playerVault": {
+    "address": "0xE4654796e4c03f88776a666f3A47E16F5d6BE4FA",
+    "startBlock": 0
+  },
+  "altarOfAscension": {
+    "address": "0xFaEda7886Cc9dF32a96ebc7DaF4DA1a27d3fB3De",
+    "startBlock": 0
+  },
+  "vipStaking": {
+    "address": "0x43f03C89aF6091090bE05C00a65CC4934CF5f90D",
+    "startBlock": 0
+  },
+  "soulShard": {
+    "address": "0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF",
+    "startBlock": 0
+  }
+}
