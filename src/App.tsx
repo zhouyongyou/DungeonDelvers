@@ -35,7 +35,8 @@ const AdminPage = lazy(() => import('./pages/AdminPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const VipPage = lazy(() => import('./pages/VipPage'));
 const ReferralPage = lazy(() => import('./pages/ReferralPage'));
-const CodexPage = lazy(() => import('./pages/CodexPage'));
+// 暫時禁用圖鑑功能
+// const CodexPage = lazy(() => import('./pages/CodexPage'));
 const DebugContractPage = lazy(() => import('./pages/DebugContractPage'));
 const PriceDebugPage = lazy(() => import('./pages/PriceDebugPage'));
 
@@ -56,7 +57,7 @@ const PageLoader: React.FC = () => {
 const getPageFromHash = (): Page => {
     const hash = window.location.hash.replace('#/', '');
     const page = hash.split('?')[0];
-    const validPages: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'explorer', 'admin', 'altar', 'profile', 'vip', 'referral', 'codex', 'debug'];
+    const validPages: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'explorer', 'admin', 'altar', 'profile', 'vip', 'referral', /* 'codex', */ 'debug'];
     if (validPages.includes(page as Page)) {
         return page as Page;
     }
@@ -111,7 +112,7 @@ function App() {
   };
 
   const renderPage = () => {
-    const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'admin', 'altar', 'profile', 'vip', 'codex'];
+    const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'admin', 'altar', 'profile', 'vip' /* , 'codex' */];
     
     // 如果頁面需要錢包但尚未連接，則顯示提示
     if (!isConnected && pageRequiresWallet.includes(activePage)) {
@@ -140,7 +141,7 @@ function App() {
         case 'profile': return <ProfilePage setActivePage={handleSetPage} />;
         case 'vip': return <VipPage />;
         case 'referral': return <ReferralPage />;
-        case 'codex': return <CodexPage />;
+        // case 'codex': return <CodexPage />;
         case 'debug': return <DebugContractPage />;
         case 'priceDebug': return <PriceDebugPage />;
         default: return <MintPage />; // 預設頁面也改為 MintPage

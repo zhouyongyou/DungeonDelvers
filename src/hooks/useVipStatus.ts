@@ -4,7 +4,7 @@ import { useAccount, useReadContract, useBalance, useReadContracts } from 'wagmi
 // import { useMonitoredReadContracts } from './useMonitoredContract';
 import { useMemo, useEffect } from 'react';
 import { bsc } from 'wagmi/chains';
-import { getContract } from '../config/contracts';
+import { getContractWithABI as getContract } from '../config/contractsWithABI';
 import { useCountdown } from './useCountdown';
 import { logger } from '../utils/logger';
 

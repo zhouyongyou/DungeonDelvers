@@ -21,7 +21,7 @@ interface UseOptimisticUpdateOptions {
 export function useOptimisticUpdate<T = any>({
   queryKey,
   updateFn,
-  revertDelay = 30000, // 30 秒後回滾
+  revertDelay = 60000, // 60 秒後回滾（增加到 60 秒以應對網路延遲）
 }: UseOptimisticUpdateOptions) {
   const queryClient = useQueryClient();
   const [isOptimistic, setIsOptimistic] = useState(false);
@@ -47,7 +47,11 @@ export function useOptimisticUpdate<T = any>({
 
     // 設置回滾計時器
     const timer = setTimeout(() => {
-      logger.warn('樂觀更新超時，執行回滾');
+      logger.warn('樂觀更新超時，執行回滾', { 
+        queryKey, 
+        timeoutSeconds: revertDelay / 1000,
+        message: '可能是網路延遲或交易未確認' 
+      });
       rollback();
     }, revertDelay);
 

@@ -18,6 +18,7 @@ import { NftCard } from '../components/ui/NftCard';
 import type { AnyNft, NftAttribute } from '../types/nft';
 import { fetchMetadata } from '../api/nfts';
 import { PRICE_OVERRIDE, logPriceOverride } from '../config/priceOverride';
+import { invalidationStrategies } from '../config/queryConfig';
 
 // =================================================================
 // Section: 工具函數
@@ -303,6 +304,8 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
             setIsAwaitingMintAfterApproval(true);
             refetchAllowance();
             setShowProgressModal(false);
+            // 添加刷新提示
+            showToast('授權成功！如果按鈕未更新，請刷新頁面', 'success');
         },
         successMessage: '授權成功！',
         errorMessage: '授權失敗',
@@ -363,8 +366,12 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
                     queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
                     queryClient.invalidateQueries({ queryKey: ['dashboardSimpleStats'] });
                     queryClient.invalidateQueries({ queryKey: ['explorer'] });
-                    // 提示用戶數據同步
-                    showToast('鑄造成功！數據同步可能需要 1-2 分鐘', 'success');
+                    // 使用統一的失效策略
+                    if (address) {
+                        invalidationStrategies.onNftMinted(queryClient, address);
+                    }
+                    // 提示用戶數據同步（子圖可能有延遲）
+                    showToast('鑄造成功！子圖數據同步可能需要 1-2 分鐘', 'success');
                 }
             }
             setShowProgressModal(false);

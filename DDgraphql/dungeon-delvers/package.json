@@ -11,12 +11,15 @@
     "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 dungeon-delvers",
     "test": "jest",
     "deploy:v15": "./deploy-v15-auto.sh",
-    "deploy:current": "./deploy-v15-auto.sh"
+    "deploy:v22": "./deploy-v22.sh",
+    "deploy:current": "./deploy-v22.sh",
+    "sync:v22": "node scripts/generate-subgraph-from-v22.js"
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "0.90.0",
     "@graphprotocol/graph-ts": "0.35.0",
     "jest": "^29.7.0",
+    "js-yaml": "^4.1.0",
     "typescript": "^5.3.3"
   }
 }

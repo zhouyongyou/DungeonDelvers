@@ -268,23 +268,20 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   const envAddressMap: Record<string, { name: ContractName, address?: Address }> = useMemo(() => {
     if (!setupConfig || !Array.isArray(setupConfig)) return {};
     
-    // 從環境變數獲取地址（這才是真正的環境變數地址）
-    const getEnvAddr = (name: ContractName) => {
-      // 將合約名稱轉換為環境變數名稱
-      const envVarName = `VITE_MAINNET_${name.toUpperCase()}_ADDRESS`;
-      const envAddress = import.meta.env[envVarName];
+    // 從配置文件獲取地址（V22 配置）
+    const getConfigAddr = (name: ContractName) => {
+      // 使用 getContract 從 contracts.ts 獲取地址
+      const contractInfo = getContract(chainId, name);
       
       return { 
         name, 
-        address: envAddress && envAddress !== '0x0000000000000000000000000000000000000000' 
-          ? envAddress as Address 
-          : undefined 
+        address: contractInfo?.address as Address | undefined
       };
     };
     
     return setupConfig.reduce((acc, config) => {
       if (config && config.key && config.valueToSetContractName) {
-        acc[config.key] = getEnvAddr(config.valueToSetContractName);
+        acc[config.key] = getConfigAddr(config.valueToSetContractName);
       }
       return acc;
     }, {} as Record<string, { name: ContractName, address?: Address }>);
@@ -343,7 +340,8 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       
       // 遊戲機制參數
       // { key: 'restDivisor', label: "休息成本係數", contract: validatedContracts.dungeonMaster, getter: 'restCostPowerDivisor', setter: 'setRestCostPowerDivisor', unit: '無', placeholders: ['新係數 (戰力/USD)'] }, // 暫時沒這功能
-      { key: 'dungeonCooldown', label: "地下城挑戰冷卻 (秒)", contract: validatedContracts.dungeonMaster, getter: 'cooldownPeriod', setter: 'setCooldownPeriod', unit: '無', placeholders: ['新冷卻時間 (秒)'] },
+      // 冷卻時間是固定的 24 小時，移除設置功能
+      // { key: 'dungeonCooldown', label: "地下城挑戰冷卻 (秒)", contract: validatedContracts.dungeonMaster, getter: 'cooldownPeriod', setter: 'setCooldownPeriod', unit: '無', placeholders: ['新冷卻時間 (秒)'] },
       // { key: 'vipCooldown', label: "VIP 取消質押冷卻 (秒)", contract: validatedContracts.vipStaking, getter: 'unstakeCooldown', setter: 'setUnstakeCooldown', unit: '無', placeholders: ['新冷卻時間 (秒)'] }, // 暫時註釋 - 與 VipSettingsManager 重複
       // { key: 'globalRewardMultiplier', label: "全域獎勵倍率", contract: validatedContracts.dungeonMaster, getter: 'globalRewardMultiplier', setter: 'setGlobalRewardMultiplier', unit: '‱', placeholders: ['新倍率 (1000=100%)'] }, // 暫時註釋 - 在 GlobalRewardSettings 中處理
       
@@ -972,16 +970,15 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         onExpand={() => setLoadedSections(prev => ({ ...prev, gameParams: true }))}
         isLoading={isLoadingParams && loadedSections.gameParams}
       >
+        {/* 顯示固定的冷卻時間 */}
+        <ReadOnlyRow
+          label="地下城挑戰冷卻"
+          value="24 小時（固定值）"
+          className="mb-4"
+        />
         {(() => {
-          const filteredParams = parameterConfig?.filter(p => p && ['dungeonCooldown'].includes(p.key)) || [];
-          
-          console.log('🔍 遊戲機制參數篩選結果:', {
-            parameterConfig: parameterConfig?.length,
-            filtered: filteredParams,
-            filteredLength: filteredParams.length,
-            params: params?.length,
-            isLoadingParams
-          });
+          // 由於冷卻時間現在是固定值，這裡不需要過濾任何參數
+          const filteredParams: any[] = [];
           
           return filteredParams.map((p) => {
             const { key, setter, ...rest } = p;

@@ -10,7 +10,7 @@ import { formatEther, parseEther } from 'viem';
 import { formatSoul, formatLargeNumber } from '../utils/formatters';
 // 不再需要從 nfts.ts 獲取數據
 // import { fetchAllOwnedNfts } from '../api/nfts';
-import { getContract } from '../config/contracts';
+import { getContractWithABI as getContract } from '../config/contractsWithABI';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ActionButton } from '../components/ui/ActionButton';
@@ -1140,7 +1140,10 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
             
             {/* Expedition Tracker - 移到可挑戰的地下城上方 */}
             <ExpeditionTracker />
-            
+        </section>
+        
+        {/* 可挑戰的地下城 - 移到隊伍檢查的外面，即使沒有隊伍也能看到 */}
+        <section className="space-y-8 mt-8">
             <div>
                 <h2 className="page-title">可挑戰的地下城</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

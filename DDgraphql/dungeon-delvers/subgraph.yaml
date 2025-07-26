@@ -1,4 +1,4 @@
-# Generated from v21-config.js on 2025-07-25T05:53:42.263Z
+# Generated from v22-config.js on 2025-07-26T02:45:10.105Z
 # DO NOT EDIT MANUALLY - Use npm run sync:config
 specVersion: 0.0.4
 schema:
@@ -8,9 +8,9 @@ dataSources:
     name: Hero
     network: bsc
     source:
-      address: '0x141F081922D4015b3157cdA6eE970dff34bb8AAb'
+      address: "0x141F081922D4015b3157cdA6eE970dff34bb8AAb"
       abi: Hero
-      startBlock: 55164905
+      startBlock: 55309000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -22,18 +22,18 @@ dataSources:
         - name: Hero
           file: ./abis/Hero.json
       eventHandlers:
-        - event: 'Transfer(indexed address,indexed address,indexed uint256)'
+        - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleTransfer
-        - event: 'HeroMinted(indexed uint256,indexed address,uint8,uint256)'
+        - event: HeroMinted(indexed uint256,indexed address,uint8,uint256)
           handler: handleHeroMinted
       file: ./src/hero.ts
   - kind: ethereum/contract
     name: Relic
     network: bsc
     source:
-      address: '0xB1eb505426e852B8Dca4BF41454a7A22D2B6F3D3'
+      address: "0xB1eb505426e852B8Dca4BF41454a7A22D2B6F3D3"
       abi: Relic
-      startBlock: 55164905
+      startBlock: 55309000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -45,18 +45,18 @@ dataSources:
         - name: Relic
           file: ./abis/Relic.json
       eventHandlers:
-        - event: 'Transfer(indexed address,indexed address,indexed uint256)'
+        - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleTransfer
-        - event: 'RelicMinted(indexed uint256,indexed address,uint8,uint8)'
+        - event: RelicMinted(indexed uint256,indexed address,uint8,uint8)
           handler: handleRelicMinted
       file: ./src/relic.ts
   - kind: ethereum/contract
     name: PartyV3
     network: bsc
     source:
-      address: '0x096aA1e0f9c87e57e8B69a7DD35D893d13Bba8f5'
+      address: "0x0B97726acd5a8Fe73c73dC6D473A51321a2e62ee"
       abi: PartyV3
-      startBlock: 55164905
+      startBlock: 55309000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -68,20 +68,18 @@ dataSources:
         - name: PartyV3
           file: ./abis/PartyV3.json
       eventHandlers:
-        - event: 'Transfer(indexed address,indexed address,indexed uint256)'
+        - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handlePartyTransfer
-        - event: >-
-            PartyCreated(indexed uint256,indexed
-            address,uint256[],uint256[],uint256,uint256,uint8)
+        - event: PartyCreated(indexed uint256,indexed address,uint256[],uint256[],uint256,uint256,uint8)
           handler: handlePartyCreated
       file: ./src/party.ts
   - kind: ethereum/contract
     name: VIPStaking
     network: bsc
     source:
-      address: '0x43f03C89aF6091090bE05C00a65CC4934CF5f90D'
+      address: "0xc59B9944a9CbB947F4067F941EbFB0a5A2564eb9"
       abi: VIPStaking
-      startBlock: 55164905
+      startBlock: 55309000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -93,20 +91,20 @@ dataSources:
         - name: VIPStaking
           file: ./abis/VIPStaking.json
       eventHandlers:
-        - event: 'Staked(indexed address,uint256,uint256)'
+        - event: Staked(indexed address,uint256,uint256)
           handler: handleStaked
-        - event: 'UnstakeRequested(indexed address,uint256,uint256)'
+        - event: UnstakeRequested(indexed address,uint256,uint256)
           handler: handleUnstakeRequested
-        - event: 'UnstakeClaimed(indexed address,uint256)'
+        - event: UnstakeClaimed(indexed address,uint256)
           handler: handleUnstakeClaimed
       file: ./src/vip-staking.ts
   - kind: ethereum/contract
     name: PlayerProfile
     network: bsc
     source:
-      address: '0xc5A972B7186562f768c8aC97D3b4ca15A019657d'
+      address: "0x4998FADF96Be619d54f6E9bcc654F89937201FBe"
       abi: PlayerProfile
-      startBlock: 55164905
+      startBlock: 55309000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -118,18 +116,18 @@ dataSources:
         - name: PlayerProfile
           file: ./abis/PlayerProfile.json
       eventHandlers:
-        - event: 'ProfileCreated(indexed address,indexed uint256)'
+        - event: ProfileCreated(indexed address,indexed uint256)
           handler: handleProfileCreated
-        - event: 'ExperienceAdded(indexed address,indexed uint256,uint256,uint256)'
+        - event: ExperienceAdded(indexed address,indexed uint256,uint256,uint256)
           handler: handleExperienceAdded
       file: ./src/player-profile.ts
   - kind: ethereum/contract
     name: AltarOfAscension
     network: bsc
     source:
-      address: '0xFaEda7886Cc9dF32a96ebc7DaF4DA1a27d3fB3De'
+      address: "0xfb121441510296A92c8A2Cc04B6Aff1a2f72cd3f"
       abi: AltarOfAscensionV2Fixed
-      startBlock: 55164905
+      startBlock: 55309000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -141,8 +139,6 @@ dataSources:
         - name: AltarOfAscensionV2Fixed
           file: ./abis/AltarOfAscensionV2Fixed.json
       eventHandlers:
-        - event: >-
-            UpgradeAttempted(indexed address,indexed
-            address,uint8,uint8,uint256[],uint256[],uint8,uint256)
+        - event: UpgradeAttempted(indexed address,indexed address,uint8,uint8,uint256[],uint256[],uint8,uint256)
           handler: handleUpgradeAttempted
       file: ./src/altar-of-ascension.ts

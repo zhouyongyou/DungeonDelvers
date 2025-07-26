@@ -6,6 +6,7 @@ import { parseEther, formatEther } from 'viem';
 import type { Abi } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { getContract } from '../../config/contracts';
+import { getContractWithABI } from '../../config/contractsWithABI';
 import { useAppToast } from '../../hooks/useAppToast';
 import { ActionButton } from '../ui/ActionButton';
 import { useQueryClient } from '@tanstack/react-query';
@@ -22,8 +23,9 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
   const queryClient = useQueryClient();
   const [pendingDungeon, setPendingDungeon] = useState<number | null>(null);
   
-  const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
-  const dungeonStorageContract = getContract(chainId, 'dungeonStorage');
+  const dungeonMasterContract = getContractWithABI(chainId, 'dungeonMaster');
+  // 使用 getContractWithABI 來獲取包含 ABI 的合約配置
+  const dungeonStorageContract = getContractWithABI(chainId, 'dungeonStorage');
 
   // 讀取地城總數量
   const { data: numDungeons } = useReadContract({
@@ -37,12 +39,13 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
   });
 
   // 根據地城數量動態生成合約讀取配置
-  const dungeonContracts = Array.from({ length: Number(numDungeons || 10) }, (_, i) => ({
-    address: dungeonStorageContract?.address,
-    abi: dungeonStorageContract?.abi,
-    functionName: 'getDungeon',
-    args: [BigInt(i + 1)],
-  }));
+  const dungeonContracts = dungeonStorageContract ? 
+    Array.from({ length: Number(numDungeons || 10) }, (_, i) => ({
+      address: dungeonStorageContract.address,
+      abi: dungeonStorageContract.abi,
+      functionName: 'getDungeon',
+      args: [BigInt(i + 1)],
+    })) : [];
 
   // 批量讀取所有地城的當前配置
   const { data: currentDungeonsData, refetch: refetchDungeons } = useReadContracts({
@@ -75,18 +78,24 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
 
   // 當從合約讀取到數據時，初始化輸入值
   useEffect(() => {
-    if (currentDungeonsData) {
+    if (currentDungeonsData && Array.isArray(currentDungeonsData)) {
       const initialInputs: Record<number, any> = {};
       currentDungeonsData.forEach((data, index) => {
         if (data.status === 'success' && data.result) {
-          const [, requiredPower, rewardAmountUSD, baseSuccessRate, isInitialized] = data.result as any[];
+          // getDungeon 返回的是一個 struct，不是陣列
+          const dungeon = data.result as {
+            requiredPower: bigint;
+            rewardAmountUSD: bigint;
+            baseSuccessRate: number;
+            isInitialized: boolean;
+          };
           
-          if (isInitialized === true) {
+          if (dungeon.isInitialized === true) {
             // 使用合約中的實際值
             initialInputs[index + 1] = {
-              requiredPower: requiredPower.toString(),
-              rewardAmountUSD: formatEther(rewardAmountUSD),
-              baseSuccessRate: baseSuccessRate.toString()
+              requiredPower: dungeon.requiredPower.toString(),
+              rewardAmountUSD: formatEther(dungeon.rewardAmountUSD),
+              baseSuccessRate: dungeon.baseSuccessRate.toString()
             };
           } else {
             // 使用默認值
@@ -217,9 +226,9 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
         const dungeonId = i + 1;
         const defaultDungeon = defaultDungeons.find(d => d.id === dungeonId);
         const dungeonName = defaultDungeon?.name || `地城 #${dungeonId}`;
-        const contractData = currentDungeonsData?.[i];
-        // 檢查數據結構：[id, requiredPower, rewardAmountUSD, baseSuccessRate, isInitialized]
-        const isInitialized = contractData?.status === 'success' && contractData?.result?.[4] === true;
+        const contractData = Array.isArray(currentDungeonsData) ? currentDungeonsData[i] : undefined;
+        // getDungeon 返回的是一個 struct
+        const isInitialized = contractData?.status === 'success' && (contractData?.result as any)?.isInitialized === true;
         
         const inputs = dungeonInputs[dungeonId] || {
           requiredPower: '',
@@ -285,9 +294,9 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
               <div className="text-sm text-gray-400">
                 {isInitialized && contractData?.result && (
                   <>
-                    當前: 戰力 {contractData.result[1]?.toString()}, 
-                    獎勵 {formatEther(contractData.result[2] || 0n)} USD, 
-                    成功率 {contractData.result[3]?.toString()}%
+                    當前: 戰力 {(contractData.result as any).requiredPower?.toString()}, 
+                    獎勵 {formatEther((contractData.result as any).rewardAmountUSD || 0n)} USD, 
+                    成功率 {(contractData.result as any).baseSuccessRate?.toString()}%
                   </>
                 )}
               </div>

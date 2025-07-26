@@ -8,7 +8,7 @@ import { NftCard } from '../components/ui/NftCard';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
-import { getContract } from '../config/contracts';
+import { getContractWithABI as getContract } from '../config/contractsWithABI';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';
 import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
