@@ -1063,13 +1063,14 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
     if (isLoading) return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
 
     return (
-        <section className="space-y-8">
-            <TransactionProgressModal
-                isOpen={showProgressModal}
-                onClose={() => setShowProgressModal(false)}
-                progress={currentProgress}
-                title={'遠征進度'} // 已移除休息功能
-            />
+        <>
+            <section className="space-y-8">
+                <TransactionProgressModal
+                    isOpen={showProgressModal}
+                    onClose={() => setShowProgressModal(false)}
+                    progress={currentProgress}
+                    title={'遠征進度'} // 已移除休息功能
+                />
             {/* 已移除儲備購買 Modal */}
             <div>
                 <div className="flex justify-between items-center mb-6">
@@ -1147,10 +1148,17 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
             <div>
                 <h2 className="page-title">可挑戰的地下城</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {[...dungeons].reverse().map(dungeon => ( <DungeonInfoCard key={dungeon.id} dungeon={dungeon} calculateSoulReward={calculateSoulReward} /> ))}
+                    {[...dungeons].reverse().map(dungeon => (
+                        <DungeonInfoCard 
+                            key={dungeon.id} 
+                            dungeon={dungeon} 
+                            calculateSoulReward={calculateSoulReward} 
+                        />
+                    ))}
                 </div>
             </div>
         </section>
+        </>
     );
 };
 
