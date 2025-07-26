@@ -94,7 +94,7 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
             // 使用合約中的實際值
             initialInputs[index + 1] = {
               requiredPower: dungeon.requiredPower.toString(),
-              rewardAmountUSD: formatEther(dungeon.rewardAmountUSD),
+              rewardAmountUSD: parseFloat(formatEther(dungeon.rewardAmountUSD)).toFixed(2),
               baseSuccessRate: dungeon.baseSuccessRate.toString()
             };
           } else {
@@ -295,7 +295,7 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
                 {isInitialized && contractData?.result && (
                   <>
                     當前: 戰力 {(contractData.result as any).requiredPower?.toString()}, 
-                    獎勵 {formatEther((contractData.result as any).rewardAmountUSD || 0n)} USD, 
+                    獎勵 {parseFloat(formatEther((contractData.result as any).rewardAmountUSD || 0n)).toFixed(2)} USD, 
                     成功率 {(contractData.result as any).baseSuccessRate?.toString()}%
                   </>
                 )}

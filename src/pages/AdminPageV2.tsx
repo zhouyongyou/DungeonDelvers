@@ -531,7 +531,7 @@ const ContractSettings: React.FC = () => {
             
             <div className="flex justify-between items-center">
               <span className="text-gray-300">鑄造價格:</span>
-              <span className="text-white">{formatEther(settings.hero.mintPriceUSD)} USD</span>
+              <span className="text-white">{parseFloat(formatEther(settings.hero.mintPriceUSD)).toFixed(2)} USD</span>
             </div>
             
             <div className="flex justify-between items-center">
@@ -578,7 +578,7 @@ const ContractSettings: React.FC = () => {
             
             <div className="flex justify-between items-center">
               <span className="text-gray-300">鑄造價格:</span>
-              <span className="text-white">{formatEther(settings.relic.mintPriceUSD)} USD</span>
+              <span className="text-white">{parseFloat(formatEther(settings.relic.mintPriceUSD)).toFixed(2)} USD</span>
             </div>
             
             <div className="flex justify-between items-center">

@@ -29,8 +29,7 @@ const MintPage = lazy(() => import('./pages/MintPage'));
 const ExplorerPage = lazy(() => import('./pages/ExplorerPage'));
 const MyAssetsPage = lazy(() => import('./pages/MyAssetsPage'));
 const DungeonPage = lazy(() => import('./pages/DungeonPage'));
-// V1版本：暫時禁用祭壇功能
-// const AltarPage = lazy(() => import('./pages/AltarPage'));
+const AltarPage = lazy(() => import('./pages/AltarPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const VipPage = lazy(() => import('./pages/VipPage'));
@@ -130,14 +129,7 @@ function App() {
         case 'mint': return <MintPage />;
         case 'explorer': return <ExplorerPage />;
         case 'admin': return <AdminPage />;
-        // V1版本：暫時禁用祭壇功能
-        case 'altar': return (
-            <div className="flex flex-col items-center justify-center h-64">
-                <p className="text-xl text-gray-400 mb-2">升星祭壇功能即將推出</p>
-                <p className="text-sm text-gray-500">敬請期待！</p>
-            </div>
-        );
-        // case 'altar': return <AltarPage />;
+        case 'altar': return <AltarPage />;
         case 'profile': return <ProfilePage setActivePage={handleSetPage} />;
         case 'vip': return <VipPage />;
         case 'referral': return <ReferralPage />;

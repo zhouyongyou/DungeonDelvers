@@ -569,12 +569,12 @@ const AdminPageOptimizedContent: React.FC<{ chainId: SupportedChainId }> = ({ ch
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <ReadOnlyRow 
             label="大額提款門檻" 
-            value={vaultParams?.[0]?.result ? `${formatEther(vaultParams[0].result as bigint)} USD` : '載入中...'} 
+            value={vaultParams?.[0]?.result ? `${parseFloat(formatEther(vaultParams[0].result as bigint)).toFixed(2)} USD` : '載入中...'} 
             isLoading={isLoadingVaultParams} 
           />
           <ReadOnlyRow 
             label="小額提款門檻" 
-            value={vaultParams?.[1]?.result ? `${formatEther(vaultParams[1].result as bigint)} USD` : '載入中...'} 
+            value={vaultParams?.[1]?.result ? `${parseFloat(formatEther(vaultParams[1].result as bigint)).toFixed(2)} USD` : '載入中...'} 
             isLoading={isLoadingVaultParams} 
           />
           <ReadOnlyRow 
