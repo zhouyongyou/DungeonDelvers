@@ -552,23 +552,26 @@ async function parseNfts<T extends AssetWithTokenId>(
 
     // 直接從子圖數據構建 NFT 對象，無需額外的合約調用
     const results = assets.map((asset: T) => {
+        // VIP 特殊處理：使用地址作為唯一標識
+        const tokenId = type === 'vip' ? '1' : asset.tokenId;
+        
         // 生成基本的 metadata 結構
         const baseMetadata = {
-            name: `${type.charAt(0).toUpperCase() + type.slice(1)} #${asset.tokenId}`,
+            name: `${type.charAt(0).toUpperCase() + type.slice(1)} #${tokenId}`,
             description: `${type.charAt(0).toUpperCase() + type.slice(1)} NFT from DungeonDelvers`,
             image: `/images/${type}/${type}.png`, // 使用默認圖片
             attributes: [] as NftAttribute[]
         };
 
-        // 安全檢查：確保 tokenId 存在且有效
-        if (!asset.tokenId || asset.tokenId === '') {
+        // 安全檢查：確保 tokenId 存在且有效（VIP 除外）
+        if (type !== 'vip' && (!asset.tokenId || asset.tokenId === '')) {
             logger.warn('跳過無效的 tokenId:', { asset, type });
             return null;
         }
 
         const baseNft = {
             ...baseMetadata,
-            id: BigInt(asset.tokenId),
+            id: BigInt(tokenId),
             contractAddress,
             source: 'subgraph'
         };

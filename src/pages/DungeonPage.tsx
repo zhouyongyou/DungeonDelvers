@@ -31,6 +31,7 @@ import { ExpeditionHistory } from '../components/ExpeditionHistory';
 import { CooldownTimer } from '../components/CooldownTimer';
 import { ExpeditionTracker } from '../components/ExpeditionTracker';
 import { useRealtimeExpeditions } from '../hooks/useRealtimeExpeditions';
+import { usePartyValidation } from '../hooks/usePartyValidation';
 import { useBatchOperations } from '../hooks/useBatchOperations';
 
 // RewardClaimButton 已移至統一的 RewardClaimSection 組件

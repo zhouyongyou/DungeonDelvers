@@ -124,20 +124,45 @@ export const useRewardManager = ({ partyId, chainId }: UseRewardManagerProps) =>
             partyStatus,
             isArray: Array.isArray(partyStatus),
             length: Array.isArray(partyStatus) ? partyStatus.length : 'not array',
-            provisionsRemaining: partyStatus[0]?.toString(),
-            cooldownEndsAt: partyStatus[1]?.toString(),
-            unclaimedRewards: partyStatus[2]?.toString(),
-            fatigueLevel: partyStatus[3]?.toString(),
+            provisionsRemaining: Array.isArray(partyStatus) && partyStatus[0] !== undefined ? partyStatus[0]?.toString() : 'N/A',
+            cooldownEndsAt: Array.isArray(partyStatus) && partyStatus[1] !== undefined ? partyStatus[1]?.toString() : 'N/A',
+            unclaimedRewards: Array.isArray(partyStatus) && partyStatus[2] !== undefined ? partyStatus[2]?.toString() : 'N/A',
+            fatigueLevel: Array.isArray(partyStatus) && partyStatus[3] !== undefined ? partyStatus[3]?.toString() : 'N/A',
         });
     }
     
     // 處理不同的數據結構（可能是對象或數組）
     let unclaimedRewards = 0n;
     if (partyStatus) {
-        if (Array.isArray(partyStatus) && partyStatus.length >= 3) {
-            unclaimedRewards = BigInt(partyStatus[2].toString());
+        if (Array.isArray(partyStatus)) {
+            // 確保索引 2 存在且不是 undefined
+            if (partyStatus.length > 2 && partyStatus[2] !== undefined && partyStatus[2] !== null) {
+                try {
+                    unclaimedRewards = BigInt(partyStatus[2].toString());
+                } catch (error) {
+                    logger.error('[useRewardManager] Error parsing unclaimed rewards:', {
+                        error,
+                        value: partyStatus[2],
+                        type: typeof partyStatus[2]
+                    });
+                    unclaimedRewards = 0n;
+                }
+            } else {
+                logger.warn('[useRewardManager] Party status array too short or value is null:', {
+                    length: partyStatus.length,
+                    value: partyStatus[2]
+                });
+            }
         } else if (typeof partyStatus === 'object' && 'unclaimedRewards' in partyStatus) {
-            unclaimedRewards = BigInt(partyStatus.unclaimedRewards.toString());
+            try {
+                unclaimedRewards = BigInt(partyStatus.unclaimedRewards.toString());
+            } catch (error) {
+                logger.error('[useRewardManager] Error parsing unclaimed rewards from object:', {
+                    error,
+                    value: partyStatus.unclaimedRewards
+                });
+                unclaimedRewards = 0n;
+            }
         }
     }
     

@@ -32,16 +32,16 @@ const OraclePriceTest: React.FC = () => {
     }
   });
   
-  // 調試日誌
-  console.log('🔍 Oracle 查詢調試:', {
-    oracleContract: oracleContract?.address,
-    testUsdContract: testUsdContract?.address,
-    soulShardContract: soulShardContract?.address,
-    testAmount,
-    directPrice,
-    directError,
-    enabled: !!oracleContract && !!testAmount && !isNaN(Number(testAmount)) && Number(testAmount) > 0
-  });
+  // 調試日誌 - 僅在錯誤時輸出
+  if (directError) {
+    console.error('🔍 Oracle 查詢錯誤:', {
+      oracleContract: oracleContract?.address,
+      testUsdContract: testUsdContract?.address,
+      soulShardContract: soulShardContract?.address,
+      testAmount,
+      directError
+    });
+  }
 
   // 測試 DungeonCore 包裝的價格查詢
   const { data: corePrice, isLoading: coreLoading, error: coreError } = useReadContract({
@@ -61,14 +61,6 @@ const OraclePriceTest: React.FC = () => {
   };
 
   const formatPrice = (price: any) => {
-    console.log('🔍 formatPrice 調試:', {
-      price,
-      priceType: typeof price,
-      isZero: price === 0n,
-      isUndefined: price === undefined,
-      isNull: price === null
-    });
-    
     if (!price && price !== 0n) return '---';
     try {
       const formatted = formatEther(price as bigint);

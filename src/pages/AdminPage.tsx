@@ -28,6 +28,7 @@ import AdminSection from '../components/admin/AdminSection';
 import ReadOnlyRow from '../components/admin/ReadOnlyRow';
 import AddressSettingRow from '../components/admin/AddressSettingRowDark';
 import SettingRow from '../components/admin/SettingRowDark';
+import { ExpeditionTestComponent } from '../components/admin/ExpeditionTestComponent';
 import DungeonManager from '../components/admin/DungeonManagerDark';
 import AltarRuleManager from '../components/admin/AltarRuleManagerDark';
 import FundsWithdrawal from '../components/admin/FundsWithdrawalDark';
@@ -724,6 +725,11 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       
       {/* Game Flow Test */}
       <GameFlowTest />
+      
+      {/* Expedition Test */}
+      <AdminSection title="🔍 出征交易測試" defaultExpanded={false}>
+        <ExpeditionTestComponent />
+      </AdminSection>
       
       <AdminSection 
         title="合約串接中心"
