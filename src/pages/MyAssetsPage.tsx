@@ -176,6 +176,43 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
         <div className="card-bg p-4 md:p-6 rounded-2xl shadow-xl">
             <h3 className="section-title">創建新隊伍</h3>
             
+            {/* NFT 同步提示 */}
+            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mb-4">
+                <div className="flex items-center gap-2 mb-1">
+                    <span className="text-blue-400 text-xs">ℹ️</span>
+                    <span className="text-xs font-medium text-blue-300">NFT 同步提示</span>
+                </div>
+                <ul className="text-xs text-gray-400 space-y-0.5">
+                    <li>• 新鑄造的 NFT 需要 <strong className="text-blue-300">2-3 分鐘</strong> 才會在此頁面顯示</li>
+                    <li>• 如果您剛完成鑄造，請稍作等待或刷新頁面</li>
+                    <li>• 系統正在同步區塊鏈數據和更新索引</li>
+                    {(heroes.length + relics.length) > 100 && (
+                        <li className="text-yellow-300">• ⚠️ 您擁有大量 NFT，載入可能需要較長時間</li>
+                    )}
+                </ul>
+            </div>
+            
+            {/* 收益最大化組隊策略 */}
+            <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-3 mb-4">
+                <div className="flex items-start gap-2">
+                    <div className="flex-shrink-0 w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center mt-0.5">
+                        <span className="text-white text-xs">💰</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <p className="text-xs text-purple-200 font-medium">
+                            收益最大化組隊策略
+                        </p>
+                        <ul className="text-xs text-purple-100 space-y-1 list-disc list-inside">
+                            <li>建議每個帳號培養<span className="font-semibold text-purple-50">一個精華隊伍</span>，戰力達到<span className="font-semibold text-purple-50">3000+</span></li>
+                            <li>優先組建能挑戰「混沌深淵」（3000 戰力需求）的隊伍，可獲得最高收益</li>
+                            <li>選擇高容量聖物（4-5 星）搭配高戰力英雄，確保隊伍總戰力最大化</li>
+                            <li>一般需要約 100 個聖物和 200 個英雄，才能篩選出最強組合</li>
+                            <li className="text-orange-300">⚠️ <span className="font-semibold">技術限制</span>：為確保頁面流暢度，建議單一地址擁有的英雄和聖物數量各不超過 1000 個</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
             {/* 步驟指引 */}
             <div className="flex items-center justify-between mb-6 bg-gray-900/50 p-3 rounded-lg">
                 <div className="flex items-center gap-4">
@@ -270,26 +307,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
             )}
 
 
-            {/* 收益最大化策略提醒 */}
-            <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-3 mb-4">
-                <div className="flex items-start gap-2">
-                    <div className="flex-shrink-0 w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center mt-0.5">
-                        <span className="text-white text-xs">💰</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <p className="text-xs text-purple-200 font-medium">
-                            收益最大化組隊策略
-                        </p>
-                        <ul className="text-xs text-purple-100 space-y-1 list-disc list-inside">
-                            <li>建議每個帳號培養 <span className="font-semibold text-purple-50">一個精華隊伍</span>，戰力達到 <span className="font-semibold text-purple-50">3000+</span></li>
-                            <li>優先組建能挑戰「混沌深淵」（3000 戰力需求）的隊伍，可獲得最高收益</li>
-                            <li>選擇高容量聖物（4-5 星）搭配高戰力英雄，確保隊伍總戰力最大化</li>
-                            <li>一般需要約 100 個聖物和 200 個英雄，才能篩選出最強組合</li>
-                            <li className="text-orange-300">⚠️ <span className="font-semibold">技術限制</span>：為確保頁面流暢度，建議單一地址擁有的英雄和聖物數量各不超過 1000 個</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
+            {/* 收益最大化策略提醒 - 移到標題上方 */}
 
             <div className="flex flex-col md:grid md:grid-cols-2 gap-6 mb-4">
                 <div>
@@ -839,22 +857,6 @@ const MyAssetsPageContent: React.FC = () => {
     return (
         <section className="space-y-8">
             <h2 className="page-title">我的資產與隊伍</h2>
-            
-            {/* 等待提示信息 - 增強版 */}
-            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                    <span className="text-blue-400">ℹ️</span>
-                    <span className="text-sm font-medium text-blue-300">NFT 同步提示</span>
-                </div>
-                <ul className="text-xs text-gray-400 space-y-1">
-                    <li>• 新鑄造的 NFT 需要 <strong className="text-blue-300">2-3 分鐘</strong> 才會在此頁面顯示</li>
-                    <li>• 如果您剛完成鑄造，請稍作等待或刷新頁面</li>
-                    <li>• 系統正在同步區塊鏈數據和更新索引</li>
-                    {nfts && (nfts.heros.length + nfts.relics.length + nfts.parties.length) > 50 && (
-                        <li className="text-yellow-300">• ⚠️ 您擁有大量 NFT，載入可能需要較長時間</li>
-                    )}
-                </ul>
-            </div>
             
             <TransactionProgressModal
                 isOpen={showProgressModal}

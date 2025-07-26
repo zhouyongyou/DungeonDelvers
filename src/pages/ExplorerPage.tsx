@@ -340,19 +340,20 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
 // =================================================================
 
 const ContractAddressSection: React.FC = () => {
+  // 從配置文件動態獲取所有合約地址
   const contracts = [
     {
       category: "核心合約",
       items: [
         {
           name: "DungeonCore",
-          address: "0x4D353aFC420E6187bfA5F99f0DdD8F7F137c20E9",
+          address: getContract(bsc.id, 'DUNGEONCORE')?.address || '',
           description: "總機合約，管理所有模組的地址和權限，是整個遊戲的中央控制器"
         },
         {
           name: "Oracle",
-          address: "0x54Ff2524C996d7608CaE9F3D9dd2075A023472E9",
-          description: "價格預言機，從 Uniswap V3 獲取即時價格，計算 USD 價值"
+          address: getContract(bsc.id, 'ORACLE')?.address || '',
+          description: "價格預言機 V22，自適應 TWAP 機制，永不失敗的價格查詢"
         }
       ]
     },
@@ -361,17 +362,17 @@ const ContractAddressSection: React.FC = () => {
       items: [
         {
           name: "Hero",
-          address: "0x141F081922D4015b3157cdA6eE970dff34bb8AAb",
+          address: getContract(bsc.id, 'HERO')?.address || '',
           description: "英雄 NFT (ERC721)，每個英雄有不同的稀有度和戰力值"
         },
         {
           name: "Relic",
-          address: "0xB1eb505426e852B8Dca4BF41454a7A22D2B6F3D3",
+          address: getContract(bsc.id, 'RELIC')?.address || '',
           description: "聖物 NFT (ERC721)，提供容量加成，用於地城探索"
         },
         {
           name: "Party",
-          address: "0xf240c4fD2651Ba41ff09eB26eE01b21f42dD9957",
+          address: getContract(bsc.id, 'PARTY')?.address || '',
           description: "隊伍 NFT (ERC721)，將英雄和聖物組合成隊伍進行探索"
         }
       ]
@@ -381,17 +382,17 @@ const ContractAddressSection: React.FC = () => {
       items: [
         {
           name: "DungeonMaster",
-          address: "0xd34ddc336071FE7Da3c636C3Df7C3BCB77B1044a",
-          description: "地城探索邏輯，處理隊伍探索、戰鬥和獎勵計算"
+          address: getContract(bsc.id, 'DUNGEONMASTER')?.address || '',
+          description: "地城探索邏輯 V2，處理隊伍探索、戰鬥和獎勵計算"
         },
         {
           name: "DungeonStorage",
-          address: "0x6B85882ab32471Ce4a6599A7256E50B8Fb1fD43e",
+          address: getContract(bsc.id, 'DUNGEONSTORAGE')?.address || '',
           description: "地城數據存儲，記錄所有地城的狀態和探索記錄"
         },
         {
           name: "AltarOfAscension",
-          address: "0xb53c51Dc426c2Bd29da78Ac99426c55A6D6a51Ab",
+          address: getContract(bsc.id, 'ALTAROFASCENSION')?.address || '',
           description: "升星祭壇，使用 SOUL 代幣提升英雄和聖物的稀有度"
         }
       ]
@@ -401,17 +402,17 @@ const ContractAddressSection: React.FC = () => {
       items: [
         {
           name: "PlayerVault",
-          address: "0xF68cEa7E171A5caF151A85D7BEb2E862B83Ccf78",
+          address: getContract(bsc.id, 'PLAYERVAULT')?.address || '',
           description: "玩家金庫，管理玩家的 SOUL 代幣存取和餘額"
         },
         {
           name: "VIPStaking",
-          address: "0x43A6C6cC9D15f2C68C7ec98deb01f2b69a618470",
+          address: getContract(bsc.id, 'VIPSTAKING')?.address || '',
           description: "VIP 質押系統，質押 SOUL 獲得 VIP NFT 和特權"
         },
         {
           name: "PlayerProfile",
-          address: "0x1d36C2F3f0C9212422B94608cAA72080CBf34A41",
+          address: getContract(bsc.id, 'PLAYERPROFILE')?.address || '',
           description: "玩家檔案系統，管理經驗值、等級和邀請關係"
         }
       ]
@@ -421,12 +422,12 @@ const ContractAddressSection: React.FC = () => {
       items: [
         {
           name: "SoulShard (SOUL)",
-          address: "0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF",
+          address: getContract(bsc.id, 'SOULSHARD')?.address || '',
           description: "遊戲代幣 (ERC20)，用於鑄造、升級和質押等所有遊戲活動"
         },
         {
           name: "USD Token",
-          address: "0x7C67Af4EBC6651c95dF78De11cfe325660d935FE",
+          address: getContract(bsc.id, 'USD')?.address || '',
           description: "測試用 USD 代幣，用於價格計算和測試"
         }
       ]
@@ -436,12 +437,12 @@ const ContractAddressSection: React.FC = () => {
       items: [
         {
           name: "Uniswap V3 Pool",
-          address: "0x1e5Cd5F386Fb6F39cD8788675dd3A5ceB6521C82",
+          address: getContract(bsc.id, 'UNISWAP_POOL')?.address || '',
           description: "SOUL/USD 交易對，提供即時價格數據"
         },
         {
           name: "DungeonMaster Wallet",
-          address: "0x10925A7138649C7E1794CE646182eeb5BF8ba647",
+          address: getContract(bsc.id, 'DUNGEONMASTERWALLET')?.address || '',
           description: "遊戲營運錢包，收取平台費用"
         }
       ]

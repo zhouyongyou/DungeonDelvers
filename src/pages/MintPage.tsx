@@ -92,6 +92,22 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
             logPriceOverride(type, quantity);
             return PRICE_OVERRIDE.calculateSoulRequired(quantity);
         }
+        
+        // 價格合理性檢查 - 防止顯示異常數值
+        if (contractRequiredAmount) {
+            const priceInEther = Number(formatEther(contractRequiredAmount));
+            const pricePerUnit = priceInEther / quantity;
+            
+            // 如果單價超過 100 萬 SOUL，很可能是錯誤
+            if (pricePerUnit > 1000000) {
+                console.error(`[MintPage] 價格異常檢測！${type} 單價: ${pricePerUnit} SOUL`);
+                // 使用備用價格
+                const fallbackPrice = type === 'hero' ? 33000 : 13000;
+                const fallbackTotal = BigInt(Math.floor(fallbackPrice * quantity * 1e18));
+                return fallbackTotal;
+            }
+        }
+        
         return contractRequiredAmount;
     }, [contractRequiredAmount, quantity, type]);
     
