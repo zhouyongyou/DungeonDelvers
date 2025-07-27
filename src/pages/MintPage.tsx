@@ -545,7 +545,6 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
                 progress={currentProgress}
                 title={needsApproval && paymentSource === 'wallet' ? '授權進度' : '鑄造進度'}
             />
-            <div className="w-full h-48 bg-gray-800/50 rounded-lg mb-4 flex items-center justify-center relative overflow-hidden"><p className="text-6xl opacity-80">{type === 'hero' ? '⚔️' : '💎'}</p></div>
             <h3 className="section-title">招募{title}</h3>
             <div className="my-4">
                 <div className="flex items-center justify-center gap-2 mb-2">
@@ -584,25 +583,6 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
                             </div>
                         );
                     })}
-                </div>
-                
-                {/* 自定義數量輸入 */}
-                <div className="mt-4 max-w-48 mx-auto">
-                    <label className="block text-xs font-medium mb-1 text-center text-gray-400">
-                        自定義數量
-                    </label>
-                    <input
-                        type="number"
-                        min="1"
-                        max="100"
-                        value={quantity}
-                        onChange={(e) => {
-                            const newQuantity = parseInt(e.target.value) || 1;
-                            setQuantity(Math.max(1, Math.min(100, newQuantity)));
-                        }}
-                        className="w-full px-3 py-2 text-center bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-                        placeholder="輸入數量..."
-                    />
                 </div>
             </div>
             <div className="w-full my-4">
@@ -647,6 +627,44 @@ const MintingInterface: React.FC<{ chainId: typeof bsc.id }> = ({ chainId }) => 
     const relicMintOptions = [1, 5, 10, 20, 50]; // 恢復單個鑄造選項
     return (
         <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <MintCard type="hero" options={heroMintOptions} chainId={chainId} />
+                <MintCard type="relic" options={relicMintOptions} chainId={chainId} />
+            </div>
+        </>
+    );
+};
+
+const MintPage: React.FC = () => {
+    const { chainId } = useAccount();
+    return (
+        <section>
+            <h2 className="page-title">鑄造工坊</h2>
+            
+            {chainId === bsc.id ? <MintingInterface chainId={chainId} /> : <div className="card-bg p-10 rounded-xl text-center text-gray-400"><p>請先連接到支援的網路 (BSC 主網) 以使用鑄造功能。</p></div>}
+            
+            {/* 收益最大化建議 */}
+            <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4 mt-8 mb-6 max-w-4xl mx-auto">
+                <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center mt-0.5">
+                        <span className="text-white text-sm">💡</span>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <p className="text-sm text-purple-300 font-semibold">
+                            收益最大化策略
+                        </p>
+                        <ul className="text-xs text-gray-300 space-y-1 list-disc list-inside">
+                            <li>建議每個帳號專注培養 <strong className="text-purple-200">一個精華隊伍</strong></li>
+                            <li>隊伍戰力應達到 <strong className="text-purple-200">3000 以上</strong>，以挑戰最高收益的「混沌深淵」地下城</li>
+                            <li>一般需要鑄造約 <strong className="text-purple-200">100 個聖物</strong> 和 <strong className="text-purple-200">200 個英雄</strong>，才能組建出幾個強力隊伍</li>
+                            <li>優先選擇高容量聖物（4-5 星）和高戰力英雄進行組隊</li>
+                            <li>記得：品質優於數量，一個強力隊伍勝過多個弱隊</li>
+                            <li className="text-orange-300">⚠️ <strong>技術限制</strong>：為確保系統穩定性，建議單一地址擁有的英雄和聖物數量各不超過 1000 個</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
             {/* 防撞庫機制說明 */}
             <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/30 rounded-lg p-6 mb-8 max-w-4xl mx-auto">
                 <div className="flex items-start gap-4">
@@ -657,7 +675,7 @@ const MintingInterface: React.FC<{ chainId: typeof bsc.id }> = ({ chainId }) => 
                         <h3 className="text-lg font-bold text-blue-300 mb-3">
                             防撞庫機制 - 批量越大，稀有度越高
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
                             {BATCH_TIERS.map((tier, index) => (
                                 <div key={index} className="bg-black/30 rounded-lg p-3 border border-gray-600/50">
                                     <div className="text-center">
@@ -683,44 +701,6 @@ const MintingInterface: React.FC<{ chainId: typeof bsc.id }> = ({ chainId }) => 
                     </div>
                 </div>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <MintCard type="hero" options={heroMintOptions} chainId={chainId} />
-                <MintCard type="relic" options={relicMintOptions} chainId={chainId} />
-            </div>
-        </>
-    );
-};
-
-const MintPage: React.FC = () => {
-    const { chainId } = useAccount();
-    return (
-        <section>
-            <h2 className="page-title">鑄造工坊</h2>
-            
-            {/* 收益最大化建議 */}
-            <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4 mb-6 max-w-4xl mx-auto">
-                <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center mt-0.5">
-                        <span className="text-white text-sm">💡</span>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        <p className="text-sm text-purple-300 font-semibold">
-                            收益最大化策略
-                        </p>
-                        <ul className="text-xs text-gray-300 space-y-1 list-disc list-inside">
-                            <li>建議每個帳號專注培養 <strong className="text-purple-200">一個精華隊伍</strong></li>
-                            <li>隊伍戰力應達到 <strong className="text-purple-200">3000 以上</strong>，以挑戰最高收益的「混沌深淵」地下城</li>
-                            <li>一般需要鑄造約 <strong className="text-purple-200">100 個聖物</strong> 和 <strong className="text-purple-200">200 個英雄</strong>，才能組建出幾個強力隊伍</li>
-                            <li>優先選擇高容量聖物（4-5 星）和高戰力英雄進行組隊</li>
-                            <li>記得：品質優於數量，一個強力隊伍勝過多個弱隊</li>
-                            <li className="text-orange-300">⚠️ <strong>技術限制</strong>：為確保系統穩定性，建議單一地址擁有的英雄和聖物數量各不超過 1000 個</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            
-            {chainId === bsc.id ? <MintingInterface chainId={chainId} /> : <div className="card-bg p-10 rounded-xl text-center text-gray-400"><p>請先連接到支援的網路 (BSC 主網) 以使用鑄造功能。</p></div>}
         </section>
     );
 };
