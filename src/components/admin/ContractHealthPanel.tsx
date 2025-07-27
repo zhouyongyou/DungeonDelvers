@@ -13,7 +13,6 @@ interface ContractHealth {
   dungeonStorageAddress: string;
   dungeonStorageSet: boolean;
   isPaused: boolean;
-  provisionPriceUSD: string;
   dungeonMasterAddress: string;
   allChecksPass: boolean;
   issues: string[];
@@ -159,10 +158,6 @@ const ContractHealthPanel: React.FC = () => {
                 <span className={health.isPaused ? 'text-red-600' : 'text-green-600'}>
                   {health.isPaused ? '⏸️ 已暫停' : '▶️ 運行中'}
                 </span>
-              </div>
-              <div className="flex justify-between">
-                <span>儲備價格:</span>
-                <span>{health.provisionPriceUSD} USD</span>
               </div>
             </div>
           </div>

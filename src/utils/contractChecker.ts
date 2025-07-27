@@ -76,32 +76,6 @@ export class ContractChecker {
     }
   }
 
-  // 檢查 DungeonMaster 合約的 provisionPriceUSD
-  async checkProvisionPriceUSD(): Promise<{
-    provisionPriceUSD: bigint;
-    dungeonMasterAddress: string;
-  }> {
-    const dungeonMasterContract = getContractWithABI(bsc.id, 'dungeonMaster');
-    
-    if (!dungeonMasterContract) {
-      throw new Error('DungeonMaster 合約配置不存在');
-    }
-
-    try {
-      const provisionPriceUSD = await this.publicClient.readContract({
-        address: dungeonMasterContract.address as `0x${string}`,
-        abi: dungeonMasterContract.abi,
-        functionName: 'provisionPriceUSD',
-      });
-
-      return {
-        provisionPriceUSD: provisionPriceUSD as bigint,
-        dungeonMasterAddress: dungeonMasterContract.address
-      };
-    } catch (error) {
-      throw new Error(`讀取 provisionPriceUSD 失敗: ${error instanceof Error ? error.message : '未知錯誤'}`);
-    }
-  }
 
   // 檢查 DungeonMaster 合約的 dungeonCore 地址
   async checkDungeonCoreAddress(): Promise<{
@@ -132,50 +106,6 @@ export class ContractChecker {
     }
   }
 
-  // 模擬 buyProvisions 調用
-  async simulateBuyProvisions(
-    userAddress: string,
-    partyId: bigint,
-    amount: bigint
-  ): Promise<{
-    success: boolean;
-    error?: string;
-    estimatedGas?: bigint;
-  }> {
-    const dungeonMasterContract = getContractWithABI(bsc.id, 'dungeonMaster');
-    
-    if (!dungeonMasterContract) {
-      throw new Error('DungeonMaster 合約配置不存在');
-    }
-
-    try {
-      const result = await this.publicClient.simulateContract({
-        address: dungeonMasterContract.address as `0x${string}`,
-        abi: dungeonMasterContract.abi,
-        functionName: 'buyProvisions',
-        args: [partyId, amount],
-        account: userAddress as `0x${string}`,
-      });
-
-      return {
-        success: true,
-        estimatedGas: result.request.gas
-      };
-    } catch (error: any) {
-      let errorMessage = '模擬調用失敗';
-      
-      if (error.message) {
-        errorMessage = error.message;
-      } else if (error.shortMessage) {
-        errorMessage = error.shortMessage;
-      }
-      
-      return {
-        success: false,
-        error: errorMessage
-      };
-    }
-  }
 
   // 檢查 DungeonMaster 合約的 dungeonStorage 地址
   async checkDungeonStorageAddress(): Promise<{
@@ -215,7 +145,6 @@ export class ContractChecker {
     dungeonStorageAddress: string;
     dungeonStorageSet: boolean;
     isPaused: boolean;
-    provisionPriceUSD: string;
     dungeonMasterAddress: string;
     allChecksPass: boolean;
     issues: string[];
@@ -247,12 +176,6 @@ export class ContractChecker {
         issues.push('DungeonMaster 合約已暫停');
       }
 
-      // 檢查儲備價格
-      const priceResult = await this.checkProvisionPriceUSD();
-      if (priceResult.provisionPriceUSD === 0n) {
-        issues.push('儲備價格未設置或為 0');
-      }
-
       return {
         soulShardToken: soulShardResult.soulShardToken,
         soulShardTokenSet: soulShardResult.isSet,
@@ -261,7 +184,6 @@ export class ContractChecker {
         dungeonStorageAddress: dungeonStorageResult.dungeonStorageAddress,
         dungeonStorageSet: dungeonStorageResult.isSet,
         isPaused: pausedResult.isPaused,
-        provisionPriceUSD: priceResult.provisionPriceUSD.toString(),
         dungeonMasterAddress: soulShardResult.dungeonMasterAddress,
         allChecksPass: issues.length === 0,
         issues
@@ -277,7 +199,6 @@ export class ContractChecker {
         dungeonStorageAddress: '',
         dungeonStorageSet: false,
         isPaused: false,
-        provisionPriceUSD: '0',
         dungeonMasterAddress: '',
         allChecksPass: false,
         issues
