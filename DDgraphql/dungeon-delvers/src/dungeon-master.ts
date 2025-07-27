@@ -1,6 +1,6 @@
 // DDgraphql/dungeondelvers/src/dungeon-master.ts (統一配置系統版)
 import { BigInt, log } from "@graphprotocol/graph-ts"
-import { ExpeditionFulfilled, ExpeditionRequested, RewardsBanked } from "../generated/DungeonMaster/DungeonMaster"
+import { ExpeditionFulfilled, RewardsBanked } from "../generated/DungeonMaster/DungeonMaster"
 import { Party, PlayerProfile, Expedition } from "../generated/schema"
 import { calculateLevel } from "./utils"
 import { getOrCreatePlayer } from "./common"
@@ -54,10 +54,10 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
     const expeditionId = event.transaction.hash.toHex() + "-" + event.logIndex.toString()
     const expedition = new Expedition(expeditionId)
     
-    // 從事件中獲取真實的 dungeonId
-    const dungeonId = event.params.dungeonId
+    // V25 版本沒有 dungeonId 參數，使用默認值
+    const dungeonId = BigInt.fromI32(1)
     
-    expedition.player = event.params.requester
+    expedition.player = event.params.player
     expedition.party = partyId
     expedition.dungeonId = dungeonId
     expedition.dungeonName = getDungeonName(dungeonId)
@@ -80,7 +80,7 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
     party.lastUpdatedAt = event.block.timestamp
     party.save()
 
-    const playerAddress = event.params.requester
+    const playerAddress = event.params.player
     getOrCreatePlayer(playerAddress)
     
     // 更新玩家統計數據
@@ -120,18 +120,19 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
 //   }
 // }
 
-export function handleExpeditionRequested(event: ExpeditionRequested): void {
-  // 記錄探險請求事件，用於追踪和分析
-  log.info("Expedition requested - Party: {}, Dungeon: {}, PartyPower: {}, RequiredPower: {}", [
-    event.params.partyId.toString(),
-    event.params.dungeonId.toString(),
-    event.params.partyPower.toString(),
-    event.params.requiredPower.toString()
-  ])
-  
-  // 可以在這裡添加更多邏輯，例如創建一個 PendingExpedition 實體
-  // 或更新隊伍的狀態為 "正在探險中"
-}
+// ExpeditionRequested 事件已在 V25 版本中移除
+// export function handleExpeditionRequested(event: ExpeditionRequested): void {
+//   // 記錄探險請求事件，用於追踪和分析
+//   log.info("Expedition requested - Party: {}, Dungeon: {}, PartyPower: {}, RequiredPower: {}", [
+//     event.params.partyId.toString(),
+//     event.params.dungeonId.toString(),
+//     event.params.partyPower.toString(),
+//     event.params.requiredPower.toString()
+//   ])
+//   
+//   // 可以在這裡添加更多邏輯，例如創建一個 PendingExpedition 實體
+//   // 或更新隊伍的狀態為 "正在探險中"
+// }
 
 
 export function handleRewardsBanked(event: RewardsBanked): void {
@@ -145,7 +146,7 @@ export function handleRewardsBanked(event: RewardsBanked): void {
     party.save()
     
     // 更新玩家的總獎勵收入
-    const playerAddress = event.params.player
+    const playerAddress = event.params.user
     const profile = PlayerProfile.load(playerAddress)
     
     if (profile) {

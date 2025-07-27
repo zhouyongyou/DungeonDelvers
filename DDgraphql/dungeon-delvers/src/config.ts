@@ -37,6 +37,10 @@ export function getPartyV3ContractAddress(): string {
     return PARTY_V3_ADDRESS
 }
 
+export function getPartyContractAddress(): string {
+    return PARTY_V3_ADDRESS
+}
+
 export function getVIPStakingContractAddress(): string {
     return V_I_P_STAKING_ADDRESS
 }
