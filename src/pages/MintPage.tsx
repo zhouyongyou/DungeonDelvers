@@ -19,6 +19,7 @@ import type { AnyNft, NftAttribute } from '../types/nft';
 import { fetchMetadata } from '../api/nfts';
 import { PRICE_OVERRIDE, logPriceOverride } from '../config/priceOverride';
 import { invalidationStrategies } from '../config/queryConfig';
+import { BATCH_TIERS, RARITY_LABELS, RARITY_COLORS, getBatchTierForQuantity, type BatchTier } from '../utils/batchMintConfig';
 
 // =================================================================
 // Section: 工具函數
@@ -216,18 +217,62 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
 // Section: 子元件與主頁面
 // =================================================================
 
-const RarityProbabilities: React.FC = () => (
-    <div className="w-full text-xs text-gray-400 mt-4">
-        <h4 className="font-bold text-center mb-1 text-gray-500 dark:text-gray-300">稀有度機率</h4>
-        <div className="grid grid-cols-5 gap-1 text-center">
-            <div className="bg-black/20 p-1 rounded"><div>普通</div><div className="font-bold text-white">44%</div></div>
-            <div className="bg-black/20 p-1 rounded"><div>罕見</div><div className="font-bold text-white">35%</div></div>
-            <div className="bg-black/20 p-1 rounded"><div>稀有</div><div className="font-bold text-white">15%</div></div>
-            <div className="bg-black/20 p-1 rounded"><div>史詩</div><div className="font-bold text-white">5%</div></div>
-            <div className="bg-black/20 p-1 rounded"><div>傳說</div><div className="font-bold text-white">1%</div></div>
+// 動態稀有度機率顯示組件
+const RarityProbabilities: React.FC<{ quantity: number }> = ({ quantity }) => {
+    const currentTier = getBatchTierForQuantity(quantity);
+    
+    if (!currentTier) {
+        return (
+            <div className="w-full text-xs text-gray-400 mt-4">
+                <h4 className="font-bold text-center mb-1 text-red-400">⚠️ 數量無效</h4>
+                <p className="text-center text-red-300">請輸入有效的數量</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-full text-xs text-gray-400 mt-4">
+            <div className="text-center mb-2">
+                <h4 className="font-bold text-gray-300">{currentTier.tierName} - 稀有度機率</h4>
+                <p className="text-xs text-gray-500">{currentTier.description}</p>
+            </div>
+            <div className="grid grid-cols-5 gap-1 text-center">
+                {RARITY_LABELS.map((label, index) => {
+                    const probability = currentTier.probabilities[index];
+                    const isDisabled = probability === 0;
+                    
+                    return (
+                        <div 
+                            key={index}
+                            className={`p-2 rounded transition-all ${
+                                isDisabled 
+                                    ? 'bg-gray-800/30 opacity-40' 
+                                    : 'bg-black/40 border border-gray-600/50'
+                            }`}
+                        >
+                            <div className={`text-xs ${isDisabled ? 'text-gray-600' : RARITY_COLORS[index]}`}>
+                                {label}
+                            </div>
+                            <div className={`font-bold ${isDisabled ? 'text-gray-600' : 'text-white'}`}>
+                                {probability}%
+                            </div>
+                            {isDisabled && (
+                                <div className="text-xs text-red-400 mt-1">鎖定</div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+            {quantity < 50 && (
+                <div className="mt-2 p-2 bg-orange-900/20 border border-orange-500/30 rounded">
+                    <p className="text-xs text-orange-300 text-center">
+                        🛡️ 防撞庫機制啟動 - 數量越多，稀有度上限越高
+                    </p>
+                </div>
+            )}
         </div>
-    </div>
-);
+    );
+};
 
 const MintResultModal: React.FC<{ nft: AnyNft | null; onClose: () => void }> = ({ nft, onClose }) => {
     if (!nft) return null;
@@ -263,7 +308,7 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
     // 定義 title 變數，避免 TDZ 錯誤 - 必須在所有使用它的 hooks 之前
     const title = type === 'hero' ? '英雄' : '聖物';
     
-    const [quantity, setQuantity] = useState(1);
+    const [quantity, setQuantity] = useState(1); // 默認從1個開始
     const [paymentSource, setPaymentSource] = useState<PaymentSource>('wallet');
     const [mintingResult, setMintingResult] = useState<AnyNft | null>(null);
     const [showProgressModal, setShowProgressModal] = useState(false);
@@ -456,6 +501,7 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
     const handleMint = async () => {
         if (!contractConfig || !publicClient) return showToast('客戶端尚未準備好，請稍後再試', 'error');
         if (isError) return showToast('價格讀取失敗，無法鑄造', 'error');
+        // 移除最少5個的限制，允許單個鑄造
         if (balance < requiredAmount) return showToast(`${paymentSource === 'wallet' ? '錢包' : '金庫'}餘額不足`, 'error');
         if (paymentSource === 'wallet' && needsApproval) return showToast(`請先完成授權`, 'error');
 
@@ -501,7 +547,64 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
             />
             <div className="w-full h-48 bg-gray-800/50 rounded-lg mb-4 flex items-center justify-center relative overflow-hidden"><p className="text-6xl opacity-80">{type === 'hero' ? '⚔️' : '💎'}</p></div>
             <h3 className="section-title">招募{title}</h3>
-            <div className="flex items-center justify-center gap-2 my-4">{options.map(q => <button key={q} onClick={() => setQuantity(q)} className={`w-12 h-12 rounded-full font-bold text-lg transition-all flex items-center justify-center border-2 ${quantity === q ? 'bg-indigo-500 text-white border-transparent scale-110' : 'bg-gray-700 hover:bg-gray-600 border-gray-600'}`}>{q}</button>)}</div>
+            <div className="my-4">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                    {options.map(q => {
+                        const tier = getBatchTierForQuantity(q);
+                        const tierColors = {
+                            "青銅包": "border-orange-600 bg-orange-600",
+                            "白銀包": "border-gray-400 bg-gray-400", 
+                            "黃金包": "border-yellow-500 bg-yellow-500",
+                            "鉑金包": "border-purple-500 bg-purple-500"
+                        };
+                        const tierColor = tier ? tierColors[tier.tierName as keyof typeof tierColors] : "border-gray-600 bg-gray-600";
+                        
+                        return (
+                            <div key={q} className="flex flex-col items-center">
+                                <button 
+                                    onClick={() => setQuantity(q)} 
+                                    className={`w-14 h-14 rounded-full font-bold text-lg transition-all flex items-center justify-center border-2 ${
+                                        quantity === q 
+                                            ? `${tierColor} text-white scale-110 shadow-lg` 
+                                            : 'bg-gray-700 hover:bg-gray-600 border-gray-600 text-gray-300'
+                                    }`}
+                                >
+                                    {q}
+                                </button>
+                                {tier && (
+                                    <div className="text-xs mt-1 text-center">
+                                        <div className={`font-medium ${quantity === q ? 'text-white' : 'text-gray-400'}`}>
+                                            {tier.tierName}
+                                        </div>
+                                        <div className="text-gray-500">
+                                            最高{tier.maxRarity}★
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+                
+                {/* 自定義數量輸入 */}
+                <div className="mt-4 max-w-48 mx-auto">
+                    <label className="block text-xs font-medium mb-1 text-center text-gray-400">
+                        自定義數量
+                    </label>
+                    <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={quantity}
+                        onChange={(e) => {
+                            const newQuantity = parseInt(e.target.value) || 1;
+                            setQuantity(Math.max(1, Math.min(100, newQuantity)));
+                        }}
+                        className="w-full px-3 py-2 text-center bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
+                        placeholder="輸入數量..."
+                    />
+                </div>
+            </div>
             <div className="w-full my-4">
                 <label className="block text-sm font-medium mb-2 text-center text-gray-400">選擇支付方式</label>
                 <div className="grid grid-cols-2 gap-2 p-1 bg-gray-900/50 rounded-lg">
@@ -534,19 +637,58 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
                     </a>
                 </p>
             )}
-            <RarityProbabilities />
+            <RarityProbabilities quantity={quantity} />
         </div>
     );
 };
 
 const MintingInterface: React.FC<{ chainId: typeof bsc.id }> = ({ chainId }) => {
-    const heroMintOptions = [1, 5, 10, 20, 50];
-    const relicMintOptions = [1, 5, 10, 20, 50];
+    const heroMintOptions = [1, 5, 10, 20, 50]; // 恢復單個鑄造選項
+    const relicMintOptions = [1, 5, 10, 20, 50]; // 恢復單個鑄造選項
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <MintCard type="hero" options={heroMintOptions} chainId={chainId} />
-            <MintCard type="relic" options={relicMintOptions} chainId={chainId} />
-        </div>
+        <>
+            {/* 防撞庫機制說明 */}
+            <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/30 rounded-lg p-6 mb-8 max-w-4xl mx-auto">
+                <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xl">🛡️</span>
+                    </div>
+                    <div className="flex-1">
+                        <h3 className="text-lg font-bold text-blue-300 mb-3">
+                            防撞庫機制 - 批量越大，稀有度越高
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                            {BATCH_TIERS.map((tier, index) => (
+                                <div key={index} className="bg-black/30 rounded-lg p-3 border border-gray-600/50">
+                                    <div className="text-center">
+                                        <div className="text-sm font-bold text-white mb-1">{tier.tierName}</div>
+                                        <div className="text-xs text-gray-400 mb-2">{tier.minQuantity}個起</div>
+                                        <div className="text-xs text-gray-300 mb-2">最高 {tier.maxRarity}★</div>
+                                        <div className="text-xs text-green-400">
+                                            約 ${tier.minQuantity * 2} USD
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="bg-yellow-900/20 border border-yellow-600/50 rounded-lg p-3">
+                            <h4 className="text-yellow-300 font-semibold mb-2">💡 設計理念</h4>
+                            <ul className="text-sm text-gray-300 space-y-1">
+                                <li>• <strong>提高撞庫成本</strong>：科學家必須投入更多資金才能嘗試獲得高稀有度</li>
+                                <li>• <strong>鼓勵大額投入</strong>：50個批量享受完整機率，獲得最佳遊戲體驗</li>
+                                <li>• <strong>機率透明化</strong>：每個批量等級的稀有度機率完全公開</li>
+                                <li>• <strong>經濟平衡</strong>：防止小額頻繁交易對經濟的影響</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <MintCard type="hero" options={heroMintOptions} chainId={chainId} />
+                <MintCard type="relic" options={relicMintOptions} chainId={chainId} />
+            </div>
+        </>
     );
 };
 
