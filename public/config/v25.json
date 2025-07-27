@@ -1,7 +1,7 @@
 {
   "version": "V25",
   "lastUpdated": "2025-07-27",
-  "description": "DungeonDelvers V25 Configuration - Production",
+  "description": "DungeonDelvers V25 Configuration",
   "contracts": {
     "SOULSHARD": "0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF",
     "ORACLE": "0x2350D85e5DF1b6a6d055CD61FeD27d5dC36B6F52",
@@ -17,20 +17,9 @@
     "ALTAROFASCENSION": "0x0148Aff0Dee6D31BA9825e66ED34a66BCeF45845",
     "DUNGEONMASTERWALLET": "0x10925A7138649C7E1794CE646182eeb5BF8ba647"
   },
-  "subgraph": {
-    "studio": {
-      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.2.0",
-      "version": "v3.2.0"
-    },
-    "decentralized": {
-      "url": "https://gateway.thegraph.com/api/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs",
-      "subgraphId": "Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs"
-    }
-  },
   "network": {
     "chainId": 56,
-    "name": "BSC Mainnet",
-    "rpcUrl": "https://bsc-dataseed.binance.org/"
+    "name": "BSC Mainnet"
   },
   "startBlock": 55514557
 }
