@@ -26,6 +26,8 @@ dataSources:
           handler: handleTransfer
         - event: HeroMinted(indexed uint256,indexed address,uint8,uint256)
           handler: handleHeroMinted
+        - event: BatchMintCompleted(indexed address,uint256,uint8,uint256[])
+          handler: handleBatchMintCompleted
       file: ./src/hero.ts
   - kind: ethereum/contract
     name: Relic
@@ -49,6 +51,8 @@ dataSources:
           handler: handleTransfer
         - event: RelicMinted(indexed uint256,indexed address,uint8,uint8)
           handler: handleRelicMinted
+        - event: BatchMintCompleted(indexed address,uint256,uint8,uint256[])
+          handler: handleBatchMintCompleted
       file: ./src/relic.ts
   - kind: ethereum/contract
     name: PartyV3

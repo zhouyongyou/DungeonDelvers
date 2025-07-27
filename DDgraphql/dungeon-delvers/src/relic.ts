@@ -1,5 +1,5 @@
 // DDgraphql/dungeondelvers/src/relic.ts (修復版)
-import { RelicMinted, Transfer, RelicUpgraded, RelicBurned } from "../generated/Relic/Relic"
+import { RelicMinted, Transfer, RelicUpgraded, RelicBurned, BatchMintCompleted } from "../generated/Relic/Relic"
 import { Relic, RelicUpgrade } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { log } from "@graphprotocol/graph-ts"
@@ -140,4 +140,20 @@ export function handleRelicBurned(event: RelicBurned): void {
         relicId,
         event.params.rarity.toString()
     ])
+}
+
+export function handleBatchMintCompleted(event: BatchMintCompleted): void {
+    // 記錄批量鑄造事件
+    log.info('BatchMintCompleted: Player {} minted {} relics with max rarity {}', [
+        event.params.player.toHexString(),
+        event.params.quantity.toString(),
+        event.params.maxRarity.toString()
+    ])
+    
+    // 批量鑄造完成事件本身不需要特別處理
+    // 因為每個聖物的創建已經在 RelicMinted 事件中處理了
+    // 這個事件主要用於前端追踪批量鑄造的完成狀態
+    
+    // 可以選擇性地更新玩家統計或創建批量鑄造記錄
+    // 但為了避免重複計算，我們不在這裡更新聖物數量統計
 }
