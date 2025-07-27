@@ -109,7 +109,8 @@ export function getContractWithABI(
         address = CONTRACT_ADDRESSES.DUNGEONSTORAGE;
         break;
       case 'testUsd':
-        address = CONTRACT_ADDRESSES.USD;
+        // USD 合約在 V24 版本中不存在，暫時返回 undefined
+        address = undefined;
         break;
       case 'soulShardToken':
         address = CONTRACT_ADDRESSES.SOULSHARD;

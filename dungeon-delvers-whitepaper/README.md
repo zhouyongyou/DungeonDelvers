@@ -2,7 +2,7 @@
 
 <figure><img src=".gitbook/assets/logo-192x192.png" alt=""><figcaption></figcaption></figure>
 
-_最後更新時間: 2025年7月26日_
+_最後更新時間: 2025年7月27日_
 
 > **📌 版本提示**：本白皮書描述了 DungeonDelvers 的完整願景。核心功能包括升星祭壇均已實裝上線。請參閱 [版本說明](VERSION_NOTES.md) 了解最新功能狀態。
 

@@ -39,3 +39,9 @@ export const CONTRACT_INFO = {
   deploymentBlock: 55499653,
   lastUpdated: "2025-07-27T13:27:01.035Z"
 };
+
+// Legacy contract name mappings for backward compatibility
+export const LEGACY_CONTRACT_NAMES = {
+  soulShardToken: 'SOULSHARD',
+  testUsd: 'USD'
+} as const;
