@@ -50,3 +50,29 @@ export const {
   ALTAROFASCENSION,
   DUNGEONMASTERWALLET,
 } = CONTRACTS[56];
+
+// Legacy compatibility - for V24 format
+export const CONTRACT_ADDRESSES = CONTRACTS[56];
+
+// Helper functions for backward compatibility
+export const getContract = (name: keyof typeof CONTRACT_ADDRESSES): string => {
+  return CONTRACT_ADDRESSES[name];
+};
+
+export const getContractAddress = (name: string): string => {
+  return CONTRACT_ADDRESSES[name as keyof typeof CONTRACT_ADDRESSES] || '';
+};
+
+// Export contract info for debugging
+export const CONTRACT_INFO = {
+  version: CONTRACT_VERSION,
+  network: "BSC Mainnet",
+  deploymentBlock: 55514557,
+  lastUpdated: new Date().toISOString()
+};
+
+// Legacy contract name mappings for backward compatibility
+export const LEGACY_CONTRACT_NAMES = {
+  soulShardToken: 'SOULSHARD',
+  testUsd: 'USD'
+} as const;
