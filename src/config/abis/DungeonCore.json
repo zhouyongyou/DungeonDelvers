@@ -5,20 +5,20 @@
         "internalType": "address",
         "name": "_initialOwner",
         "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_usdToken",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_soulShardToken",
+        "type": "address"
       }
     ],
     "stateMutability": "nonpayable",
     "type": "constructor"
-  },
-  {
-    "inputs": [],
-    "name": "EnforcedPause",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "ExpectedPause",
-    "type": "error"
   },
   {
     "inputs": [
@@ -43,22 +43,6 @@
     "type": "error"
   },
   {
-    "inputs": [],
-    "name": "ReentrancyGuardReentrantCall",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      }
-    ],
-    "name": "SafeERC20FailedOperation",
-    "type": "error"
-  },
-  {
     "anonymous": false,
     "inputs": [
       {
@@ -68,38 +52,7 @@
         "type": "address"
       }
     ],
-    "name": "DungeonCoreSet",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "dungeonId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "requiredPower",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "rewardAmountUSD",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint8",
-        "name": "baseSuccessRate",
-        "type": "uint8"
-      }
-    ],
-    "name": "DungeonSet",
+    "name": "AltarOfAscensionSet",
     "type": "event"
   },
   {
@@ -112,20 +65,7 @@
         "type": "address"
       }
     ],
-    "name": "DungeonStorageSet",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "newSeed",
-        "type": "uint256"
-      }
-    ],
-    "name": "DynamicSeedUpdated",
+    "name": "DungeonMasterSet",
     "type": "event"
   },
   {
@@ -134,35 +74,24 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "player",
+        "name": "newAddress",
         "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "partyId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "bool",
-        "name": "success",
-        "type": "bool"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "reward",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "expGained",
-        "type": "uint256"
       }
     ],
-    "name": "ExpeditionFulfilled",
+    "name": "HeroContractSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newAddress",
+        "type": "address"
+      }
+    ],
+    "name": "OracleSet",
     "type": "event"
   },
   {
@@ -188,38 +117,13 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "address",
-        "name": "account",
+        "name": "newAddress",
         "type": "address"
       }
     ],
-    "name": "Paused",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "partyId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "RewardsBanked",
+    "name": "PartyContractSet",
     "type": "event"
   },
   {
@@ -232,25 +136,83 @@
         "type": "address"
       }
     ],
-    "name": "SoulShardTokenSet",
+    "name": "PlayerProfileSet",
     "type": "event"
   },
   {
     "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "address",
-        "name": "account",
+        "name": "newAddress",
         "type": "address"
       }
     ],
-    "name": "Unpaused",
+    "name": "PlayerVaultSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newAddress",
+        "type": "address"
+      }
+    ],
+    "name": "RelicContractSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newAddress",
+        "type": "address"
+      }
+    ],
+    "name": "VipStakingSet",
     "type": "event"
   },
   {
     "inputs": [],
-    "name": "COOLDOWN_PERIOD",
+    "name": "altarOfAscensionAddress",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "dungeonMasterAddress",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_amountUSD",
+        "type": "uint256"
+      }
+    ],
+    "name": "getSoulShardAmountForUSD",
     "outputs": [
       {
         "internalType": "uint256",
@@ -265,44 +227,11 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "_partyId",
+        "name": "_soulShardAmount",
         "type": "uint256"
       }
     ],
-    "name": "claimRewards",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "dungeonCore",
-    "outputs": [
-      {
-        "internalType": "contract IDungeonCore",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "dungeonStorage",
-    "outputs": [
-      {
-        "internalType": "contract IDungeonStorage",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "dynamicSeed",
+    "name": "getUSDValueForSoulShard",
     "outputs": [
       {
         "internalType": "uint256",
@@ -315,12 +244,12 @@
   },
   {
     "inputs": [],
-    "name": "explorationFee",
+    "name": "heroContractAddress",
     "outputs": [
       {
-        "internalType": "uint256",
+        "internalType": "address",
         "name": "",
-        "type": "uint256"
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -330,30 +259,15 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "_dungeonId",
+        "name": "partyId",
         "type": "uint256"
       }
     ],
-    "name": "getDungeon",
+    "name": "isPartyLocked",
     "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "requiredPower",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "rewardAmountUSD",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint8",
-        "name": "baseSuccessRate",
-        "type": "uint8"
-      },
       {
         "internalType": "bool",
-        "name": "isInitialized",
+        "name": "",
         "type": "bool"
       }
     ],
@@ -361,37 +275,13 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_partyId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getPartyStatus",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "cooldownEndsAt",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "unclaimedRewards",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [],
-    "name": "globalRewardMultiplier",
+    "name": "oracleAddress",
     "outputs": [
       {
-        "internalType": "uint256",
+        "internalType": "address",
         "name": "",
-        "type": "uint256"
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -412,19 +302,51 @@
   },
   {
     "inputs": [],
-    "name": "pause",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "name": "partyContractAddress",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "paused",
+    "name": "playerProfileAddress",
     "outputs": [
       {
-        "internalType": "bool",
+        "internalType": "address",
         "name": "",
-        "type": "bool"
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "playerVaultAddress",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "relicContractAddress",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -440,45 +362,12 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "_partyId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_dungeonId",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "_newAddress",
+        "type": "address"
       }
     ],
-    "name": "requestExpedition",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_dungeonId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_requiredPower",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_rewardAmountUSD",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint8",
-        "name": "_baseSuccessRate",
-        "type": "uint8"
-      }
-    ],
-    "name": "setDungeon",
+    "name": "setAltarOfAscension",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -491,7 +380,7 @@
         "type": "address"
       }
     ],
-    "name": "setDungeonCore",
+    "name": "setDungeonMaster",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -504,33 +393,7 @@
         "type": "address"
       }
     ],
-    "name": "setDungeonStorage",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_newFee",
-        "type": "uint256"
-      }
-    ],
-    "name": "setExplorationFee",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_newMultiplier",
-        "type": "uint256"
-      }
-    ],
-    "name": "setGlobalRewardMultiplier",
+    "name": "setHeroContract",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -543,22 +406,105 @@
         "type": "address"
       }
     ],
-    "name": "setSoulShardToken",
+    "name": "setOracle",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_newAddress",
+        "type": "address"
+      }
+    ],
+    "name": "setPartyContract",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_newAddress",
+        "type": "address"
+      }
+    ],
+    "name": "setPlayerProfile",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_newAddress",
+        "type": "address"
+      }
+    ],
+    "name": "setPlayerVault",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_newAddress",
+        "type": "address"
+      }
+    ],
+    "name": "setRelicContract",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_newAddress",
+        "type": "address"
+      }
+    ],
+    "name": "setVipStaking",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "soulShardToken",
+    "name": "soulShardTokenAddress",
     "outputs": [
       {
-        "internalType": "contract IERC20",
+        "internalType": "address",
         "name": "",
         "type": "address"
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "spendFromVault",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -576,36 +522,41 @@
   },
   {
     "inputs": [],
-    "name": "unpause",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
+    "name": "usdDecimals",
+    "outputs": [
       {
-        "internalType": "uint256",
-        "name": "_newSeed",
-        "type": "uint256"
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
       }
     ],
-    "name": "updateDynamicSeed",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "withdrawNativeFunding",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "name": "usdTokenAddress",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "withdrawSoulShard",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "name": "vipStakingAddress",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   }
 ]

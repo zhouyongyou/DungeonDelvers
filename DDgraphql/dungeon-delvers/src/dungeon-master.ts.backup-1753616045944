@@ -1,6 +1,6 @@
 // DDgraphql/dungeondelvers/src/dungeon-master.ts (統一配置系統版)
 import { BigInt, log } from "@graphprotocol/graph-ts"
-import { ExpeditionFulfilled, ExpeditionRequested, RewardsBanked } from "../generated/DungeonMaster/DungeonMaster"
+import { ExpeditionFulfilled, ExpeditionRequested, ProvisionsBought, RewardsBanked } from "../generated/DungeonMaster/DungeonMaster"
 import { Party, PlayerProfile, Expedition } from "../generated/schema"
 import { calculateLevel } from "./utils"
 import { getOrCreatePlayer } from "./common"
@@ -133,6 +133,16 @@ export function handleExpeditionRequested(event: ExpeditionRequested): void {
   // 或更新隊伍的狀態為 "正在探險中"
 }
 
+export function handleProvisionsBought(event: ProvisionsBought): void {
+  const partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
+  const party = Party.load(partyId)
+  if (party) {
+    // 增加補給品數量
+    party.provisionsRemaining = party.provisionsRemaining + event.params.amount.toI32()
+    party.lastUpdatedAt = event.block.timestamp
+    party.save()
+  }
+}
 
 export function handleRewardsBanked(event: RewardsBanked): void {
   const partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())

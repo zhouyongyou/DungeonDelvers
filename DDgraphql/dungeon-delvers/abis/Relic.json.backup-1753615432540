@@ -241,68 +241,6 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "player",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "quantity",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint8",
-        "name": "maxRarity",
-        "type": "uint8"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256[]",
-        "name": "tokenIds",
-        "type": "uint256[]"
-      }
-    ],
-    "name": "BatchMintCompleted",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "tierId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "minQuantity",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint8",
-        "name": "maxRarity",
-        "type": "uint8"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "tierName",
-        "type": "string"
-      }
-    ],
-    "name": "BatchTierSet",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
         "indexed": false,
         "internalType": "string",
         "name": "newContractURI",
@@ -443,6 +381,43 @@
     "inputs": [
       {
         "indexed": true,
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "oldRarity",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "newRarity",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "newCapacity",
+        "type": "uint8"
+      }
+    ],
+    "name": "RelicUpgraded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
         "internalType": "address",
         "name": "from",
         "type": "address"
@@ -474,6 +449,68 @@
       }
     ],
     "name": "Unpaused",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "quantity",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "maxRarity",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256[]",
+        "name": "tokenIds",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "BatchMintCompleted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "tierId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "minQuantity",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "maxRarity",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "tierName",
+        "type": "string"
+      }
+    ],
+    "name": "BatchTierSet",
     "type": "event"
   },
   {
@@ -543,35 +580,6 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "batchTiers",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "minQuantity",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint8",
-        "name": "maxRarity",
-        "type": "uint8"
-      },
-      {
-        "internalType": "string",
-        "name": "tierName",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
         "name": "_tokenId",
         "type": "uint256"
       }
@@ -621,36 +629,6 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "getAllBatchTiers",
-    "outputs": [
-      {
-        "components": [
-          {
-            "internalType": "uint256",
-            "name": "minQuantity",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint8",
-            "name": "maxRarity",
-            "type": "uint8"
-          },
-          {
-            "internalType": "string",
-            "name": "tierName",
-            "type": "string"
-          }
-        ],
-        "internalType": "struct Relic.BatchTier[]",
-        "name": "",
-        "type": "tuple[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -664,64 +642,6 @@
         "internalType": "address",
         "name": "",
         "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_quantity",
-        "type": "uint256"
-      }
-    ],
-    "name": "getBatchTierInfo",
-    "outputs": [
-      {
-        "internalType": "uint8",
-        "name": "maxRarity",
-        "type": "uint8"
-      },
-      {
-        "internalType": "string",
-        "name": "tierName",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "exactTierQuantity",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "totalCost",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_quantity",
-        "type": "uint256"
-      }
-    ],
-    "name": "getMaxRarityForQuantity",
-    "outputs": [
-      {
-        "internalType": "uint8",
-        "name": "maxRarity",
-        "type": "uint8"
-      },
-      {
-        "internalType": "string",
-        "name": "tierName",
-        "type": "string"
       }
     ],
     "stateMutability": "view",
@@ -1069,34 +989,6 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "_tierId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_minQuantity",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint8",
-        "name": "_maxRarity",
-        "type": "uint8"
-      },
-      {
-        "internalType": "string",
-        "name": "_tierName",
-        "type": "string"
-      }
-    ],
-    "name": "setBatchTier",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "string",
         "name": "newContractURI",
         "type": "string"
@@ -1199,19 +1091,6 @@
         "internalType": "string",
         "name": "",
         "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "tierCount",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
       }
     ],
     "stateMutability": "view",

@@ -55,7 +55,7 @@ export function handleUnstakeClaimed(event: UnstakeClaimed): void {
     }
 }
 
-export function handleVipTransfer(event: Transfer): void {
+export function handleTransfer(event: Transfer): void {
     if (event.params.from.toHexString() != "0x0000000000000000000000000000000000000000") {
         return // 只處理鑄造事件
     }

@@ -3,7 +3,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_initialOwner",
+        "name": "initialOwner",
         "type": "address"
       }
     ],
@@ -62,7 +62,7 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "address",
         "name": "newAddress",
         "type": "address"
@@ -106,7 +106,7 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "address",
         "name": "newAddress",
         "type": "address"
@@ -134,13 +134,19 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "player",
+        "name": "requester",
         "type": "address"
       },
       {
         "indexed": true,
         "internalType": "uint256",
         "name": "partyId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "dungeonId",
         "type": "uint256"
       },
       {
@@ -169,6 +175,70 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newFee",
+        "type": "uint256"
+      }
+    ],
+    "name": "ExplorationFeeSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "FundsReceived",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "FundsWithdrawn",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newMultiplier",
+        "type": "uint256"
+      }
+    ],
+    "name": "GlobalRewardMultiplierSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": true,
         "internalType": "address",
         "name": "previousOwner",
@@ -188,6 +258,31 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "partyId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "cost",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "payer",
+        "type": "address"
+      }
+    ],
+    "name": "PartyRested",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": false,
         "internalType": "address",
         "name": "account",
@@ -201,9 +296,66 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newPrice",
+        "type": "uint256"
+      }
+    ],
+    "name": "ProvisionPriceSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "partyId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "cost",
+        "type": "uint256"
+      },
+      {
         "indexed": true,
         "internalType": "address",
-        "name": "user",
+        "name": "buyer",
+        "type": "address"
+      }
+    ],
+    "name": "ProvisionsBought",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newDivisor",
+        "type": "uint256"
+      }
+    ],
+    "name": "RestCostPowerDivisorSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "player",
         "type": "address"
       },
       {
@@ -226,13 +378,32 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "address",
         "name": "newAddress",
         "type": "address"
       }
     ],
     "name": "SoulShardTokenSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "SoulShardWithdrawn",
     "type": "event"
   },
   {
@@ -259,6 +430,52 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_dungeonId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_requiredPower",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_rewardAmountUSD",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "_baseSuccessRate",
+        "type": "uint8"
+      }
+    ],
+    "name": "adminSetDungeon",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_partyId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "buyProvisions",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -327,34 +544,13 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_dungeonId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getDungeon",
+    "inputs": [],
+    "name": "globalRewardMultiplier",
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "requiredPower",
+        "name": "",
         "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "rewardAmountUSD",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint8",
-        "name": "baseSuccessRate",
-        "type": "uint8"
-      },
-      {
-        "internalType": "bool",
-        "name": "isInitialized",
-        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -368,30 +564,12 @@
         "type": "uint256"
       }
     ],
-    "name": "getPartyStatus",
+    "name": "isPartyLocked",
     "outputs": [
       {
-        "internalType": "uint256",
-        "name": "cooldownEndsAt",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "unclaimedRewards",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "globalRewardMultiplier",
-    "outputs": [
-      {
-        "internalType": "uint256",
+        "internalType": "bool",
         "name": "",
-        "type": "uint256"
+        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -432,6 +610,19 @@
   },
   {
     "inputs": [],
+    "name": "provisionPriceUSD",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "renounceOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -456,31 +647,16 @@
     "type": "function"
   },
   {
-    "inputs": [
+    "inputs": [],
+    "name": "restCostPowerDivisor",
+    "outputs": [
       {
         "internalType": "uint256",
-        "name": "_dungeonId",
+        "name": "",
         "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_requiredPower",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_rewardAmountUSD",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint8",
-        "name": "_baseSuccessRate",
-        "type": "uint8"
       }
     ],
-    "name": "setDungeon",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -531,6 +707,32 @@
       }
     ],
     "name": "setGlobalRewardMultiplier",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_newPrice",
+        "type": "uint256"
+      }
+    ],
+    "name": "setProvisionPrice",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_newDivisor",
+        "type": "uint256"
+      }
+    ],
+    "name": "setRestCostPowerDivisor",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -595,17 +797,33 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "withdrawNativeFunding",
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "withdrawBNB",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [],
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_amount",
+        "type": "uint256"
+      }
+    ],
     "name": "withdrawSoulShard",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
+  },
+  {
+    "stateMutability": "payable",
+    "type": "receive"
   }
 ]

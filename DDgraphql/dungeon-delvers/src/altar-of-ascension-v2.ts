@@ -1,7 +1,6 @@
 // DDgraphql/dungeondelvers/src/altar-of-ascension-v2.ts
 // V2Fixed 祭壇事件處理器
 import { 
-  UpgradeProcessed,
   UpgradeAttempted,
   PlayerStatsUpdated
 } from "../generated/AltarOfAscension/AltarOfAscensionV2Fixed"
@@ -14,7 +13,8 @@ import { getOrCreatePlayer } from "./common"
 import { updateGlobalStats, updatePlayerStats, TOTAL_UPGRADE_ATTEMPTS, SUCCESSFUL_UPGRADES, TOTAL_UPGRADE_ATTEMPTS_PLAYER, SUCCESSFUL_UPGRADES_PLAYER } from "./stats"
 import { BigInt } from "@graphprotocol/graph-ts"
 
-// 處理 V1 事件（向後相容）
+// V23 removed UpgradeProcessed event
+/*
 export function handleUpgradeProcessed(event: UpgradeProcessed): void {
     const player = getOrCreatePlayer(event.params.player)
     
@@ -50,6 +50,7 @@ export function handleUpgradeProcessed(event: UpgradeProcessed): void {
         updatePlayerStats(event.params.player, SUCCESSFUL_UPGRADES_PLAYER, 1, event.block.timestamp)
     }
 }
+*/
 
 // 處理 V2Fixed 新事件
 export function handleUpgradeAttempted(event: UpgradeAttempted): void {

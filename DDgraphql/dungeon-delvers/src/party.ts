@@ -1,9 +1,10 @@
-import { PartyCreated, Transfer, PartyMemberAdded, PartyMemberRemoved } from "../generated/Party/Party"
+import { PartyCreated, Transfer, PartyMemberChanged } from "../generated/PartyV3/PartyV3"
 import { Party, Hero, Relic, PartyMemberChange } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { log } from "@graphprotocol/graph-ts"
 import { getHeroContractAddress, getRelicContractAddress, createEntityId } from "./config"
 import { updateGlobalStats, updatePlayerStats, TOTAL_PARTIES, TOTAL_PARTIES_CREATED } from "./stats"
+export { handlePartyMemberChanged } from "./party-member-changed"
 
 export function handlePartyCreated(event: PartyCreated): void {
     // 參數驗證
@@ -152,73 +153,40 @@ export function handleRelicTransferForParty(event: Transfer): void {
     log.info('Relic transfer detected: {}, checking party associations', [relicId]);
 }
 
-export function handlePartyMemberAdded(event: PartyMemberAdded): void {
-    const partyId = createEntityId(event.address.toHexString(), event.params.partyId.toString())
+// V23 removed individual member add/remove events - use handlePartyMemberChanged instead
+
+export function handleTransfer(event: Transfer): void {
+    const partyId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
     const party = Party.load(partyId)
     
-    if (!party) {
-        log.error('Party not found for member add event: {}', [partyId])
+    // 處理 burn 操作 (to = 0x0)
+    if (event.params.to.toHexString() === '0x0000000000000000000000000000000000000000') {
+        if (party) {
+            // 減少統計數據
+            updateGlobalStats(TOTAL_PARTIES, -1, event.block.timestamp)
+            updatePlayerStats(event.params.from, TOTAL_PARTIES_CREATED, -1, event.block.timestamp)
+            
+            // 標記為已銷毀
+            party.isBurned = true
+            party.burnedAt = event.block.timestamp
+            party.save()
+            
+            log.info('Party burned: {} from {}', [partyId, event.params.from.toHexString()])
+        }
         return
     }
-
-    // 創建成員變更記錄
-    const changeId = event.transaction.hash.toHexString() + '-' + event.logIndex.toString()
-    const change = new PartyMemberChange(changeId)
-    change.party = partyId
-    change.owner = event.params.owner
-    change.changeType = 0 // 0 表示添加
-    change.hero = createEntityId(getHeroContractAddress(), event.params.heroId.toString())
-    change.timestamp = event.block.timestamp
-    change.save()
-
-    // 更新隊伍的英雄列表
-    const heroIds = party.heroIds
-    const heroId = createEntityId(getHeroContractAddress(), event.params.heroId.toString())
-    if (!heroIds.includes(heroId)) {
-        heroIds.push(heroId)
-        party.heroIds = heroIds
-        party.heroes = heroIds
-        party.save()
-    }
-
-    log.info('Successfully processed PartyMemberAdded event: {} (Hero: {})', [
-        partyId,
-        event.params.heroId.toString()
-    ])
-}
-
-export function handlePartyMemberRemoved(event: PartyMemberRemoved): void {
-    const partyId = createEntityId(event.address.toHexString(), event.params.partyId.toString())
-    const party = Party.load(partyId)
     
-    if (!party) {
-        log.error('Party not found for member remove event: {}', [partyId])
-        return
-    }
-
-    // 創建成員變更記錄
-    const changeId = event.transaction.hash.toHexString() + '-' + event.logIndex.toString()
-    const change = new PartyMemberChange(changeId)
-    change.party = partyId
-    change.owner = event.params.owner
-    change.changeType = 1 // 1 表示移除
-    change.hero = createEntityId(getHeroContractAddress(), event.params.heroId.toString())
-    change.timestamp = event.block.timestamp
-    change.save()
-
-    // 更新隊伍的英雄列表
-    const heroIds = party.heroIds
-    const heroId = createEntityId(getHeroContractAddress(), event.params.heroId.toString())
-    const index = heroIds.indexOf(heroId)
-    if (index > -1) {
-        heroIds.splice(index, 1)
-        party.heroIds = heroIds
-        party.heroes = heroIds
+    // 處理一般轉移
+    if (party) {
+        const newOwner = getOrCreatePlayer(event.params.to)
+        party.owner = newOwner.id
         party.save()
+        log.info('Successfully transferred party {} from {} to {}', [
+            partyId, 
+            event.params.from.toHexString(), 
+            event.params.to.toHexString()
+        ])
+    } else {
+        log.warning("Transfer event for Party that doesn't exist in subgraph: {}", [partyId])
     }
-
-    log.info('Successfully processed PartyMemberRemoved event: {} (Hero: {})', [
-        partyId,
-        event.params.heroId.toString()
-    ])
 }

@@ -1,30 +1,27 @@
-// Auto-generated from v23-config.js - 2025/7/27 下午6:53:50
-// Version: V23
-// Network: BSC Mainnet
+// V24 合約配置 - 2025-07-27T13:30:40.192Z
+// 自動生成，請勿手動修改
 
 export const CONTRACT_ADDRESSES = {
   // Core Contracts
-  DUNGEONCORE: "0xA6b9357279C6b479485aa25e382a048d717bd7c7",
-  ORACLE: "0xde3bA7f6F75AC667416a07b624b7eFA4E8892BA8", // V23 Adaptive TWAP Oracle
-  SOULSHARD: "0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF",
+  DUNGEONCORE: "0x940b44fa26ad15A79ad2485A21fb63F0f634017c",
+  ORACLE: "0xde3bA7f6F75AC667416a07b624b7eFA4E8892BA8",
   
-  // NFT Contracts
-  HERO: "0x8C7dA304ED6DB3Ee921FF7B090aE4264CE61c692",
-  RELIC: "0x0e9B58F7D9800081Df85C7A309bDa82692304987",
-  PARTY: "0xa7D885FF8052b3203E0774688d74dD4F934121ce",
-  
-  // Game Contracts
-  DUNGEONMASTER: "0x9D3acBa5Bb1eeadf235A3a2DC10e4b9a0E94B374",
-  DUNGEONMASTER_WALLET: "0x10925A7138649C7E1794CE646182eeb5BF8ba647",
-  PLAYERVAULT: "0x9b1ED028204C385e805962303EF25B15C4B9Cc93",
-  PLAYERPROFILE: "0xcB2e252E5b4B3Ba5d0e842e82E5FbA146d6c3d84",
-  ALTAROFASCENSION: "0x04566bf26fC567C73c137A80082FAC2EB3F0207D",
-  VIPSTAKING: "0x70946C2328cee3b42F6906bF137d15657A98C661",
-  DUNGEONSTORAGE: "0x8f3CcD7e915907af848b9dAFa94E5839D3201A2D",
+  // NFT Contracts  
+  HERO: "0x5c8a29f82F1aFcbf44dF023970aA6442ca3D6D96",
+  RELIC: "0xA31651E260E9863f13d0b3f773716490f9ed7024",
+  PARTY: "0x6e6b6Cc4fd496bF655695b3Be670Da6dF26e3d1b",
   
   // DeFi Contracts
-  UNISWAP_POOL: "0x1e5Cd5F386Fb6F39cD8788675dd3A5ceB6521C82",
-  USD: "0x7C67Af4EBC6651c95dF78De11cfe325660d935FE"
+  SOULSHARD: "0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF",
+  
+  // Game Mechanics
+  DUNGEONMASTER: "0x1da1ab60fBA1A294e1CD0767D26CF70ee9611F6d",
+  DUNGEONMASTER_WALLET: "0x10925A7138649C7E1794CE646182eeb5BF8ba647",
+  PLAYERVAULT: "0x7273A8368aBAbfF7E9297Dd9eA720D43ffe2634c",
+  PLAYERPROFILE: "0x44814a5E9096Be8F34365F915e42BE0C3E02b9d5",
+  ALTAROFASCENSION: "0xeE9f541224AB9352A8e5CDD79CBf8B95DF11C4ef",
+  VIPSTAKING: "0x78E30b5d5708db41b815D7556c333A2ea73718c4",
+  DUNGEONSTORAGE: "0xfA7848Da96d5691F14b424fE48c70358eCd3EfF6",
 } as const;
 
 export const getContract = (name: keyof typeof CONTRACT_ADDRESSES): string => {
@@ -35,39 +32,10 @@ export const getContractAddress = (name: string): string => {
   return CONTRACT_ADDRESSES[name as keyof typeof CONTRACT_ADDRESSES] || '';
 };
 
-export const isValidContract = (address: string): boolean => {
-  return Object.values(CONTRACT_ADDRESSES).includes(address.toLowerCase());
+// Export contract info for debugging
+export const CONTRACT_INFO = {
+  version: "V24",
+  network: "BSC Mainnet",
+  deploymentBlock: 55499653,
+  lastUpdated: "2025-07-27T13:27:01.035Z"
 };
-
-// Metadata Base URIs
-export const BASE_URIS = {
-  HERO: "https://dungeon-delvers-metadata-server.onrender.com/api/hero/",
-  RELIC: "https://dungeon-delvers-metadata-server.onrender.com/api/relic/",
-  PARTY: "https://dungeon-delvers-metadata-server.onrender.com/api/party/",
-  VIP: "https://dungeon-delvers-metadata-server.onrender.com/api/vip/",
-  PROFILE: "https://dungeon-delvers-metadata-server.onrender.com/api/profile/"
-} as const;
-
-// Version Info
-export const DEPLOYMENT_VERSION = "V23";
-export const DEPLOYMENT_DATE = "2025-07-27T10:35:14.067Z";
-
-// Legacy contract name mappings
-export const LEGACY_CONTRACT_NAMES = {
-  'HeroNFT': 'HERO',
-  'RelicNFT': 'RELIC',
-  'PartyNFT': 'PARTY',
-  'SoulShardToken': 'SOULSHARD',
-  'PlayerVault': 'PLAYERVAULT',
-  'DungeonCore': 'DUNGEONCORE',
-  'DungeonMaster': 'DUNGEONMASTER',
-  'PlayerProfile': 'PLAYERPROFILE',
-  'VIPStaking': 'VIPSTAKING',
-  'Oracle': 'ORACLE',
-  'AltarOfAscension': 'ALTAROFASCENSION',
-  'DungeonStorage': 'DUNGEONSTORAGE'
-} as const;
-
-// Contract type definitions
-export type ContractName = keyof typeof CONTRACT_ADDRESSES;
-export type LegacyContractName = keyof typeof LEGACY_CONTRACT_NAMES;

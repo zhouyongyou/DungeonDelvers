@@ -1,5 +1,5 @@
-# Generated from v24-config.js on 2025-07-27T13:30:40.196Z
-# V24 Production Deployment
+# Generated from v22-config.js on 2025-07-26T02:45:10.105Z
+# DO NOT EDIT MANUALLY - Use npm run sync:config
 specVersion: 0.0.4
 schema:
   file: ./schema.graphql
@@ -8,9 +8,9 @@ dataSources:
     name: Hero
     network: bsc
     source:
-      address: '0x5c8a29f82F1aFcbf44dF023970aA6442ca3D6D96'
+      address: "0x141F081922D4015b3157cdA6eE970dff34bb8AAb"
       abi: Hero
-      startBlock: 55499653
+      startBlock: 55309000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -28,16 +28,14 @@ dataSources:
           handler: handleHeroMinted
         - event: BatchMintCompleted(indexed address,uint256,uint8,uint256[])
           handler: handleBatchMintCompleted
-        - event: HeroBurned(indexed uint256,indexed address,uint8,uint256)
-          handler: handleHeroBurned
       file: ./src/hero.ts
   - kind: ethereum/contract
     name: Relic
     network: bsc
     source:
-      address: '0xA31651E260E9863f13d0b3f773716490f9ed7024'
+      address: "0xB1eb505426e852B8Dca4BF41454a7A22D2B6F3D3"
       abi: Relic
-      startBlock: 55499653
+      startBlock: 55309000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -55,16 +53,14 @@ dataSources:
           handler: handleRelicMinted
         - event: BatchMintCompleted(indexed address,uint256,uint8,uint256[])
           handler: handleBatchMintCompleted
-        - event: RelicBurned(indexed uint256,indexed address,uint8,uint8)
-          handler: handleRelicBurned
       file: ./src/relic.ts
   - kind: ethereum/contract
     name: PartyV3
     network: bsc
     source:
-      address: '0x6e6b6Cc4fd496bF655695b3Be670Da6dF26e3d1b'
+      address: "0x0B97726acd5a8Fe73c73dC6D473A51321a2e62ee"
       abi: PartyV3
-      startBlock: 55499653
+      startBlock: 55309000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -77,32 +73,28 @@ dataSources:
           file: ./abis/PartyV3.json
       eventHandlers:
         - event: Transfer(indexed address,indexed address,indexed uint256)
-          handler: handleTransfer
+          handler: handlePartyTransfer
         - event: PartyCreated(indexed uint256,indexed address,uint256[],uint256[],uint256,uint256,uint8)
           handler: handlePartyCreated
-        - event: PartyMemberChanged(indexed uint256,uint256[],uint256[])
-          handler: handlePartyMemberChanged
       file: ./src/party.ts
   - kind: ethereum/contract
     name: VIPStaking
     network: bsc
     source:
-      address: '0x78E30b5d5708db41b815D7556c333A2ea73718c4'
+      address: "0xc59B9944a9CbB947F4067F941EbFB0a5A2564eb9"
       abi: VIPStaking
-      startBlock: 55499653
+      startBlock: 55309000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
       language: wasm/assemblyscript
       entities:
-        - VIP
-        - Transfer
+        - VIPStake
+        - User
       abis:
         - name: VIPStaking
           file: ./abis/VIPStaking.json
       eventHandlers:
-        - event: Transfer(indexed address,indexed address,indexed uint256)
-          handler: handleTransfer
         - event: Staked(indexed address,uint256,uint256)
           handler: handleStaked
         - event: UnstakeRequested(indexed address,uint256,uint256)
@@ -114,22 +106,20 @@ dataSources:
     name: PlayerProfile
     network: bsc
     source:
-      address: '0x44814a5E9096Be8F34365F915e42BE0C3E02b9d5'
+      address: "0x4998FADF96Be619d54f6E9bcc654F89937201FBe"
       abi: PlayerProfile
-      startBlock: 55499653
+      startBlock: 55309000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
       language: wasm/assemblyscript
       entities:
-        - PlayerProfile
-        - Transfer
+        - Player
+        - Referral
       abis:
         - name: PlayerProfile
           file: ./abis/PlayerProfile.json
       eventHandlers:
-        - event: Transfer(indexed address,indexed address,indexed uint256)
-          handler: handleTransfer
         - event: ProfileCreated(indexed address,indexed uint256)
           handler: handleProfileCreated
         - event: ExperienceAdded(indexed address,indexed uint256,uint256,uint256)
@@ -139,42 +129,20 @@ dataSources:
     name: AltarOfAscension
     network: bsc
     source:
-      address: '0xeE9f541224AB9352A8e5CDD79CBf8B95DF11C4ef'
+      address: "0xfb121441510296A92c8A2Cc04B6Aff1a2f72cd3f"
       abi: AltarOfAscensionV2Fixed
-      startBlock: 55499653
+      startBlock: 55309000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
       language: wasm/assemblyscript
       entities:
         - UpgradeAttempt
+        - Player
       abis:
         - name: AltarOfAscensionV2Fixed
           file: ./abis/AltarOfAscensionV2Fixed.json
       eventHandlers:
         - event: UpgradeAttempted(indexed address,indexed address,uint8,uint8,uint256[],uint256[],uint8,uint256)
           handler: handleUpgradeAttempted
-      file: ./src/altar-of-ascension-v2.ts
-  - kind: ethereum/contract
-    name: DungeonMaster
-    network: bsc
-    source:
-      address: '0x1da1ab60fBA1A294e1CD0767D26CF70ee9611F6d'
-      abi: DungeonMaster
-      startBlock: 55499653
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.6
-      language: wasm/assemblyscript
-      entities:
-        - DungeonExploration
-        - Player
-      abis:
-        - name: DungeonMaster
-          file: ./abis/DungeonMaster.json
-      eventHandlers:
-        - event: ExpeditionFulfilled(indexed address,indexed uint256,bool,uint256,uint256)
-          handler: handleExpeditionFulfilled
-        - event: RewardsBanked(indexed address,indexed uint256,uint256)
-          handler: handleRewardsBanked
-      file: ./src/dungeon-master.ts
+      file: ./src/altar-of-ascension.ts
