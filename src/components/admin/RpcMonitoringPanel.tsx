@@ -381,15 +381,15 @@ const RpcMonitoringPanel: React.FC = () => {
                   <div>
                     <h5 className="font-medium text-gray-300 mb-2">緩存指標</h5>
                     <ul className="space-y-1 text-gray-400">
-                      <li>• 緩存命中率 (目標 > 60%)</li>
-                      <li>• 響應時間 (緩存命中 < 10ms)</li>
-                      <li>• 緩存大小 (< 1000 條目)</li>
+                      <li>• 緩存命中率 (目標 &gt; 60%)</li>
+                      <li>• 響應時間 (緩存命中 &lt; 10ms)</li>
+                      <li>• 緩存大小 (&lt; 1000 條目)</li>
                     </ul>
                   </div>
                   <div>
                     <h5 className="font-medium text-gray-300 mb-2">性能指標</h5>
                     <ul className="space-y-1 text-gray-400">
-                      <li>• API Key 錯誤率 (< 5%)</li>
+                      <li>• API Key 錯誤率 (&lt; 5%)</li>
                       <li>• 速率限制觸發 (監控)</li>
                       <li>• 系統健康狀態</li>
                     </ul>
