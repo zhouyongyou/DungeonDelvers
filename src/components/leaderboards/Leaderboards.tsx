@@ -487,8 +487,12 @@ export const Leaderboards: React.FC = React.memo(() => {
         return renderRewardsLeaderboard();
       case 'expeditions':
         return renderExpeditionsLeaderboard();
+      case 'upgrades':
+        return renderUpgradeLeaderboard();
       case 'vip':
         return renderVIPLeaderboard();
+      case 'recent':
+        return renderRecentActivityLeaderboard();
       default:
         return null;
     }
@@ -507,21 +511,25 @@ export const Leaderboards: React.FC = React.memo(() => {
       </div>
 
       {/* 標籤切換 */}
-      <div className="flex space-x-1 mb-6 bg-gray-700 p-1 rounded-lg">
-        {LEADERBOARD_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-300 hover:text-white hover:bg-gray-600'
-            }`}
-          >
-            <span className="mr-1">{tab.icon}</span>
-            {tab.label}
-          </button>
-        ))}
+      <div className="mb-6">
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 bg-gray-700 p-1 rounded-lg">
+          {LEADERBOARD_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-2 py-2 rounded-md text-xs font-medium transition-colors text-center ${
+                activeTab === tab.id
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-300 hover:text-white hover:bg-gray-600'
+              }`}
+            >
+              <div className="flex flex-col items-center">
+                <span className="text-lg mb-1">{tab.icon}</span>
+                <span className="leading-tight">{tab.label}</span>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* 排行榜內容 */}
