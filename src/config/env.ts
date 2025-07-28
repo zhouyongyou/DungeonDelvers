@@ -107,9 +107,9 @@ export const ENV = {
                     '0x4D353aFC420E6187bfA5F99f0DdD8F7F137c20E9',
       
       // 代幣合約
-      SOUL_SHARD_TOKEN: import.meta.env.VITE_MAINNET_SOULSHARD_ADDRESS || 
+      SOUL_SHARD_TOKEN: import.meta.env.VITE_MAINNET_SOUL_SHARD_TOKEN_ADDRESS || 
                         '0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF',
-      USD_TOKEN: import.meta.env.VITE_MAINNET_USD_ADDRESS || 
+      USD_TOKEN: import.meta.env.VITE_MAINNET_USD_TOKEN_ADDRESS || 
                  '0x7C67Af4EBC6651c95dF78De11cfe325660d935FE',
       POOL: import.meta.env.VITE_MAINNET_UNISWAP_POOL_ADDRESS || 
             '0x1e5Cd5F386Fb6F39cD8788675dd3A5ceB6521C82',
@@ -120,7 +120,7 @@ export const ENV = {
   // 第三方服務
   // =================================================================
   THIRD_PARTY: {
-    WALLET_CONNECT_PROJECT_ID: import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID || 
+    WALLET_CONNECT_PROJECT_ID: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 
                                'd02f4199d4862ab0a12a3d0424fb567b',
   },
 

@@ -1,0 +1,225 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 防止 CLS (Cumulative Layout Shift) 的全局樣式 */
+@layer base {
+  /* 預設圖片行為以防止 CLS */
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+  
+  /* 確保 aspect-ratio 被正確應用 */
+  [style*="aspect-ratio"] {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  /* 減少動畫造成的佈局偏移 */
+  * {
+    transform-box: border-box;
+  }
+  
+  /* GPU 加速優化 */
+  .transform-gpu {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+  
+  /* 預設字體載入行為 */
+  body {
+    font-display: swap;
+  }
+}
+
+/* 移動端優化樣式 */
+@layer base {
+  /* 防止 iOS 橡皮筋效果 */
+  html {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 安全區域變數 */
+  :root {
+    --sat: env(safe-area-inset-top);
+    --sar: env(safe-area-inset-right);
+    --sab: env(safe-area-inset-bottom);
+    --sal: env(safe-area-inset-left);
+  }
+
+  /* 防止文字選擇（僅限按鈕和遊戲元素） */
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  /* 確保輸入框可以選擇文字 */
+  input, textarea, pre, code {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  /* 優化觸控反饋 */
+  button, a, .clickable {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* ★ 核心修正：將 keyframes 定義移至 @layer 外部，解決語法錯誤 */
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-down {
+  from {
+    transform: translate(-50%, -100%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+@layer base {
+  body {
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-font-smoothing: antialiased;
+
+    /* 強制深色主題 */
+    @apply bg-gray-900 font-sans text-gray-200;
+    
+    /* 移動端優化 */
+    @media (max-width: 768px) {
+      font-size: 16px; /* 防止 iOS 縮放 */
+      touch-action: pan-y; /* 允許垂直滾動，防止水平滾動 */
+    }
+  }
+
+  input, select, textarea {
+    @apply bg-gray-800 border-gray-600 text-gray-200 placeholder-gray-500 shadow-sm;
+    @apply focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-gray-100;
+  }
+
+  p, span, div {
+    @apply text-gray-200;
+  }
+
+  a {
+    @apply text-blue-400 hover:text-blue-300 transition-colors duration-200;
+  }
+}
+
+@layer components {
+  .card-bg {
+    @apply bg-gray-800 border border-gray-700 shadow-lg;
+    @apply hover:shadow-xl;
+    @apply transition-all duration-300;
+  }
+
+  .btn-primary {
+    @apply bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/60 hover:-translate-y-px disabled:bg-gray-400 disabled:shadow-none disabled:cursor-not-allowed active:scale-95;
+  }
+
+  .nav-item {
+    @apply px-4 py-2 rounded-full cursor-pointer transition-colors duration-300;
+    @apply text-gray-300 hover:bg-gray-700 hover:text-white;
+  }
+
+  .nav-item.active {
+    @apply bg-gray-700 font-semibold text-white;
+  }
+
+  .page-title {
+    @apply text-3xl md:text-4xl font-bold text-center mb-8 text-gray-100 font-serif tracking-wide;
+  }
+
+  .section-title {
+    @apply text-xl md:text-2xl font-bold mb-4 text-gray-100;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-700 text-gray-200 border border-gray-600 hover:bg-gray-600 transition-all duration-200;
+  }
+
+  .status-indicator {
+    @apply px-2 py-1 rounded-full text-xs font-medium;
+  }
+
+  .status-success {
+    @apply bg-green-900/30 text-green-400;
+  }
+
+  .status-warning {
+    @apply bg-yellow-900/30 text-yellow-400;
+  }
+
+  .status-error {
+    @apply bg-red-900/30 text-red-400;
+  }
+
+  .status-info {
+    @apply bg-blue-900/30 text-blue-400;
+  }
+}
+
+@layer utilities {
+  .animate-slide-in-right {
+    animation: slide-in-right 0.5s ease-out forwards;
+  }
+
+  .animate-zoom-in {
+    animation: zoom-in 0.3s ease-out forwards;
+  }
+  
+  .animate-slide-down {
+    animation: slide-down 0.3s ease-out;
+  }
+
+  .text-high-contrast {
+    @apply text-gray-100;
+  }
+
+  .text-medium-contrast {
+    @apply text-gray-200;
+  }
+
+  .text-low-contrast {
+    @apply text-gray-400;
+  }
+
+  .bg-high-contrast {
+    @apply bg-gray-800;
+  }
+
+  .bg-medium-contrast {
+    @apply bg-gray-900;
+  }
+}
