@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useMonitoredReadContracts } from './useMonitoredContract';
-import { getContract } from '../config/contracts';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { logger } from '../utils/logger';
 import { formatEther, parseEther } from 'viem';
 import { bsc } from 'wagmi/chains';
@@ -61,7 +61,7 @@ export function useAdminData(): AdminDataHookReturn {
     if (registry.hero) {
       contracts.push({
         address: registry.hero,
-        abi: getContract('HERO').abi,
+        abi: getContractWithABI(bsc.id, 'hero')?.abi,
         functionName: 'mintPriceUSD',
       });
     }
@@ -69,7 +69,7 @@ export function useAdminData(): AdminDataHookReturn {
     if (registry.relic) {
       contracts.push({
         address: registry.relic,
-        abi: getContract('RELIC').abi,
+        abi: getContractWithABI(bsc.id, 'relic')?.abi,
         functionName: 'mintPriceUSD',
       });
     }
@@ -77,12 +77,12 @@ export function useAdminData(): AdminDataHookReturn {
     if (registry.dungeonMaster) {
       contracts.push({
         address: registry.dungeonMaster,
-        abi: getContract('DUNGEONMASTER').abi,
+        abi: getContractWithABI(bsc.id, 'dungeonMaster')?.abi,
         functionName: 'explorationFee',
       });
       contracts.push({
         address: registry.dungeonMaster,
-        abi: getContract('DUNGEONMASTER').abi,
+        abi: getContractWithABI(bsc.id, 'dungeonMaster')?.abi,
         functionName: 'globalRewardMultiplier',
       });
     }

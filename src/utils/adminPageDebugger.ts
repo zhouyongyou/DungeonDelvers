@@ -1,7 +1,7 @@
 // src/utils/adminPageDebugger.ts - 管理頁面診斷工具
 
 import { logger } from './logger';
-import { getContract, CONTRACT_ADDRESSES } from '../config/contracts';
+import { getContract } from '../config/contracts';
 import { bsc } from 'wagmi/chains';
 import type { Address } from 'viem';
 

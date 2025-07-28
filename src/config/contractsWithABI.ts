@@ -1,159 +1,100 @@
-// contractsWithABI.ts - 完整的合約配置，包含地址和 ABI
-// 用於鑄造頁面等需要完整合約配置的地方
+// V25 Contract Configuration with ABI
+// Generated on 2025-07-28T07:06:24.066Z
+// DO NOT EDIT MANUALLY - Use v25-sync-all.js to update
 
-import { CONTRACT_ADDRESSES, LEGACY_CONTRACT_NAMES } from './contracts';
+import HeroABI from '../abis/Hero.json';
+import RelicABI from '../abis/Relic.json';
+import PartyABI from '../abis/Party.json';
+import DungeonCoreABI from '../abis/DungeonCore.json';
+import DungeonMasterABI from '../abis/DungeonMaster.json';
+import PlayerProfileABI from '../abis/PlayerProfile.json';
+import VIPStakingABI from '../abis/VIPStaking.json';
+import OracleABI from '../abis/Oracle.json';
+import AltarOfAscensionABI from '../abis/AltarOfAscension.json';
+import PlayerVaultABI from '../abis/PlayerVault.json';
+import DungeonStorageABI from '../abis/DungeonStorage.json';
+import SoulShardTokenABI from '../abis/SoulShardToken.json';
 
-// 重新導出 CONTRACT_ADDRESSES 以供其他文件使用
-export { CONTRACT_ADDRESSES, LEGACY_CONTRACT_NAMES };
-export type { ContractName } from './contracts';
-// 直接從 JSON 檔案導入 ABI
-import heroABI from '../abis/Hero.json';
-import relicABI from '../abis/Relic.json';
-import partyV3ABI from '../abis/Party.json';
-import dungeonCoreABI from '../abis/DungeonCore.json';
-import dungeonMasterABI from '../abis/DungeonMaster.json';
-import playerProfileABI from '../abis/PlayerProfile.json';
-import vipStakingABI from '../abis/VIPStaking.json';
-import oracleABI from '../abis/Oracle.json';
-import altarOfAscensionABI from '../abis/AltarOfAscension.json';
-import playerVaultABI from '../abis/PlayerVault.json';
-import dungeonStorageABI from '../abis/DungeonStorage.json';
-
-// 導入 SoulShard Token ABI
-import soulShardTokenABI from '../abis/SoulShardToken.json';
-
-export interface ContractConfig {
-  address: `0x${string}`;
+export interface ContractWithABI {
+  address: string;
   abi: any;
-  name: string;
 }
 
-// 合約 ABI 映射 - 處理 Hardhat artifact 格式
-const CONTRACT_ABIS = {
-  hero: heroABI.abi || heroABI,
-  relic: relicABI.abi || relicABI,
-  party: partyV3ABI.abi || partyV3ABI,
-  soulShard: soulShardTokenABI.abi || soulShardTokenABI,
-  playerVault: playerVaultABI.abi || playerVaultABI,
-  dungeonCore: dungeonCoreABI.abi || dungeonCoreABI,
-  dungeonMaster: dungeonMasterABI.abi || dungeonMasterABI,
-  playerProfile: playerProfileABI.abi || playerProfileABI,
-  vipStaking: vipStakingABI.abi || vipStakingABI,
-  oracle: oracleABI.abi || oracleABI,
-  altarOfAscension: altarOfAscensionABI.abi || altarOfAscensionABI,
-  dungeonStorage: dungeonStorageABI.abi || dungeonStorageABI,
-  // 添加測試代幣的 ABI 映射
-  testUsd: soulShardTokenABI.abi || soulShardTokenABI, // TestUSD 使用標準 ERC20 ABI
-  soulShardToken: soulShardTokenABI.abi || soulShardTokenABI // 明確的 soulShard 映射
-} as const;
-
-/**
- * 獲取包含 ABI 的完整合約配置
- * @param chainId - 鏈 ID (目前只支援 BSC 主網 56)
- * @param contractType - 合約類型
- * @returns 完整的合約配置或 undefined
- */
-export function getContractWithABI(
-  chainId: number, 
-  contractType: keyof typeof CONTRACT_ABIS | keyof typeof LEGACY_CONTRACT_NAMES
-): ContractConfig | undefined {
-  // 只支援 BSC 主網
-  if (chainId !== 56) {
-    return undefined;
-  }
-
-  // 處理 legacy 名稱映射 - 直接使用原始名稱作為 ABI 鍵
-  const finalContractType = contractType as keyof typeof CONTRACT_ABIS;
-
-  // 獲取地址 - 使用 legacy 映射來獲取正確的常數名稱
-  let address: string | undefined;
-  if (contractType in LEGACY_CONTRACT_NAMES) {
-    const addressKey = LEGACY_CONTRACT_NAMES[contractType as keyof typeof LEGACY_CONTRACT_NAMES];
-    address = CONTRACT_ADDRESSES[addressKey as keyof typeof CONTRACT_ADDRESSES];
-  } else {
-    // 直接映射，如果不在 legacy 中
-    switch (finalContractType) {
-      case 'soulShard':
-        address = CONTRACT_ADDRESSES.SOULSHARD;
-        break;
-      case 'hero':
-        address = CONTRACT_ADDRESSES.HERO;
-        break;
-      case 'relic':
-        address = CONTRACT_ADDRESSES.RELIC;
-        break;
-      case 'party':
-        address = CONTRACT_ADDRESSES.PARTY;
-        break;
-      case 'playerVault':
-        address = CONTRACT_ADDRESSES.PLAYERVAULT;
-        break;
-      case 'dungeonCore':
-        address = CONTRACT_ADDRESSES.DUNGEONCORE;
-        break;
-      case 'dungeonMaster':
-        address = CONTRACT_ADDRESSES.DUNGEONMASTER;
-        break;
-      case 'playerProfile':
-        address = CONTRACT_ADDRESSES.PLAYERPROFILE;
-        break;
-      case 'vipStaking':
-        address = CONTRACT_ADDRESSES.VIPSTAKING;
-        break;
-      case 'oracle':
-        address = CONTRACT_ADDRESSES.ORACLE;
-        break;
-      case 'altarOfAscension':
-        address = CONTRACT_ADDRESSES.ALTAROFASCENSION;
-        break;
-      case 'dungeonStorage':
-        address = CONTRACT_ADDRESSES.DUNGEONSTORAGE;
-        break;
-      case 'testUsd':
-        // USD 合約在 V24 版本中不存在，暫時返回 undefined
-        address = undefined;
-        break;
-      case 'soulShardToken':
-        address = CONTRACT_ADDRESSES.SOULSHARD;
-        break;
+export const CONTRACTS_WITH_ABI = {
+  56: { // BSC Mainnet
+    // NFT Contracts
+    HERO: {
+      address: '0x162b0b673f38C11732b0bc0B4B026304e563e8e2',
+      abi: HeroABI
+    },
+    RELIC: {
+      address: '0x15c2454A31Abc0063ef4a71d0640057d71847a22',
+      abi: RelicABI
+    },
+    PARTY: {
+      address: '0xab07E90d44c34FB62313C74F3C7b4b343E52a253',
+      abi: PartyABI
+    },
+    
+    // Core Contracts
+    DUNGEONCORE: {
+      address: '0x04b33eEB6Da358ea9Dd002a1E1c28AC90A25881E',
+      abi: DungeonCoreABI
+    },
+    DUNGEONMASTER: {
+      address: '0x08Bd8E0D85A7F10bEecCBA9a67da9033f9a7C8D9',
+      abi: DungeonMasterABI
+    },
+    PLAYERPROFILE: {
+      address: '0x145F19e672a7D53ddb16bcE3fdeAd976bb3ef82f',
+      abi: PlayerProfileABI
+    },
+    VIPSTAKING: {
+      address: '0xdC285539069Fa51b9259bd1F1d66f23f74B96A6c',
+      abi: VIPStakingABI
+    },
+    ORACLE: {
+      address: '0x2350D85e5DF1b6a6d055CD61FeD27d5dC36B6F52',
+      abi: OracleABI
+    },
+    ALTAROFASCENSION: {
+      address: '0x0148Aff0Dee6D31BA9825e66ED34a66BCeF45845',
+      abi: AltarOfAscensionABI
+    },
+    PLAYERVAULT: {
+      address: '0x4d06483c907DB1CfA9C2207D9DC5a1Abad86544b',
+      abi: PlayerVaultABI
+    },
+    DUNGEONSTORAGE: {
+      address: '0x4b1A9a45d0a1C35CDbae04272814f3daA9b59c47',
+      abi: DungeonStorageABI
+    },
+    
+    // Token Contracts
+    SOULSHARD: {
+      address: '0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF',
+      abi: SoulShardTokenABI
     }
   }
+} as const;
 
-  // 獲取 ABI
-  const abi = CONTRACT_ABIS[finalContractType];
+// Contract version for tracking
+export const CONTRACT_VERSION = 'V25';
 
-  if (!address || !abi || address === '0x0000000000000000000000000000000000000000') {
-    return undefined;
-  }
+// Helper function to get contract with ABI
+export const getContractWithABI = (name: keyof typeof CONTRACTS_WITH_ABI[56]): ContractWithABI => {
+  return CONTRACTS_WITH_ABI[56][name];
+};
 
-  return {
-    address: address as `0x${string}`,
-    abi,
-    name: finalContractType
-  };
-}
+// Legacy compatibility function
+export const getContract = (name: keyof typeof CONTRACTS_WITH_ABI[56]): string => {
+  return CONTRACTS_WITH_ABI[56][name].address;
+};
 
-/**
- * Legacy 兼容函數 - 替代原來的 getContractLegacy
- * 這個函數現在返回完整的合約配置，包含 ABI
- */
-export function getContractLegacy(
-  chainId: number, 
-  legacyName: keyof typeof LEGACY_CONTRACT_NAMES
-): ContractConfig | undefined {
-  return getContractWithABI(chainId, legacyName);
-}
-
-// 導出常用的合約配置獲取函數
-export const getHeroContract = (chainId: number) => getContractWithABI(chainId, 'hero');
-export const getRelicContract = (chainId: number) => getContractWithABI(chainId, 'relic');
-export const getPartyContract = (chainId: number) => getContractWithABI(chainId, 'party');
-export const getSoulShardContract = (chainId: number) => getContractWithABI(chainId, 'soulShard');
-export const getPlayerVaultContract = (chainId: number) => getContractWithABI(chainId, 'playerVault');
-export const getDungeonCoreContract = (chainId: number) => getContractWithABI(chainId, 'dungeonCore');
-export const getDungeonMasterContract = (chainId: number) => getContractWithABI(chainId, 'dungeonMaster');
-export const getPlayerProfileContract = (chainId: number) => getContractWithABI(chainId, 'playerProfile');
-export const getVipStakingContract = (chainId: number) => getContractWithABI(chainId, 'vipStaking');
-export const getOracleContract = (chainId: number) => getContractWithABI(chainId, 'oracle');
-export const getAltarOfAscensionContract = (chainId: number) => getContractWithABI(chainId, 'altarOfAscension');
-export const getDungeonStorageContract = (chainId: number) => getContractWithABI(chainId, 'dungeonStorage');
+// Export contract info for debugging
+export const CONTRACT_INFO = {
+  version: CONTRACT_VERSION,
+  network: "BSC Mainnet",
+  deploymentBlock: 55514557,
+  lastUpdated: "2025-07-28T07:06:24.066Z"
+};

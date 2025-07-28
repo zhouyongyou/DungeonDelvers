@@ -6,7 +6,7 @@ import { formatEther } from 'viem';
 
 export const TestBatchRead: React.FC = () => {
   const chainId = 56;
-  const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
+  const dungeonMasterContract = getContract('DUNGEONMASTER');
   
   // 測試單個合約讀取 - explorationFee
   const { data: singleData, error: singleError, isLoading: singleLoading } = useContractRead({

@@ -1,29 +1,26 @@
-// contractsWithABI-new.ts - 使用新的 JSON ABI 檔案
-// 這是現代化的版本，直接從 JSON 檔案讀取 ABI
+// contractsWithABI.ts - 完整的合約配置，包含地址和 ABI
+// 用於鑄造頁面等需要完整合約配置的地方
 
 import { getContract, LEGACY_CONTRACT_NAMES } from './contracts';
 
-// 直接從 JSON 檔案導入 ABI
-import heroABI from './abis/Hero.json';
-import relicABI from './abis/Relic.json';
-import partyABI from './abis/Party.json';
-import dungeonCoreABI from './abis/DungeonCore.json';
-import dungeonMasterABI from './abis/DungeonMaster.json';
-import playerProfileABI from './abis/PlayerProfile.json';
-import vipStakingABI from './abis/VIPStaking.json';
-import oracleABI from './abis/Oracle.json';
-import altarOfAscensionABI from './abis/AltarOfAscension.json';
-import playerVaultABI from './abis/PlayerVault.json';
-
-// 需要從舊的 abis.ts 導入的 ABI（尚未同步到 JSON）
-import { 
-  soulShardTokenABI,
-  dungeonStorageABI 
-} from './abis';
-
-// 重新導出
-export { CONTRACT_ADDRESSES, LEGACY_CONTRACT_NAMES };
+// 重新導出 LEGACY_CONTRACT_NAMES 以供其他文件使用
+export { LEGACY_CONTRACT_NAMES };
 export type { ContractName } from './contracts';
+// 直接從 JSON 檔案導入 ABI
+import heroABI from '../abis/Hero.json';
+import relicABI from '../abis/Relic.json';
+import partyV3ABI from '../abis/Party.json';
+import dungeonCoreABI from '../abis/DungeonCore.json';
+import dungeonMasterABI from '../abis/DungeonMaster.json';
+import playerProfileABI from '../abis/PlayerProfile.json';
+import vipStakingABI from '../abis/VIPStaking.json';
+import oracleABI from '../abis/Oracle.json';
+import altarOfAscensionABI from '../abis/AltarOfAscension.json';
+import playerVaultABI from '../abis/PlayerVault.json';
+import dungeonStorageABI from '../abis/DungeonStorage.json';
+
+// 導入 SoulShard Token ABI
+import soulShardTokenABI from '../abis/SoulShardToken.json';
 
 export interface ContractConfig {
   address: `0x${string}`;
@@ -31,23 +28,23 @@ export interface ContractConfig {
   name: string;
 }
 
-// 合約 ABI 映射
+// 合約 ABI 映射 - 處理 Hardhat artifact 格式
 const CONTRACT_ABIS = {
-  hero: heroABI,
-  relic: relicABI,
-  party: partyABI,
-  soulShard: soulShardTokenABI, // 暫時使用舊的
-  playerVault: playerVaultABI,
-  dungeonCore: dungeonCoreABI,
-  dungeonMaster: dungeonMasterABI,
-  playerProfile: playerProfileABI,
-  vipStaking: vipStakingABI,
-  oracle: oracleABI,
-  altarOfAscension: altarOfAscensionABI,
-  dungeonStorage: dungeonStorageABI, // 暫時使用舊的
+  hero: heroABI.abi || heroABI,
+  relic: relicABI.abi || relicABI,
+  party: partyV3ABI.abi || partyV3ABI,
+  soulShard: soulShardTokenABI.abi || soulShardTokenABI,
+  playerVault: playerVaultABI.abi || playerVaultABI,
+  dungeonCore: dungeonCoreABI.abi || dungeonCoreABI,
+  dungeonMaster: dungeonMasterABI.abi || dungeonMasterABI,
+  playerProfile: playerProfileABI.abi || playerProfileABI,
+  vipStaking: vipStakingABI.abi || vipStakingABI,
+  oracle: oracleABI.abi || oracleABI,
+  altarOfAscension: altarOfAscensionABI.abi || altarOfAscensionABI,
+  dungeonStorage: dungeonStorageABI.abi || dungeonStorageABI,
   // 添加測試代幣的 ABI 映射
-  testUsd: soulShardTokenABI, // TestUSD 使用標準 ERC20 ABI
-  soulShardToken: soulShardTokenABI // 明確的 soulShard 映射
+  testUsd: soulShardTokenABI.abi || soulShardTokenABI, // TestUSD 使用標準 ERC20 ABI
+  soulShardToken: soulShardTokenABI.abi || soulShardTokenABI // 明確的 soulShard 映射
 } as const;
 
 /**

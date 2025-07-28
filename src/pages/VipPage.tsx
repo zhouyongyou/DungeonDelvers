@@ -139,6 +139,7 @@ const VipPageContent: React.FC = () => {
     const [mode, setMode] = useState<'stake' | 'unstake'>('stake');
     const [isAwaitingStakeAfterApproval, setIsAwaitingStakeAfterApproval] = useState(false);
     const [recentlyStaked, setRecentlyStaked] = useState(false);
+    const [showBenefitsGuide, setShowBenefitsGuide] = useState(false);
     
     const {
         isLoading, vipStakingContract, soulShardContract,
@@ -410,9 +411,17 @@ const VipPageContent: React.FC = () => {
             
             {/* VIP 等級說明卡片 */}
             <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 p-6 rounded-xl border border-purple-500/20">
-                <h3 className="text-lg font-bold text-purple-300 mb-4 flex items-center gap-2">
-                    <span>👑</span> VIP 等級與福利
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-purple-300 flex items-center gap-2">
+                        <span>👑</span> VIP 等級與福利
+                    </h3>
+                    <button
+                        onClick={() => setShowBenefitsGuide(true)}
+                        className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 transition-all transform hover:scale-105 shadow-lg"
+                    >
+                        📖 查看完整指南
+                    </button>
+                </div>
                 {/* 質押冷卻期提示 */}
                 <div className="mb-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded">
                     <p className="text-sm text-blue-300">
@@ -467,8 +476,8 @@ const VipPageContent: React.FC = () => {
                                 🔢 <strong>稅率公式</strong>：每個VIP等級減免 0.5%
                             </p>
                             <p className="text-xs text-purple-300">
-                                🏰 <strong>祝壇加成</strong>：VIP等級直接加到升級成功率上<br/>
-                                ⚔️ <strong>地下城加成</strong>：增加所有地下城的基礎成功率
+                                🏰 <strong>祭壇加成</strong>：需管理員手動設置，目前未自動生效 ⚠️<br/>
+                                ⚔️ <strong>地下城加成</strong>：自動生效，增加所有地下城的基礎成功率 ✅
                             </p>
                         </div>
                     </div>
@@ -646,6 +655,12 @@ const VipPageContent: React.FC = () => {
                     </div>
                 </div>
             )}
+            
+            {/* VIP 完整指南 Modal */}
+            <VipBenefitsGuide 
+                isOpen={showBenefitsGuide}
+                onClose={() => setShowBenefitsGuide(false)}
+            />
         </section>
     );
 };

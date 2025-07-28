@@ -28,10 +28,10 @@ export const AltarRulesVisualization: React.FC<AltarRulesVisualizationProps> = (
   
   const altarContract = getContractWithABI('ALTAROFASCENSION');
   
-  // 讀取 VIP 加成率
-  const { data: vipBonusRate } = useReadContract({
+  // 讀取玩家 VIP 信息（新版合約）
+  const { data: playerVipInfo } = useReadContract({
     ...altarContract,
-    functionName: 'vipBonusRate',
+    functionName: 'getPlayerVipInfo',
     args: address ? [address] : undefined,
     query: {
       enabled: !!address && !!altarContract,
@@ -39,7 +39,8 @@ export const AltarRulesVisualization: React.FC<AltarRulesVisualizationProps> = (
     }
   });
 
-  const bonusRate = Number(vipBonusRate || 0);
+  // 解析 VIP 信息：[currentVipLevel, additionalBonus, totalVipBonus, effectiveTotalBonus]
+  const bonusRate = playerVipInfo ? Number(playerVipInfo[3]) : 0; // 使用 effectiveTotalBonus
   if (isLoading) {
     return (
       <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 backdrop-blur-md border border-purple-500/20 rounded-2xl p-6">

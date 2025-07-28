@@ -19,6 +19,7 @@ import { useTransactionStore } from '../stores/useTransactionStore';
 import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';
 import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
 import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
+import { useVipStatus } from '../hooks/useVipStatus';
 import type { Page } from '../types/page';
 import type { PartyNft } from '../types/nft';
 import { Modal } from '../components/ui/Modal';
@@ -573,7 +574,14 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
     );
 };
 
-const DungeonInfoCard: React.FC<{ dungeon: Dungeon; calculateSoulReward: (usdAmount: bigint) => bigint }> = ({ dungeon, calculateSoulReward }) => (
+const DungeonInfoCard: React.FC<{ dungeon: Dungeon; calculateSoulReward: (usdAmount: bigint) => bigint }> = ({ dungeon, calculateSoulReward }) => {
+    const { vipLevel } = useVipStatus();
+    
+    // 計算實際成功率（包含VIP加成）
+    const actualSuccessRate = Math.min(dungeon.baseSuccessRate + (vipLevel || 0), 100);
+    const hasVipBonus = (vipLevel || 0) > 0;
+    
+    return (
     <div className="card-bg rounded-xl shadow-lg overflow-hidden bg-gray-800/50 hover:transform hover:scale-105 transition-transform duration-200">
         {/* 地下城圖片 */}
         <div className="relative h-48 overflow-hidden bg-gray-900">
@@ -604,11 +612,19 @@ const DungeonInfoCard: React.FC<{ dungeon: Dungeon; calculateSoulReward: (usdAmo
                     (${parseFloat(formatEther(dungeon.rewardAmountUSD)).toFixed(2)})
                 </span>
             </p>
-            <p className="text-gray-300">成功率: <span className="font-semibold text-white">{dungeon.baseSuccessRate}%</span></p>
+            <p className="text-gray-300">成功率: 
+                <span className="font-semibold text-white">{actualSuccessRate}%</span>
+                {hasVipBonus && (
+                    <span className="text-xs text-purple-400 ml-2">
+                        (基礎 {dungeon.baseSuccessRate}% + VIP {vipLevel} = +{vipLevel}%)
+                    </span>
+                )}
+            </p>
             <p className="font-bold text-sky-400">預計經驗: +{dungeon.id * 5 + 20} EXP</p>
         </div>
     </div>
-);
+    );
+};
 
 
 // =================================================================
