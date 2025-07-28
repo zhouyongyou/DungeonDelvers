@@ -6,20 +6,21 @@ import { CONTRACT_ADDRESSES, LEGACY_CONTRACT_NAMES } from './contracts';
 // 重新導出 CONTRACT_ADDRESSES 以供其他文件使用
 export { CONTRACT_ADDRESSES, LEGACY_CONTRACT_NAMES };
 export type { ContractName } from './contracts';
-import { 
-  heroABI, 
-  relicABI, 
-  soulShardTokenABI, 
-  playerVaultABI,
-  dungeonCoreABI,
-  dungeonMasterABI,
-  playerProfileABI,
-  vipStakingABI,
-  oracleABI,
-  altarOfAscensionABI,
-  partyV3ABI,
-  dungeonStorageABI
-} from './abis';
+// 直接從 JSON 檔案導入 ABI
+import heroABI from '../abis/Hero.json';
+import relicABI from '../abis/Relic.json';
+import partyV3ABI from '../abis/Party.json';
+import dungeonCoreABI from '../abis/DungeonCore.json';
+import dungeonMasterABI from '../abis/DungeonMaster.json';
+import playerProfileABI from '../abis/PlayerProfile.json';
+import vipStakingABI from '../abis/VIPStaking.json';
+import oracleABI from '../abis/Oracle.json';
+import altarOfAscensionABI from '../abis/AltarOfAscension.json';
+import playerVaultABI from '../abis/PlayerVault.json';
+import dungeonStorageABI from '../abis/DungeonStorage.json';
+
+// 導入 SoulShard Token ABI
+import soulShardTokenABI from '../abis/SoulShardToken.json';
 
 export interface ContractConfig {
   address: `0x${string}`;

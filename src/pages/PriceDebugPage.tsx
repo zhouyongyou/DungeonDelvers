@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { useReadContract, useReadContracts } from 'wagmi';
 import { formatEther, parseEther } from 'viem';
 import { bsc } from 'wagmi/chains';
-import { getContractLegacy } from '../utils/contractLegacy';
+import { getContractLegacy } from '../config/contractsWithABI';
 
 const PriceDebugPage: React.FC = () => {
     const chainId = bsc.id;
