@@ -215,7 +215,8 @@ export const AltarTutorial: React.FC<AltarTutorialProps> = ({ isOpen, onClose })
       onClose={onClose}
       title=""
       showCloseButton={false}
-      className="max-w-2xl"
+      maxWidth="2xl"
+      isTutorial={true}
     >
       <div className="relative">
         {/* 進度條 */}
@@ -240,7 +241,7 @@ export const AltarTutorial: React.FC<AltarTutorialProps> = ({ isOpen, onClose })
         </div>
 
         {/* 教學內容 */}
-        <div className="min-h-[400px]">
+        <div className="min-h-[300px] max-h-[60vh] overflow-y-auto">
           <h2 className="text-2xl font-bold text-center mb-6 bg-gradient-to-r from-purple-300 to-indigo-300 bg-clip-text text-transparent">
             {currentTutorial.title}
           </h2>

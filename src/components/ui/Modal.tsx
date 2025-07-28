@@ -73,25 +73,27 @@ export const Modal: React.FC<ModalProps> = ({
     '6xl': 'max-w-6xl'
   }[maxWidth];
 
+  const modalZIndex = zIndex || (isTutorial ? Z_INDEX.TUTORIAL_BACKDROP : Z_INDEX.MODAL_BACKDROP);
+
   return (
     // 背景遮罩層
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
-      className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center backdrop-blur-sm px-4 py-4 overflow-y-auto"
-      style={{ zIndex }}
+      className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center backdrop-blur-sm px-4 py-4 overflow-y-auto overscroll-contain"
+      style={{ zIndex: modalZIndex }}
       onClick={onClose}
     >
       {/* Modal 內容卡片，加入了 animate-zoom-in */}
       <div
-        className={`card-bg p-6 rounded-2xl shadow-2xl w-full ${maxWidthClass} my-auto animate-zoom-in ${className}`}
+        className={`card-bg p-4 sm:p-6 rounded-2xl shadow-2xl w-full ${maxWidthClass} my-auto animate-zoom-in max-h-[90vh] overflow-hidden flex flex-col ${className}`}
         onClick={e => e.stopPropagation()}
       >
         {title && (
           <h3 id="modal-title" className="text-2xl font-bold text-gray-100 font-serif mb-4">{title}</h3>
         )}
-        <div className="text-gray-300 mb-6">{children}</div>
+        <div className="text-gray-300 mb-6 flex-1 overflow-y-auto">{children}</div>
         {onConfirm && (
           <div className="flex justify-end gap-3">
             {showCloseButton && (
