@@ -8,37 +8,42 @@ export enum GraphQLEndpointType {
 
 // 功能與端點映射
 export const FEATURE_ENDPOINT_MAP: Record<string, GraphQLEndpointType> = {
-  // 暫時所有功能都使用 Studio 版本（穩定且免費）
+  // 探索者頁面使用 Studio 版本（免費，可承受延遲）
   'explorer': GraphQLEndpointType.STUDIO,
   'browser': GraphQLEndpointType.STUDIO,
-  'leaderboard': GraphQLEndpointType.STUDIO,
-  'history': GraphQLEndpointType.STUDIO,
   'statistics': GraphQLEndpointType.STUDIO,
-  'nft-gallery': GraphQLEndpointType.STUDIO,
   
-  // 暫時也使用 Studio 版本，待去中心化配置完成後再切換
-  'party-management': GraphQLEndpointType.STUDIO,
-  'battle': GraphQLEndpointType.STUDIO,
-  'expedition': GraphQLEndpointType.STUDIO,
-  'market': GraphQLEndpointType.STUDIO,
-  'rewards': GraphQLEndpointType.STUDIO,
-  'real-time-stats': GraphQLEndpointType.STUDIO
+  // 核心遊戲功能使用去中心化版本（即時數據）
+  'party-management': GraphQLEndpointType.DECENTRALIZED,
+  'battle': GraphQLEndpointType.DECENTRALIZED,
+  'expedition': GraphQLEndpointType.DECENTRALIZED,
+  'market': GraphQLEndpointType.DECENTRALIZED,
+  'rewards': GraphQLEndpointType.DECENTRALIZED,
+  'real-time-stats': GraphQLEndpointType.DECENTRALIZED,
+  
+  // 用戶數據相關使用去中心化版本
+  'leaderboard': GraphQLEndpointType.DECENTRALIZED,
+  'history': GraphQLEndpointType.DECENTRALIZED,
+  'nft-gallery': GraphQLEndpointType.DECENTRALIZED
 };
 
 // 端點配置
 export const GRAPHQL_ENDPOINTS = {
   [GraphQLEndpointType.STUDIO]: {
     url: import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL || 
-         'https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs',
-    description: '免費版本 - 有 15-30 分鐘延遲',
-    features: ['探索者', '數據瀏覽', '歷史記錄', '排行榜']
+         'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.2.0',
+    description: '免費版本 - 有 15-30 分鐘延遲，Studio 額度有限',
+    features: ['探索者', '數據瀏覽', '統計資料'],
+    fallbackUrl: import.meta.env.VITE_THE_GRAPH_DECENTRALIZED_API_URL || 
+                 'https://gateway.thegraph.com/api/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs'
   },
   [GraphQLEndpointType.DECENTRALIZED]: {
     url: import.meta.env.VITE_THE_GRAPH_DECENTRALIZED_API_URL || 
-         import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL || // fallback to studio if not configured
          'https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs',
-    description: '付費版本 - 即時數據',
-    features: ['隊伍管理', '戰鬥', '市場', '獎勵']
+    description: '付費版本 - 即時數據，主要使用',
+    features: ['隊伍管理', '戰鬥', '市場', '獎勵', '即時統計'],
+    fallbackUrl: import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL || 
+                 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.2.0'
   }
 };
 

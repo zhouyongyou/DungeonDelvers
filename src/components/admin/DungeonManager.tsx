@@ -53,16 +53,16 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
   
   // 地下城預設配置 - 作為初始化參考 (2025-01 經濟模型版本)
   const defaultDungeons = [
-    { id: 1, name: "新手礦洞", requiredPower: 300, rewardAmountUSD: 29.30, baseSuccessRate: 89 },
-    { id: 2, name: "哥布林洞穴", requiredPower: 600, rewardAmountUSD: 62.00, baseSuccessRate: 83 },
-    { id: 3, name: "食人魔山谷", requiredPower: 900, rewardAmountUSD: 96.00, baseSuccessRate: 77 },
-    { id: 4, name: "蜘蛛巢穴", requiredPower: 1200, rewardAmountUSD: 151.00, baseSuccessRate: 69 },
-    { id: 5, name: "石化蜥蜴沼澤", requiredPower: 1500, rewardAmountUSD: 205.00, baseSuccessRate: 63 },
-    { id: 6, name: "巫妖墓穴", requiredPower: 1800, rewardAmountUSD: 271.00, baseSuccessRate: 57 },
-    { id: 7, name: "奇美拉之巢", requiredPower: 2100, rewardAmountUSD: 418.00, baseSuccessRate: 52 },
-    { id: 8, name: "惡魔前哨站", requiredPower: 2400, rewardAmountUSD: 539.00, baseSuccessRate: 52 },
-    { id: 9, name: "巨龍之巔", requiredPower: 2700, rewardAmountUSD: 685.00, baseSuccessRate: 50 },
-    { id: 10, name: "混沌深淵", requiredPower: 3000, rewardAmountUSD: 850.00, baseSuccessRate: 50 }
+    { id: 1, name: "新手礦洞", requiredPower: 300, rewardAmountUSD: 6.00, baseSuccessRate: 89 },
+    { id: 2, name: "哥布林洞穴", requiredPower: 600, rewardAmountUSD: 12.00, baseSuccessRate: 84 },
+    { id: 3, name: "食人魔山谷", requiredPower: 900, rewardAmountUSD: 20.00, baseSuccessRate: 79 },
+    { id: 4, name: "蜘蛛巢穴", requiredPower: 1200, rewardAmountUSD: 33.00, baseSuccessRate: 74 },
+    { id: 5, name: "石化蜥蜴沼澤", requiredPower: 1500, rewardAmountUSD: 52.00, baseSuccessRate: 69 },
+    { id: 6, name: "巫妖墓穴", requiredPower: 1800, rewardAmountUSD: 78.00, baseSuccessRate: 64 },
+    { id: 7, name: "奇美拉之巢", requiredPower: 2100, rewardAmountUSD: 113.00, baseSuccessRate: 59 },
+    { id: 8, name: "惡魔前哨站", requiredPower: 2400, rewardAmountUSD: 156.00, baseSuccessRate: 54 },
+    { id: 9, name: "巨龍之巔", requiredPower: 2700, rewardAmountUSD: 209.00, baseSuccessRate: 49 },
+    { id: 10, name: "混沌深淵", requiredPower: 3000, rewardAmountUSD: 225.00, baseSuccessRate: 44 }
   ];
 
   const [dungeonInputs, setDungeonInputs] = useState<Record<number, {

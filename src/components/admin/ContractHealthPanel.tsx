@@ -69,12 +69,12 @@ const ContractHealthPanel: React.FC = () => {
   if (error) {
     return (
       <AdminSection title="🔗 合約連接狀態" defaultExpanded={false}>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center text-red-800">
+        <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
+          <div className="flex items-center text-red-300">
             <span className="text-xl mr-2">⚠️</span>
             <span className="font-medium">檢查失敗</span>
           </div>
-          <p className="text-red-600 mt-2">{error}</p>
+          <p className="text-red-400 mt-2">{error}</p>
           <button
             onClick={checkHealth}
             className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
@@ -94,8 +94,8 @@ const ContractHealthPanel: React.FC = () => {
         {/* 整體狀態 */}
         <div className={`p-4 rounded-lg border ${
           health.allChecksPass 
-            ? 'bg-green-50 border-green-200' 
-            : 'bg-red-50 border-red-200'
+            ? 'bg-green-900/20 border-green-700' 
+            : 'bg-red-900/20 border-red-700'
         }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center">
@@ -104,12 +104,12 @@ const ContractHealthPanel: React.FC = () => {
               </span>
               <div>
                 <h3 className={`font-semibold ${
-                  health.allChecksPass ? 'text-green-800' : 'text-red-800'
+                  health.allChecksPass ? 'text-green-300' : 'text-red-300'
                 }`}>
                   {health.allChecksPass ? '系統健康' : '發現問題'}
                 </h3>
                 <p className={`text-sm ${
-                  health.allChecksPass ? 'text-green-600' : 'text-red-600'
+                  health.allChecksPass ? 'text-green-400' : 'text-red-400'
                 }`}>
                   {health.allChecksPass 
                     ? '所有合約連接正常' 
@@ -129,11 +129,11 @@ const ContractHealthPanel: React.FC = () => {
 
         {/* 問題列表 */}
         {health.issues.length > 0 && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h4 className="font-semibold text-yellow-800 mb-2">⚠️ 需要注意的問題：</h4>
+          <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-4">
+            <h4 className="font-semibold text-yellow-300 mb-2">⚠️ 需要注意的問題：</h4>
             <ul className="space-y-1">
               {health.issues.map((issue, index) => (
-                <li key={index} className="text-yellow-700 text-sm">
+                <li key={index} className="text-yellow-400 text-sm">
                   • {issue}
                 </li>
               ))}
@@ -144,12 +144,12 @@ const ContractHealthPanel: React.FC = () => {
         {/* 詳細狀態 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* DungeonMaster 資訊 */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h4 className="font-semibold text-gray-800 mb-3">📋 DungeonMaster 狀態</h4>
+          <div className="bg-gray-800 rounded-lg p-4">
+            <h4 className="font-semibold text-gray-100 mb-3">📋 DungeonMaster 狀態</h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span>合約地址:</span>
-                <code className="text-xs bg-gray-200 px-2 py-1 rounded">
+                <code className="text-xs bg-gray-700 px-2 py-1 rounded">
                   {formatAddress(health.dungeonMasterAddress)}
                 </code>
               </div>
@@ -163,14 +163,14 @@ const ContractHealthPanel: React.FC = () => {
           </div>
 
           {/* 連接狀態 */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h4 className="font-semibold text-gray-800 mb-3">🔗 合約連接</h4>
+          <div className="bg-gray-800 rounded-lg p-4">
+            <h4 className="font-semibold text-gray-100 mb-3">🔗 合約連接</h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span>SoulShard Token:</span>
                 <div className="flex items-center">
                   <span className="mr-2">{getStatusIcon(health.soulShardTokenSet)}</span>
-                  <code className="text-xs bg-gray-200 px-2 py-1 rounded">
+                  <code className="text-xs bg-gray-700 px-2 py-1 rounded">
                     {formatAddress(health.soulShardToken)}
                   </code>
                 </div>
@@ -179,7 +179,7 @@ const ContractHealthPanel: React.FC = () => {
                 <span>DungeonCore:</span>
                 <div className="flex items-center">
                   <span className="mr-2">{getStatusIcon(health.dungeonCoreSet)}</span>
-                  <code className="text-xs bg-gray-200 px-2 py-1 rounded">
+                  <code className="text-xs bg-gray-700 px-2 py-1 rounded">
                     {formatAddress(health.dungeonCoreAddress)}
                   </code>
                 </div>
@@ -188,7 +188,7 @@ const ContractHealthPanel: React.FC = () => {
                 <span>DungeonStorage:</span>
                 <div className="flex items-center">
                   <span className="mr-2">{getStatusIcon(health.dungeonStorageSet)}</span>
-                  <code className="text-xs bg-gray-200 px-2 py-1 rounded">
+                  <code className="text-xs bg-gray-700 px-2 py-1 rounded">
                     {formatAddress(health.dungeonStorageAddress)}
                   </code>
                 </div>
@@ -199,9 +199,9 @@ const ContractHealthPanel: React.FC = () => {
 
         {/* 操作建議 */}
         {!health.allChecksPass && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-semibold text-blue-800 mb-2">🛠️ 建議的修復步驟：</h4>
-            <div className="text-blue-700 text-sm space-y-1">
+          <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
+            <h4 className="font-semibold text-blue-300 mb-2">🛠️ 建議的修復步驟：</h4>
+            <div className="text-blue-400 text-sm space-y-1">
               {!health.soulShardTokenSet && (
                 <p>• 執行 DungeonMaster.setSoulShardToken() 設置代幣地址</p>
               )}

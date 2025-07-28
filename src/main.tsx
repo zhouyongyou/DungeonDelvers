@@ -9,7 +9,7 @@ import './assets/index.css';
 import { wagmiConfig } from './wagmi';
 import { ToastProvider } from './contexts/SimpleToastContext';
 import { ExpeditionProvider } from './contexts/ExpeditionContext';
-import App from './StableApp';
+import App from './App';
 import { checkSubgraphSync } from './utils/checkSubgraphSync';
 import { apolloClient } from './config/apolloClient';
 

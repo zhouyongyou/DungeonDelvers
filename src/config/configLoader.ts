@@ -88,8 +88,12 @@ class ConfigLoader {
     return {
       contracts: Object.keys(contracts).length > 0 ? contracts : undefined,
       subgraph: {
-        studio: import.meta.env.VITE_GRAPH_STUDIO_URL || DEFAULT_CONFIG.subgraph.studio,
-        decentralized: import.meta.env.VITE_GRAPH_DECENTRALIZED_URL || DEFAULT_CONFIG.subgraph.decentralized,
+        studio: import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL || 
+                import.meta.env.VITE_GRAPH_STUDIO_URL || 
+                DEFAULT_CONFIG.subgraph.studio,
+        decentralized: import.meta.env.VITE_THE_GRAPH_DECENTRALIZED_API_URL || 
+                      import.meta.env.VITE_GRAPH_DECENTRALIZED_URL || 
+                      DEFAULT_CONFIG.subgraph.decentralized,
         useDecentralized: import.meta.env.PROD
       }
     };
@@ -98,8 +102,8 @@ class ConfigLoader {
   // 從遠端載入配置
   private async loadFromRemote(): Promise<AppConfig | null> {
     try {
-      // 優先從 CDN 載入
-      const cdnUrl = '/config/v22.json';
+      // 優先從 CDN 載入最新版本
+      const cdnUrl = '/config/v25.json';
       const response = await fetch(cdnUrl);
       
       if (!response.ok) {
@@ -114,9 +118,9 @@ class ConfigLoader {
         lastUpdated: remoteConfig.lastUpdated,
         contracts: remoteConfig.contracts,
         subgraph: {
-          studio: remoteConfig.subgraph.studio.url,
-          decentralized: remoteConfig.subgraph.decentralized.url,
-          useDecentralized: import.meta.env.PROD
+          studio: remoteConfig.subgraph?.studio?.url || DEFAULT_CONFIG.subgraph.studio,
+          decentralized: remoteConfig.subgraph?.decentralized?.url || DEFAULT_CONFIG.subgraph.decentralized,
+          useDecentralized: remoteConfig.subgraph?.useDecentralized ?? import.meta.env.PROD
         },
         network: remoteConfig.network
       };

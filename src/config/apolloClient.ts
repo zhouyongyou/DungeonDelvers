@@ -11,10 +11,8 @@ import { logger } from '../utils/logger';
 // 獲取 GraphQL 端點（使用去中心化版本）
 import { THE_GRAPH_API_URL } from './graphConfig';
 
-// Use decentralized network in production, Studio for development
-const GRAPHQL_ENDPOINT = import.meta.env.PROD
-  ? (import.meta.env.VITE_GRAPH_DECENTRALIZED_URL || 'https://gateway.thegraph.com/api/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs')
-  : (THE_GRAPH_API_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.1.1');
+// 根據環境變數決定使用哪個版本
+const GRAPHQL_ENDPOINT = THE_GRAPH_API_URL || 'https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs';
 
 // 將 HTTP URL 轉換為 WebSocket URL
 const getWebSocketUrl = (httpUrl: string) => {

@@ -17,6 +17,21 @@
     "ALTAROFASCENSION": "0x0148Aff0Dee6D31BA9825e66ED34a66BCeF45845",
     "DUNGEONMASTERWALLET": "0x10925A7138649C7E1794CE646182eeb5BF8ba647"
   },
+  "subgraph": {
+    "studio": {
+      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.2.0",
+      "description": "Studio version - 免費但有延遲，僅供探索功能",
+      "version": "v3.2.0"
+    },
+    "decentralized": {
+      "url": "https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs",
+      "description": "Decentralized version - 付費即時，主要使用",
+      "version": "latest",
+      "apiKey": "f6c1aba78203cfdf0cc732eafe677bdd"
+    },
+    "useDecentralized": true,
+    "strategy": "decentralized-first"
+  },
   "network": {
     "chainId": 56,
     "name": "BSC Mainnet"

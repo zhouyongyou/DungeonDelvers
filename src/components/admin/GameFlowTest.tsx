@@ -169,11 +169,11 @@ const GameFlowTest: React.FC = () => {
     <AdminSection title="🎮 完整遊戲流程測試" defaultExpanded={false}>
       <div className="space-y-6">
         {/* 控制面板 */}
-        <div className="bg-gray-50 rounded-lg p-4">
+        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h4 className="font-semibold text-gray-800">自動化測試套件</h4>
-              <p className="text-sm text-gray-600">
+              <h4 className="font-semibold text-gray-100">自動化測試套件</h4>
+              <p className="text-sm text-gray-400">
                 檢查所有核心遊戲功能是否正常運作
               </p>
             </div>
@@ -198,9 +198,9 @@ const GameFlowTest: React.FC = () => {
 
         {/* 測試進度 */}
         {testResults.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <h4 className="font-semibold text-gray-800 mb-3">測試進度</h4>
-            <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+            <h4 className="font-semibold text-gray-100 mb-3">測試進度</h4>
+            <div className="w-full bg-gray-700 rounded-full h-2 mb-4">
               <div 
                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                 style={{ 
@@ -208,7 +208,7 @@ const GameFlowTest: React.FC = () => {
                 }}
               />
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-400">
               已完成: {testResults.filter(r => r.status !== 'pending' && r.status !== 'testing').length} / {gameFlowSteps.length}
             </div>
           </div>
@@ -224,10 +224,10 @@ const GameFlowTest: React.FC = () => {
               <div
                 key={step.id}
                 className={`border rounded-lg p-4 transition-all duration-200 ${
-                  status === 'success' ? 'border-green-200 bg-green-50' :
-                  status === 'failed' ? 'border-red-200 bg-red-50' :
-                  status === 'testing' ? 'border-blue-200 bg-blue-50' :
-                  'border-gray-200 bg-white'
+                  status === 'success' ? 'border-green-700 bg-green-900/20' :
+                  status === 'failed' ? 'border-red-700 bg-red-900/20' :
+                  status === 'testing' ? 'border-blue-700 bg-blue-900/20' :
+                  'border-gray-700 bg-gray-800'
                 }`}
               >
                 <div className="flex items-start justify-between">
@@ -235,8 +235,8 @@ const GameFlowTest: React.FC = () => {
                     <div className="flex items-center gap-3 mb-2">
                       <span className="text-xl">{getStatusIcon(status)}</span>
                       <div>
-                        <h5 className="font-medium text-gray-800">{step.name}</h5>
-                        <p className="text-sm text-gray-600">{step.description}</p>
+                        <h5 className="font-medium text-gray-100">{step.name}</h5>
+                        <p className="text-sm text-gray-400">{step.description}</p>
                       </div>
                     </div>
                     
@@ -269,41 +269,41 @@ const GameFlowTest: React.FC = () => {
 
         {/* 測試結果摘要 */}
         {testResults.length > 0 && (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <h4 className="font-semibold text-gray-800 mb-3">測試摘要</h4>
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+            <h4 className="font-semibold text-gray-100 mb-3">測試摘要</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div>
                 <div className="text-2xl font-bold text-green-600">
                   {testResults.filter(r => r.status === 'success').length}
                 </div>
-                <div className="text-sm text-gray-600">通過</div>
+                <div className="text-sm text-gray-400">通過</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-red-600">
                   {testResults.filter(r => r.status === 'failed').length}
                 </div>
-                <div className="text-sm text-gray-600">失敗</div>
+                <div className="text-sm text-gray-400">失敗</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-blue-600">
                   {testResults.filter(r => r.status === 'testing').length}
                 </div>
-                <div className="text-sm text-gray-600">進行中</div>
+                <div className="text-sm text-gray-400">進行中</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-gray-500">
                   {testResults.filter(r => r.status === 'pending').length + (gameFlowSteps.length - testResults.length)}
                 </div>
-                <div className="text-sm text-gray-600">待測試</div>
+                <div className="text-sm text-gray-400">待測試</div>
               </div>
             </div>
           </div>
         )}
 
         {/* 說明 */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-semibold text-blue-800 mb-2">ℹ️ 測試說明</h4>
-          <div className="text-sm text-blue-700 space-y-1">
+        <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
+          <h4 className="font-semibold text-blue-300 mb-2">ℹ️ 測試說明</h4>
+          <div className="text-sm text-blue-400 space-y-1">
             <p>• <strong>錢包連接</strong>: 檢查用戶錢包是否正確連接到 BSC 網路</p>
             <p>• <strong>合約配置</strong>: 驗證所有智能合約地址配置正確</p>
             <p>• <strong>NFT 頁面</strong>: 測試英雄、聖物、隊伍相關頁面載入</p>

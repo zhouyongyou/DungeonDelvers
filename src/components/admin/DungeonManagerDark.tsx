@@ -58,15 +58,15 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
 
   const defaultDungeons = [
     { id: 1, name: "新手礦洞", requiredPower: 300, rewardAmountUSD: "6", baseSuccessRate: 89 },
-    { id: 2, name: "哥布林洞穴", requiredPower: 600, rewardAmountUSD: "12", baseSuccessRate: 83 },
-    { id: 3, name: "食人魔山谷", requiredPower: 900, rewardAmountUSD: "20", baseSuccessRate: 78 },
-    { id: 4, name: "蜘蛛巢穴", requiredPower: 1200, rewardAmountUSD: "27", baseSuccessRate: 74 },
-    { id: 5, name: "石化蜥蜴沼澤", requiredPower: 1500, rewardAmountUSD: "35", baseSuccessRate: 70 },
-    { id: 6, name: "巫妖墓穴", requiredPower: 1800, rewardAmountUSD: "60", baseSuccessRate: 66 },
-    { id: 7, name: "奇美拉之巢", requiredPower: 2100, rewardAmountUSD: "82", baseSuccessRate: 62 },
-    { id: 8, name: "惡魔前哨站", requiredPower: 2400, rewardAmountUSD: "103", baseSuccessRate: 58 },
-    { id: 9, name: "巨龍之巔", requiredPower: 2700, rewardAmountUSD: "136", baseSuccessRate: 54 },
-    { id: 10, name: "混沌深淵", requiredPower: 3000, rewardAmountUSD: "225", baseSuccessRate: 50 }
+    { id: 2, name: "哥布林洞穴", requiredPower: 600, rewardAmountUSD: "12", baseSuccessRate: 84 },
+    { id: 3, name: "食人魔山谷", requiredPower: 900, rewardAmountUSD: "20", baseSuccessRate: 79 },
+    { id: 4, name: "蜘蛛巢穴", requiredPower: 1200, rewardAmountUSD: "33", baseSuccessRate: 74 },
+    { id: 5, name: "石化蜥蜴沼澤", requiredPower: 1500, rewardAmountUSD: "52", baseSuccessRate: 69 },
+    { id: 6, name: "巫妖墓穴", requiredPower: 1800, rewardAmountUSD: "78", baseSuccessRate: 64 },
+    { id: 7, name: "奇美拉之巢", requiredPower: 2100, rewardAmountUSD: "113", baseSuccessRate: 59 },
+    { id: 8, name: "惡魔前哨站", requiredPower: 2400, rewardAmountUSD: "156", baseSuccessRate: 54 },
+    { id: 9, name: "巨龍之巔", requiredPower: 2700, rewardAmountUSD: "209", baseSuccessRate: 49 },
+    { id: 10, name: "混沌深淵", requiredPower: 3000, rewardAmountUSD: "225", baseSuccessRate: 44 }
   ];
   
   // 初始化地城輸入狀態
