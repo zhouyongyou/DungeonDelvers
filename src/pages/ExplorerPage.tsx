@@ -8,6 +8,7 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { formatEther, isAddress } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { getContract, getContractWithABI } from '../config/contractsWithABI';
+import { Leaderboards } from '../components/leaderboards';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取
@@ -505,6 +506,13 @@ const ExplorerPage: React.FC = () => {
   return (
     <section>
       <h2 className="page-title">遊戲數據瀏覽器</h2>
+      
+      {/* 排行榜區域 - 新增 */}
+      <div className="mb-8">
+        <Leaderboards />
+      </div>
+      
+      {/* 原有的查詢功能 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="space-y-8">
           <PlayerSearchQuery />

@@ -312,9 +312,9 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
         );
       })}
       
-      {/* 預設配置參考 */}
+      {/* 建議配置參考 */}
       <div className="mt-6 p-4 bg-gray-900 rounded-lg">
-        <h4 className="font-semibold text-yellow-400 mb-3">預設配置參考</h4>
+        <h4 className="font-semibold text-yellow-400 mb-3">建議配置參考</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           {defaultDungeons.map(dungeon => (
             <div key={dungeon.id} className="flex justify-between text-gray-400">
@@ -322,6 +322,9 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
               <span>戰力 {dungeon.requiredPower}, 獎勵 ${dungeon.rewardAmountUSD}, 成功率 {dungeon.baseSuccessRate}%</span>
             </div>
           ))}
+        </div>
+        <div className="mt-3 text-xs text-gray-500">
+          * 以上為建議配置，實際配置以合約數據為準
         </div>
       </div>
     </div>
