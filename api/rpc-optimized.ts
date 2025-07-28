@@ -322,10 +322,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   
   // 健康檢查 - 修正路由判斷
   if (req.method === 'GET') {
-    // Vercel 中的路徑判斷
-    const isHealthCheck = req.url === '/health' || 
-                         req.url === '/api/rpc-optimized/health' ||
-                         req.url?.endsWith('/health');
+    // Vercel 中的路徑判斷 - 更寬鬆的匹配
+    const isHealthCheck = req.url?.includes('/health') || 
+                         req.query?.health !== undefined ||
+                         req.url === '/health';
     
     if (isHealthCheck) {
       try {

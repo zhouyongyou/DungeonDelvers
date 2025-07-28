@@ -143,11 +143,11 @@ const useDashboardStats = () => {
 
 // 輔助函式與子元件 (保持不變)
 const StatCard: React.FC<{ title: string; value: string | number; isLoading?: boolean, icon: React.ReactNode, className?: string }> = ({ title, value, isLoading, icon, className }) => (
-    <div className={`card-bg p-4 rounded-xl shadow-lg flex items-center gap-4 ${className}`}>
-        <div className="text-indigo-400 bg-black/10 p-3 rounded-lg">{icon}</div>
+    <div className={`card-bg p-3 sm:p-4 rounded-xl shadow-lg flex items-center gap-3 sm:gap-4 ${className}`}>
+        <div className="text-indigo-400 bg-black/10 p-2 sm:p-3 rounded-lg">{icon}</div>
         <div>
-            <p className="text-sm text-gray-400">{title}</p>
-            {isLoading ? <div className="h-7 w-20 bg-gray-700 rounded-md animate-pulse mt-1"></div> : <p className="text-2xl font-bold text-white">{value}</p>}
+            <p className="text-xs sm:text-sm text-gray-400">{title}</p>
+            {isLoading ? <div className="h-6 sm:h-7 w-16 sm:w-20 bg-gray-700 rounded-md animate-pulse mt-1"></div> : <p className="text-lg sm:text-xl md:text-2xl font-bold text-white">{value}</p>}
         </div>
     </div>
 );
@@ -374,17 +374,17 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                 {isLoading && !stats ? (
                     <LoadingState message="載入儀表板數據..." />
                 ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-2 card-bg p-6 rounded-xl flex flex-col sm:flex-row items-center gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+                        <div className="lg:col-span-2 card-bg p-4 sm:p-5 md:p-6 rounded-xl flex flex-col sm:flex-row items-center gap-4 sm:gap-5 md:gap-6">
                             {/* 等級顯示已移除，節省查詢資源 - 可在個人檔案頁面查看 */}
                             <div className="w-full">
-                                <h3 className="section-title text-xl mb-2">我的檔案</h3>
+                                <h3 className="section-title text-base sm:text-lg md:text-xl mb-2">我的檔案</h3>
                                 <p className="font-mono text-xs break-all bg-black/20 p-2 rounded">{address}</p>
                             </div>
                         </div>
-                        <div className="card-bg p-6 rounded-xl flex flex-col justify-center">
+                        <div className="card-bg p-4 sm:p-5 md:p-6 rounded-xl flex flex-col justify-center">
                             <div className="flex items-center gap-2 mb-1">
-                                <h3 className="section-title text-xl">我的金庫</h3>
+                                <h3 className="section-title text-base sm:text-lg md:text-xl">我的金庫</h3>
                                 <div className="group relative">
                                     <span className="text-gray-500 hover:text-gray-300 cursor-help text-sm">ⓘ</span>
                                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-2 bg-gray-900 border border-gray-700 rounded-lg text-xs text-gray-300 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
@@ -396,7 +396,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                                     </div>
                                 </div>
                             </div>
-                            <p className="text-3xl font-bold text-teal-400">{formatSoul(totalDisplayBalance)}</p>
+                            <p className="text-xl sm:text-2xl md:text-3xl font-bold text-teal-400">{formatSoul(totalDisplayBalance)}</p>
                             {partyRewards > 0n && (
                                 <p className="text-xs text-yellow-400">
                                     包含隊伍未領取獎勵 {formatSoul(partyRewards)} SOUL
@@ -441,7 +441,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                 )}
             </LocalErrorBoundary>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
                 <div className="lg:col-span-2">
                     <TownBulletin />
                 </div>
@@ -452,7 +452,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
 
             <div>
                 <h3 className="section-title">快捷操作</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                     <QuickActionButton title="鑄造 NFT" description="獲取新的英雄與聖物" onAction={() => setActivePage('mint')} icon={<Icons.Mint className="w-8 h-8"/>} />
                     {/* <QuickActionButton title="升星祭壇" description="提升你的 NFT 星級" onAction={() => setActivePage('altar')} icon={<Icons.Altar className="w-8 h-8"/>}/> */}
                     <QuickActionButton title="資產管理" description="創建隊伍、查看資產" onAction={() => setActivePage('party')} icon={<Icons.Assets className="w-8 h-8"/>}/>
@@ -462,7 +462,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
 
             <div>
                 <h3 className="section-title">外部市場 (OKX NFT)</h3>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                     {externalMarkets.map(market => (
                         market.address ? (
                             <ExternalLinkButton
