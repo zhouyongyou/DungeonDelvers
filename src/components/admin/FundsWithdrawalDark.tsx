@@ -23,13 +23,13 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
   // 根據合約能力設定提取權限
   const contracts = [
     { name: 'dungeonMaster', label: '地城主', hasWithdraw: true },
-    { name: 'hero', label: '英雄合約', hasWithdraw: true }, // 支援 withdrawSoulShard 和 withdrawBNB
-    { name: 'relic', label: '聖物合約', hasWithdraw: true }, // 支援 withdrawSoulShard 和 withdrawBNB
-    { name: 'party', label: '隊伍合約', hasWithdraw: true }, // 支援 withdrawBNB
-    { name: 'altarOfAscension', label: '升星祭壇', hasWithdraw: true }, // 支援 withdrawBNB
-    // 以下合約無管理員提取功能
-    { name: 'playerVault', label: '玩家金庫', hasWithdraw: false }, // 只有用戶可以提取
-    { name: 'vipStaking', label: 'VIP質押', hasWithdraw: false }, // 只有用戶可以提取
+    { name: 'hero', label: '英雄合約', hasWithdraw: true }, // 支援 withdrawSoulShard 和 withdrawNativeFunding
+    { name: 'relic', label: '聖物合約', hasWithdraw: true }, // 支援 withdrawSoulShard 和 withdrawNativeFunding
+    { name: 'party', label: '隊伍合約', hasWithdraw: true }, // 支援 withdrawNative
+    { name: 'altarOfAscension', label: '升星祭壇', hasWithdraw: true }, // 支援 withdrawNative
+    // 以下合約有部分管理員提取功能
+    { name: 'playerVault', label: '玩家金庫', hasWithdraw: true }, // 支援 withdrawGameRevenue
+    { name: 'vipStaking', label: 'VIP質押', hasWithdraw: true }, // 支援 withdrawStakedTokens
     { name: 'dungeonCore', label: '地城核心', hasWithdraw: false } // 無提取功能
   ];
 
@@ -57,10 +57,34 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
     }
   };
 
+  // 獲取合約配置的輔助函數 
+  const getContractConfig = (name: string) => {
+    switch (name) {
+      case 'dungeonMaster':
+        return getContractWithABI(chainId, 'DUNGEONMASTER');
+      case 'hero':
+        return getContractWithABI(chainId, 'HERO');
+      case 'relic':
+        return getContractWithABI(chainId, 'RELIC');
+      case 'party':
+        return getContractWithABI(chainId, 'PARTY');
+      case 'altarOfAscension':
+        return getContractWithABI(chainId, 'ALTAROFASCENSION');
+      case 'playerVault':
+        return getContractWithABI(chainId, 'PLAYERVAULT');
+      case 'vipStaking':
+        return getContractWithABI(chainId, 'VIPSTAKING');
+      case 'dungeonCore':
+        return getContractWithABI(chainId, 'DUNGEONCORE');
+      default:
+        return null;
+    }
+  };
+
   // 獲取所有合約的信息
   const contractsWithAddresses = contracts.map(({ name, label, hasWithdraw }) => {
     const address = getContractAddress(name);
-    const contractConfig = address ? getContractWithABI(chainId, name as any) : null;
+    const contractConfig = address ? getContractConfig(name) : null;
     
     // 調試信息
     if (!address) {
@@ -88,10 +112,33 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
       return;
     }
     
-    // Party 和 AltarOfAscension 不支援 SoulShard 提取
-    if (contractName === 'party' || contractName === 'altarOfAscension') {
-      showToast(`${label} 不支援 SoulShard 提取`, 'warning');
-      return;
+    // 根據合約類型確定函數名稱和參數
+    let functionName = '';
+    let functionArgs: any[] = [];
+    
+    switch (contractName) {
+      case 'dungeonMaster':
+      case 'hero':
+      case 'relic':
+        functionName = 'withdrawSoulShard';
+        break;
+      case 'playerVault':
+        // PlayerVault 使用 withdrawGameRevenue，需要提供金額
+        // 這裡可以設為 0 讓合約提取所有可用資金，或提示用戶輸入金額
+        showToast('PlayerVault 需要指定提取金額，請使用專門的管理界面', 'warning');
+        return;
+      case 'vipStaking':
+        // VIPStaking 使用 withdrawStakedTokens，需要提供金額
+        showToast('VIPStaking 需要指定提取金額，請使用專門的管理界面', 'warning');
+        return;
+      case 'party':
+      case 'altarOfAscension':
+      case 'dungeonCore':
+        showToast(`${label} 不支援 SoulShard 提取`, 'warning');
+        return;
+      default:
+        showToast(`${label} 不支援 SoulShard 提取`, 'warning');
+        return;
     }
     
     try {
@@ -104,7 +151,8 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
       const hash = await writeContractAsync({ 
         address: contractInfo.contract.address, 
         abi: contractInfo.contract.abi, 
-        functionName: 'withdrawSoulShard' 
+        functionName: functionName,
+        args: functionArgs
       });
       addTransaction({ hash, description: `提取 ${label} SoulShard` });
       showToast(`${label} SoulShard 提取成功`, 'success');
@@ -140,6 +188,11 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
         case 'altarOfAscension':
           functionName = 'withdrawNative';
           break;
+        case 'playerVault':
+        case 'vipStaking':
+        case 'dungeonCore':
+          showToast(`${label} 不支援 BNB 提取`, 'warning');
+          return;
         default:
           showToast(`${label} 不支援 BNB 提取`, 'warning');
           return;
@@ -192,11 +245,11 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
                       <ActionButton
                         onClick={() => handleWithdrawSoulShard(name, label, hasWithdraw)}
                         className={`text-xs px-3 py-1 ${
-                          hasWithdraw && name !== 'party' && name !== 'altarOfAscension' 
+                          hasWithdraw && ['dungeonMaster', 'hero', 'relic'].includes(name)
                             ? 'bg-blue-600 hover:bg-blue-700' 
                             : 'bg-gray-700 cursor-not-allowed opacity-50'
                         }`}
-                        disabled={!hasWithdraw || name === 'party' || name === 'altarOfAscension'}
+                        disabled={!hasWithdraw || !['dungeonMaster', 'hero', 'relic'].includes(name)}
                       >
                         提取 SOUL
                       </ActionButton>
@@ -207,8 +260,12 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
                       <span className="text-sm text-gray-400">BNB:</span>
                       <ActionButton
                         onClick={() => handleWithdrawBNB(name, label, hasWithdraw)}
-                        className={`text-xs px-3 py-1 ${hasWithdraw ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-gray-700 cursor-not-allowed opacity-50'}`}
-                        disabled={!hasWithdraw}
+                        className={`text-xs px-3 py-1 ${
+                          hasWithdraw && ['dungeonMaster', 'hero', 'relic', 'party', 'altarOfAscension'].includes(name)
+                            ? 'bg-yellow-600 hover:bg-yellow-700' 
+                            : 'bg-gray-700 cursor-not-allowed opacity-50'
+                        }`}
+                        disabled={!hasWithdraw || !['dungeonMaster', 'hero', 'relic', 'party', 'altarOfAscension'].includes(name)}
                       >
                         提取 BNB
                       </ActionButton>
@@ -232,7 +289,8 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
             <ul className="text-xs text-yellow-200 mt-1 space-y-1">
               <li>• Hero/Relic/DungeonMaster：支援提取 SoulShard 和 BNB（使用 withdrawSoulShard 和 withdrawNativeFunding）</li>
               <li>• Party/Altar：僅支援提取 BNB（使用 withdrawNative）</li>
-              <li>• PlayerVault/VIPStaking：由用戶自行提取</li>
+              <li>• PlayerVault：有 withdrawGameRevenue 函數，但需要指定金額參數</li>
+              <li>• VIPStaking：有 withdrawStakedTokens 函數，但需要指定金額參數</li>
               <li>• DungeonCore：無提取功能</li>
             </ul>
           </div>

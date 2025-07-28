@@ -65,9 +65,10 @@ export const AltarRitualAnimation: React.FC<AltarRitualAnimationProps> = ({
 
   const getSacrificeSlots = () => {
     const slots = [];
-    const radius = 120;
-    const centerX = 160;
-    const centerY = 160;
+    // 使用百分比定位，適應容器大小
+    const radius = 38; // 38% of container
+    const centerX = 50; // 50% of container 
+    const centerY = 50; // 50% of container
 
     for (let i = 0; i < requiredCount; i++) {
       const angle = (i * 2 * Math.PI) / requiredCount - Math.PI / 2;
@@ -80,7 +81,7 @@ export const AltarRitualAnimation: React.FC<AltarRitualAnimationProps> = ({
       slots.push(
         <div
           key={i}
-          className={`absolute w-12 h-12 rounded-full border-2 transition-all duration-500 ${
+          className={`absolute w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full border-2 transition-all duration-500 ${
             isOccupied
               ? 'bg-gradient-to-br from-purple-500 to-indigo-600 border-purple-300 shadow-lg shadow-purple-500/50'
               : 'bg-gray-800/50 border-gray-600 border-dashed'
@@ -88,13 +89,14 @@ export const AltarRitualAnimation: React.FC<AltarRitualAnimationProps> = ({
             isRitualActive && isOccupied ? 'animate-bounce' : ''
           }`}
           style={{
-            left: x - 24,
-            top: y - 24,
+            left: `${x}%`,
+            top: `${y}%`,
+            transform: 'translate(-50%, -50%)',
             animationDelay: `${i * 0.2}s`
           }}
         >
           {isOccupied && (
-            <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-full h-full flex items-center justify-center text-white font-bold text-xs sm:text-sm">
               {i + 1}
             </div>
           )}
@@ -124,11 +126,11 @@ export const AltarRitualAnimation: React.FC<AltarRitualAnimationProps> = ({
   };
 
   return (
-    <div className="relative w-80 h-80 mx-auto">
+    <div className="relative w-full max-w-sm sm:max-w-md md:max-w-80 mx-auto aspect-square" style={{ height: 'min(320px, 80vw)' }}>
       {/* 祭壇基座 */}
       <div className={`absolute inset-0 rounded-full bg-gradient-to-br from-gray-800 to-gray-900 border-4 border-gray-600 transition-all duration-1000 ${getAltarGlow()}`}>
         {/* 祭壇中心 */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-gradient-to-br from-purple-600 to-indigo-700 border-2 border-purple-400">
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-purple-600 to-indigo-700 border-2 border-purple-400">
           {/* 中心寶石 */}
           <div className={`w-full h-full rounded-full transition-all duration-1000 ${
             stage === 'ritual' 
@@ -141,7 +143,7 @@ export const AltarRitualAnimation: React.FC<AltarRitualAnimationProps> = ({
               ? 'bg-gradient-to-br from-red-400 to-red-600 shadow-lg shadow-red-500/50'
               : 'bg-gradient-to-br from-purple-600 to-indigo-700'
           }`}>
-            <div className="w-full h-full flex items-center justify-center text-white text-2xl">
+            <div className="w-full h-full flex items-center justify-center text-white text-lg sm:text-xl md:text-2xl">
               {stage === 'success' && '✨'}
               {stage === 'great_success' && '⚜️'}
               {stage === 'failed' && '💀'}
@@ -166,7 +168,7 @@ export const AltarRitualAnimation: React.FC<AltarRitualAnimationProps> = ({
                   left: '50%',
                   top: '0',
                   transform: `rotate(${angle}deg) translateY(-2px)`,
-                  transformOrigin: '50% 140px'
+                  transformOrigin: '50% 44%'
                 }}
               />
             );
@@ -194,8 +196,8 @@ export const AltarRitualAnimation: React.FC<AltarRitualAnimationProps> = ({
       </div>
 
       {/* 狀態文字 */}
-      <div className="absolute -bottom-8 left-0 right-0 text-center">
-        <p className={`text-sm font-medium transition-all duration-500 ${
+      <div className="absolute -bottom-6 sm:-bottom-8 left-0 right-0 text-center">
+        <p className={`text-xs sm:text-sm font-medium transition-all duration-500 ${
           stage === 'success' 
             ? 'text-green-400'
             : stage === 'great_success'

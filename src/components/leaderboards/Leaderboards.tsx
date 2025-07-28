@@ -87,6 +87,43 @@ const LEADERBOARDS_QUERY = `
       stakedAt
     }
     
+    # 最近遠征活動 - 前 20 名
+    recentExpeditions: expeditions(
+      first: 20
+      orderBy: timestamp
+      orderDirection: desc
+    ) {
+      id
+      player {
+        id
+        profile {
+          name
+        }
+      }
+      party {
+        name
+        totalPower
+      }
+      dungeonName
+      success
+      reward
+      timestamp
+    }
+    
+    # 升星成功率排行榜 - 前 10 名（至少嘗試 5 次）
+    upgradeLeaders: playerUpgradeStats(
+      first: 10
+      orderBy: totalAttempts
+      orderDirection: desc
+      where: { totalAttempts_gte: "5" }
+    ) {
+      id
+      totalAttempts
+      totalMinted
+      totalBurned
+      totalFeesSpent
+    }
+    
     # 全局統計
     globalStats(id: "global") {
       totalPlayers
@@ -145,6 +182,30 @@ interface LeaderboardData {
     stakedAmount: string;
     stakedAt: string;
   }>;
+  recentExpeditions: Array<{
+    id: string;
+    player: {
+      id: string;
+      profile?: {
+        name: string;
+      };
+    };
+    party: {
+      name: string;
+      totalPower: string;
+    };
+    dungeonName: string;
+    success: boolean;
+    reward: string;
+    timestamp: string;
+  }>;
+  upgradeLeaders: Array<{
+    id: string;
+    totalAttempts: string;
+    totalMinted: string;
+    totalBurned: string;
+    totalFeesSpent: string;
+  }>;
   globalStats?: {
     totalPlayers: number;
     totalExpeditions: number;
@@ -200,13 +261,15 @@ function calculateSuccessRate(successful: number, total: number): string {
 }
 
 // 排行榜標籤
-type LeaderboardTab = 'power' | 'rewards' | 'expeditions' | 'vip';
+type LeaderboardTab = 'power' | 'rewards' | 'expeditions' | 'vip' | 'recent' | 'upgrades';
 
 const LEADERBOARD_TABS: Array<{ id: LeaderboardTab; label: string; icon: string }> = [
   { id: 'power', label: '戰力排行', icon: '⚔️' },
   { id: 'rewards', label: '獎勵排行', icon: '💰' },
   { id: 'expeditions', label: '遠征排行', icon: '🗺️' },
+  { id: 'upgrades', label: '升星排行', icon: '⭐' },
   { id: 'vip', label: 'VIP 排行', icon: '👑' },
+  { id: 'recent', label: '最近活動', icon: '📊' },
 ];
 
 export const Leaderboards: React.FC = React.memo(() => {
@@ -347,6 +410,72 @@ export const Leaderboards: React.FC = React.memo(() => {
           </div>
         </div>
       ))}
+    </div>
+  );
+
+  const renderRecentActivityLeaderboard = () => (
+    <div className="space-y-3">
+      {leaderboardData.recentExpeditions.map((expedition, index) => (
+        <div key={expedition.id} className="bg-gray-700 p-3 rounded">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center space-x-2">
+              <span className={`w-2 h-2 rounded-full ${expedition.success ? 'bg-green-400' : 'bg-red-400'}`}></span>
+              <p className="text-white font-medium">{formatPlayerName(expedition.player)}</p>
+              <span className={`text-xs px-2 py-1 rounded ${expedition.success ? 'bg-green-900 text-green-200' : 'bg-red-900 text-red-200'}`}>
+                {expedition.success ? '成功' : '失敗'}
+              </span>
+            </div>
+            <span className="text-gray-400 text-xs">
+              {new Date(parseInt(expedition.timestamp) * 1000).toLocaleString()}
+            </span>
+          </div>
+          <div className="flex justify-between items-center text-sm">
+            <div>
+              <p className="text-gray-300">地城: <span className="text-blue-400">{expedition.dungeonName}</span></p>
+              <p className="text-gray-300">隊伍: <span className="text-purple-400">{expedition.party.name}</span> (戰力: {parseInt(expedition.party.totalPower).toLocaleString()})</p>
+            </div>
+            {expedition.success && (
+              <div className="text-right">
+                <p className="text-green-400 font-bold">+{parseFloat(formatEther(BigInt(expedition.reward))).toFixed(2)}</p>
+                <p className="text-gray-400 text-xs">SoulShard</p>
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderUpgradeLeaderboard = () => (
+    <div className="space-y-3">
+      {leaderboardData.upgradeLeaders.map((player, index) => {
+        const totalAttempts = parseInt(player.totalAttempts);
+        const totalMinted = parseInt(player.totalMinted);
+        const totalBurned = parseInt(player.totalBurned);
+        const successRate = totalAttempts > 0 ? (totalMinted / totalAttempts) * 100 : 0;
+        
+        return (
+          <div key={player.id} className="flex items-center justify-between bg-gray-700 p-3 rounded">
+            <div className="flex items-center space-x-3">
+              <span className="text-lg font-bold text-yellow-400">#{index + 1}</span>
+              <div>
+                <p className="text-white font-medium">{`${player.id.slice(0, 6)}...${player.id.slice(-4)}`}</p>
+                <p className="text-gray-400 text-sm">
+                  成功率 {successRate.toFixed(1)}% · 消耗 {parseFloat(formatEther(BigInt(player.totalFeesSpent))).toFixed(1)} SoulShard
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-orange-400 font-bold">{totalAttempts}</p>
+              <p className="text-gray-400 text-sm">升星次數</p>
+              <div className="flex space-x-2 text-xs mt-1">
+                <span className="text-green-400">+{totalMinted}</span>
+                <span className="text-red-400">-{totalBurned}</span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 

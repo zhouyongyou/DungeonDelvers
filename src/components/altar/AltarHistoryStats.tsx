@@ -47,50 +47,34 @@ export const AltarHistoryStats: React.FC<AltarHistoryStatsProps> = ({ isOpen, on
   const { address } = useAccount();
   const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
 
-  // 暫時使用模擬數據，實際應該從子圖查詢
+  // TODO: 實際從子圖查詢升星歷史數據
   const { data: upgradeHistory, isLoading } = useQuery({
     queryKey: ['altarHistory', address],
     queryFn: async (): Promise<UpgradeRecord[]> => {
-      // 模擬數據 - 實際需要從子圖獲取
       if (!address) return [];
       
-      // 模擬一些升星記錄
-      const mockData: UpgradeRecord[] = [
-        {
-          id: '1',
-          timestamp: new Date(Date.now() - 86400000).toISOString(),
-          nftType: 'hero',
-          fromRarity: 1,
-          toRarity: 2,
-          outcome: 'success',
-          materialsUsed: 5,
-          nftsReceived: 1
-        },
-        {
-          id: '2',
-          timestamp: new Date(Date.now() - 172800000).toISOString(),
-          nftType: 'relic',
-          fromRarity: 1,
-          toRarity: 2,
-          outcome: 'great_success',
-          materialsUsed: 5,
-          nftsReceived: 2
-        },
-        {
-          id: '3',
-          timestamp: new Date(Date.now() - 259200000).toISOString(),
-          nftType: 'hero',
-          fromRarity: 2,
-          toRarity: 3,
-          outcome: 'success',
-          materialsUsed: 4,
-          nftsReceived: 1
-        }
-      ];
+      // 目前子圖尚未實作升星歷史查詢功能
+      // 返回空數組，等待子圖支援後再實作
+      return [];
       
-      // 模擬網路延遲
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return mockData;
+      /* 未來實作時的參考代碼：
+      try {
+        const response = await fetch(THE_GRAPH_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: GET_UPGRADE_HISTORY,
+            variables: { player: address.toLowerCase() }
+          })
+        });
+        
+        const result = await response.json();
+        return result.data?.upgradeEvents || [];
+      } catch (error) {
+        console.error('查詢升星歷史失敗:', error);
+        return [];
+      }
+      */
     },
     enabled: !!address && isOpen,
     staleTime: 1000 * 60 * 5,
