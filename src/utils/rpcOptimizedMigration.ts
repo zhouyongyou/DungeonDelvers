@@ -3,7 +3,7 @@
 // 流量分配配置
 export const RPC_MIGRATION_CONFIG = {
   // 啟用優化版本的流量百分比 (0-100)
-  trafficPercentage: 10, // 開始時只有 10% 的流量使用新版本
+  trafficPercentage: 100, // 最終階段：全量流量使用優化版本
   
   // 是否啟用 A/B 測試
   enabled: true,
