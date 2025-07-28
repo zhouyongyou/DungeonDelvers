@@ -1,7 +1,8 @@
 // src/pages/AltarPage.tsx (數據讀取修正版)
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, memo } from 'react';
 import { useAccount, useReadContracts, useWriteContract, usePublicClient, useReadContract } from 'wagmi';
+import { useContractBatchRead, usePriceSettingsBatchRead } from '../hooks/useContractBatchRead';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatEther, decodeEventLog, type Abi } from 'viem';
 import { fetchMetadata } from '../api/nfts';
@@ -237,7 +238,7 @@ const UpgradeInfoCard: React.FC<{ rule: { materialsRequired: number; nativeFee: 
 // Section: AltarPage 主元件
 // =================================================================
 
-const AltarPage: React.FC = () => {
+const AltarPage = memo(() => {
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
     const publicClient = usePublicClient();
@@ -263,14 +264,32 @@ const AltarPage: React.FC = () => {
 
     // 檢查當前 NFT 類型的授權狀態
     const currentNftContract = nftType === 'hero' ? heroContract : relicContract;
-    const { data: isApprovedForAll, refetch: refetchApproval } = useReadContract({
+    
+    // 批量讀取合約數據
+    const { results: altarBatchResults } = useContractBatchRead({
+        chainId: bsc.id,
+        reads: [
+            ...(address && currentNftContract && altarContract ? [
+                { 
+                    contractName: nftType === 'hero' ? 'hero' : 'relic', 
+                    functionName: 'isApprovedForAll', 
+                    args: [address, altarContract.address] 
+                },
+            ] : []),
+        ],
+    });
+    
+    const [approvalResult] = altarBatchResults;
+    const isApprovedForAll = approvalResult?.data as boolean | undefined;
+    
+    // 單獨的 refetch hook
+    const { refetch: refetchApproval } = useReadContract({
         address: currentNftContract?.address as `0x${string}`,
         abi: currentNftContract?.abi,
         functionName: 'isApprovedForAll',
         args: address && altarContract ? [address, altarContract.address] : undefined,
         query: {
-            enabled: !!address && !!currentNftContract && !!altarContract && chainId === bsc.id,
-            refetchInterval: 3000, // 每3秒檢查一次授權狀態
+            enabled: false, // 只用於 refetch
         }
     });
 
@@ -833,6 +852,7 @@ const AltarPage: React.FC = () => {
             </div>
         </section>
     );
-};
+});
+AltarPage.displayName = 'AltarPage';
 
 export default AltarPage;

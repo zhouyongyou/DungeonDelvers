@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import { visualizer } from 'rollup-plugin-visualizer'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   base: '/', 
   plugins: [
     react(),
@@ -87,13 +87,19 @@ export default defineConfig({
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true,
-        drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug'],
+        // 只在生產環境移除 console.log
+        drop_console: mode === 'production',
+        drop_debugger: mode === 'production',
+        pure_funcs: mode === 'production' ? ['console.log', 'console.info', 'console.debug'] : [],
         // 🔥 新增：移除未使用代碼
         unused: true,
         // 移除死代碼
-        dead_code: true
+        dead_code: true,
+        // 保留 console.warn 和 console.error
+        keep_fnames: false,
+      },
+      format: {
+        comments: false, // 移除所有註釋
       },
       mangle: {
         safari10: true
@@ -156,4 +162,4 @@ export default defineConfig({
       // 如果使用 SCSS/SASS，可以在這裡添加全局變量
     }
   }
-})
+}))

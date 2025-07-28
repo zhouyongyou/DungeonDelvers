@@ -7,7 +7,7 @@ import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { formatEther, isAddress } from 'viem';
 import { bsc } from 'wagmi/chains';
-import { getContract } from '../config/contracts';
+import { getContract, getContractWithABI } from '../config/contractsWithABI';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取
@@ -258,7 +258,7 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
     useAccount();
     const [submittedId, setSubmittedId] = useState<string | null>(null);
 
-    const contractAddress = getContractWithABI(bsc.id, type)?.address;
+    const contractAddress = getContract(type.toUpperCase() as any);
 
     const { data, isLoading, isError, error } = useQuery({
         queryKey: ['explorer', type, submittedId],

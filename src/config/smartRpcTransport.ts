@@ -2,6 +2,7 @@
 
 import { custom, type Transport } from 'viem';
 import { logger } from '../utils/logger';
+import { getRpcEndpoint } from '../utils/rpcOptimizedMigration';
 // import { rpcMonitor } from '../utils/rpcMonitor'; // Removed RPC monitoring
 
 // 公共 BSC RPC 節點列表（作為後備）
@@ -66,17 +67,25 @@ function getAlchemyKeys(): string[] {
  * 3. 否則使用公共節點
  */
 function getRpcUrl(): string {
-  // 緊急禁用 RPC 代理，直接使用公共節點
-  const useRpcProxy = false; // 強制禁用代理
+  // 使用新的 RPC 代理遷移策略
+  const useRpcProxy = import.meta.env.VITE_USE_RPC_PROXY === 'true';
   
   // 生產環境且啟用代理
   if (import.meta.env.PROD && useRpcProxy) {
-    logger.info('🔒 生產環境：使用 API RPC 代理');
-    return '/api/rpc';
+    const rpcEndpoint = getRpcEndpoint();
+    logger.info(`🔒 生產環境：使用 ${rpcEndpoint}`);
+    return rpcEndpoint;
   }
   
-  // 生產環境緊急回退到公共節點
-  if (import.meta.env.PROD) {
+  // 生產環境但未啟用代理 - 使用直接 Alchemy 連接
+  if (import.meta.env.PROD && !useRpcProxy) {
+    // 繼續使用現有的直接連接邏輯
+    const alchemyKeys = getAlchemyKeys();
+    if (alchemyKeys.length > 0) {
+      const key = alchemyKeys[currentKeyIndex++ % alchemyKeys.length];
+      return `https://bnb-mainnet.g.alchemy.com/v2/${key}`;
+    }
+    // 如果沒有 key，使用公共節點
     logger.warn('🚨 緊急模式：生產環境使用公共 RPC 節點');
     const rpcIndex = currentKeyIndex++ % PUBLIC_BSC_RPCS.length;
     return PUBLIC_BSC_RPCS[rpcIndex];

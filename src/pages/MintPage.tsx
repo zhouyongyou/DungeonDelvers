@@ -1,6 +1,6 @@
 // src/pages/MintPage.tsx (優化後最終版)
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, memo, useCallback } from 'react';
 import { useAccount, useWriteContract, useBalance, usePublicClient, useReadContract } from 'wagmi';
 import { formatEther, maxUint256, type Abi, decodeEventLog } from 'viem';
 import { useQueryClient } from '@tanstack/react-query';
@@ -62,7 +62,7 @@ type PaymentSource = 'wallet' | 'vault';
 const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: PaymentSource, chainId: typeof bsc.id) => {
     const { address } = useAccount();
     const contractConfig = getContract(type === 'hero' ? 'HERO' : 'RELIC');
-    const soulShardContract = getContract('SOULSHARDTOKEN');
+    const soulShardContract = getContract('SOULSHARD');
     const playerVaultContract = getContract('PLAYERVAULT');
 
     // ★★★【核心優化】★★★
@@ -232,7 +232,7 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
 // =================================================================
 
 // 動態稀有度機率顯示組件
-const RarityProbabilities: React.FC<{ quantity: number }> = ({ quantity }) => {
+const RarityProbabilities = memo<{ quantity: number }>(({ quantity }) => {
     const currentTier = getBatchTierForQuantity(quantity);
     
     if (!currentTier) {
@@ -286,9 +286,9 @@ const RarityProbabilities: React.FC<{ quantity: number }> = ({ quantity }) => {
             )}
         </div>
     );
-};
+});
 
-const MintResultModal: React.FC<{ nft: AnyNft | null; onClose: () => void }> = ({ nft, onClose }) => {
+const MintResultModal = memo<{ nft: AnyNft | null; onClose: () => void }>(({ nft, onClose }) => {
     if (!nft) return null;
     return (
         <Modal isOpen={!!nft} onClose={onClose} title="鑄造成功！" confirmText="太棒了！" onConfirm={onClose}>
@@ -311,9 +311,17 @@ const MintResultModal: React.FC<{ nft: AnyNft | null; onClose: () => void }> = (
             </div>
         </Modal>
     );
-};
+});
+RarityProbabilities.displayName = 'RarityProbabilities';
+MintResultModal.displayName = 'MintResultModal';
 
-const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: typeof bsc.id }> = ({ type, options, chainId }) => {
+interface MintCardProps {
+    type: 'hero' | 'relic';
+    options: number[];
+    chainId: typeof bsc.id;
+}
+
+const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
     const { address } = useAccount();
     const { showToast } = useAppToast();
     const publicClient = usePublicClient();
@@ -513,7 +521,7 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
     const isProcessing = currentProgress.status !== 'idle' && currentProgress.status !== 'error';
     
     const contractConfig = getContract(type === 'hero' ? 'HERO' : 'RELIC');
-    const soulShardContract = getContract('SOULSHARDTOKEN');
+    const soulShardContract = getContract('SOULSHARD');
 
     if (!contractConfig || !soulShardContract) {
         return <div className="card-bg p-6 rounded-xl shadow-lg flex flex-col items-center justify-center h-full text-center"><h3 className="text-xl font-bold text-red-500">設定錯誤</h3><p className="text-gray-400 mt-2">找不到 '{type}' 或 '$SoulShard' 的合約地址。</p><p className="text-gray-400 text-xs mt-1">請檢查您的 <code>.env</code> 環境變數設定是否正確。</p></div>;
@@ -694,9 +702,10 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
             <RarityProbabilities quantity={quantity} />
         </div>
     );
-};
+});
+MintCard.displayName = 'MintCard';
 
-const MintingInterface: React.FC<{ chainId: typeof bsc.id }> = ({ chainId }) => {
+const MintingInterface = memo<{ chainId: typeof bsc.id }>(({ chainId }) => {
     const heroMintOptions = [1, 5, 10, 20, 50]; // 恢復單個鑄造選項
     const relicMintOptions = [1, 5, 10, 20, 50]; // 恢復單個鑄造選項
     return (
@@ -707,9 +716,10 @@ const MintingInterface: React.FC<{ chainId: typeof bsc.id }> = ({ chainId }) => 
             </div>
         </>
     );
-};
+});
+MintingInterface.displayName = 'MintingInterface';
 
-const MintPage: React.FC = () => {
+const MintPage: React.FC = memo(() => {
     const { chainId } = useAccount();
     return (
         <section>
@@ -777,6 +787,6 @@ const MintPage: React.FC = () => {
             </div>
         </section>
     );
-};
+});
 
 export default MintPage;

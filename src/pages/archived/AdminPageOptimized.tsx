@@ -5,7 +5,7 @@ import { useAccount, useWriteContract } from 'wagmi';
 import { useMonitoredReadContracts } from '../../hooks/useMonitoredContract';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatEther, isAddress } from 'viem';
-import { getContractWithABI, CONTRACT_ADDRESSES as contractConfigs, type ContractName } from '../../config/contractsWithABI';
+import { getContractWithABI, CONTRACTS_WITH_ABI as contractConfigs } from '../../config/contractsWithABI';
 import { getContract } from '../../config/contracts'; // 保留原有函數供地址查詢使用
 import { useAppToast } from '../../contexts/SimpleToastContext';
 import { ActionButton } from '../../components/ui/ActionButton';

@@ -1,6 +1,6 @@
 // src/pages/AdminPage.tsx
 
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef, memo } from 'react';
 import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
 // 移除循環依賴的 hooks
 // import { useMonitoredReadContracts } from '../hooks/useMonitoredContract';
@@ -50,7 +50,7 @@ if (!DEVELOPER_ADDRESS) {
   logger.warn('開發者地址未在環境變數中設定 (VITE_DEVELOPER_ADDRESS)');
 }
 
-const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) => {
+const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainId }) => {
   const { address } = useAccount();
   const { showToast } = useAppToast();
   const { addTransaction } = useTransactionStore();
@@ -1188,7 +1188,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
       */}
     </>
   );
-};
+});
 
 const AdminPage: React.FC = () => {
   const { chainId } = useAccount();
@@ -1257,4 +1257,5 @@ const AdminPage: React.FC = () => {
   );
 };
 
-export default AdminPage;
+export default memo(AdminPage);
+export { AdminPage };

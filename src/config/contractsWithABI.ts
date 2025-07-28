@@ -1,5 +1,5 @@
 // V25 Contract Configuration with ABI
-// Generated on 2025-07-28T07:06:24.066Z
+// Generated on 2025-07-28T15:23:45.344Z
 // DO NOT EDIT MANUALLY - Use v25-sync-all.js to update
 
 import HeroABI from '../abis/Hero.json';
@@ -74,6 +74,20 @@ export const CONTRACTS_WITH_ABI = {
     SOULSHARD: {
       address: '0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF',
       abi: SoulShardTokenABI
+    },
+    
+    // Additional Addresses (from master-config.json)
+    USD: {
+      address: '0x7C67Af4EBC6651c95dF78De11cfe325660d935FE',
+      abi: [] // USD Token ABI if needed
+    },
+    UNISWAP_POOL: {
+      address: '0x1e5Cd5F386Fb6F39cD8788675dd3A5ceB6521C82',
+      abi: [] // Uniswap V3 Pool ABI if needed
+    },
+    DUNGEONMASTERWALLET: {
+      address: '0x10925A7138649C7E1794CE646182eeb5BF8ba647',
+      abi: [] // This is a wallet address, not a contract
     }
   }
 } as const;
@@ -81,10 +95,41 @@ export const CONTRACTS_WITH_ABI = {
 // Contract version for tracking
 export const CONTRACT_VERSION = 'V25';
 
-// Helper function to get contract with ABI
-export const getContractWithABI = (name: keyof typeof CONTRACTS_WITH_ABI[56]): ContractWithABI => {
-  return CONTRACTS_WITH_ABI[56][name];
-};
+// Helper function to get contract with ABI - supports both signatures
+export function getContractWithABI(name: keyof typeof CONTRACTS_WITH_ABI[56]): ContractWithABI;
+export function getContractWithABI(chainId: number, name: string): ContractWithABI | undefined;
+export function getContractWithABI(
+  nameOrChainId: keyof typeof CONTRACTS_WITH_ABI[56] | number,
+  nameIfChainId?: string
+): ContractWithABI | undefined {
+  // Support old signature: getContractWithABI(name)
+  if (typeof nameOrChainId === 'string') {
+    return CONTRACTS_WITH_ABI[56][nameOrChainId];
+  }
+  
+  // Support new signature: getContractWithABI(chainId, name)
+  const chainId = nameOrChainId as number;
+  const name = nameIfChainId!;
+  
+  // Convert contract name to uppercase to match the keys
+  const upperName = name.toUpperCase();
+  
+  // Check if chainId exists in CONTRACTS_WITH_ABI
+  if (!(chainId in CONTRACTS_WITH_ABI)) {
+    console.warn(`Chain ID ${chainId} not found in CONTRACTS_WITH_ABI`);
+    return undefined;
+  }
+  
+  const chainContracts = CONTRACTS_WITH_ABI[chainId as keyof typeof CONTRACTS_WITH_ABI];
+  
+  // Check if contract exists for this chain
+  if (!(upperName in chainContracts)) {
+    console.warn(`Contract ${name} (${upperName}) not found for chain ${chainId}`);
+    return undefined;
+  }
+  
+  return chainContracts[upperName as keyof typeof chainContracts];
+}
 
 // Legacy compatibility function
 export const getContract = (name: keyof typeof CONTRACTS_WITH_ABI[56]): string => {
@@ -96,5 +141,5 @@ export const CONTRACT_INFO = {
   version: CONTRACT_VERSION,
   network: "BSC Mainnet",
   deploymentBlock: 55514557,
-  lastUpdated: "2025-07-28T07:06:24.066Z"
+  lastUpdated: "2025-07-28T15:23:45.344Z"
 };

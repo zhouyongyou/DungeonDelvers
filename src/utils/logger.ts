@@ -34,25 +34,71 @@ export const handleError = (error: unknown): AppError => {
   };
 };
 
-// 簡化的日誌函數
+// 增強的日誌函數，支援生產環境自動優化
 export const logger = {
   info: (message: string, data?: unknown) => {
-    console.log(`[INFO] ${message}`, data || '');
+    // 生產環境中，這些日誌會被 Vite 的 terser 自動移除
+    if (import.meta.env.DEV || import.meta.env.VITE_ENABLE_PROD_LOGS === 'true') {
+      console.log(`[INFO] ${message}`, data || '');
+    }
   },
   
   warn: (message: string, data?: unknown) => {
+    // 警告在生產環境保留
     console.warn(`[WARN] ${message}`, data || '');
   },
   
   error: (message: string, error?: unknown) => {
+    // 錯誤在生產環境保留
     console.error(`[ERROR] ${message}`, error || '');
   },
   
   debug: (message: string, data?: unknown) => {
-    // 只在明確開啟 DEBUG 模式時顯示
-    if (import.meta.env.DEV && import.meta.env.VITE_DEBUG === 'true') {
+    // 只在開發環境或明確開啟 DEBUG 模式時顯示
+    if (import.meta.env.DEV) {
       console.log(`[DEBUG] ${message}`, data || '');
     }
+  },
+  
+  // 性能追蹤
+  time: (label: string) => {
+    if (import.meta.env.DEV) {
+      console.time(`[PERF] ${label}`);
+    }
+  },
+  
+  timeEnd: (label: string) => {
+    if (import.meta.env.DEV) {
+      console.timeEnd(`[PERF] ${label}`);
+    }
+  },
+  
+  // 分組日誌
+  group: (label: string) => {
+    if (import.meta.env.DEV) {
+      console.group(`[GROUP] ${label}`);
+    }
+  },
+  
+  groupEnd: () => {
+    if (import.meta.env.DEV) {
+      console.groupEnd();
+    }
+  },
+  
+  // 表格顯示
+  table: (data: unknown) => {
+    if (import.meta.env.DEV) {
+      console.table(data);
+    }
+  },
+  
+  // 檢查日誌是否啟用
+  isEnabled: (level: 'debug' | 'info' | 'warn' | 'error') => {
+    if (level === 'warn' || level === 'error') return true;
+    if (level === 'info') return import.meta.env.DEV || import.meta.env.VITE_ENABLE_PROD_LOGS === 'true';
+    if (level === 'debug') return import.meta.env.DEV;
+    return false;
   }
 };
 

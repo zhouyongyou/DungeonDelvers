@@ -1,7 +1,8 @@
 // src/pages/DungeonPage.tsx (The Graph 改造版)
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { useAccount, useReadContract, useReadContracts, useWriteContract } from 'wagmi';
+import { useContractBatchRead } from '../hooks/useContractBatchRead';
 import { useQuery, useQueryClient, useQueries } from '@tanstack/react-query';
 import { readContract } from '@wagmi/core';
 import { wagmiConfig as config } from '../wagmi';
@@ -337,7 +338,7 @@ interface PartyStatusCardProps {
   chainId: number;
 }
 
-const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onStartExpedition, /* onRest, */ isTxPending, isAnyTxPendingForThisParty, chainId }) => {
+const PartyStatusCard = memo<PartyStatusCardProps>(({ party, dungeons, onStartExpedition, /* onRest, */ isTxPending, isAnyTxPendingForThisParty, chainId }) => {
     const { address } = useAccount();
     const queryClient = useQueryClient();
     // 🎯 智能選擇最高可挑戰的地城作為預設值
@@ -366,36 +367,20 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
         }
     }, [dungeons, party.totalPower]);
     
-    const { data: explorationFee } = useReadContract({
-        address: dungeonMasterContract?.address as `0x${string}`,
-        abi: dungeonMasterContract?.abi,
-        functionName: 'explorationFee',
-        query: { enabled: !!dungeonMasterContract }
+    // 批量讀取地城相關數據
+    const { results: dungeonBatchResults } = useContractBatchRead({
+        chainId: bsc.id,
+        reads: [
+            { contractName: 'dungeonMaster', functionName: 'explorationFee' },
+            { contractName: 'dungeonCore', functionName: 'getSoulShardAmountForUSD', args: [parseEther('1')] },
+            { contractName: 'dungeonMaster', functionName: 'globalRewardMultiplier' },
+        ],
     });
-
-    // 🎯 一次性讀取 USD 到 SOUL 的匯率（使用 1 USD 作為基準）
-    const { data: usdToSoulRate } = useReadContract({
-        address: dungeonCoreContract?.address as `0x${string}`,
-        abi: dungeonCoreContract?.abi,
-        functionName: 'getSoulShardAmountForUSD',
-        args: [parseEther('1')], // 1 USD 可以換多少 SOUL
-        query: { 
-            enabled: !!dungeonCoreContract,
-            staleTime: 1000 * 60 * 5, // 5分鐘緩存
-            gcTime: 1000 * 60 * 30,   // 30分鐘垃圾回收
-        }
-    });
-
-    // 讀取全局獎勵倍率
-    const { data: globalRewardMultiplier } = useReadContract({
-        address: dungeonMasterContract?.address as `0x${string}`,
-        abi: dungeonMasterContract?.abi,
-        functionName: 'globalRewardMultiplier',
-        query: {
-            enabled: !!dungeonMasterContract,
-            staleTime: 1000 * 60 * 5, // 5分鐘緩存
-        }
-    });
+    
+    const [explorationFeeResult, usdToSoulRateResult, globalRewardMultiplierResult] = dungeonBatchResults;
+    const explorationFee = explorationFeeResult?.data as bigint | undefined;
+    const usdToSoulRate = usdToSoulRateResult?.data as bigint | undefined;
+    const globalRewardMultiplier = globalRewardMultiplierResult?.data as bigint | undefined;
     
     // 等級和經驗查詢已移除，節省資源 - 只在個人檔案頁面顯示
 
@@ -572,9 +557,10 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
             <ExpeditionHistory partyId={party.entityId} limit={3} />
         </div>
     );
-};
+});
+PartyStatusCard.displayName = 'PartyStatusCard';
 
-const DungeonInfoCard: React.FC<{ dungeon: Dungeon; calculateSoulReward: (usdAmount: bigint) => bigint }> = ({ dungeon, calculateSoulReward }) => {
+const DungeonInfoCard = memo<{ dungeon: Dungeon; calculateSoulReward: (usdAmount: bigint) => bigint }>(({ dungeon, calculateSoulReward }) => {
     const { vipLevel } = useVipStatus();
     
     // 計算實際成功率（包含VIP加成）
@@ -624,14 +610,15 @@ const DungeonInfoCard: React.FC<{ dungeon: Dungeon; calculateSoulReward: (usdAmo
         </div>
     </div>
     );
-};
+});
+DungeonInfoCard.displayName = 'DungeonInfoCard';
 
 
 // =================================================================
 // Section: 主頁面元件
 // =================================================================
 
-const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setActivePage }) => {
+const DungeonPageContent = memo<{ setActivePage: (page: Page) => void }>(({ setActivePage }) => {
     // const { setLoading } = useGlobalLoading(); // 移除未使用的 hook
     const { chainId, address } = useAccount();
     const { showToast } = useAppToast();
@@ -657,36 +644,20 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
     const dungeonMasterContract = getContract('DUNGEONMASTER');
     const dungeonCoreContract = getContract('DUNGEONCORE');
 
-    // 🎯 一次性讀取 USD 到 SOUL 的匯率（用於所有地城獎勵顯示）
-    const { data: usdToSoulRate } = useReadContract({
-        address: dungeonCoreContract?.address as `0x${string}`,
-        abi: dungeonCoreContract?.abi,
-        functionName: 'getSoulShardAmountForUSD',
-        args: [parseEther('1')], // 1 USD 可以換多少 SOUL
-        query: { 
-            enabled: !!dungeonCoreContract,
-            staleTime: 1000 * 60 * 5, // 5分鐘緩存
-            gcTime: 1000 * 60 * 30,   // 30分鐘垃圾回收
-        }
-    });
-
-    // 讀取全局獎勵倍率
-    const { data: globalRewardMultiplier } = useReadContract({
-        address: getContractWithABI(bsc.id, 'dungeonMaster')?.address,
-        abi: getContractWithABI(bsc.id, 'dungeonMaster')?.abi,
-        functionName: 'globalRewardMultiplier',
-        query: {
-            staleTime: 1000 * 60 * 5, // 5分鐘緩存
-        }
+    // 批量讀取地城相關數據 - 避免重複讀取
+    const { results: dungeonBatchResults2 } = useContractBatchRead({
+        chainId: bsc.id,
+        reads: [
+            { contractName: 'dungeonCore', functionName: 'getSoulShardAmountForUSD', args: [parseEther('1')] },
+            { contractName: 'dungeonMaster', functionName: 'globalRewardMultiplier' },
+            { contractName: 'dungeonMaster', functionName: 'explorationFee' },
+        ],
     });
     
-    // 讀取探索費用
-    const { data: explorationFee } = useReadContract({
-        address: dungeonMasterContract?.address as `0x${string}`,
-        abi: dungeonMasterContract?.abi,
-        functionName: 'explorationFee',
-        query: { enabled: !!dungeonMasterContract }
-    });
+    const [usdToSoulRateResult2, globalRewardMultiplierResult2, explorationFeeResult2] = dungeonBatchResults2;
+    const usdToSoulRate = usdToSoulRateResult2?.data as bigint | undefined;
+    const globalRewardMultiplier = globalRewardMultiplierResult2?.data as bigint | undefined;
+    const explorationFee = explorationFeeResult2?.data as bigint | undefined;
 
     // 🧮 計算獎勵的輔助函數（考慮全局倍率）
     const calculateSoulReward = (usdAmount: bigint): bigint => {
@@ -1177,14 +1148,16 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
         </section>
         </>
     );
-};
+});
+DungeonPageContent.displayName = 'DungeonPageContent';
 
-const DungeonPage: React.FC<{ setActivePage: (page: Page) => void; }> = ({ setActivePage }) => {
+const DungeonPage = memo<{ setActivePage: (page: Page) => void; }>(({ setActivePage }) => {
     return (
         <ErrorBoundary>
             <DungeonPageContent setActivePage={setActivePage} />
         </ErrorBoundary>
     );
-};
+});
+DungeonPage.displayName = 'DungeonPage';
 
 export default DungeonPage;

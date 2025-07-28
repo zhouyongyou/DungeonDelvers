@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useCallback, memo, useEffect } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
+import { useContractBatchRead } from '../hooks/useContractBatchRead';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { NftCard } from '../components/ui/NftCard';
@@ -39,7 +40,7 @@ interface TeamBuilderProps {
   isAuthorizing: boolean;
 }
 
-const TeamBuilder: React.FC<TeamBuilderProps> = ({ 
+const TeamBuilder = memo<TeamBuilderProps>(({ 
   heroes, 
   relics, 
   onCreateParty, 
@@ -444,13 +445,14 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({
 
         </div>
     );
-};
+});
+TeamBuilder.displayName = 'TeamBuilder';
 
 // =================================================================
 // Section: 主頁面元件
 // =================================================================
 
-const MyAssetsPageContent: React.FC = () => {
+const MyAssetsPageContent = memo(() => {
     // const { setLoading } = useGlobalLoading(); // 移除未使用的 hook
     const { address, chainId } = useAccount();
     const { showToast } = useAppToast();
@@ -498,18 +500,21 @@ const MyAssetsPageContent: React.FC = () => {
         retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // 指數退避
     });
     
-    const { data: platformFee, isLoading: isLoadingFee } = useReadContract({
-        address: partyContract?.address as `0x${string}`,
-        abi: partyContract?.abi,
-        functionName: 'platformFee',
-        query: { 
-            enabled: !!partyContract,
-            staleTime: 1000 * 60 * 30, // 30分鐘 - 平台費用變更頻率低
-            gcTime: 1000 * 60 * 60,    // 60分鐘
-            refetchOnWindowFocus: false,
-            retry: 2,
-        }
+    // 批量讀取合約數據
+    const { results: contractBatchResults, isLoading: isBatchLoading } = useContractBatchRead({
+        chainId: bsc.id,
+        reads: [
+            { contractName: 'party', functionName: 'platformFee' },
+            ...(address && partyContract ? [
+                { contractName: 'hero', functionName: 'isApprovedForAll', args: [address, partyContract.address] },
+                { contractName: 'relic', functionName: 'isApprovedForAll', args: [address, partyContract.address] },
+            ] : []),
+        ],
     });
+    
+    const [platformFeeResult, heroAuthResult, relicAuthResult] = contractBatchResults;
+    const platformFee = platformFeeResult?.data as bigint | undefined;
+    const isLoadingFee = isBatchLoading;
 
     // 交易進度 Hooks - 英雄授權
     const { execute: executeHeroAuth, progress: heroAuthProgress, reset: resetHeroAuth } = useTransactionWithProgress({
@@ -675,32 +680,28 @@ const MyAssetsPageContent: React.FC = () => {
                            currentTransactionType === 'relic' ? relicAuthProgress : 
                            createPartyProgress;
 
-    // 檢查授權狀態
-    const { data: isHeroAuthorized, refetch: refetchHeroAuth } = useReadContract({
+    // 從批量結果中提取授權狀態
+    const isHeroAuthorized = heroAuthResult?.data as boolean | undefined;
+    const isRelicAuthorized = relicAuthResult?.data as boolean | undefined;
+    
+    // 單獨的 hooks 用於 refetch（只在需要時使用）
+    const { refetch: refetchHeroAuth } = useReadContract({
         address: heroContract?.address as `0x${string}`,
         abi: heroContract?.abi,
         functionName: 'isApprovedForAll',
         args: [address!, partyContract!.address],
         query: { 
-            enabled: !!address && !!heroContract && !!partyContract,
-            staleTime: 1000 * 60 * 5, // 5分鐘 - 授權狀態需要較新
-            gcTime: 1000 * 60 * 15,   // 15分鐘
-            refetchOnWindowFocus: false,
-            retry: 2,
+            enabled: false, // 預設禁用，只在需要 refetch 時使用
         }
     });
-
-    const { data: isRelicAuthorized, refetch: refetchRelicAuth } = useReadContract({
+    
+    const { refetch: refetchRelicAuth } = useReadContract({
         address: relicContract?.address as `0x${string}`,
         abi: relicContract?.abi,
         functionName: 'isApprovedForAll',
         args: [address!, partyContract!.address],
         query: { 
-            enabled: !!address && !!relicContract && !!partyContract,
-            staleTime: 1000 * 60 * 5, // 5分鐘 - 授權狀態需要較新
-            gcTime: 1000 * 60 * 15,   // 15分鐘
-            refetchOnWindowFocus: false,
-            retry: 2,
+            enabled: false, // 預設禁用，只在需要 refetch 時使用
         }
     });
 
@@ -906,14 +907,16 @@ const MyAssetsPageContent: React.FC = () => {
             </div>
         </section>
     );
-};
+});
+MyAssetsPageContent.displayName = 'MyAssetsPageContent';
 
-const MyAssetsPage: React.FC = () => {
+const MyAssetsPage = memo(() => {
     return (
         <ErrorBoundary>
             <MyAssetsPageContent />
         </ErrorBoundary>
     );
-};
+});
+MyAssetsPage.displayName = 'MyAssetsPage';
 
 export default MyAssetsPage;
