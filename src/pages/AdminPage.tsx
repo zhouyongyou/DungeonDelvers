@@ -39,6 +39,7 @@ import GameFlowTest from '../components/admin/GameFlowTestDark';
 // RPC監控已移除以解決循環依賴問題
 import { ContractHealthCheck } from '../components/admin/ContractHealthCheck';
 import { PitchUrlManager } from '../components/admin/PitchUrlManager';
+import RpcMonitoringPanel from '../components/admin/RpcMonitoringPanel';
 import { validateContract, getSafeContract } from '../utils/contractValidator';
 
 type SupportedChainId = typeof bsc.id;
@@ -1182,7 +1183,9 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
         defaultExpanded={false}
         onExpand={() => setLoadedSections(prev => ({ ...prev, rpcMonitor: true }))}
       >
-        <RpcMonitoringPanel />
+        <ErrorBoundary>
+          <RpcMonitoringPanel />
+        </ErrorBoundary>
       </AdminSection>
     </>
   );

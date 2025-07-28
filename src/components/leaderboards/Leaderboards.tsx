@@ -124,6 +124,64 @@ const LEADERBOARDS_QUERY = `
       totalFeesSpent
     }
     
+    # 消費排行榜 - 前 10 名（總消費最多的玩家）
+    spendingLeaders: playerUpgradeStats(
+      first: 10
+      orderBy: totalFeesSpent
+      orderDirection: desc
+      where: { totalFeesSpent_gt: "0" }
+    ) {
+      id
+      totalFeesSpent
+      totalAttempts
+      totalMinted
+      totalBurned
+    }
+    
+    # 勝率排行榜 - 前 10 名（至少 10 次遠征）
+    winRateLeaders: playerStats(
+      first: 10
+      orderBy: successfulExpeditions
+      orderDirection: desc
+      where: { 
+        totalExpeditions_gte: 10
+        successfulExpeditions_gt: 0
+      }
+    ) {
+      id
+      player {
+        id
+        profile {
+          name
+        }
+      }
+      totalExpeditions
+      successfulExpeditions
+      totalRewardsEarned
+      highestPartyPower
+    }
+    
+    # 最近 7 天活躍玩家 - 前 10 名
+    recentActiveLeaders: expeditions(
+      first: 200
+      orderBy: timestamp
+      orderDirection: desc
+      where: { 
+        timestamp_gte: "${Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000)}"
+      }
+    ) {
+      id
+      player {
+        id
+        profile {
+          name
+        }
+      }
+      success
+      reward
+      timestamp
+    }
+    
     # 全局統計
     globalStats(id: "global") {
       totalPlayers
@@ -206,6 +264,38 @@ interface LeaderboardData {
     totalBurned: string;
     totalFeesSpent: string;
   }>;
+  spendingLeaders: Array<{
+    id: string;
+    totalFeesSpent: string;
+    totalAttempts: string;
+    totalMinted: string;
+    totalBurned: string;
+  }>;
+  winRateLeaders: Array<{
+    id: string;
+    player: {
+      id: string;
+      profile?: {
+        name: string;
+      };
+    };
+    totalExpeditions: number;
+    successfulExpeditions: number;
+    totalRewardsEarned: string;
+    highestPartyPower: string;
+  }>;
+  recentActiveLeaders: Array<{
+    id: string;
+    player: {
+      id: string;
+      profile?: {
+        name: string;
+      };
+    };
+    success: boolean;
+    reward: string;
+    timestamp: string;
+  }>;
   globalStats?: {
     totalPlayers: number;
     totalExpeditions: number;
@@ -260,15 +350,53 @@ function calculateSuccessRate(successful: number, total: number): string {
   return `${((successful / total) * 100).toFixed(1)}%`;
 }
 
+// 處理活躍玩家數據
+function processActiveLeaders(expeditions: LeaderboardData['recentActiveLeaders']) {
+  const playerStats = new Map<string, {
+    player: { id: string; profile?: { name: string } };
+    expeditions: number;
+    successfulExpeditions: number;
+    totalRewards: bigint;
+    lastActivity: number;
+  }>();
+
+  expeditions.forEach(expedition => {
+    const playerId = expedition.player.id;
+    const existing = playerStats.get(playerId) || {
+      player: expedition.player,
+      expeditions: 0,
+      successfulExpeditions: 0,
+      totalRewards: 0n,
+      lastActivity: 0
+    };
+
+    existing.expeditions++;
+    if (expedition.success) {
+      existing.successfulExpeditions++;
+      existing.totalRewards += BigInt(expedition.reward);
+    }
+    existing.lastActivity = Math.max(existing.lastActivity, parseInt(expedition.timestamp));
+    
+    playerStats.set(playerId, existing);
+  });
+
+  return Array.from(playerStats.values())
+    .sort((a, b) => b.expeditions - a.expeditions)
+    .slice(0, 10);
+}
+
 // 排行榜標籤
-type LeaderboardTab = 'power' | 'rewards' | 'expeditions' | 'vip' | 'recent' | 'upgrades';
+type LeaderboardTab = 'power' | 'rewards' | 'expeditions' | 'vip' | 'recent' | 'upgrades' | 'spending' | 'winrate' | 'active';
 
 const LEADERBOARD_TABS: Array<{ id: LeaderboardTab; label: string; icon: string }> = [
   { id: 'power', label: '戰力排行', icon: '⚔️' },
   { id: 'rewards', label: '獎勵排行', icon: '💰' },
   { id: 'expeditions', label: '遠征排行', icon: '🗺️' },
   { id: 'upgrades', label: '升星排行', icon: '⭐' },
+  { id: 'spending', label: '消費排行', icon: '💎' },
+  { id: 'winrate', label: '勝率排行', icon: '🏆' },
   { id: 'vip', label: 'VIP 排行', icon: '👑' },
+  { id: 'active', label: '活躍排行', icon: '🔥' },
   { id: 'recent', label: '最近活動', icon: '📊' },
 ];
 
@@ -479,6 +607,95 @@ export const Leaderboards: React.FC = React.memo(() => {
     </div>
   );
 
+  // 消費排行榜
+  const renderSpendingLeaderboard = () => (
+    <div className="space-y-3">
+      {leaderboardData.spendingLeaders.map((player, index) => {
+        const totalSpent = parseFloat(formatEther(BigInt(player.totalFeesSpent)));
+        const totalAttempts = parseInt(player.totalAttempts);
+        const avgSpend = totalAttempts > 0 ? totalSpent / totalAttempts : 0;
+        
+        return (
+          <div key={player.id} className="flex items-center justify-between bg-gray-700 p-3 rounded">
+            <div className="flex items-center space-x-3">
+              <span className="text-lg font-bold text-purple-400">#{index + 1}</span>
+              <div>
+                <p className="text-white font-medium">{`${player.id.slice(0, 6)}...${player.id.slice(-4)}`}</p>
+                <p className="text-gray-400 text-sm">
+                  {totalAttempts} 次升星 · 平均 {avgSpend.toFixed(2)} SoulShard/次
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-purple-400 font-bold">{totalSpent.toFixed(1)}</p>
+              <p className="text-gray-400 text-sm">總消費 SoulShard</p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  // 勝率排行榜
+  const renderWinRateLeaderboard = () => (
+    <div className="space-y-3">
+      {leaderboardData.winRateLeaders.map((player, index) => {
+        const winRate = (player.successfulExpeditions / player.totalExpeditions) * 100;
+        
+        return (
+          <div key={player.id} className="flex items-center justify-between bg-gray-700 p-3 rounded">
+            <div className="flex items-center space-x-3">
+              <span className="text-lg font-bold text-yellow-400">#{index + 1}</span>
+              <div>
+                <p className="text-white font-medium">{formatPlayerName(player.player)}</p>
+                <p className="text-gray-400 text-sm">
+                  {player.successfulExpeditions}/{player.totalExpeditions} 勝 · 戰力 {parseInt(player.highestPartyPower).toLocaleString()}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-yellow-400 font-bold">{winRate.toFixed(1)}%</p>
+              <p className="text-gray-400 text-sm">勝率</p>
+              <p className="text-green-400 text-xs">+{parseFloat(formatEther(BigInt(player.totalRewardsEarned))).toFixed(1)} SoulShard</p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  // 活躍排行榜
+  const renderActiveLeaderboard = () => {
+    const activeLeaders = processActiveLeaders(leaderboardData.recentActiveLeaders);
+    
+    return (
+      <div className="space-y-3">
+        {activeLeaders.map((player, index) => {
+          const winRate = player.expeditions > 0 ? (player.successfulExpeditions / player.expeditions) * 100 : 0;
+          
+          return (
+            <div key={player.player.id} className="flex items-center justify-between bg-gray-700 p-3 rounded">
+              <div className="flex items-center space-x-3">
+                <span className="text-lg font-bold text-orange-400">#{index + 1}</span>
+                <div>
+                  <p className="text-white font-medium">{formatPlayerName(player.player)}</p>
+                  <p className="text-gray-400 text-sm">
+                    勝率 {winRate.toFixed(1)}% · 上次活動 {new Date(player.lastActivity * 1000).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-orange-400 font-bold">{player.expeditions}</p>
+                <p className="text-gray-400 text-sm">7天遠征次數</p>
+                <p className="text-green-400 text-xs">+{parseFloat(formatEther(player.totalRewards)).toFixed(1)} SoulShard</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   const renderLeaderboard = () => {
     switch (activeTab) {
       case 'power':
@@ -489,8 +706,14 @@ export const Leaderboards: React.FC = React.memo(() => {
         return renderExpeditionsLeaderboard();
       case 'upgrades':
         return renderUpgradeLeaderboard();
+      case 'spending':
+        return renderSpendingLeaderboard();
+      case 'winrate':
+        return renderWinRateLeaderboard();
       case 'vip':
         return renderVIPLeaderboard();
+      case 'active':
+        return renderActiveLeaderboard();
       case 'recent':
         return renderRecentActivityLeaderboard();
       default:
@@ -512,7 +735,7 @@ export const Leaderboards: React.FC = React.memo(() => {
 
       {/* 標籤切換 */}
       <div className="mb-6">
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 bg-gray-700 p-1 rounded-lg">
+        <div className="grid grid-cols-3 md:grid-cols-9 gap-1 bg-gray-700 p-1 rounded-lg">
           {LEADERBOARD_TABS.map((tab) => (
             <button
               key={tab.id}
