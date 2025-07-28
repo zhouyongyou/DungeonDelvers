@@ -23,12 +23,12 @@ const ApprovalDiagnostic: React.FC = () => {
   const { writeContract } = useWriteContract();
   
   // 檢查各種授權狀態
-  const soulShardContract = getContract('soulShard', bsc.id);
-  const heroContract = getContract('hero', bsc.id);
-  const relicContract = getContract('relic', bsc.id);
-  const partyContract = getContract('party', bsc.id);
-  const altarContract = getContract('altarOfAscension', bsc.id);
-  const dungeonMasterContract = getContract('dungeonMaster', bsc.id);
+  const soulShardContract = getContractWithABI(bsc.id, 'soulShard');
+  const heroContract = getContractWithABI(bsc.id, 'hero');
+  const relicContract = getContractWithABI(bsc.id, 'relic');
+  const partyContract = getContractWithABI(bsc.id, 'party');
+  const altarContract = getContractWithABI(bsc.id, 'altarOfAscension');
+  const dungeonMasterContract = getContractWithABI(bsc.id, 'dungeonMaster');
   
   // 檢查 SoulShard 授權
   const { data: soulShardAllowanceToHero } = useReadContract({
@@ -293,10 +293,10 @@ const ContractSettings: React.FC = () => {
   const { writeContract } = useWriteContract();
   
   // 獲取合約實例
-  const heroContract = getContract('hero', bsc.id);
-  const relicContract = getContract('relic', bsc.id);
-  const partyContract = getContract('party', bsc.id);
-  const dungeonMasterContract = getContract('dungeonMaster', bsc.id);
+  const heroContract = getContractWithABI(bsc.id, 'hero');
+  const relicContract = getContractWithABI(bsc.id, 'relic');
+  const partyContract = getContractWithABI(bsc.id, 'party');
+  const dungeonMasterContract = getContractWithABI(bsc.id, 'dungeonMaster');
   
   // 讀取合約設定
   const contractReads = [

@@ -61,7 +61,7 @@ export function useAdminData(): AdminDataHookReturn {
     if (registry.hero) {
       contracts.push({
         address: registry.hero,
-        abi: getContract(chainId, 'hero').abi,
+        abi: getContract('HERO').abi,
         functionName: 'mintPriceUSD',
       });
     }
@@ -69,7 +69,7 @@ export function useAdminData(): AdminDataHookReturn {
     if (registry.relic) {
       contracts.push({
         address: registry.relic,
-        abi: getContract(chainId, 'relic').abi,
+        abi: getContract('RELIC').abi,
         functionName: 'mintPriceUSD',
       });
     }
@@ -77,12 +77,12 @@ export function useAdminData(): AdminDataHookReturn {
     if (registry.dungeonMaster) {
       contracts.push({
         address: registry.dungeonMaster,
-        abi: getContract(chainId, 'dungeonMaster').abi,
+        abi: getContract('DUNGEONMASTER').abi,
         functionName: 'explorationFee',
       });
       contracts.push({
         address: registry.dungeonMaster,
-        abi: getContract(chainId, 'dungeonMaster').abi,
+        abi: getContract('DUNGEONMASTER').abi,
         functionName: 'globalRewardMultiplier',
       });
     }

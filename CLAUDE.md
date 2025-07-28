@@ -45,7 +45,7 @@ VITE_WALLETCONNECT_PROJECT_ID=你的WalletConnect項目ID
 - 網路設定
 
 ### 配置優先級
-1. CDN 配置文件 (`/public/config/v18.json`)
+1. CDN 配置文件 (`/public/config/v25.json`)
 2. 環境變數（作為備份）
 3. 默認值（硬編碼）
 

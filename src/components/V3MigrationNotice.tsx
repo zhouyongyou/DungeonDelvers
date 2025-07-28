@@ -21,13 +21,13 @@ export const V3MigrationNotice: React.FC<V3MigrationNoticeProps> = ({ onClose })
   const [currentStep, setCurrentStep] = useState(0);
 
   // 獲取所有需要的合約
-  const heroContract = getContract(bsc.id, 'hero');
-  const relicContract = getContract(bsc.id, 'relic');
-  const partyContract = getContract(bsc.id, 'party');
-  const altarContract = getContract(bsc.id, 'altarOfAscension');
-  const soulShardContract = getContract(bsc.id, 'soulShard');
-  const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
-  const playerVaultContract = getContract(bsc.id, 'playerVault');
+  const heroContract = getContract('HERO');
+  const relicContract = getContract('RELIC');
+  const partyContract = getContract('PARTY');
+  const altarContract = getContract('ALTAROFASCENSION');
+  const soulShardContract = getContract('SOULSHARD');
+  const dungeonMasterContract = getContract('DUNGEONMASTER');
+  const playerVaultContract = getContract('PLAYERVAULT');
 
   // 檢查各種授權狀態
   const { data: heroToParty } = useReadContract({

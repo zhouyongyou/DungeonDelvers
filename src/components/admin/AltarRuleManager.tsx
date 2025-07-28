@@ -19,7 +19,7 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
   const { writeContractAsync } = useWriteContract();
   const [pendingRule, setPendingRule] = useState<number | null>(null);
   
-  const altarContract = getContract(chainId, 'altarOfAscension');
+  const altarContract = getContract('ALTAROFASCENSION');
 
   const { data: rulesData, isLoading, refetch } = useReadContracts({
     contracts: Array.from({ length: 4 }, (_, i) => ({

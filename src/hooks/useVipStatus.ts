@@ -42,7 +42,7 @@ export const useVipStatus = () => {
 
     const vipStakingContract = useMemo(() => {
         if (!isSupportedChain) return null;
-        const contract = getContract(chainId, 'vipStaking');
+        const contract = getContract('VIPSTAKING');
         
         if (!contract) {
             logger.error('無法獲取 VIP Staking 合約配置', { chainId });
@@ -60,7 +60,7 @@ export const useVipStatus = () => {
     
     const soulShardContract = useMemo(() => {
         if (!isSupportedChain) return null;
-        const contract = getContract(chainId, 'soulShard');
+        const contract = getContract('SOULSHARD');
         
         if (!contract) {
             logger.error('無法獲取 SoulShard 合約配置', { chainId });
@@ -78,7 +78,7 @@ export const useVipStatus = () => {
     
     const oracleContract = useMemo(() => {
         if (!isSupportedChain) return null;
-        const contract = getContract(chainId, 'oracle');
+        const contract = getContract('ORACLE');
         
         if (!contract) {
             logger.error('無法獲取 Oracle 合約配置', { chainId });
@@ -284,9 +284,8 @@ export const useVipStatus = () => {
         }
     }, [vipDataError]);
 
-    const refetchAll = async () => {
+    const refetchAll = async (enablePolling = false) => {
         try {
-
             // 並行執行所有refetch操作
             const promises = [
                 refetchVipData(),
@@ -299,10 +298,101 @@ export const useVipStatus = () => {
             if (stakedAmount > 0n) {
                 await refetchStakedValueUSD();
             }
-
+            
+            logger.debug('✅ VIP 狀態刷新完成');
         } catch (error) {
             logger.error('❌ 刷新VIP狀態時發生錯誤:', error);
         }
+    };
+
+    // 輪詢刷新機制 - 用於質押/贖回操作後
+    const startPollingRefresh = async (
+        expectedChange: 'stake' | 'unstake' | 'claim',
+        maxAttempts = 10,
+        intervalMs = 3000
+    ) => {
+        logger.info(`🔄 開始輪詢檢查 ${expectedChange} 狀態變更...`);
+        
+        // 記錄初始狀態用於比較
+        const initialStakedAmount = stakedAmount;
+        const initialPendingUnstake = pendingUnstakeAmount;
+        const initialTokenId = tokenId;
+        
+        let attempts = 0;
+        
+        const poll = async (): Promise<boolean> => {
+            attempts++;
+            logger.debug(`🔍 輪詢檢查第 ${attempts}/${maxAttempts} 次`);
+            
+            try {
+                await refetchAll();
+                
+                // 根據操作類型檢查預期的變更
+                switch (expectedChange) {
+                    case 'stake':
+                        // 檢查質押金額是否增加或新產生 tokenId
+                        const hasStakeIncrease = stakedAmount > initialStakedAmount;
+                        const hasNewToken = !initialTokenId && tokenId && tokenId > 0n;
+                        const hasTokenIdChange = initialTokenId !== tokenId;
+                        
+                        if (hasStakeIncrease || hasNewToken || hasTokenIdChange) {
+                            logger.info('✅ 檢測到質押狀態變更');
+                            return true;
+                        }
+                        break;
+                        
+                    case 'unstake':
+                        // 檢查是否有新的待贖回請求
+                        if (pendingUnstakeAmount > initialPendingUnstake) {
+                            logger.info('✅ 檢測到贖回請求狀態變更');
+                            return true;
+                        }
+                        break;
+                        
+                    case 'claim':
+                        // 檢查待贖回金額是否減少
+                        if (pendingUnstakeAmount < initialPendingUnstake) {
+                            logger.info('✅ 檢測到領取狀態變更');
+                            return true;
+                        }
+                        break;
+                }
+                
+                return false;
+            } catch (error) {
+                logger.warn(`⚠️ 輪詢檢查第 ${attempts} 次失敗:`, error);
+                return false;
+            }
+        };
+        
+        // 立即檢查一次
+        if (await poll()) {
+            return true;
+        }
+        
+        // 設置定時輪詢
+        return new Promise<boolean>((resolve) => {
+            const intervalId = setInterval(async () => {
+                if (attempts >= maxAttempts) {
+                    clearInterval(intervalId);
+                    logger.warn(`⚠️ 輪詢檢查已達最大次數 (${maxAttempts})，停止輪詢`);
+                    resolve(false);
+                    return;
+                }
+                
+                if (await poll()) {
+                    clearInterval(intervalId);
+                    resolve(true);
+                }
+            }, intervalMs);
+            
+            // 設置總超時時間（防止無限輪詢）
+            setTimeout(() => {
+                clearInterval(intervalId);
+                logger.warn('⏰ 輪詢檢查總超時，停止輪詢');
+                resolve(false);
+            }, maxAttempts * intervalMs + 5000);
+        });
     };
 
     return {
@@ -325,6 +415,7 @@ export const useVipStatus = () => {
         cooldownDays: cooldownPeriod ? Number(cooldownPeriod) / 86400 : 7,
         cooldownFormatted: formatCooldownPeriod(cooldownPeriod),
         refetchAll,
+        startPollingRefresh,
         // 調試信息
         isChainSupported: isSupportedChain,
         hasContracts: !!vipStakingContract && !!soulShardContract,

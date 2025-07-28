@@ -269,14 +269,56 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
   const envAddressMap: Record<string, { name: ContractName, address?: Address }> = useMemo(() => {
     if (!setupConfig || !Array.isArray(setupConfig)) return {};
     
-    // 從配置文件獲取地址（V22 配置）
+    // 從配置文件獲取地址（V25 配置）
     const getConfigAddr = (name: ContractName) => {
-      // 使用 getContract 從 contracts.ts 獲取地址
-      const contractInfo = getContract(chainId, name);
+      // 修復：使用正確的函數簽名和名稱映射
+      let addressKey: keyof typeof CONTRACT_ADDRESSES;
+      
+      // 映射合約名稱到配置文件中的常數名稱
+      switch (name) {
+        case 'oracle':
+          addressKey = 'ORACLE';
+          break;
+        case 'playerVault':
+          addressKey = 'PLAYERVAULT';
+          break;
+        case 'dungeonMaster':
+          addressKey = 'DUNGEONMASTER';
+          break;
+        case 'altarOfAscension':
+          addressKey = 'ALTAROFASCENSION';
+          break;
+        case 'playerProfile':
+          addressKey = 'PLAYERPROFILE';
+          break;
+        case 'vipStaking':
+          addressKey = 'VIPSTAKING';
+          break;
+        case 'hero':
+          addressKey = 'HERO';
+          break;
+        case 'relic':
+          addressKey = 'RELIC';
+          break;
+        case 'party':
+          addressKey = 'PARTY';
+          break;
+        case 'dungeonCore':
+          addressKey = 'DUNGEONCORE';
+          break;
+        case 'soulShard':
+          addressKey = 'SOULSHARD';
+          break;
+        default:
+          logger.warn(`未知的合約名稱: ${name}`);
+          return { name, address: undefined };
+      }
+      
+      const contractAddress = getContract(addressKey);
       
       return { 
         name, 
-        address: contractInfo?.address as Address | undefined
+        address: contractAddress as Address | undefined
       };
     };
     

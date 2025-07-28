@@ -10,7 +10,7 @@ interface PartyValidationOptions {
 }
 
 export const usePartyValidation = ({ partyIds, enabled = true }: PartyValidationOptions) => {
-    const partyContract = getContract(bsc.id, 'party');
+    const partyContract = getContract('PARTY');
 
     // 批量檢查隊伍存在性
     const contracts = partyIds.map(partyId => ({

@@ -117,7 +117,7 @@ const ReferralPage: React.FC = () => {
     const currentReferrer = referralData?.referrer;
     const totalCommission = referralData?.totalCommissionPaid ? BigInt(referralData.totalCommissionPaid) : 0n;
 
-    const playerVaultContract = getContract(chainId === bsc.id ? chainId : bsc.id, 'playerVault');
+    const playerVaultContract = getContract('PLAYERVAULT');
     const { writeContractAsync, isPending: isSettingReferrer } = useWriteContract();
 
     // 判斷是否已有邀請人 - 移到 useEffect 之前

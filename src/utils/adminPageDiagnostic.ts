@@ -293,7 +293,7 @@ export class AdminPageDiagnostic {
       const invalidContracts: string[] = [];
 
       contractNames.forEach(name => {
-        const contract = getContract(this.chainId, name);
+        const contract = getContractWithABI(this.chainId, name);
         if (contract && contract.address && contract.address !== '0x0000000000000000000000000000000000000000') {
           validContracts.push(name);
         } else {

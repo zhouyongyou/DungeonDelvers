@@ -5,6 +5,46 @@ import { formatEther, parseEther } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { getContractLegacy } from '../config/contractsWithABI';
 
+// Oracle 狀態檢查組件
+const OracleStatusCheck: React.FC<{ oracleAddress: `0x${string}` | undefined }> = ({ oracleAddress }) => {
+    const oracleContract = getContractLegacy(bsc.id, 'oracle');
+    
+    // 讀取 Oracle 基本資訊
+    const { data: oracleData, error: oracleError } = useReadContracts({
+        contracts: [
+            {
+                address: oracleAddress,
+                abi: oracleContract?.abi,
+                functionName: 'owner'
+            },
+            {
+                address: oracleAddress,
+                abi: oracleContract?.abi,
+                functionName: 'paused'
+            }
+        ],
+        query: {
+            enabled: !!oracleAddress && !!oracleContract
+        }
+    });
+    
+    if (!oracleAddress) {
+        return <p className="text-yellow-400">Oracle 地址未設置</p>;
+    }
+    
+    if (oracleError) {
+        return <p className="text-red-400">無法讀取 Oracle: {oracleError.message}</p>;
+    }
+    
+    return (
+        <div className="space-y-2">
+            <p>Oracle 地址: {oracleAddress}</p>
+            <p>Owner: {oracleData?.[0]?.result || 'Loading...'}</p>
+            <p>Paused: {oracleData?.[1]?.result?.toString() || 'Loading...'}</p>
+        </div>
+    );
+};
+
 const PriceDebugPage: React.FC = () => {
     const chainId = bsc.id;
     
@@ -14,7 +54,7 @@ const PriceDebugPage: React.FC = () => {
     const oracleContract = getContractLegacy(chainId, 'oracle');
     
     // 1. 讀取 Hero 的 mintPriceUSD
-    const { data: mintPriceUSD } = useReadContract({
+    const { data: mintPriceUSD, error: mintPriceError } = useReadContract({
         address: heroContract?.address,
         abi: heroContract?.abi,
         functionName: 'mintPriceUSD'
@@ -47,7 +87,7 @@ const PriceDebugPage: React.FC = () => {
     
     // 3. 測試不同數量的價格計算
     const quantities = [1, 5, 10];
-    const { data: priceData } = useReadContracts({
+    const { data: priceData, error: priceError } = useReadContracts({
         contracts: quantities.map(q => ({
             address: heroContract?.address,
             abi: heroContract?.abi,
@@ -83,6 +123,10 @@ const PriceDebugPage: React.FC = () => {
     // 調試輸出
     useEffect(() => {
         console.log('[PriceDebugPage] 完整診斷:', {
+            errors: {
+                mintPriceError,
+                priceError,
+            },
             contracts: {
                 hero: heroContract?.address,
                 dungeonCore: dungeonCoreContract?.address,
@@ -141,6 +185,9 @@ const PriceDebugPage: React.FC = () => {
                     <p>Raw: {mintPriceUSD?.toString()}</p>
                     <p>Formatted: {mintPriceUSD ? formatEther(mintPriceUSD) : 'N/A'} USD</p>
                     <p className="text-sm text-gray-400">預期: 2 USD</p>
+                    {mintPriceError && (
+                        <p className="text-red-400">錯誤: {mintPriceError.message}</p>
+                    )}
                 </div>
             </div>
             
@@ -208,6 +255,12 @@ const PriceDebugPage: React.FC = () => {
                         </div>
                     ))}
                 </div>
+            </div>
+            
+            {/* 新增：直接讀取 Oracle 狀態 */}
+            <div className="bg-gray-800 rounded-lg p-6 mb-6">
+                <h3 className="text-xl font-semibold mb-4">Oracle 直接狀態檢查</h3>
+                <OracleStatusCheck oracleAddress={oracleAddress as `0x${string}`} />
             </div>
             
             <div className="mt-6 p-4 bg-yellow-900/20 border border-yellow-600 rounded-lg">

@@ -178,10 +178,10 @@ const useTaxParams = () => {
     const { address, chainId } = useAccount();
     const isChainSupported = chainId === bsc.id;
 
-    const dungeonCoreContract = getContract(isChainSupported ? chainId! : bsc.id, 'dungeonCore');
-    const playerVaultContract = getContract(isChainSupported ? chainId! : bsc.id, 'playerVault');
-    const vipStakingContract = getContract(isChainSupported ? chainId! : bsc.id, 'vipStaking');
-    const playerProfileContract = getContract(isChainSupported ? chainId! : bsc.id, 'playerProfile');
+    const dungeonCoreContract = getContract('DUNGEONCORE');
+    const playerVaultContract = getContract('PLAYERVAULT');
+    const vipStakingContract = getContract('VIPSTAKING');
+    const playerProfileContract = getContract('PLAYERPROFILE');
     
     // 這個 Hook 現在只負責獲取合約層級的設定，不再獲取玩家個人數據
     const contractsToRead = useMemo(() => {
@@ -315,7 +315,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
 
     const handleWithdraw = async () => {
         if (!chainId || chainId !== bsc.id) return;
-        const playerVaultContract = getContract(chainId, 'playerVault');
+        const playerVaultContract = getContract('PLAYERVAULT');
         if (!playerVaultContract || vaultBalance === 0n) return;
         
         setShowProgressModal(true);

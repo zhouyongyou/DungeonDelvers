@@ -199,13 +199,13 @@ export const useContractEventsOptimized = () => {
     }, [queryClient]);
 
     // --- 合約實例 ---
-    const heroContract = getContract(bsc.id, 'hero');
-    const relicContract = getContract(bsc.id, 'relic');
-    const partyContract = getContract(bsc.id, 'party');
-    const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
-    const playerVaultContract = getContract(bsc.id, 'playerVault');
-    const altarOfAscensionContract = getContract(bsc.id, 'altarOfAscension');
-    const playerProfileContract = getContract(bsc.id, 'playerProfile');
+    const heroContract = getContract('HERO');
+    const relicContract = getContract('RELIC');
+    const partyContract = getContract('PARTY');
+    const dungeonMasterContract = getContract('DUNGEONMASTER');
+    const playerVaultContract = getContract('PLAYERVAULT');
+    const altarOfAscensionContract = getContract('ALTAROFASCENSION');
+    const playerProfileContract = getContract('PLAYERPROFILE');
 
     // 🔥 優化：顯示當前輪詢狀態（開發階段可用）
     useEffect(() => {

@@ -20,8 +20,8 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
   const queryClient = useQueryClient();
   const [pendingDungeon, setPendingDungeon] = useState<number | null>(null);
   
-  const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
-  const dungeonStorageContract = getContract(chainId, 'dungeonStorage');
+  const dungeonMasterContract = getContract('DUNGEONMASTER');
+  const dungeonStorageContract = getContract('DUNGEONSTORAGE');
 
   // 讀取地城總數量
   const { data: numDungeons } = useReadContract({

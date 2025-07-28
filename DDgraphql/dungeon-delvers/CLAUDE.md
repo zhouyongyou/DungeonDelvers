@@ -43,13 +43,13 @@ graph deploy --studio dungeon-delvers
 ```
 
 ## 當前版本
-- V18 - 用於 V18 合約（區塊 55134953 開始）
-- 生成時間: 2025-07-23T13:03:51.179Z
+- V25 - 用於 V25 合約（區塊 55514557 開始）
+- 生成時間: 2025-07-28T03:54:42.682Z
 - 自動從 master-config.json 生成
 ## 查詢端點
 ```
-Studio: https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.9
-Decentralized: https://gateway.thegraph.com/api/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs
+Studio: https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.2.0
+Decentralized: https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs
 ```
 ## 🔄 配置管理系統
 
@@ -80,7 +80,7 @@ npx hardhat run scripts/check-subgraph-sync-current.js --network bsc
 
 ```bash
 # 使用自動生成的部署腳本
-npm run deploy:v18
+npm run deploy:v25
 
 # 或者
 npm run deploy:current

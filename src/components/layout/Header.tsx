@@ -55,30 +55,45 @@ export const Header: React.FC<HeaderProps> = ({
 
   const [isTxPopoverOpen, setIsTxPopoverOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [openMobileCategory, setOpenMobileCategory] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const { level } = usePlayerLevel();
 
   const isDeveloper = isConnected && address?.toLowerCase() === DEVELOPER_ADDRESS.toLowerCase();
 
-  const navItems: { key: Page; label: string }[] = useMemo(() => {
-      const items: { key: Page; label: string }[] = [
-          { key: 'dashboard', label: '儀表板' },
-          { key: 'profile', label: '個人檔案' },
-          { key: 'mint', label: '鑄造' },
-          { key: 'party', label: '隊伍' },
-          { key: 'dungeon', label: '地下城' },
-          { key: 'altar', label: '升星祭壇' },
-          // 暫時禁用圖鑑功能
-          // { key: 'codex', label: '圖鑑' },
-          { key: 'vip', label: 'VIP' },
-          { key: 'referral', label: '推薦' },
-          { key: 'explorer', label: '探索者' },
-      ];
+  const gameMenus = useMemo(() => {
+      const baseMenus = {
+          '總覽': [
+              { key: 'dashboard' as Page, label: '總覽' },
+              { key: 'profile' as Page, label: '檔案' },
+              { key: 'explorer' as Page, label: '探索' },
+          ],
+          '成長': [
+              { key: 'mint' as Page, label: '鑄造' },
+              { key: 'altar' as Page, label: '升星' },
+          ],
+          '冒險': [
+              { key: 'party' as Page, label: '組隊' },
+              { key: 'dungeon' as Page, label: '地城' },
+          ],
+          '社群': [
+              { key: 'referral' as Page, label: '推薦' },
+              { key: 'vip' as Page, label: 'VIP' },
+          ]
+      };
+      
       if (isDeveloper) {
-          items.push({ key: 'admin', label: '管理員' });
+          baseMenus['總覽'].push({ key: 'admin' as Page, label: '管理' });
       }
-      return items;
+      
+      return baseMenus;
   }, [isDeveloper]);
+
+  const navItems: { key: Page; label: string }[] = useMemo(() => {
+      return Object.values(gameMenus).flat();
+  }, [gameMenus]);
 
   const handleConnectClick = () => { if (isConnected) disconnect(); else connect({ connector: injected() }); };
 
@@ -86,6 +101,9 @@ export const Header: React.FC<HeaderProps> = ({
     const handleClickOutside = (event: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
         setIsTxPopoverOpen(false);
+      }
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpenDropdown(null);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -99,6 +117,15 @@ export const Header: React.FC<HeaderProps> = ({
   const handleNavClick = (page: Page) => {
       setActivePage(page);
       setIsMenuOpen(false);
+      setOpenDropdown(null);
+  };
+
+  const toggleDropdown = (category: string) => {
+      setOpenDropdown(openDropdown === category ? null : category);
+  };
+
+  const toggleMobileCategory = (category: string) => {
+      setOpenMobileCategory(openMobileCategory === category ? null : category);
   };
 
   return (
@@ -144,11 +171,47 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
             </div>
             
-            <nav className="hidden md:flex mt-4 flex-wrap justify-center gap-2 text-sm">
-              {navItems.map(item => (
-                  <a key={item.key} href={`#/${item.key}`} className={`nav-item ${activePage === item.key ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActivePage(item.key); }}>
-                    {item.label}
-                  </a>
+            <nav className="hidden md:flex mt-4 flex-wrap justify-center gap-6 text-sm" ref={dropdownRef}>
+              {Object.entries(gameMenus).map(([category, items]) => (
+                  <div key={category} className="relative">
+                      <button 
+                          className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                              items.some(item => item.key === activePage) 
+                                  ? 'bg-[#C0A573] text-white' 
+                                  : 'text-gray-300 hover:bg-gray-700'
+                          }`}
+                          onClick={() => toggleDropdown(category)}
+                      >
+                          {category}
+                          <svg 
+                              className={`w-4 h-4 transition-transform ${openDropdown === category ? 'rotate-180' : ''}`} 
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                          >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m19 9-7 7-7-7" />
+                          </svg>
+                      </button>
+                      
+                      {openDropdown === category && (
+                          <div className="absolute top-full left-0 mt-2 bg-[#2A2B3D] border border-gray-600 rounded-lg shadow-lg z-50 min-w-[120px]">
+                              {items.map(item => (
+                                  <a 
+                                      key={item.key} 
+                                      href={`#/${item.key}`} 
+                                      className={`block px-4 py-3 text-sm transition-colors border-b border-gray-600 last:border-b-0 ${
+                                          activePage === item.key 
+                                              ? 'bg-[#C0A573] text-white font-semibold' 
+                                              : 'text-gray-300 hover:bg-gray-600'
+                                      }`}
+                                      onClick={(e) => { e.preventDefault(); handleNavClick(item.key); }}
+                                  >
+                                      {item.label}
+                                  </a>
+                              ))}
+                          </div>
+                      )}
+                  </div>
               ))}
             </nav>
         </div>
@@ -175,16 +238,47 @@ export const Header: React.FC<HeaderProps> = ({
                     )}
                 </div>
                 
-                <nav className="flex flex-col items-center gap-4">
-                    {navItems.map(item => (
-                        <a 
-                           key={item.key} 
-                           href={`#/${item.key}`} 
-                           className={`w-full text-center py-3 text-lg rounded-lg transition-colors ${activePage === item.key ? 'bg-gray-700 font-semibold text-white' : 'text-gray-300'}`}
-                           onClick={(e) => { e.preventDefault(); handleNavClick(item.key); }}
-                        >
-                          {item.label}
-                        </a>
+                <nav className="flex flex-col gap-4">
+                    {Object.entries(gameMenus).map(([category, items]) => (
+                        <div key={category} className="bg-gray-700/30 rounded-lg overflow-hidden">
+                            <button 
+                                className={`w-full flex items-center justify-between p-4 text-left transition-colors ${
+                                    items.some(item => item.key === activePage) 
+                                        ? 'bg-[#C0A573] text-white' 
+                                        : 'text-gray-300 hover:bg-gray-600'
+                                }`}
+                                onClick={() => toggleMobileCategory(category)}
+                            >
+                                <span className="text-lg font-semibold">{category}</span>
+                                <svg 
+                                    className={`w-5 h-5 transition-transform ${openMobileCategory === category ? 'rotate-180' : ''}`} 
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m19 9-7 7-7-7" />
+                                </svg>
+                            </button>
+                            
+                            {openMobileCategory === category && (
+                                <div className="border-t border-gray-600">
+                                    {items.map((item, index) => (
+                                        <a 
+                                           key={item.key} 
+                                           href={`#/${item.key}`} 
+                                           className={`block px-6 py-4 text-lg transition-colors border-b border-gray-600 last:border-b-0 ${
+                                               activePage === item.key 
+                                                   ? 'bg-[#C0A573] text-white font-semibold' 
+                                                   : 'text-gray-300 hover:bg-gray-600'
+                                           }`}
+                                           onClick={(e) => { e.preventDefault(); handleNavClick(item.key); }}
+                                        >
+                                          {item.label}
+                                        </a>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     ))}
                 </nav>
             </div>

@@ -17,8 +17,8 @@ export const useBatchOperations = ({ parties, chainId }: UseBatchOperationsProps
     const { showToast } = useAppToast();
     const queryClient = useQueryClient();
     
-    const dungeonStorageContract = getContract(chainId, 'dungeonStorage');
-    const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
+    const dungeonStorageContract = getContract('DUNGEONSTORAGE');
+    const dungeonMasterContract = getContract('DUNGEONMASTER');
     
     // 批量讀取所有隊伍的獎勵狀態
     const partyStatusCalls = parties?.map(party => ({

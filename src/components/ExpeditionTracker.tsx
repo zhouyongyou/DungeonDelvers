@@ -58,7 +58,7 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
     const [showBanner, setShowBanner] = useState(false);
     const [latestResult, setLatestResult] = useState<ExpeditionResult | null>(null);
 
-    const dungeonMasterContract = getContract(chainId === bsc.id ? chainId : bsc.id, 'dungeonMaster');
+    const dungeonMasterContract = getContract('DUNGEONMASTER');
 
     // Fetch recent expeditions from subgraph with caching
     const { data: graphResults, refetch } = useQuery({

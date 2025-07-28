@@ -12,6 +12,7 @@ import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useContractTransaction, ContractOperations } from '../hooks/useContractTransaction';
 import { APP_CONSTANTS, getVipTier } from '../config/constants';
 import { useAppToast } from '../contexts/SimpleToastContext';
+import { VipBenefitsGuide } from '../components/vip/VipBenefitsGuide';
 
 const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undefined, vipLevel: number, contractAddress?: string }> = ({ tokenId, chainId, vipLevel, contractAddress }) => {
     const [nftImage, setNftImage] = useState<string | null>(null);
@@ -144,7 +145,7 @@ const VipPageContent: React.FC = () => {
         soulShardBalance, stakedAmount, stakedValueUSD,
         tokenId, vipLevel, taxReduction,
         pendingUnstakeAmount, unstakeAvailableAt, isCooldownOver, countdown, allowance, 
-        cooldownDays, cooldownFormatted, cooldownPeriod, refetchAll
+        cooldownDays, cooldownFormatted, cooldownPeriod, refetchAll, startPollingRefresh
     } = useVipStatus();
 
     const { executeTransaction, isPending: isTxPending } = useContractTransaction();
@@ -168,9 +169,9 @@ const VipPageContent: React.FC = () => {
             successMessage: '授權成功！將自動為您質押...',
             errorMessage: '授權失敗',
             loadingMessage: '正在授權...',
-            onSuccess: () => {
+            onSuccess: async () => {
                 setIsAwaitingStakeAfterApproval(true);
-                refetchAll();
+                await refetchAll();
             }
         });
     }, [soulShardContract, vipStakingContract, executeTransaction, refetchAll]);
@@ -189,15 +190,29 @@ const VipPageContent: React.FC = () => {
             successMessage: '質押成功！',
             errorMessage: '質押失敗',
             loadingMessage: '正在質押...',
-            onSuccess: () => {
+            onSuccess: async () => {
                 setAmount('');
                 setRecentlyStaked(true);
-                refetchAll();
-                // 10秒後清除狀態
-                setTimeout(() => setRecentlyStaked(false), 10000);
+                
+                // 開始輪詢檢查狀態變更
+                logger.info('🎯 質押交易成功，開始輪詢檢查狀態變更...');
+                const pollingResult = await startPollingRefresh('stake', 15, 2500);
+                
+                if (pollingResult) {
+                    logger.info('✅ 質押狀態已成功更新');
+                    showToast('✅ 質押狀態已更新！', 'success');
+                } else {
+                    logger.warn('⚠️ 輪詢超時，但交易可能仍在處理中');
+                    showToast('⏳ 質押交易已提交，請稍後手動刷新頁面', 'info');
+                    // 備用：執行一次普通刷新
+                    await refetchAll();
+                }
+                
+                // 清除等待狀態
+                setRecentlyStaked(false);
             }
         });
-    }, [vipStakingContract, executeTransaction, amount, refetchAll]);
+    }, [vipStakingContract, executeTransaction, amount, refetchAll, startPollingRefresh, showToast]);
 
     const handleRequestUnstake = useCallback(async () => {
         if (!vipStakingContract || !amount) return;
@@ -213,12 +228,25 @@ const VipPageContent: React.FC = () => {
             successMessage: '贖回請求已提交！',
             errorMessage: '贖回請求失敗',
             loadingMessage: '正在請求贖回...',
-            onSuccess: () => {
+            onSuccess: async () => {
                 setAmount('');
-                refetchAll();
+                
+                // 開始輪詢檢查狀態變更
+                logger.info('🎯 贖回請求成功，開始輪詢檢查狀態變更...');
+                const pollingResult = await startPollingRefresh('unstake', 12, 3000);
+                
+                if (pollingResult) {
+                    logger.info('✅ 贖回請求狀態已成功更新');
+                    showToast('✅ 贖回請求已生效！', 'success');
+                } else {
+                    logger.warn('⚠️ 輪詢超時，但交易可能仍在處理中');
+                    showToast('⏳ 贖回請求已提交，請稍後手動刷新頁面', 'info');
+                    // 備用：執行一次普通刷新
+                    await refetchAll();
+                }
             }
         });
-    }, [vipStakingContract, executeTransaction, amount, refetchAll]);
+    }, [vipStakingContract, executeTransaction, amount, refetchAll, startPollingRefresh, showToast]);
 
     const handleClaim = useCallback(async () => {
         if (!vipStakingContract) return;
@@ -233,11 +261,23 @@ const VipPageContent: React.FC = () => {
             successMessage: '領取成功！',
             errorMessage: '領取失敗',
             loadingMessage: '正在領取...',
-            onSuccess: () => {
-                refetchAll();
+            onSuccess: async () => {
+                // 開始輪詢檢查狀態變更
+                logger.info('🎯 領取成功，開始輪詢檢查狀態變更...');
+                const pollingResult = await startPollingRefresh('claim', 10, 3000);
+                
+                if (pollingResult) {
+                    logger.info('✅ 領取狀態已成功更新');
+                    showToast('✅ 領取完成，狀態已更新！', 'success');
+                } else {
+                    logger.warn('⚠️ 輪詢超時，但交易可能仍在處理中');
+                    showToast('⏳ 領取交易已完成，請稍後手動刷新頁面', 'info');
+                    // 備用：執行一次普通刷新
+                    await refetchAll();
+                }
             }
         });
-    }, [vipStakingContract, executeTransaction, refetchAll]);
+    }, [vipStakingContract, executeTransaction, refetchAll, startPollingRefresh, showToast]);
     const handleMainAction = useCallback(() => { if (mode === 'stake') { if (needsApproval) handleApprove(); else handleStake(); } else { handleRequestUnstake(); } }, [mode, needsApproval, handleApprove, handleStake, handleRequestUnstake]);
     const handlePercentageClick = useCallback((percentage: number) => {
         const balance = mode === 'stake' ? soulShardBalance : stakedAmount;
@@ -422,9 +462,13 @@ const VipPageContent: React.FC = () => {
                             <p className="text-xs text-blue-300 mb-2">
                                 💡 <strong>稅率減免</strong>適用於從玩家金庫提取代幣時的手續費
                             </p>
-                            <p className="text-xs text-green-300">
+                            <p className="text-xs text-green-300 mb-2">
                                 ✅ <strong>等級計算</strong>：VIP等級 = √(USD價值/100)，平滑成長無上限<br/>
                                 🔢 <strong>稅率公式</strong>：每個VIP等級減免 0.5%
+                            </p>
+                            <p className="text-xs text-purple-300">
+                                🏰 <strong>祝壇加成</strong>：VIP等級直接加到升級成功率上<br/>
+                                ⚔️ <strong>地下城加成</strong>：增加所有地下城的基礎成功率
                             </p>
                         </div>
                     </div>
@@ -580,7 +624,7 @@ const VipPageContent: React.FC = () => {
                                 <div className="w-5 h-5 border-2 border-green-400 border-t-transparent rounded-full animate-spin"></div>
                                 <div className="text-green-300">
                                     <p className="font-medium">🎉 質押成功！</p>
-                                    <p className="text-sm">正在等待區塊鏈確認和頁面刷新...</p>
+                                    <p className="text-sm">正在智能輪詢檢查狀態更新...</p>
                                 </div>
                             </div>
                         </div>
@@ -593,9 +637,9 @@ const VipPageContent: React.FC = () => {
                             <div className="text-sm text-blue-200 space-y-2">
                                 <p className="font-medium">質押後的提示：</p>
                                 <ul className="text-xs space-y-1 text-blue-300 list-disc list-inside">
-                                    <li>質押成功後，頁面通常會在 3-5 秒內自動刷新</li>
-                                    <li>如果未自動刷新，請手動刷新頁面（F5 或 Ctrl+R）</li>
-                                    <li>刷新後將顯示您的 VIP 狀態和等級信息</li>
+                                    <li>質押成功後，系統會自動輪詢檢查狀態更新（最多 15 次，每 2.5 秒一次）</li>
+                                    <li>輪詢成功後會自動顯示最新的 VIP 狀態和等級信息</li>
+                                    <li>如果輪詢超時，請手動刷新頁面（F5 或 Ctrl+R）檢查最新狀態</li>
                                 </ul>
                             </div>
                         </div>

@@ -3,7 +3,7 @@
 
 export const PRICE_OVERRIDE = {
   // 是否啟用價格覆蓋
-  enabled: false, // V20 Oracle 已修復
+  enabled: false, // 關閉以進行實際 DEBUG
   
   // 價格配置
   prices: {

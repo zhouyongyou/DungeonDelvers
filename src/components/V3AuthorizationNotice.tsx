@@ -16,9 +16,9 @@ export const V3AuthorizationNotice: React.FC = () => {
   const [hasUserDismissed, setHasUserDismissed] = useState(false);
 
   // 獲取合約
-  const heroContract = getContract(bsc.id, 'hero');
-  const relicContract = getContract(bsc.id, 'relic');
-  const partyContract = getContract(bsc.id, 'party');
+  const heroContract = getContract('HERO');
+  const relicContract = getContract('RELIC');
+  const partyContract = getContract('PARTY');
   // V1版本：暫時不包含祭壇授權
 
   // 檢查授權狀態

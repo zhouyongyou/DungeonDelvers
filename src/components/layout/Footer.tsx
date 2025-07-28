@@ -139,7 +139,7 @@ export const Footer: React.FC = () => {
 
   // 只允許主網 chain.id
   const soulShardAddress = (chain && chain.id === bsc.id) 
-    ? getContract(chain.id, 'SOULSHARD')?.address 
+    ? getContract('SOULSHARD') 
     : undefined;
 
   return (

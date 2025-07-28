@@ -30,7 +30,7 @@ export class AdminPageDebugger {
     const invalidAddresses: string[] = [];
     
     contractNames.forEach(name => {
-      const contract = getContract(chainId, name);
+      const contract = getContractWithABI(chainId, name);
       
       if (!contract) {
         logger.error(`合約 ${name} 未找到！`);
@@ -87,7 +87,7 @@ export class AdminPageDebugger {
     const issues: string[] = [];
     
     parameterFunctions.forEach(({ contract: contractName, functions }) => {
-      const contract = getContract(chainId, contractName as any);
+      const contract = getContractWithABI(chainId, contractName as any);
       
       if (!contract || !contract.abi) {
         issues.push(`合約 ${contractName} 無法加載`);

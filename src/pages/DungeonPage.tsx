@@ -244,7 +244,7 @@ const usePlayerParties = () => {
                 image: '', 
                 description: '',
                 attributes: [],
-                contractAddress: getContract(bsc.id, 'party')?.address ?? '0x',
+                contractAddress: getContract('PARTY') ?? '0x',
                 type: 'party',
                 totalPower: BigInt(p.totalPower || '0'),
                 totalCapacity: BigInt(p.totalCapacity || '0'),
@@ -353,10 +353,10 @@ const PartyStatusCard: React.FC<PartyStatusCardProps> = ({ party, dungeons, onSt
     };
     
     const [selectedDungeonId, setSelectedDungeonId] = useState<bigint>(getHighestChallengeableDungeon());
-    const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
-    const dungeonStorageContract = getContract(chainId, 'dungeonStorage');
-    const dungeonCoreContract = getContract(chainId, 'dungeonCore');
-    const playerProfileContract = getContract(chainId, 'playerProfile');
+    const dungeonMasterContract = getContract('DUNGEONMASTER');
+    const dungeonStorageContract = getContract('DUNGEONSTORAGE');
+    const dungeonCoreContract = getContract('DUNGEONCORE');
+    const playerProfileContract = getContract('PLAYERPROFILE');
     
     // 🎯 當地城數據加載完成後，更新預設選擇
     React.useEffect(() => {
@@ -638,8 +638,8 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
     // const [currentAction, setCurrentAction] = useState<'expedition' | 'rest'>('expedition'); // 已移除休息功能
 
     // ✅ 將所有Hooks調用移到組件頂部，在任何條件語句之前
-    const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
-    const dungeonCoreContract = getContract(bsc.id, 'dungeonCore');
+    const dungeonMasterContract = getContract('DUNGEONMASTER');
+    const dungeonCoreContract = getContract('DUNGEONCORE');
 
     // 🎯 一次性讀取 USD 到 SOUL 的匯率（用於所有地城獎勵顯示）
     const { data: usdToSoulRate } = useReadContract({
@@ -656,8 +656,8 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
 
     // 讀取全局獎勵倍率
     const { data: globalRewardMultiplier } = useReadContract({
-        address: getContract(bsc.id, 'dungeonMaster')?.address,
-        abi: getContract(bsc.id, 'dungeonMaster')?.abi,
+        address: getContractWithABI(bsc.id, 'dungeonMaster')?.address,
+        abi: getContractWithABI(bsc.id, 'dungeonMaster')?.abi,
         functionName: 'globalRewardMultiplier',
         query: {
             staleTime: 1000 * 60 * 5, // 5分鐘緩存
@@ -687,7 +687,7 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
     const { data: partiesFromGraph, isLoading: isLoadingParties, refetch: refetchParties, error: partiesError } = usePlayerParties();
     
     // 獲取所有隊伍的冷卻時間
-    const dungeonStorageContractForCooldown = getContract(chainId, 'dungeonStorage');
+    const dungeonStorageContractForCooldown = getContract('DUNGEONSTORAGE');
     
     // 使用 useQueries 批量獲取所有隊伍的狀態
     const partyCooldownQueries = useQueries({
@@ -819,7 +819,7 @@ const DungeonPageContent: React.FC<{ setActivePage: (page: Page) => void; }> = (
     const isTxPending = currentProgress.status !== 'idle' && currentProgress.status !== 'error';
 
     // 獲取地城資訊的邏輯保持不變，因為這是全域數據
-    const dungeonStorageContract = getContract(bsc.id, 'dungeonStorage');
+    const dungeonStorageContract = getContract('DUNGEONSTORAGE');
     const dungeonContracts = useMemo(() => {
         if (!dungeonStorageContract) {
             logger.warn('[DungeonPage] dungeonStorageContract is null');

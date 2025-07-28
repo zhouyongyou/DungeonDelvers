@@ -68,7 +68,7 @@ const useTargetAddress = () => {
 // ★ 核心改造：新的 Hook，用於獲取玩家檔案數據
 const usePlayerProfile = (targetAddress: Address | undefined) => {
     const { chainId } = useAccount();
-    const playerProfileContract = getContract(chainId === bsc.id ? chainId : bsc.id, 'playerProfile');
+    const playerProfileContract = getContract('PLAYERPROFILE');
 
     // 步驟 1: 從 The Graph 快速獲取 tokenId 和 experience
     const { data: graphData, isLoading: isLoadingGraph, isError, error: graphError } = useQuery({
@@ -566,8 +566,10 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
         if (isMyProfile) {
             return (
                 <EmptyState message="您尚未獲得玩家檔案">
-                    <p className="text-gray-400 mb-4 max-w-md text-center">您的玩家檔案是一個獨一無二的靈魂綁定代幣 (SBT)，它將在您**首次成功完成地下城遠征**後由系統自動為您鑄造。</p>
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <p className="text-gray-400 mb-4 max-w-md text-center">
+                        您的玩家檔案是一個獨一無二的靈魂綁定代幣 (SBT)，它將在您<strong>首次成功完成地下城遠征</strong>後由系統自動為您鑄造。
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
                         <ActionButton onClick={() => setActivePage('dungeon')} className="w-48 h-12">前往地下城</ActionButton>
                         <ActionButton onClick={() => setActivePage('mint')} className="w-48 h-12 bg-teal-600 hover:bg-teal-500">前往鑄造</ActionButton>
                     </div>

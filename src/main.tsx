@@ -12,10 +12,14 @@ import { ExpeditionProvider } from './contexts/ExpeditionContext';
 import App from './App';
 import { checkSubgraphSync } from './utils/checkSubgraphSync';
 import { apolloClient } from './config/apolloClient';
+import { initializeAppConfig } from './config/initConfig';
 
 // 將函數暴露到全局，方便在控制台手動調用
 // 移除自動檢查以減少 API 請求
 (window as any).checkSubgraphSync = checkSubgraphSync;
+
+// 初始化應用配置
+initializeAppConfig().catch(console.error);
 
 // 第一步：測試基本的 React Query
 const queryClient = new QueryClient({

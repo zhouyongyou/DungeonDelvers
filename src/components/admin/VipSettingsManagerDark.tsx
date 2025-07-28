@@ -21,7 +21,7 @@ const VipSettingsManager: React.FC<VipSettingsManagerProps> = ({ chainId }) => {
   const [cooldownUnit, setCooldownUnit] = useState<'seconds' | 'minutes' | 'hours' | 'days'>('days');
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const vipContract = getContract(chainId, 'vipStaking');
+  const vipContract = getContract('VIPSTAKING');
 
   // 讀取當前冷卻期
   const { data: currentCooldown, isLoading } = useReadContract({

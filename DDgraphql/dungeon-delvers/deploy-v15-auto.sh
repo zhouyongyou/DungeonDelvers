@@ -48,7 +48,7 @@ graph deploy --studio dungeon-delvers --version-label "V15" || {
 echo "\n✅ 部署成功！"
 echo "\n📊 查詢端點："
 echo "Studio: https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.0.9"
-echo "Decentralized: https://gateway.thegraph.com/api/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs"
+echo "Decentralized: https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs"
 echo "\n📝 注意事項："
 echo "1. 新交易會立即被索引"
 echo "2. 子圖同步需要時間（可能數小時）"

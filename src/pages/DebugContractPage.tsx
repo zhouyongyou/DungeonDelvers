@@ -11,7 +11,7 @@ const DebugContractPage: React.FC = () => {
   const [debugInfo, setDebugInfo] = useState<any>({});
 
   // 讀取 DungeonCore 的 owner
-  const dungeonCoreContract = getContract(bsc.id, 'dungeonCore');
+  const dungeonCoreContract = getContract('DUNGEONCORE');
   
   const { data: owner, error: ownerError, isLoading } = useReadContract({
     address: dungeonCoreContract?.address,

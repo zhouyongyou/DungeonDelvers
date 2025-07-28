@@ -2,22 +2,37 @@
 
 此文檔記錄所有需要更新合約地址的位置，方便未來合約升級時使用。
 
-## 🚨 最新合約地址 (V2 - 2025-01-17)
+## 🚨 最新合約地址 (V25 - 2025-07-28)
 
-| 合約名稱 | 地址 | 說明 |
+| 合約名稱 | V25 地址 | 說明 |
 |---------|------|------|
-| Oracle | `0xD7e41690270Cc4f06F13eF47764F030CC4411904` | 價格預言機 |
-| DungeonStorage | `0x85Fe26dF31903A522e78eb7C853DeA7b6CF7eFa6` | 地城資料儲存 |
-| PlayerVault | `0x67CEecf8BE748dFd77D90D87a376Bd745B7c3c62` | 玩家金庫 |
-| AltarOfAscension | `0xdf87881b48b51380CE47Bf6B54930ef1e07471F0` | 升星祭壇 |
-| **DungeonMaster** | `0xd13250E0F0766006816d7AfE95EaEEc5e215d082` | **V2 - 移除擁有權限制** |
-| Hero | `0xB882915F4fD4C3773e0E8eeBB65088CB584A0Bdf` | 英雄 NFT |
-| Relic | `0x41cb97b903547C4190D66E818A64b7b37DE005c0` | 聖物 NFT |
-| Party | `0x075F68Ab40A55CB4341A7dF5CFdB873696502dd0` | 隊伍 NFT |
-| VIPStaking | `0x8D7Eb405247C9AD0373D398C5F63E88421ba7b49` | VIP 質押 |
-| PlayerProfile | `0x7f5D359bC65F0aB07f7A874C2efF72752Fb294e5` | 玩家檔案 |
-| DungeonCore | `0xd03d3D7456ba3B52E6E0112eBc2494dB1cB34524` | 核心合約 |
-| SoulShard | `0xc88dAD283Ac209D77Bfe452807d378615AB8B94a` | 代幣（未更新） |
+| **Oracle** | `0x2350D85e5DF1b6a6d055CD61FeD27d5dC36B6F52` | **V25 - 價格預言機** |
+| **DungeonCore** | `0x04b33eEB6Da358ea9Dd002a1E1c28AC90A25881E` | **V25 - 核心合約** |
+| **DungeonStorage** | `0x4b1A9a45d0a1C35CDbae04272814f3daA9b59c47` | **V25 - 地城資料儲存** |
+| **PlayerVault** | `0x4d06483c907DB1CfA9C2207D9DC5a1Abad86544b` | **V25 - 玩家金庫** |
+| **DungeonMaster** | `0x08Bd8E0D85A7F10bEecCBA9a67da9033f9a7C8D9` | **V25 - 地城探索** |
+| **Hero** | `0x162b0b673f38C11732b0bc0B4B026304e563e8e2` | **V25 - 英雄 NFT** |
+| **Relic** | `0x15c2454A31Abc0063ef4a71d0640057d71847a22` | **V25 - 聖物 NFT** |
+| **Party** | `0xab07E90d44c34FB62313C74F3C7b4b343E52a253` | **V25 - 隊伍 NFT** |
+| **AltarOfAscension** | `0x0148Aff0Dee6D31BA9825e66ED34a66BCeF45845` | **V25 - 升星祭壇** |
+| **VIPStaking** | `0xdC285539069Fa51b9259bd1F1d66f23f74B96A6c` | **V25 - VIP 質押** |
+| **PlayerProfile** | `0x145F19e672a7D53ddb16bcE3fdeAd976bb3ef82f` | **V25 - 玩家檔案** |
+| **SoulShard** | `0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF` | **代幣合約** |
+| **DungeonMasterWallet** | `0x10925A7138649C7E1794CE646182eeb5BF8ba647` | **管理員錢包** |
+
+## 🚀 V25 配置系統革新
+
+**重要變更**: 從 V25 開始，合約地址管理完全革新：
+
+### ✅ **新系統：配置即服務**
+- **單一配置源**: `/public/config/v25.json`
+- **自動同步**: 前端、後端、子圖全部自動同步
+- **零停機更新**: 更新配置文件即可，無需重新部署
+
+### ❌ **舊系統：手動管理**
+- 需要手動更新 20+ 個文件中的硬編碼地址
+- 容易出錯，更新時可能遺漏某些位置
+- 需要重新部署所有服務
 
 ## 📍 需要更新合約地址的位置
 

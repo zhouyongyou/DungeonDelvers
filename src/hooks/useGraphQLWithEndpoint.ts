@@ -3,7 +3,7 @@
 
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import { GraphQLClient } from 'graphql-request';
-import { getEndpointForFeature, isUsingStudioVersion } from '../config/graphql';
+import { getEndpointForFeatureSync, isUsingStudioVersion } from '../config/graphql';
 import { useCallback, useMemo } from 'react';
 
 // 創建 GraphQL 客戶端的緩存
@@ -30,8 +30,8 @@ export function useGraphQLWithEndpoint<TData = any, TVariables = any>({
   queryKey,
   ...options
 }: UseGraphQLOptions<TData, TVariables>) {
-  // 根據功能獲取對應端點
-  const endpoint = useMemo(() => getEndpointForFeature(feature), [feature]);
+  // 根據功能獲取對應端點（使用同步版本，因為初始化後已有快取）
+  const endpoint = useMemo(() => getEndpointForFeatureSync(feature), [feature]);
   const client = useMemo(() => getOrCreateClient(endpoint), [endpoint]);
   const hasDelay = useMemo(() => isUsingStudioVersion(feature), [feature]);
   

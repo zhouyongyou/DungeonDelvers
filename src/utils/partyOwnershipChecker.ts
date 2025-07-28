@@ -22,7 +22,7 @@ export class PartyOwnershipChecker {
     error?: string;
   }> {
     try {
-      const partyContract = getContract(bsc.id, 'party');
+      const partyContract = getContract('PARTY');
       
       if (!partyContract) {
         throw new Error('Party 合約配置不存在');
@@ -53,7 +53,7 @@ export class PartyOwnershipChecker {
     error?: string;
   }> {
     try {
-      const partyContract = getContract(bsc.id, 'party');
+      const partyContract = getContract('PARTY');
       
       if (!partyContract) {
         throw new Error('Party 合約配置不存在');
@@ -97,7 +97,7 @@ export class PartyOwnershipChecker {
     error?: string;
   }> {
     try {
-      const dungeonCoreContract = getContract(bsc.id, 'dungeonCore');
+      const dungeonCoreContract = getContract('DUNGEONCORE');
       
       if (!dungeonCoreContract) {
         throw new Error('DungeonCore 合約配置不存在');

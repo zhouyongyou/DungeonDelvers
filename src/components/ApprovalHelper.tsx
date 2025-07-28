@@ -21,11 +21,11 @@ export const ApprovalHelper: React.FC<ApprovalHelperProps> = ({ className = '' }
   const [isChecking, setIsChecking] = useState(false);
   
   // 獲取合約實例
-  const soulShardContract = getContract('soulShard', bsc.id);
-  const heroContract = getContract('hero', bsc.id);
-  const relicContract = getContract('relic', bsc.id);
-  const partyContract = getContract('party', bsc.id);
-  const altarContract = getContract('altarOfAscension', bsc.id);
+  const soulShardContract = getContractWithABI(bsc.id, 'soulShard');
+  const heroContract = getContractWithABI(bsc.id, 'hero');
+  const relicContract = getContractWithABI(bsc.id, 'relic');
+  const partyContract = getContractWithABI(bsc.id, 'party');
+  const altarContract = getContractWithABI(bsc.id, 'altarOfAscension');
   
   // 檢查 SoulShard 授權
   const { data: soulShardAllowanceToHero } = useReadContract({

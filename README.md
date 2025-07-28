@@ -1,4 +1,4 @@
-# Dungeon Delvers (地下城探索者) - V18
+# Dungeon Delvers (地下城探索者) - V25
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Blockchain: BSC](https://img.shields.io/badge/Blockchain-BSC-yellow.svg)](https://www.bscscan.com/)
@@ -7,7 +7,7 @@
 [![Performance](https://img.shields.io/badge/Query_Speed-50%25_Faster-green.svg)](https://dungeondelvers.xyz/)
 [![Config Management](https://img.shields.io/badge/Config-Enterprise_Grade-blue.svg)](https://dungeondelvers.xyz/)
 
-歡迎來到 Dungeon Delvers 的全新紀元！本專案配備**企業級配置管理系統**和**極速查詢優化**，從原生 JavaScript 架構全面重構為現代化的 **React + TypeScript** 技術棧，為玩家提供頂級的遊戲體驗，並展示 Web3 DApp 的最佳實踐。
+歡迎來到 Dungeon Delvers 的全新紀元！本專案在 V25 版本中實現了**動態配置系統**、**樂觀 UI 更新**和**零停機部署**，從原生 JavaScript 架構全面重構為現代化的 **React + TypeScript** 技術棧，為玩家提供絲滑的遊戲體驗，並展示 Web3 DApp 的最佳實踐。
 
 玩家可以招募英雄、鑄造聖物、組建獨一無二的冒險隊伍，深入充滿挑戰的地下城，尋找傳說中的「魂晶」($SoulShard)。
 
@@ -30,10 +30,10 @@
 
 ## 🚀 技術亮點
 
-### 🔧 企業級配置管理
-- **動態配置載入**: CDN 配置系統，無需重新部署即可更新合約地址和網路設定
-- **環境變數優化**: 從 20+ 個簡化至 5-9 個變數，大幅簡化部署流程
-- **分層安全架構**: 前端極速響應 + 後端穩定保護的混合策略
+### 🔧 V25 配置即服務架構
+- **零停機更新**: 配置文件熱更新，合約升級無需重新部署任何服務
+- **統一真相來源**: 單一配置文件管理前端、後端、子圖的所有地址和設定
+- **漸進式降級**: 配置載入失敗時自動使用環境變數和默認值保障服務
 
 ### ⚡ 突破性效能優化
 - **查詢速度提升 50%**: 使用 The Graph 付費去中心化網路，告別慢速查詢
@@ -45,8 +45,14 @@
 - **智能後備系統**: 自動故障轉移機制，單點故障零影響
 - **零停機更新**: 配置熱更新支援，維護期間服務不中斷
 
+### 🚀 V25 用戶體驗革新
+- **樂觀 UI 更新**: 授權完成後立即顯示鑄造按鈕，無需等待鏈上確認
+- **智能狀態管理**: 自動處理授權狀態轉換，提供絲滑操作體驗
+- **實時價格顯示**: USD 等值計算和數量-稀有度關係提示
+
 ### 🎯 開發者體驗
-- **30 秒快速設置**: 只需配置 WalletConnect Project ID 即可啟動
+- **10 秒快速啟動**: 只需一個環境變數即可運行完整 DApp
+- **配置同步腳本**: 一鍵更新所有硬編碼配置到最新版本
 - **完整部署文檔**: 包含 Vercel 和 Render 的最佳實踐配置
 - **智能錯誤處理**: 詳細的故障排除指南和監控面板
 

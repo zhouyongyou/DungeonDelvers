@@ -25,7 +25,7 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
     restCostPowerDivisor: ''
   });
 
-  const dungeonMasterContract = useMemo(() => getContract(chainId, 'dungeonMaster'), [chainId]);
+  const dungeonMasterContract = useMemo(() => getContract('DUNGEONMASTER'), [chainId]);
 
   // 讀取當前參數
   const { data: currentParams, isLoading } = useReadContracts({

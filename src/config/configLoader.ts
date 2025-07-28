@@ -22,10 +22,10 @@ export interface AppConfig {
   };
 }
 
-// 默認配置（作為備份）- V22 版本
+// 默認配置（作為備份）- V25 版本
 const DEFAULT_CONFIG: AppConfig = {
-  version: 'V22',
-  lastUpdated: '2025-07-25',
+  version: 'V25',
+  lastUpdated: '2025-07-28',
   contracts: {
     USD: '0x7C67Af4EBC6651c95dF78De11cfe325660d935FE',
     SOULSHARD: '0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF',
@@ -44,8 +44,8 @@ const DEFAULT_CONFIG: AppConfig = {
     UNISWAP_POOL: '0x1e5Cd5F386Fb6F39cD8788675dd3A5ceB6521C82',
   },
   subgraph: {
-    studio: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.1.1',
-    decentralized: 'https://gateway.thegraph.com/api/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs',
+    studio: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.2.0',
+    decentralized: 'https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs',
     useDecentralized: import.meta.env.PROD
   },
   network: {
@@ -62,6 +62,28 @@ class ConfigLoader {
   private configPromise: Promise<AppConfig> | null = null;
 
   private constructor() {}
+
+  // 構建包含 API key 的去中心化 URL
+  private buildDecentralizedUrl(decentralizedConfig: any): string | null {
+    if (!decentralizedConfig) return null;
+    
+    const baseUrl = decentralizedConfig.url;
+    const apiKey = decentralizedConfig.apiKey;
+    
+    if (!baseUrl) return null;
+    
+    // 如果 URL 已經包含 API key，直接返回
+    if (baseUrl.includes('/api/') && baseUrl.includes('subgraphs/id/')) {
+      return baseUrl;
+    }
+    
+    // 如果有 API key 且 URL 格式正確，則插入 API key
+    if (apiKey && baseUrl.includes('gateway.thegraph.com/api/subgraphs/id/')) {
+      return baseUrl.replace('/api/subgraphs/id/', `/api/${apiKey}/subgraphs/id/`);
+    }
+    
+    return baseUrl;
+  }
 
   static getInstance(): ConfigLoader {
     if (!ConfigLoader.instance) {
@@ -119,7 +141,7 @@ class ConfigLoader {
         contracts: remoteConfig.contracts,
         subgraph: {
           studio: remoteConfig.subgraph?.studio?.url || DEFAULT_CONFIG.subgraph.studio,
-          decentralized: remoteConfig.subgraph?.decentralized?.url || DEFAULT_CONFIG.subgraph.decentralized,
+          decentralized: this.buildDecentralizedUrl(remoteConfig.subgraph?.decentralized) || DEFAULT_CONFIG.subgraph.decentralized,
           useDecentralized: remoteConfig.subgraph?.useDecentralized ?? import.meta.env.PROD
         },
         network: remoteConfig.network

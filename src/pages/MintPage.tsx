@@ -78,11 +78,11 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
             staleTime: 1000 * 60 * 2, // 2分鐘 - 縮短快取時間，平衡性能與準確性
             gcTime: 1000 * 60 * 10,   // 10分鐘
             refetchOnWindowFocus: false,
-            retry: 2,
+            retry: 3, // 增加重試次數
             // 🔄 價格查詢失敗時的重試策略
             retryDelay: (attemptIndex) => {
-                // 第一次重試立即執行，第二次重試等待1秒
-                return attemptIndex === 0 ? 0 : 1000;
+                // 遞增延遲：0ms, 500ms, 1500ms
+                return attemptIndex * 500;
             },
         },
     });
@@ -114,6 +114,18 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     
     // 🔍 價格調試信息
     useEffect(() => {
+        if (isError && error) {
+            console.error(`[MintPage] 價格讀取錯誤:`, {
+                type,
+                quantity,
+                contractAddress: contractConfig?.address,
+                error: error,
+                errorMessage: (error as any)?.message || 'Unknown error',
+                errorCode: (error as any)?.code,
+                errorDetails: (error as any)?.details,
+            });
+        }
+        
         if (requiredAmount) {
             const priceInEther = Number(formatEther(requiredAmount));
             const pricePerUnit = priceInEther / quantity;
@@ -186,9 +198,10 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
         args: [address!, contractConfig?.address as `0x${string}`],
         query: { 
             enabled: !!address && !!contractConfig && paymentSource === 'wallet',
-            staleTime: 1000 * 60 * 5, // 5分鐘 - 授權狀態需要較新
-            gcTime: 1000 * 60 * 15,   // 15分鐘
-            refetchOnWindowFocus: false,
+            staleTime: 1000 * 30, // 30秒 - 授權後需要快速更新
+            gcTime: 1000 * 60 * 5,   // 5分鐘
+            refetchOnWindowFocus: true, // 開啟視窗焦點刷新
+            refetchInterval: false, // 預設不自動刷新
             retry: 2,
         },
     });
@@ -210,6 +223,7 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
         error,
         platformFee: finalPlatformFee,
         refetchAllowance,
+        allowance: allowance ?? 0n,
     };
 };
 
@@ -312,11 +326,31 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
     const [paymentSource, setPaymentSource] = useState<PaymentSource>('wallet');
     const [mintingResult, setMintingResult] = useState<AnyNft | null>(null);
     const [showProgressModal, setShowProgressModal] = useState(false);
-    const [isAwaitingMintAfterApproval, setIsAwaitingMintAfterApproval] = useState(false);
+    const [isCheckingApproval, setIsCheckingApproval] = useState(false);
+    
+    // 樂觀授權狀態：用於立即更新 UI，無需等待鏈上確認
+    const [optimisticApprovalGranted, setOptimisticApprovalGranted] = useState(false);
 
     const debouncedQuantity = useDebounce(quantity, 300);
     
-    const { requiredAmount, balance, needsApproval, isLoading, isError, error, platformFee, refetchAllowance } = useMintLogic(type, debouncedQuantity, paymentSource, chainId);
+    const { requiredAmount, balance, needsApproval: baseNeedsApproval, isLoading, isError, error, platformFee, refetchAllowance, allowance } = useMintLogic(type, debouncedQuantity, paymentSource, chainId);
+    
+    // 合併實際授權狀態與樂觀狀態
+    const needsApproval = baseNeedsApproval && !optimisticApprovalGranted;
+    
+    // 當支付方式改變時，重置樂觀授權狀態
+    useEffect(() => {
+        if (paymentSource === 'vault') {
+            setOptimisticApprovalGranted(false);
+        }
+    }, [paymentSource]);
+    
+    // 當實際授權狀態更新且滿足需求時，可以重置樂觀狀態
+    useEffect(() => {
+        if (allowance && requiredAmount && allowance >= requiredAmount) {
+            setOptimisticApprovalGranted(false); // 重置，因為實際授權已經足够
+        }
+    }, [allowance, requiredAmount]);
     
     // 計算價格合理性
     const pricePerUnit = useMemo(() => {
@@ -359,14 +393,33 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
         }
     });
     
-    // 使用新的交易進度 Hook
+    // 使用新的交易進度 Hook - 優化授權體驗
     const { execute: executeApprove, progress: approveProgress, reset: resetApprove } = useTransactionWithProgress({
-        onSuccess: () => {
-            setIsAwaitingMintAfterApproval(true);
-            refetchAllowance();
+        onSuccess: async () => {
             setShowProgressModal(false);
-            // 添加刷新提示
-            showToast('授權成功！如果按鈕未更新，請刷新頁面', 'success');
+            showToast('授權完成！可以開始鑄造了 ⚡', 'success');
+            
+            // 🚀 樂觀更新：立即認為授權成功，無需等待鏈上確認
+            // 這樣用戶可以立即看到「招募」按鈕，提升體驗
+            setOptimisticApprovalGranted(true);
+            setIsCheckingApproval(false);
+            
+            // 在背景中更新實際授權狀態，但不阻塞 UI
+            setTimeout(async () => {
+                try {
+                    await refetchAllowance();
+                } catch (error) {
+                    console.log('背景更新授權狀態失敗，但不影響用戶操作:', error);
+                }
+            }, 500); // 500ms 後在背景更新
+            
+            // 為了保險起見，在 2-3 秒後再次檢查
+            setTimeout(() => {
+                refetchAllowance().catch(() => {
+                    // 如果還是失敗，手動觸發頁面刷新提示
+                    console.log('授權狀態檢查失敗，但用戶體驗不受影響');
+                });
+            }, 2500);
         },
         successMessage: '授權成功！',
         errorMessage: '授權失敗',
@@ -445,26 +498,15 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
         errorMessage: '鑄造失敗',
     });
     
-    // 授權完成後自動鑄造邏輯
+    // 每次 needsApproval 狀態變化時記錄
     useEffect(() => {
-        async function handlePostApproval() {
-            if (isAwaitingMintAfterApproval && !approveProgress.isLoading && !mintProgress.isLoading) {
-                // 等待足夠時間確保區塊鏈狀態更新
-                await new Promise<void>(resolve => setTimeout(resolve, 3000));
-                await refetchAllowance();
-                setIsAwaitingMintAfterApproval(false);
-                
-                // 檢查授權是否成功
-                if (!needsApproval && requiredAmount) {
-                    showToast('授權成功，開始自動鑄造...', 'info');
-                    handleMint(); // 自動觸發鑄造
-                } else {
-                    showToast('授權尚未完成，請稍後重試', 'info');
-                }
-            }
-        }
-        handlePostApproval();
-    }, [isAwaitingMintAfterApproval, approveProgress.isLoading, mintProgress.isLoading, needsApproval, requiredAmount, refetchAllowance, showToast]);
+        console.log('[MintPage] 授權狀態:', {
+            needsApproval,
+            allowance: allowance?.toString(),
+            requiredAmount: requiredAmount?.toString(),
+            paymentSource
+        });
+    }, [needsApproval, allowance, requiredAmount, paymentSource]);
 
     // 決定使用哪個進度狀態
     const currentProgress = needsApproval && paymentSource === 'wallet' ? approveProgress : mintProgress;
@@ -530,11 +572,20 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
         }
     };
     
-    const isButtonDisabled = !address || isLoading || isError || balance < requiredAmount || requiredAmount === 0n || isProcessing;
+    const isButtonDisabled = !address || isLoading || isError || balance < requiredAmount || requiredAmount === 0n || isProcessing || isCheckingApproval;
+
+    const getButtonText = () => {
+        if (!address) return '請先連接錢包';
+        if (isProcessing) return '處理中...';
+        if (isCheckingApproval) return '檢查授權狀態...';
+        if (paymentSource === 'wallet' && needsApproval) return '授權代幣使用';
+        if (optimisticApprovalGranted && paymentSource === 'wallet') return `招募 ${quantity} 個 ⚡`;
+        return `招募 ${quantity} 個`;
+    };
 
     const actionButton = (paymentSource === 'wallet' && needsApproval)
-        ? <ActionButton onClick={handleApprove} isLoading={isProcessing} className="w-48 h-12">授權</ActionButton>
-        : <ActionButton onClick={handleMint} isLoading={isProcessing || isLoading} disabled={isButtonDisabled} className="w-48 h-12">{isProcessing ? '處理中...' : (address ? `招募 ${quantity} 個` : '請先連接錢包')}</ActionButton>;
+        ? <ActionButton onClick={handleApprove} isLoading={isProcessing || isCheckingApproval} className="w-48 h-12">{getButtonText()}</ActionButton>
+        : <ActionButton onClick={handleMint} isLoading={isProcessing || isLoading || isCheckingApproval} disabled={isButtonDisabled} className="w-48 h-12">{getButtonText()}</ActionButton>;
 
     return (
         <div className="card-bg p-6 rounded-xl shadow-lg flex flex-col items-center h-full">
@@ -546,6 +597,11 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
                 title={needsApproval && paymentSource === 'wallet' ? '授權進度' : '鑄造進度'}
             />
             <h3 className="section-title">招募{title}</h3>
+            <div className="bg-amber-900/20 border border-amber-600/30 rounded-lg px-3 py-2 mb-3 mx-4">
+                <p className="text-xs text-amber-400 text-center font-medium">
+                    ⚡ 數量越多，稀有度越高！單個最高2★，50個可達5★
+                </p>
+            </div>
             <div className="my-4">
                 <div className="flex items-center justify-center gap-2 mb-2">
                     {options.map(q => {
@@ -595,16 +651,34 @@ const MintCard: React.FC<{ type: 'hero' | 'relic'; options: number[]; chainId: t
             </div>
             <div className="text-center mb-4 min-h-[72px] flex-grow flex flex-col justify-center">
                 {isLoading ? <div className="flex flex-col items-center justify-center"><LoadingSpinner color="border-gray-500" /><p className="text-sm text-gray-400 mt-2">讀取價格中...</p></div>
-                : isError ? <div className="text-red-500 text-center"><p className="font-bold">價格讀取失敗</p><p className="text-xs mt-1">{(error as { shortMessage?: string })?.shortMessage || '請檢查合約狀態或網路連線。'}</p></div>
+                : isError ? <div className="text-red-500 text-center">
+                    <p className="font-bold">價格讀取失敗</p>
+                    <p className="text-xs mt-1">{(error as { shortMessage?: string })?.shortMessage || '請檢查合約狀態或網路連線。'}</p>
+                    <button 
+                        onClick={() => window.location.reload()} 
+                        className="mt-2 px-3 py-1 text-xs bg-red-600 hover:bg-red-700 rounded transition-colors"
+                    >
+                        重新載入
+                    </button>
+                </div>
                 : (<div>
                     <p className="text-lg text-gray-400">總價:</p>
                     <p className="font-bold text-yellow-400 text-2xl">
                         {formatPriceDisplay(requiredAmount)}
                     </p>
                     <p className="text-xs text-gray-500">$SoulShard + {formatEther(typeof platformFee === 'bigint' ? platformFee * BigInt(quantity) : 0n)} BNB</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                        (約 ${(2 * quantity).toFixed(0)} USD，每個 $2 USD)
+                    </p>
                 </div>)}
             </div>
             {actionButton}
+            <div className="text-xs text-gray-400 mt-2 text-center">
+                <span className="inline-flex items-center gap-1">
+                    <span>💡</span>
+                    <span>價格基於 Oracle 即時匯率計算</span>
+                </span>
+            </div>
             <a href={contractConfig.address ? `https://www.okx.com/web3/nft/markets/collection/bscn/${contractConfig.address}` : '#'} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500 dark:text-indigo-400 hover:underline mt-2">前往市場交易</a>
             {contractConfig.address && (
                 <p className="text-xs text-gray-500 mt-1">

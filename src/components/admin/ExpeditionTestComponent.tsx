@@ -11,9 +11,9 @@ export const ExpeditionTestComponent: React.FC = () => {
     const [testDungeonId, setTestDungeonId] = useState<string>('1');
     const [testResults, setTestResults] = useState<any[]>([]);
 
-    const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
-    const dungeonStorageContract = getContract(bsc.id, 'dungeonStorage');
-    const dungeonCoreContract = getContract(bsc.id, 'dungeonCore');
+    const dungeonMasterContract = getContract('DUNGEONMASTER');
+    const dungeonStorageContract = getContract('DUNGEONSTORAGE');
+    const dungeonCoreContract = getContract('DUNGEONCORE');
 
     // 1. 檢查探索費用
     const { data: explorationFee } = useReadContract({

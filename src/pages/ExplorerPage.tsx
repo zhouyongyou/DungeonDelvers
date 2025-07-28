@@ -258,7 +258,7 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
     useAccount();
     const [submittedId, setSubmittedId] = useState<string | null>(null);
 
-    const contractAddress = getContract(bsc.id, type)?.address;
+    const contractAddress = getContractWithABI(bsc.id, type)?.address;
 
     const { data, isLoading, isError, error } = useQuery({
         queryKey: ['explorer', type, submittedId],
@@ -347,12 +347,12 @@ const ContractAddressSection: React.FC = () => {
       items: [
         {
           name: "DungeonCore",
-          address: getContract(bsc.id, 'DUNGEONCORE')?.address || '',
+          address: getContract('DUNGEONCORE') || '',
           description: "總機合約，管理所有模組的地址和權限，是整個遊戲的中央控制器"
         },
         {
           name: "Oracle",
-          address: getContract(bsc.id, 'ORACLE')?.address || '',
+          address: getContract('ORACLE') || '',
           description: "價格預言機 V22，自適應 TWAP 機制，永不失敗的價格查詢"
         }
       ]
@@ -362,17 +362,17 @@ const ContractAddressSection: React.FC = () => {
       items: [
         {
           name: "Hero",
-          address: getContract(bsc.id, 'HERO')?.address || '',
+          address: getContract('HERO') || '',
           description: "英雄 NFT (ERC721)，每個英雄有不同的稀有度和戰力值"
         },
         {
           name: "Relic",
-          address: getContract(bsc.id, 'RELIC')?.address || '',
+          address: getContract('RELIC') || '',
           description: "聖物 NFT (ERC721)，提供容量加成，用於地城探索"
         },
         {
           name: "Party",
-          address: getContract(bsc.id, 'PARTY')?.address || '',
+          address: getContract('PARTY') || '',
           description: "隊伍 NFT (ERC721)，將英雄和聖物組合成隊伍進行探索"
         }
       ]
@@ -382,17 +382,17 @@ const ContractAddressSection: React.FC = () => {
       items: [
         {
           name: "DungeonMaster",
-          address: getContract(bsc.id, 'DUNGEONMASTER')?.address || '',
+          address: getContract('DUNGEONMASTER') || '',
           description: "地城探索邏輯 V2，處理隊伍探索、戰鬥和獎勵計算"
         },
         {
           name: "DungeonStorage",
-          address: getContract(bsc.id, 'DUNGEONSTORAGE')?.address || '',
+          address: getContract('DUNGEONSTORAGE') || '',
           description: "地城數據存儲，記錄所有地城的狀態和探索記錄"
         },
         {
           name: "AltarOfAscension",
-          address: getContract(bsc.id, 'ALTAROFASCENSION')?.address || '',
+          address: getContract('ALTAROFASCENSION') || '',
           description: "升星祭壇，使用 SOUL 代幣提升英雄和聖物的稀有度"
         }
       ]
@@ -402,17 +402,17 @@ const ContractAddressSection: React.FC = () => {
       items: [
         {
           name: "PlayerVault",
-          address: getContract(bsc.id, 'PLAYERVAULT')?.address || '',
+          address: getContract('PLAYERVAULT') || '',
           description: "玩家金庫，管理玩家的 SOUL 代幣存取和餘額"
         },
         {
           name: "VIPStaking",
-          address: getContract(bsc.id, 'VIPSTAKING')?.address || '',
+          address: getContract('VIPSTAKING') || '',
           description: "VIP 質押系統，質押 SOUL 獲得 VIP NFT 和特權"
         },
         {
           name: "PlayerProfile",
-          address: getContract(bsc.id, 'PLAYERPROFILE')?.address || '',
+          address: getContract('PLAYERPROFILE') || '',
           description: "玩家檔案系統，管理經驗值、等級和邀請關係"
         }
       ]
@@ -422,12 +422,12 @@ const ContractAddressSection: React.FC = () => {
       items: [
         {
           name: "SoulShard (SOUL)",
-          address: getContract(bsc.id, 'SOULSHARD')?.address || '',
+          address: getContract('SOULSHARD') || '',
           description: "遊戲代幣 (ERC20)，用於鑄造、升級和質押等所有遊戲活動"
         },
         {
           name: "USD Token",
-          address: getContract(bsc.id, 'USD')?.address || '',
+          address: getContract('USD') || '',
           description: "測試用 USD 代幣，用於價格計算和測試"
         }
       ]
@@ -437,12 +437,12 @@ const ContractAddressSection: React.FC = () => {
       items: [
         {
           name: "Uniswap V3 Pool",
-          address: getContract(bsc.id, 'UNISWAP_POOL')?.address || '',
+          address: getContract('UNISWAP_POOL') || '',
           description: "SOUL/USD 交易對，提供即時價格數據"
         },
         {
           name: "DungeonMaster Wallet",
-          address: getContract(bsc.id, 'DUNGEONMASTERWALLET')?.address || '',
+          address: getContract('DUNGEONMASTERWALLET') || '',
           description: "遊戲營運錢包，收取平台費用"
         }
       ]

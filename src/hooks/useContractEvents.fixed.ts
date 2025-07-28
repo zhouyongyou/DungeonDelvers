@@ -162,11 +162,11 @@ export const useContractEventsFixed = () => {
     }, [address, throttledRefresh]);
     
     // 合約實例
-    const heroContract = getContract(bsc.id, 'hero');
-    const relicContract = getContract(bsc.id, 'relic');
-    const partyContract = getContract(bsc.id, 'party');
-    const dungeonMasterContract = getContract(bsc.id, 'dungeonMaster');
-    const playerVaultContract = getContract(bsc.id, 'playerVault');
+    const heroContract = getContract('HERO');
+    const relicContract = getContract('RELIC');
+    const partyContract = getContract('PARTY');
+    const dungeonMasterContract = getContract('DUNGEONMASTER');
+    const playerVaultContract = getContract('PLAYERVAULT');
     
     // 🔧 修復：只監聽最重要的事件，減少併發數量
     

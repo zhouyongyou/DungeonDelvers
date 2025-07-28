@@ -536,19 +536,19 @@ async function parseNfts<T extends AssetWithTokenId>(
 ): Promise<Array<HeroNft | RelicNft | PartyNft | VipNft>> {
     if (!assets || assets.length === 0) return [];
 
-    const contractTypeMap: Record<NftType, 'hero' | 'relic' | 'party' | 'vipStaking'> = {
-        hero: 'hero',
-        relic: 'relic',
-        party: 'party',
-        vip: 'vipStaking',
+    const contractTypeMap: Record<NftType, keyof typeof CONTRACT_ADDRESSES> = {
+        hero: 'HERO',
+        relic: 'RELIC',
+        party: 'PARTY',
+        vip: 'VIPSTAKING',
     };
 
-    const contract = getContract(chainId, contractTypeMap[type]);
-    if (!contract) {
-        logger.warn(`在 chainId: ${chainId} 上找不到 '${contractTypeMap[type]}' 的合約設定`);
+    const contractName = contractTypeMap[type];
+    const contractAddress = CONTRACT_ADDRESSES[contractName];
+    if (!contractAddress) {
+        logger.warn(`在 chainId: ${chainId} 上找不到 '${contractName}' 的合約設定`);
         return [];
     }
-    const contractAddress = contract.address;
 
     // 直接從子圖數據構建 NFT 對象，無需額外的合約調用
     const results = assets.map((asset: T) => {

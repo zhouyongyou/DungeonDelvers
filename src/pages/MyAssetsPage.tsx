@@ -462,9 +462,9 @@ const MyAssetsPageContent: React.FC = () => {
     const [currentPartyData, setCurrentPartyData] = useState<{ heroIds: bigint[], relicIds: bigint[] } | null>(null);
 
     // Move all hooks to be called before any early returns
-    const heroContract = useMemo(() => chainId ? getContract(bsc.id, 'hero') : null, [chainId]);
-    const relicContract = useMemo(() => chainId ? getContract(bsc.id, 'relic') : null, [chainId]);
-    const partyContract = useMemo(() => chainId ? getContract(bsc.id, 'party') : null, [chainId]);
+    const heroContract = useMemo(() => chainId ? getContract('HERO') : null, [chainId]);
+    const relicContract = useMemo(() => chainId ? getContract('RELIC') : null, [chainId]);
+    const partyContract = useMemo(() => chainId ? getContract('PARTY') : null, [chainId]);
 
     const { data: nfts, isLoading, refetch, error } = useQuery({
         queryKey: ['ownedNfts', address, chainId],

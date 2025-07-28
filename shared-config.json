@@ -11,25 +11,25 @@
     "explorerUrl": "https://bscscan.com"
   },
   "contracts": {
-    "hero": "0xaa3166b87648F10E7C8A59f000E48d21A1A048C1",
-    "relic": "0x7023E506A9AD9339D5150c1c9F767A422066D3Df",
-    "party": "0xb069B70d61f96bE5f5529dE216538766672f1096",
-    "vipStaking": "0x769C47058c786A9d1b0948922Db70A56394c96FD",
-    "playerProfile": "0x861CFCA7af4E6005884CF3fE89C2a5Cf3d6F3c85",
-    "dungeonCore": "0x548A15CaFAE2a5D19f9683CDad6D57e3320E61a7",
-    "dungeonMaster": "0x8550ACe3B6C9Ef311B995678F9263A69bC00EC3A",
-    "oracle": "0xB75BB304AaBfB12B3A428BE77d6a0A9052671925",
-    "playerVault": "0x172cd598bC04609056e643Bba5430ceA9641aD3B",
-    "altarOfAscension": "0x66bf56FBec308E5f2713C4B96CE8e4B02fD3ae8B",
-    "dungeonStorage": "0xEC6773F9C52446BB2F8318dBBa09f58E72fe91b4"
+    "hero": "0x162b0b673f38C11732b0bc0B4B026304e563e8e2",
+    "relic": "0x15c2454A31Abc0063ef4a71d0640057d71847a22",
+    "party": "0xab07E90d44c34FB62313C74F3C7b4b343E52a253",
+    "vipStaking": "0xdC285539069Fa51b9259bd1F1d66f23f74B96A6c",
+    "playerProfile": "0x145F19e672a7D53ddb16bcE3fdeAd976bb3ef82f",
+    "dungeonCore": "0x04b33eEB6Da358ea9Dd002a1E1c28AC90A25881E",
+    "dungeonMaster": "0x08Bd8E0D85A7F10bEecCBA9a67da9033f9a7C8D9",
+    "oracle": "0x2350D85e5DF1b6a6d055CD61FeD27d5dC36B6F52",
+    "playerVault": "0x4d06483c907DB1CfA9C2207D9DC5a1Abad86544b",
+    "altarOfAscension": "0x0148Aff0Dee6D31BA9825e66ED34a66BCeF45845",
+    "dungeonStorage": "0x4b1A9a45d0a1C35CDbae04272814f3daA9b59c47"
   },
   "tokens": {
-    "soulShard": "0xc88dAD283Ac209D77Bfe452807d378615AB8B94a",
+    "soulShard": "0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF",
     "usd": "0x7C67Af4EBC6651c95dF78De11cfe325660d935FE"
   },
   "services": {
     "subgraph": {
-      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers/v2.0.4",
+      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.2.0",
       "id": "dungeon-delvers"
     },
     "metadataServer": {
@@ -47,8 +47,12 @@
     "pinataSecretKey": ""
   },
   "deployment": {
-    "environments": ["development", "staging", "production"],
+    "environments": [
+      "development",
+      "staging",
+      "production"
+    ],
     "autoVerify": true,
     "gasLimit": 8000000
   }
-} 
+}

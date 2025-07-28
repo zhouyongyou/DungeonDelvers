@@ -100,7 +100,7 @@ export class AdminConfigValidator {
 
     // 驗證合約地址
     if (config.contractName) {
-      const contract = getContract(this.chainId, config.contractName as any);
+      const contract = getContractWithABI(this.chainId, config.contractName as any);
       if (!contract) {
         errors.push(`配置 ${index}: 無法找到合約 ${config.contractName}`);
       } else if (!this.isValidAddress(contract.address)) {
@@ -131,13 +131,13 @@ export class AdminConfigValidator {
 
     // 檢查合約可用性
     const contracts = {
-      hero: getContract(chainId, 'hero'),
-      relic: getContract(chainId, 'relic'),
-      party: getContract(chainId, 'party'),
-      dungeonMaster: getContract(chainId, 'dungeonMaster'),
-      playerVault: getContract(chainId, 'playerVault'),
-      vipStaking: getContract(chainId, 'vipStaking'),
-      oracle: getContract(chainId, 'oracle'),
+      hero: getContract('HERO'),
+      relic: getContract('RELIC'),
+      party: getContract('PARTY'),
+      dungeonMaster: getContract('DUNGEONMASTER'),
+      playerVault: getContract('PLAYERVAULT'),
+      vipStaking: getContract('VIPSTAKING'),
+      oracle: getContract('ORACLE'),
     };
 
     // 只添加有效的合約配置
@@ -307,7 +307,7 @@ export class AdminConfigValidator {
     const validConfigs = this.validateParameterConfig(parameterConfig).validConfigs;
     
     return validConfigs.map(config => {
-      const contract = getContract(this.chainId, config.contractName as any);
+      const contract = getContractWithABI(this.chainId, config.contractName as any);
       
       if (!contract) {
         logger.warn(`無法找到合約: ${config.contractName}`);
@@ -342,14 +342,14 @@ export class AdminConfigValidator {
 
       // 驗證合約存在
       if (config.targetContractName) {
-        const contract = getContract(this.chainId, config.targetContractName);
+        const contract = getContractWithABI(this.chainId, config.targetContractName);
         if (!contract) {
           configErrors.push(`設定 ${index}: 無法找到目標合約 ${config.targetContractName}`);
         }
       }
 
       if (config.valueToSetContractName) {
-        const contract = getContract(this.chainId, config.valueToSetContractName);
+        const contract = getContractWithABI(this.chainId, config.valueToSetContractName);
         if (!contract) {
           configErrors.push(`設定 ${index}: 無法找到值合約 ${config.valueToSetContractName}`);
         }

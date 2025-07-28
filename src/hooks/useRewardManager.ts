@@ -18,8 +18,8 @@ export const useRewardManager = ({ partyId, chainId }: UseRewardManagerProps) =>
     const { showToast } = useAppToast();
     const queryClient = useQueryClient();
     
-    const dungeonStorageContract = getContract(chainId, 'dungeonStorage');
-    const dungeonMasterContract = getContract(chainId, 'dungeonMaster');
+    const dungeonStorageContract = getContract('DUNGEONSTORAGE');
+    const dungeonMasterContract = getContract('DUNGEONMASTER');
     
     // 讀取隊伍狀態（包含未領取獎勵）
     const { data: partyStatus, refetch: refetchStatus, isLoading: isLoadingStatus } = useReadContract({

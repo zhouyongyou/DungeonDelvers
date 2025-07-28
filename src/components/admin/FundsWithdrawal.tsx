@@ -34,7 +34,7 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
 
   // 獲取所有合約的 BNB 餘額
   const balanceQueries = contracts.map(({ name }) => {
-    const contract = getContract(chainId, name as any);
+    const contract = getContractWithABI(chainId, name as any);
     return contract ? { address: contract.address } : null;
   }).filter(Boolean);
 
@@ -56,7 +56,7 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
     }
     
     try {
-      const contract = getContract(chainId, contractName as any);
+      const contract = getContractWithABI(chainId, contractName as any);
       if (!contract) return;
 
       const hash = await writeContractAsync({ 
@@ -80,7 +80,7 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
     }
     
     try {
-      const contract = getContract(chainId, contractName as any);
+      const contract = getContractWithABI(chainId, contractName as any);
       if (!contract) return;
 
       // 嘗試不同的函數名稱
@@ -130,7 +130,7 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
         <div className="space-y-2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {contracts.map(({ name, label, hasWithdraw }) => {
-              const contract = getContract(chainId, name as any);
+              const contract = getContractWithABI(chainId, name as any);
               if (!contract) return null;
 
               return (

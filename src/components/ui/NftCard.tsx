@@ -24,7 +24,7 @@ interface NftCardProps {
 
 const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, fallbackImage }) => {
   const { address, chainId } = useAccount();
-  const vipStakingContract = getContract(chainId === bsc.id ? chainId : bsc.id, 'vipStaking');
+  const vipStakingContract = getContract('VIPSTAKING');
   
   // ✅ 使用實時合約數據獲取VIP等級，而不是元數據
   const { data: realTimeVipLevel } = useReadContract({

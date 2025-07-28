@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { useReadContracts, useWriteContract, useBalance } from 'wagmi';
 import { formatEther } from 'viem';
 import { ActionButton } from '../ui/ActionButton';
-import { getContract } from '../../config/contracts';
+import { getContract, CONTRACT_ADDRESSES } from '../../config/contracts';
+import { getContractWithABI } from '../../config/contractsWithABI';
 import { useAppToast } from '../../hooks/useAppToast';
 import { useTransactionStore } from '../../stores/useTransactionStore';
 import { bsc } from 'wagmi/chains';
@@ -32,22 +33,54 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
     { name: 'dungeonCore', label: '地城核心', hasWithdraw: false } // 無提取功能
   ];
 
-  // 獲取所有合約的 BNB 餘額
-  const balanceQueries = contracts.map(({ name }) => {
-    const contract = getContract(chainId, name as any);
-    return contract ? { address: contract.address } : null;
-  }).filter(Boolean);
-
-  const { data: balances } = useBalance({
-    address: balanceQueries[0]?.address as `0x${string}`,
-    chainId,
-    query: {
-      staleTime: 1000 * 60 * 5, // 5分鐘 - 合約餘額需要較新的數據
-      gcTime: 1000 * 60 * 15,   // 15分鐘
-      refetchOnWindowFocus: false,
-      retry: 2,
+  // 獲取合約地址的輔助函數
+  const getContractAddress = (name: string): string | null => {
+    switch (name) {
+      case 'dungeonMaster':
+        return CONTRACT_ADDRESSES.DUNGEONMASTER;
+      case 'hero':
+        return CONTRACT_ADDRESSES.HERO;
+      case 'relic':
+        return CONTRACT_ADDRESSES.RELIC;
+      case 'party':
+        return CONTRACT_ADDRESSES.PARTY;
+      case 'altarOfAscension':
+        return CONTRACT_ADDRESSES.ALTAROFASCENSION;
+      case 'playerVault':
+        return CONTRACT_ADDRESSES.PLAYERVAULT;
+      case 'vipStaking':
+        return CONTRACT_ADDRESSES.VIPSTAKING;
+      case 'dungeonCore':
+        return CONTRACT_ADDRESSES.DUNGEONCORE;
+      default:
+        return null;
     }
-  });
+  };
+
+  // 獲取所有合約的信息
+  const contractsWithAddresses = contracts.map(({ name, label, hasWithdraw }) => {
+    const address = getContractAddress(name);
+    const contractConfig = address ? getContractWithABI(chainId, name as any) : null;
+    
+    // 調試信息
+    if (!address) {
+      console.warn(`FundsWithdrawal: 找不到 ${name} 的地址`);
+    }
+    if (!contractConfig) {
+      console.warn(`FundsWithdrawal: 找不到 ${name} 的合約配置`);
+    }
+    
+    return {
+      name,
+      label,
+      hasWithdraw,
+      address,
+      contract: contractConfig
+    };
+  }).filter(item => item.address && item.contract);
+
+  // 調試：顯示有效的合約數量
+  console.log(`FundsWithdrawal: 找到 ${contractsWithAddresses.length} 個有效合約配置`);
 
   const handleWithdrawSoulShard = async (contractName: string, label: string, hasWithdraw: boolean) => {
     if (!hasWithdraw) {
@@ -62,12 +95,15 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
     }
     
     try {
-      const contract = getContract(chainId, contractName as any);
-      if (!contract) return;
+      const contractInfo = contractsWithAddresses.find(c => c.name === contractName);
+      if (!contractInfo?.contract) {
+        showToast(`找不到 ${label} 合約配置`, 'error');
+        return;
+      }
 
       const hash = await writeContractAsync({ 
-        address: contract.address, 
-        abi: contract.abi, 
+        address: contractInfo.contract.address, 
+        abi: contractInfo.contract.abi, 
         functionName: 'withdrawSoulShard' 
       });
       addTransaction({ hash, description: `提取 ${label} SoulShard` });
@@ -86,33 +122,36 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
     }
     
     try {
-      const contract = getContract(chainId, contractName as any);
-      if (!contract) return;
+      const contractInfo = contractsWithAddresses.find(c => c.name === contractName);
+      if (!contractInfo?.contract) {
+        showToast(`找不到 ${label} 合約配置`, 'error');
+        return;
+      }
 
-      // 嘗試不同的函數名稱
-      const functionNames = ['withdrawBNB', 'withdraw', 'withdrawETH', 'withdrawFunds'];
-      let success = false;
-
-      for (const funcName of functionNames) {
-        try {
-          const hash = await writeContractAsync({ 
-            address: contract.address, 
-            abi: contract.abi, 
-            functionName: funcName 
-          });
-          addTransaction({ hash, description: `提取 ${label} BNB` });
-          showToast(`${label} BNB 提取成功`, 'success');
-          success = true;
+      // 根據合約類型使用正確的函數名稱
+      let functionName = '';
+      switch (contractName) {
+        case 'dungeonMaster':
+        case 'hero':
+        case 'relic':
+          functionName = 'withdrawNativeFunding';
           break;
-        } catch (e) {
-          // 繼續嘗試下一個函數名
-          continue;
-        }
+        case 'party':
+        case 'altarOfAscension':
+          functionName = 'withdrawNative';
+          break;
+        default:
+          showToast(`${label} 不支援 BNB 提取`, 'warning');
+          return;
       }
 
-      if (!success) {
-        showToast(`${label} 可能不支援 BNB 提取`, 'warning');
-      }
+      const hash = await writeContractAsync({ 
+        address: contractInfo.contract.address, 
+        abi: contractInfo.contract.abi, 
+        functionName: functionName
+      });
+      addTransaction({ hash, description: `提取 ${label} BNB` });
+      showToast(`${label} BNB 提取成功`, 'success');
     } catch (e: any) {
       if (!e.message?.includes('User rejected')) {
         showToast(`提取 ${label} BNB 失敗: ${e.shortMessage || e.message}`, 'error');
@@ -134,11 +173,14 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
       
       {isExpanded && (
         <div className="space-y-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {contracts.map(({ name, label, hasWithdraw }) => {
-              const contract = getContract(chainId, name as any);
-              if (!contract) return null;
-
+          {contractsWithAddresses.length === 0 ? (
+            <div className="p-4 bg-red-900/20 border border-red-600 rounded-lg text-center">
+              <p className="text-red-300">⚠️ 找不到任何有效的合約配置</p>
+              <p className="text-sm text-red-400 mt-1">請檢查合約地址和 ABI 配置是否正確</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {contractsWithAddresses.map(({ name, label, hasWithdraw, address, contract }) => {
               return (
                 <div key={name} className="p-4 bg-gray-800 border border-gray-700 rounded-lg space-y-3">
                   <h5 className="font-medium text-gray-200">{label}</h5>
@@ -175,20 +217,21 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
                   
                   {/* 顯示合約地址 */}
                   <div className="text-xs text-gray-500 truncate">
-                    {contract.address}
+                    {address}
                   </div>
                 </div>
               );
             })}
-          </div>
+            </div>
+          )}
           
           <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-600 rounded-lg">
             <p className="text-sm text-yellow-300">
               ⚠️ 注意：
             </p>
             <ul className="text-xs text-yellow-200 mt-1 space-y-1">
-              <li>• Hero/Relic：支援提取 SoulShard 和 BNB</li>
-              <li>• Party/Altar：僅支援提取 BNB</li>
+              <li>• Hero/Relic/DungeonMaster：支援提取 SoulShard 和 BNB（使用 withdrawSoulShard 和 withdrawNativeFunding）</li>
+              <li>• Party/Altar：僅支援提取 BNB（使用 withdrawNative）</li>
               <li>• PlayerVault/VIPStaking：由用戶自行提取</li>
               <li>• DungeonCore：無提取功能</li>
             </ul>

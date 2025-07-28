@@ -28,23 +28,23 @@ export interface ContractConfig {
   name: string;
 }
 
-// 合約 ABI 映射
+// 合約 ABI 映射 - 處理 Hardhat artifact 格式
 const CONTRACT_ABIS = {
-  hero: heroABI,
-  relic: relicABI,
-  party: partyV3ABI,
-  soulShard: soulShardTokenABI,
-  playerVault: playerVaultABI,
-  dungeonCore: dungeonCoreABI,
-  dungeonMaster: dungeonMasterABI,
-  playerProfile: playerProfileABI,
-  vipStaking: vipStakingABI,
-  oracle: oracleABI,
-  altarOfAscension: altarOfAscensionABI,
-  dungeonStorage: dungeonStorageABI,
+  hero: heroABI.abi || heroABI,
+  relic: relicABI.abi || relicABI,
+  party: partyV3ABI.abi || partyV3ABI,
+  soulShard: soulShardTokenABI.abi || soulShardTokenABI,
+  playerVault: playerVaultABI.abi || playerVaultABI,
+  dungeonCore: dungeonCoreABI.abi || dungeonCoreABI,
+  dungeonMaster: dungeonMasterABI.abi || dungeonMasterABI,
+  playerProfile: playerProfileABI.abi || playerProfileABI,
+  vipStaking: vipStakingABI.abi || vipStakingABI,
+  oracle: oracleABI.abi || oracleABI,
+  altarOfAscension: altarOfAscensionABI.abi || altarOfAscensionABI,
+  dungeonStorage: dungeonStorageABI.abi || dungeonStorageABI,
   // 添加測試代幣的 ABI 映射
-  testUsd: soulShardTokenABI, // TestUSD 使用標準 ERC20 ABI
-  soulShardToken: soulShardTokenABI // 明確的 soulShard 映射
+  testUsd: soulShardTokenABI.abi || soulShardTokenABI, // TestUSD 使用標準 ERC20 ABI
+  soulShardToken: soulShardTokenABI.abi || soulShardTokenABI // 明確的 soulShard 映射
 } as const;
 
 /**
