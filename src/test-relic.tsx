@@ -1,11 +1,11 @@
 // 測試聖物合約數據
 import React from 'react';
 import { useReadContract } from 'wagmi';
-import { getContract } from './config/contracts';
+import { getContractWithABI } from './config/contractsWithABI';
 import { bsc } from 'wagmi/chains';
 
 export const TestRelic: React.FC = () => {
-    const relicContract = getContract(bsc.id, 'relic');
+    const relicContract = getContractWithABI('RELIC');
     
     // 讀取總供應量
     const { data: totalSupply } = useReadContract({

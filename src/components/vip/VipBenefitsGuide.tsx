@@ -198,7 +198,7 @@ const benefitCategories = [
           <div className="bg-gray-800/50 p-3 rounded font-mono text-xs">
             <div className="text-yellow-300">// AltarOfAscensionV2Fixed.sol 第205-210行</div>
             <div className="text-white mt-1">uint8 rawTotalBonus = vipLevel + additionalVipBonusRate[_player];</div>
-            <div className="text-white">totalVipBonus = rawTotalBonus > MAX_VIP_BONUS ? MAX_VIP_BONUS : rawTotalBonus;</div>
+            <div className="text-white">totalVipBonus = rawTotalBonus {`>`} MAX_VIP_BONUS ? MAX_VIP_BONUS : rawTotalBonus;</div>
             <div className="text-white">uint8 effectiveSuccessChance = rule.successChance + totalVipBonus;</div>
           </div>
           <p className="text-xs text-yellow-200 mt-2">

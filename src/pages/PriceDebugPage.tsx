@@ -3,11 +3,11 @@ import React, { useEffect } from 'react';
 import { useReadContract, useReadContracts } from 'wagmi';
 import { formatEther, parseEther } from 'viem';
 import { bsc } from 'wagmi/chains';
-import { getContractLegacy } from '../config/contractsWithABI';
+import { getContract, getContractWithABI } from '../config/contractsWithABI';
 
 // Oracle 狀態檢查組件
 const OracleStatusCheck: React.FC<{ oracleAddress: `0x${string}` | undefined }> = ({ oracleAddress }) => {
-    const oracleContract = getContractLegacy(bsc.id, 'oracle');
+    const oracleContract = getContractWithABI('ORACLE');
     
     // 讀取 Oracle 基本資訊
     const { data: oracleData, error: oracleError } = useReadContracts({
@@ -49,9 +49,9 @@ const PriceDebugPage: React.FC = () => {
     const chainId = bsc.id;
     
     // 獲取合約
-    const heroContract = getContractLegacy(chainId, 'hero');
-    const dungeonCoreContract = getContractLegacy(chainId, 'dungeonCore');
-    const oracleContract = getContractLegacy(chainId, 'oracle');
+    const heroContract = getContractWithABI('HERO');
+    const dungeonCoreContract = getContractWithABI('DUNGEONCORE');
+    const oracleContract = getContractWithABI('ORACLE');
     
     // 1. 讀取 Hero 的 mintPriceUSD
     const { data: mintPriceUSD, error: mintPriceError } = useReadContract({

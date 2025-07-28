@@ -8,8 +8,8 @@ import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
 // import { useAdminContracts } from '../hooks/useAdminContracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatEther, isAddress } from 'viem';
-import { getContractWithABI, CONTRACT_ADDRESSES as contractConfigs } from '../config/contractsWithABI';
-import { getContract } from '../config/contracts'; // 保留原有函數供地址查詢使用
+import { getContractWithABI, CONTRACTS_WITH_ABI as contractConfigs } from '../config/contractsWithABI';
+import { getContract, CONTRACT_ADDRESSES } from '../config/contracts'; // 保留原有函數供地址查詢使用
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
