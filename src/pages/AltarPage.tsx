@@ -285,7 +285,7 @@ const AltarPage: React.FC = () => {
                 if (!upgradeLog) throw new Error("找不到升級事件");
 
                 const decodedUpgradeLog = decodeEventLog({ abi: altarOfAscensionABI, ...upgradeLog });
-                if (decodedUpgradeLog.eventName !== 'UpgradeProcessed') throw new Error("事件名稱不符");
+                if (decodedUpgradeLog.eventName !== 'UpgradeAttempted') throw new Error("事件名稱不符");
 
                 const outcome = Number(((decodedUpgradeLog.args as unknown) as Record<string, unknown>).outcome);
                 const tokenContract = nftType === 'hero' ? heroContract : relicContract;

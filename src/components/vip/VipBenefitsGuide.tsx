@@ -194,13 +194,15 @@ const benefitCategories = [
         </div>
 
         <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
-          <h4 className="font-semibold text-yellow-300 mb-2">🎮 合約實現</h4>
+          <h4 className="font-semibold text-yellow-300 mb-2">🎮 合約實現（V2Fixed 新版）</h4>
           <div className="bg-gray-800/50 p-3 rounded font-mono text-xs">
-            <div className="text-yellow-300">// AltarOfAscension.sol 第180行</div>
-            <div className="text-white mt-1">uint8 effectiveSuccessChance = rule.successChance + vipBonusRate[_player];</div>
+            <div className="text-yellow-300">// AltarOfAscensionV2Fixed.sol 第205-210行</div>
+            <div className="text-white mt-1">uint8 rawTotalBonus = vipLevel + additionalVipBonusRate[_player];</div>
+            <div className="text-white">totalVipBonus = rawTotalBonus > MAX_VIP_BONUS ? MAX_VIP_BONUS : rawTotalBonus;</div>
+            <div className="text-white">uint8 effectiveSuccessChance = rule.successChance + totalVipBonus;</div>
           </div>
           <p className="text-xs text-yellow-200 mt-2">
-            ⚡ VIP 加成直接加到普通成功率上，讓您的升星之路更加順暢！
+            ⚡ 新版合約支援自動 VIP 等級加成 + 管理員額外加成，總加成上限 20%！
           </p>
         </div>
       </div>

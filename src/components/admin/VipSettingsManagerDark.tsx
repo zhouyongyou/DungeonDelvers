@@ -28,17 +28,23 @@ const AltarVipBonusManager: React.FC<{ chainId: number }> = ({ chainId }) => {
   const altarContract = getContract('ALTAROFASCENSION');
   const vipContract = getContract('VIPSTAKING');
 
-  // 檢查單個地址的 VIP 加成
-  const { data: currentBonus, isLoading: isBonusLoading, refetch: refetchBonus } = useReadContract({
+  // 檢查單個地址的 VIP 加成（新版合約 V2Fixed）
+  const { data: playerVipInfo, isLoading: isBonusLoading, refetch: refetchBonus } = useReadContract({
     address: altarContract?.address as `0x${string}`,
     abi: altarContract?.abi,
-    functionName: 'vipBonusRate',
+    functionName: 'getPlayerVipInfo',
     args: singleAddress && isAddress(singleAddress) ? [singleAddress] : undefined,
     query: {
       enabled: !!altarContract && !!singleAddress && isAddress(singleAddress),
       staleTime: 1000 * 30,
     }
   });
+  
+  // 解析 VIP 信息：[currentVipLevel, additionalBonus, totalVipBonus, effectiveTotalBonus]
+  const currentVipLevel = playerVipInfo ? Number(playerVipInfo[0]) : 0;
+  const additionalBonus = playerVipInfo ? Number(playerVipInfo[1]) : 0;
+  const totalVipBonus = playerVipInfo ? Number(playerVipInfo[2]) : 0;
+  const effectiveVipBonus = playerVipInfo ? Number(playerVipInfo[3]) : 0;
 
   // 設置單個用戶的 VIP 加成
   const handleSetSingleBonus = async () => {
@@ -62,7 +68,7 @@ const AltarVipBonusManager: React.FC<{ chainId: number }> = ({ chainId }) => {
       const hash = await writeContractAsync({
         address: altarContract.address as `0x${string}`,
         abi: altarContract.abi,
-        functionName: 'setVIPBonus',
+        functionName: 'setAdditionalVIPBonus',
         args: [singleAddress, bonusValue]
       });
 
@@ -154,7 +160,7 @@ const AltarVipBonusManager: React.FC<{ chainId: number }> = ({ chainId }) => {
       const hash = await writeContractAsync({
         address: altarContract.address as `0x${string}`,
         abi: altarContract.abi,
-        functionName: 'setVIPBonusBatch',
+        functionName: 'batchSetAdditionalVIPBonus',
         args: [addresses, bonusRates]
       });
 
@@ -193,9 +199,20 @@ const AltarVipBonusManager: React.FC<{ chainId: number }> = ({ chainId }) => {
                 {isBonusLoading ? (
                   <span className="text-gray-400">檢查中...</span>
                 ) : (
-                  <span className="text-purple-300">
-                    當前加成: <strong>{Number(currentBonus || 0)}%</strong>
-                  </span>
+                  <div className="space-y-1">
+                    <div className="text-purple-300">
+                      VIP 等級加成: <strong>{currentVipLevel}%</strong>
+                    </div>
+                    <div className="text-green-300">
+                      管理員額外加成: <strong>{additionalBonus}%</strong>
+                    </div>
+                    <div className="text-yellow-300">
+                      總加成: <strong>{effectiveVipBonus}%</strong> 
+                      {totalVipBonus !== effectiveVipBonus && (
+                        <span className="text-red-400 text-xs">(原 {totalVipBonus}%，受上限限制)</span>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             )}

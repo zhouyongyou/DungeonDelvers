@@ -38,6 +38,7 @@ import OraclePriceTest from '../components/admin/OraclePriceTestDark';
 import GameFlowTest from '../components/admin/GameFlowTestDark';
 // RPC監控已移除以解決循環依賴問題
 import { ContractHealthCheck } from '../components/admin/ContractHealthCheck';
+import { PitchUrlManager } from '../components/admin/PitchUrlManager';
 import { validateContract, getSafeContract } from '../utils/contractValidator';
 
 type SupportedChainId = typeof bsc.id;
@@ -864,6 +865,13 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = ({ chainId }) 
         onExpand={() => setLoadedSections(prev => ({ ...prev, vipSettings: true }))}
       >
         <VipSettingsManager chainId={chainId} />
+      </AdminSection>
+      
+      <AdminSection 
+        title="📊 Pitch 頁面管理"
+        defaultExpanded={false}
+      >
+        <PitchUrlManager />
       </AdminSection>
       
       <AdminSection 

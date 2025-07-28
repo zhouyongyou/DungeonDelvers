@@ -81,6 +81,15 @@ export function handleUpgradeAttempted(event: UpgradeAttempted): void {
         upgradeAttempt.newRarity = event.params.targetRarity
     }
     
+    // V5 Optimized VIP fields - check if they exist in the event
+    // Note: These fields were added in V5, so they might be null for older events
+    if (event.params.vipLevel) {
+        upgradeAttempt.vipLevel = event.params.vipLevel
+    }
+    if (event.params.totalVipBonus) {
+        upgradeAttempt.totalVipBonus = event.params.totalVipBonus
+    }
+    
     upgradeAttempt.save()
     
     // 更新統計數據

@@ -476,7 +476,7 @@ const VipPageContent: React.FC = () => {
                                 🔢 <strong>稅率公式</strong>：每個VIP等級減免 0.5%
                             </p>
                             <p className="text-xs text-purple-300">
-                                🏰 <strong>祭壇加成</strong>：需管理員手動設置，目前未自動生效 ⚠️<br/>
+                                🏰 <strong>祭壇加成</strong>：現已支援自動 VIP 等級加成 + 管理員額外加成 ✅<br/>
                                 ⚔️ <strong>地下城加成</strong>：自動生效，增加所有地下城的基礎成功率 ✅
                             </p>
                         </div>

@@ -15,10 +15,10 @@ export const AltarVipBonus: React.FC<AltarVipBonusProps> = ({ className = '' }) 
   
   const altarContract = getContractWithABI('ALTAROFASCENSION');
   
-  // 讀取祭壇中的手動設置的 VIP 加成率
-  const { data: vipBonusRate, isLoading: isBonusLoading } = useReadContract({
+  // 讀取玩家 VIP 信息（新版合約 V2Fixed）
+  const { data: playerVipInfo, isLoading: isBonusLoading } = useReadContract({
     ...altarContract,
-    functionName: 'vipBonusRate',
+    functionName: 'getPlayerVipInfo',
     args: address ? [address] : undefined,
     query: {
       enabled: !!address && !!altarContract,
@@ -27,8 +27,14 @@ export const AltarVipBonus: React.FC<AltarVipBonusProps> = ({ className = '' }) 
   });
 
   const isLoading = isVipLoading || isBonusLoading;
-  const manualBonusRate = Number(vipBonusRate || 0);
-  const autoVipBonus = vipLevel || 0; // 自動 VIP 加成（地下城模式）
+  
+  // 解析 VIP 信息：[currentVipLevel, additionalBonus, totalVipBonus, effectiveTotalBonus]
+  const currentVipLevel = playerVipInfo ? Number(playerVipInfo[0]) : 0;
+  const additionalBonus = playerVipInfo ? Number(playerVipInfo[1]) : 0;
+  const totalVipBonus = playerVipInfo ? Number(playerVipInfo[2]) : 0;
+  const effectiveVipBonus = playerVipInfo ? Number(playerVipInfo[3]) : 0;
+  
+  const autoVipBonus = vipLevel || 0; // 地下城使用的自動 VIP 加成
 
   if (!address) {
     return null;
@@ -113,18 +119,30 @@ export const AltarVipBonus: React.FC<AltarVipBonusProps> = ({ className = '' }) 
             <span className="font-bold text-green-300">自動生效 +{autoVipBonus}%</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-orange-300">祭壇加成</span>
-            <span className={`font-bold ${manualBonusRate > 0 ? 'text-green-300' : 'text-red-300'}`}>
-              {manualBonusRate > 0 ? `手動設置 +${manualBonusRate}%` : '尚未設置 +0%'}
+            <span className="text-orange-300">VIP 等級加成</span>
+            <span className="font-bold text-green-300">+{currentVipLevel}%</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-orange-300">管理員額外加成</span>
+            <span className={`font-bold ${
+              additionalBonus > 0 ? 'text-green-300' : 'text-gray-400'
+            }`}>
+              +{additionalBonus}%
             </span>
+          </div>
+          <div className="flex justify-between items-center border-t border-orange-500/20 pt-1 mt-2">
+            <span className="text-orange-200 font-semibold">總加成</span>
+            <span className="font-bold text-yellow-300">+{effectiveVipBonus}%</span>
           </div>
         </div>
         
         <div className="mt-2 pt-2 border-t border-orange-500/20">
           <p className="text-xs text-orange-200 text-center">
-            {manualBonusRate > 0 
-              ? '🎉 您已獲得管理員設置的祭壇 VIP 加成！'
-              : '🔧 祭壇 VIP 加成需要管理員手動設置才能生效'
+            {effectiveVipBonus > currentVipLevel 
+              ? `🎉 您獲得了 +${additionalBonus}% 管理員額外加成！`
+              : effectiveVipBonus === currentVipLevel && currentVipLevel > 0
+                ? '✅ VIP 等級加成自動生效中'
+                : '👤 質押 SoulShard 成為 VIP 以獲得加成'
             }
           </p>
         </div>
@@ -138,8 +156,8 @@ export const AltarVipBonus: React.FC<AltarVipBonusProps> = ({ className = '' }) 
         </div>
         <div className="space-y-1 text-xs text-gray-300">
           <p>• 地下城：自動讀取 VIP 等級並應用加成</p>
-          <p>• 祭壇：使用管理員手動設置的加成率映射</p>
-          <p>• 建議：升級祭壇合約以實現自動 VIP 加成</p>
+          <p>• 祭壇：現在也支援自動 VIP 等級加成了！</p>
+          <p>• 上限：總加成上限 20%，管理員額外加成上限 20%</p>
         </div>
       </div>
 

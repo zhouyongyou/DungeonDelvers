@@ -152,7 +152,7 @@ dataSources:
         - name: AltarOfAscensionV2Fixed
           file: ./abis/AltarOfAscensionV2Fixed.json
       eventHandlers:
-        - event: UpgradeAttempted(indexed address,indexed address,uint8,uint8,uint256[],uint256[],uint8,uint256)
+        - event: UpgradeAttempted(indexed address,indexed address,uint8,uint8,uint256[],uint256[],uint8,uint256,uint8,uint8)
           handler: handleUpgradeAttempted
       file: ./src/altar-of-ascension-v2.ts
   - kind: ethereum/contract

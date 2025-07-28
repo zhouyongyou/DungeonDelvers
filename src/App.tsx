@@ -21,6 +21,7 @@ import PerformanceDashboard from './components/debug/PerformanceDashboard';
 import { preloadCriticalImages, setupSmartPreloading } from './utils/imagePreloadStrategy';
 import { usePagePerformance } from './utils/performanceMonitor';
 import { quickDiagnose } from './utils/simpleDiagnostics';
+import { isValidPitchPath } from './utils/pitchAccess';
 // import { WebSocketIndicator } from './components/WebSocketIndicator'; // 移除，因為不再使用 Apollo
 
 // 動態導入所有頁面
@@ -38,6 +39,7 @@ const ReferralPage = lazy(() => import('./pages/ReferralPage'));
 // const CodexPage = lazy(() => import('./pages/CodexPage'));
 const DebugContractPage = lazy(() => import('./pages/DebugContractPage'));
 const PriceDebugPage = lazy(() => import('./pages/PriceDebugPage'));
+const PitchPage = lazy(() => import('./pages/PitchPage'));
 
 
 const PageLoader: React.FC = () => {
@@ -56,7 +58,13 @@ const PageLoader: React.FC = () => {
 const getPageFromHash = (): Page => {
     const hash = window.location.hash.replace('#/', '');
     const page = hash.split('?')[0];
-    const validPages: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'explorer', 'admin', 'altar', 'profile', 'vip', 'referral', /* 'codex', */ 'debug'];
+    
+    // Check if this is a valid pitch route with random path
+    if (isValidPitchPath(page)) {
+        return 'pitch';
+    }
+    
+    const validPages: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'explorer', 'admin', 'altar', 'profile', 'vip', 'referral', /* 'codex', */ 'debug', 'pitch'];
     if (validPages.includes(page as Page)) {
         return page as Page;
     }
@@ -136,6 +144,7 @@ function App() {
         // case 'codex': return <CodexPage />;
         case 'debug': return <DebugContractPage />;
         case 'priceDebug': return <PriceDebugPage />;
+        case 'pitch': return <PitchPage />;
         default: return <MintPage />; // 預設頁面也改為 MintPage
     }
   };

@@ -207,6 +207,10 @@ type UpgradeAttempt @entity(immutable: true) {
   fee: BigInt!
   burnedTokenIds: [BigInt!]!
   mintedTokenIds: [BigInt!]!
+  
+  " V5 Optimized new fields "
+  vipLevel: Int
+  totalVipBonus: Int
 }
 
 type GlobalStats @entity(immutable: false) {
