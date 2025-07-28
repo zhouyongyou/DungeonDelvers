@@ -353,7 +353,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
     const isLoading = isLoadingStats || isLoadingTaxParams;
 
     return (
-        <section className="space-y-8">
+        <section className="space-y-4 sm:space-y-6 md:space-y-8">
             <TransactionProgressModal
                 isOpen={showProgressModal}
                 onClose={() => setShowProgressModal(false)}

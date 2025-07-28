@@ -123,14 +123,13 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
         functionName = 'withdrawSoulShard';
         break;
       case 'playerVault':
-        // PlayerVault 使用 withdrawGameRevenue，需要提供金額
-        // 這裡可以設為 0 讓合約提取所有可用資金，或提示用戶輸入金額
-        showToast('PlayerVault 需要指定提取金額，請使用專門的管理界面', 'warning');
-        return;
+        functionName = 'withdrawGameRevenue';
+        functionArgs = [0]; // 傳入 0 提取全部可用資金
+        break;
       case 'vipStaking':
-        // VIPStaking 使用 withdrawStakedTokens，需要提供金額
-        showToast('VIPStaking 需要指定提取金額，請使用專門的管理界面', 'warning');
-        return;
+        functionName = 'withdrawStakedTokens';
+        functionArgs = [0]; // 傳入 0 提取全部可用資金
+        break;
       case 'party':
       case 'altarOfAscension':
       case 'dungeonCore':
@@ -245,11 +244,11 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
                       <ActionButton
                         onClick={() => handleWithdrawSoulShard(name, label, hasWithdraw)}
                         className={`text-xs px-3 py-1 ${
-                          hasWithdraw && ['dungeonMaster', 'hero', 'relic'].includes(name)
+                          hasWithdraw && ['dungeonMaster', 'hero', 'relic', 'playerVault', 'vipStaking'].includes(name)
                             ? 'bg-blue-600 hover:bg-blue-700' 
                             : 'bg-gray-700 cursor-not-allowed opacity-50'
                         }`}
-                        disabled={!hasWithdraw || !['dungeonMaster', 'hero', 'relic'].includes(name)}
+                        disabled={!hasWithdraw || !['dungeonMaster', 'hero', 'relic', 'playerVault', 'vipStaking'].includes(name)}
                       >
                         提取 SOUL
                       </ActionButton>
@@ -289,8 +288,8 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
             <ul className="text-xs text-yellow-200 mt-1 space-y-1">
               <li>• Hero/Relic/DungeonMaster：支援提取 SoulShard 和 BNB（使用 withdrawSoulShard 和 withdrawNativeFunding）</li>
               <li>• Party/Altar：僅支援提取 BNB（使用 withdrawNative）</li>
-              <li>• PlayerVault：有 withdrawGameRevenue 函數，但需要指定金額參數</li>
-              <li>• VIPStaking：有 withdrawStakedTokens 函數，但需要指定金額參數</li>
+              <li>• PlayerVault：支援提取 SoulShard（使用 withdrawGameRevenue(0) 提取全部）</li>
+              <li>• VIPStaking：支援提取 SoulShard（使用 withdrawStakedTokens(0) 提取全部可用資金）</li>
               <li>• DungeonCore：無提取功能</li>
             </ul>
           </div>
