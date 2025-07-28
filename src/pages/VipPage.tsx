@@ -12,6 +12,7 @@ import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useContractTransaction, ContractOperations } from '../hooks/useContractTransaction';
 import { APP_CONSTANTS, getVipTier } from '../config/constants';
 import { useAppToast } from '../contexts/SimpleToastContext';
+import { useAdminAccess } from '../hooks/useAdminAccess';
 import { VipBenefitsGuide } from '../components/vip/VipBenefitsGuide';
 
 const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undefined, vipLevel: number, contractAddress?: string }> = ({ tokenId, chainId, vipLevel, contractAddress }) => {
@@ -134,6 +135,7 @@ const VipPageContent: React.FC = () => {
     const { chainId } = useAccount();
     const publicClient = usePublicClient();
     const { showToast } = useAppToast();
+    const { isAdmin } = useAdminAccess();
 
     const [amount, setAmount] = useState('');
     const [mode, setMode] = useState<'stake' | 'unstake'>('stake');
@@ -316,7 +318,7 @@ const VipPageContent: React.FC = () => {
     const canUnstake = stakedAmount > 0n && !hasPendingUnstake;
     
     const renderActionPanel = () => (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
             {/* 如果有待處理的 unstake，顯示警告 */}
             {hasPendingUnstake && (
                 <div className="p-3 bg-yellow-900/50 border border-yellow-600/50 rounded-lg">
@@ -326,10 +328,10 @@ const VipPageContent: React.FC = () => {
                 </div>
             )}
             
-            <div className="flex items-center gap-2 bg-gray-900/50 p-1 rounded-lg">
+            <div className="flex items-center gap-1 sm:gap-2 bg-gray-900/50 p-1 rounded-lg">
                 <button 
                     onClick={() => { setMode('stake'); setAmount(''); }} 
-                    className={`w-full py-2 text-sm font-medium rounded-md transition ${mode === 'stake' ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'} ${!canStake ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`w-full py-2 text-xs sm:text-sm font-medium rounded-md transition ${mode === 'stake' ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'} ${!canStake ? 'opacity-50 cursor-not-allowed' : ''}`}
                     disabled={!canStake}
                     title={!canStake ? '有待領取的贖回請求，需要先領取' : '質押 SoulShard 代幣'}
                 >
@@ -337,7 +339,7 @@ const VipPageContent: React.FC = () => {
                 </button>
                 <button 
                     onClick={() => { setMode('unstake'); setAmount(''); }} 
-                    className={`w-full py-2 text-sm font-medium rounded-md transition ${mode === 'unstake' ? 'bg-red-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'} ${!canUnstake ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                    className={`w-full py-2 text-xs sm:text-sm font-medium rounded-md transition ${mode === 'unstake' ? 'bg-red-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'} ${!canUnstake ? 'opacity-50 cursor-not-allowed' : ''}`} 
                     disabled={!canUnstake}
                     title={!canUnstake ? (stakedAmount === 0n ? '沒有可贖回的質押金額' : '有待領取的贖回請求，需要先領取') : '請求贖回質押的代幣'}
                 >
@@ -403,71 +405,71 @@ const VipPageContent: React.FC = () => {
     
 
     return (
-        <section className="space-y-8 max-w-5xl mx-auto">
+        <section className="space-y-6 sm:space-y-8 max-w-5xl mx-auto">
             <h2 className="page-title">VIP 質押中心</h2>
-            <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto -mt-4">
+            <p className="text-center text-gray-500 dark:text-gray-400 max-w-2xl mx-auto -mt-3 sm:-mt-4 text-sm sm:text-base">
                 質押您的 $SoulShard 代幣以提升 VIP 等級，享受提現稅率減免等尊榮禮遇。
             </p>
             
             {/* VIP 等級說明卡片 */}
-            <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 p-6 rounded-xl border border-purple-500/20">
+            <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 p-4 sm:p-6 rounded-xl border border-purple-500/20">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-purple-300 flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-bold text-purple-300 flex items-center gap-2">
                         <span>👑</span> VIP 等級與福利
                     </h3>
                     <button
                         onClick={() => setShowBenefitsGuide(true)}
-                        className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 transition-all transform hover:scale-105 shadow-lg"
+                        className="px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 transition-all transform hover:scale-105 shadow-lg text-sm sm:text-base"
                     >
                         📖 查看完整指南
                     </button>
                 </div>
                 {/* 質押冷卻期提示 */}
-                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded">
+                <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-blue-900/20 border border-blue-500/30 rounded">
                     <p className="text-sm text-blue-300">
                         ⏱️ <strong>質押冷卻期</strong>：贖回請求後需等待 <span className="text-yellow-400 font-bold">{isLoading ? '讀取中...' : cooldownFormatted}</span> 才能領取
                     </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                     <div className="space-y-2">
-                        <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
+                        <div className="flex justify-between items-center py-2 px-2 sm:px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 1</span>
                             <span className="text-yellow-400">$100+ USD 質押價值</span>
                             <span className="text-green-400">0.5% 稅率減免</span>
                         </div>
-                        <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
+                        <div className="flex justify-between items-center py-2 px-2 sm:px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 2</span>
                             <span className="text-yellow-400">$400+ USD 質押價值</span>
                             <span className="text-green-400">1% 稅率減免</span>
                         </div>
-                        <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
+                        <div className="flex justify-between items-center py-2 px-2 sm:px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 3</span>
                             <span className="text-yellow-400">$900+ USD 質押價值</span>
                             <span className="text-green-400">1.5% 稅率減免</span>
                         </div>
-                        <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
+                        <div className="flex justify-between items-center py-2 px-2 sm:px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 4</span>
                             <span className="text-yellow-400">$1,600+ USD 質押價值</span>
                             <span className="text-green-400">2% 稅率減免</span>
                         </div>
-                        <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
+                        <div className="flex justify-between items-center py-2 px-2 sm:px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 5</span>
                             <span className="text-yellow-400">$2,500+ USD 質押價值</span>
                             <span className="text-green-400">2.5% 稅率減免</span>
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
+                        <div className="flex justify-between items-center py-2 px-2 sm:px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 10</span>
                             <span className="text-yellow-400">$10,000+ USD 質押價值</span>
                             <span className="text-green-400">5% 稅率減免</span>
                         </div>
-                        <div className="flex justify-between items-center py-2 px-3 bg-gray-800/50 rounded">
+                        <div className="flex justify-between items-center py-2 px-2 sm:px-3 bg-gray-800/50 rounded">
                             <span className="text-gray-300">VIP 20</span>
                             <span className="text-yellow-400">$40,000+ USD 質押價值</span>
                             <span className="text-green-400">10% 稅率減免</span>
                         </div>
-                        <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded">
+                        <div className="mt-3 p-2 sm:p-3 bg-blue-900/20 border border-blue-500/30 rounded">
                             <p className="text-xs text-blue-300 mb-2">
                                 💡 <strong>稅率減免</strong>適用於從玩家金庫提取代幣時的手續費
                             </p>
@@ -476,8 +478,17 @@ const VipPageContent: React.FC = () => {
                                 🔢 <strong>稅率公式</strong>：每個VIP等級減免 0.5%
                             </p>
                             <p className="text-xs text-purple-300">
-                                🏰 <strong>祭壇加成</strong>：現已支援自動 VIP 等級加成 + 管理員額外加成 ✅<br/>
-                                ⚔️ <strong>地下城加成</strong>：自動生效，增加所有地下城的基礎成功率 ✅
+                                {isAdmin ? (
+                                    <>
+                                        🏰 <strong>祭壇加成</strong>：現已支援自動 VIP 等級加成 + 管理員額外加成 ✅<br/>
+                                        ⚔️ <strong>地下城加成</strong>：自動生效，增加所有地下城的基礎成功率 ✅
+                                    </>
+                                ) : (
+                                    <>
+                                        🏰 <strong>祭壇加成</strong>：VIP 等級自動提升升星成功率 ✅<br/>
+                                        ⚔️ <strong>地下城加成</strong>：自動生效，增加所有地下城的基礎成功率 ✅
+                                    </>
+                                )}
                             </p>
                         </div>
                     </div>
@@ -491,31 +502,31 @@ const VipPageContent: React.FC = () => {
                 <div className="flex justify-center"><LoadingSpinner /></div>
             ) : hasStaked || pendingUnstakeAmount > 0n ? (
                 // 有質押或有待領取的情況
-                <div className={`grid grid-cols-1 gap-8 items-start ${hasStaked ? 'lg:grid-cols-2' : ''}`}>
-                    <div className={`card-bg p-6 rounded-2xl space-y-6 ${!hasStaked ? 'max-w-2xl mx-auto' : 'lg:col-span-1'}`}>
-                        <h3 className="section-title text-xl">我的 VIP 狀態</h3>
+                <div className={`grid grid-cols-1 gap-6 sm:gap-8 items-start ${hasStaked ? 'lg:grid-cols-2' : ''}`}>
+                    <div className={`card-bg p-4 sm:p-6 rounded-2xl space-y-4 sm:space-y-6 ${!hasStaked ? 'max-w-2xl mx-auto' : 'lg:col-span-1'}`}>
+                        <h3 className="section-title text-lg sm:text-xl">我的 VIP 狀態</h3>
                         
                         {/* 狀態統計 - 僅在有質押時顯示 */}
                         {hasStaked && (
-                            <div className="grid grid-cols-3 gap-4 text-center">
+                            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
                                 <div>
-                                    <div className="text-sm text-gray-400">質押總額</div>
-                                    <div className="font-bold text-2xl text-white">
+                                    <div className="text-xs sm:text-sm text-gray-400">質押總額</div>
+                                    <div className="font-bold text-lg sm:text-2xl text-white">
                                         {isLoading ? <LoadingSpinner /> : parseFloat(formatEther(stakedAmount)).toFixed(2)}
                                     </div>
-                                    <div className="text-xs text-gray-500">
+                                    <div className="text-xs sm:text-sm text-gray-500">
                                         ≈ ${isLoading ? '...' : parseFloat(formatEther(stakedValueUSD)).toFixed(2)} USD
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="text-sm text-gray-400">VIP 等級</div>
-                                    <div className="font-bold text-2xl text-yellow-400">
+                                    <div className="text-xs sm:text-sm text-gray-400">VIP 等級</div>
+                                    <div className="font-bold text-lg sm:text-2xl text-yellow-400">
                                         LV {isLoading ? '...' : vipLevel.toString()}
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="text-sm text-gray-400">稅率減免</div>
-                                    <div className="font-bold text-2xl text-green-400">
+                                    <div className="text-xs sm:text-sm text-gray-400">稅率減免</div>
+                                    <div className="font-bold text-lg sm:text-2xl text-green-400">
                                         {isLoading ? '...' : `${(Number(taxReduction) / 10000 * 100).toFixed(1)}%`}
                                     </div>
                                 </div>
@@ -523,17 +534,17 @@ const VipPageContent: React.FC = () => {
                         )}
                         
                         {/* 待領取區塊 */}
-                        <div className={`p-4 rounded-lg text-center transition-all duration-300 border-2 ${
+                        <div className={`p-3 sm:p-4 rounded-lg text-center transition-all duration-300 border-2 ${
                                 pendingUnstakeAmount > 0n 
                                     ? 'bg-yellow-900/50 border-yellow-400/60 shadow-lg shadow-yellow-400/20' 
                                     : 'bg-gray-800 border-gray-700'
                             }`}>
-                                <h4 className={`font-bold mb-2 flex items-center justify-center gap-2 ${
+                                <h4 className={`font-bold mb-2 flex items-center justify-center gap-2 text-sm sm:text-base ${
                                     pendingUnstakeAmount > 0n ? 'text-yellow-300' : 'text-gray-400'
                                 }`}>
                                     {pendingUnstakeAmount > 0n ? '💰' : '💫'} 待領取請求
                                 </h4>
-                                <p className="text-2xl font-mono text-white mb-2">
+                                <p className="text-lg sm:text-2xl font-mono text-white mb-2">
                                     {formatEther(pendingUnstakeAmount)} $SoulShard
                                 </p>
                                 

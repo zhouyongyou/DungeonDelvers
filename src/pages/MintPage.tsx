@@ -8,7 +8,7 @@ import { useAppToast } from '../contexts/SimpleToastContext';
 import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';
 import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
 import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
-import { getContract } from '../config/contractsWithABI';
+import { getContract, getContractWithABI } from '../config/contractsWithABI';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useTransactionStore } from '../stores/useTransactionStore';
@@ -65,16 +65,23 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     const soulShardContract = getContract('SOULSHARD');
     const playerVaultContract = getContract('PLAYERVAULT');
 
-    // ★★★【核心優化】★★★
-    // 直接呼叫 Hero/Relic 合約的 getRequiredSoulShardAmount 函式。
-    // 這個函式內部會處理所有 USD 到 SoulShard 的轉換，將兩次鏈上讀取合併為一次。
+    // ★★★【核心修復】★★★
+    // 改用與管理頁面相同的 Oracle 直接查詢方式，避免 Hero 合約的問題
+    // 每個 NFT 價格為 2 USD，需要轉換為 SoulShard
+    const dungeonCoreContract = getContractWithABI(chainId, 'dungeonCore');
+    
+    // 計算總 USD 金額（每個 NFT 2 USD）
+    const totalUSDAmount = useMemo(() => {
+        return BigInt(quantity * 2) * BigInt(10) ** BigInt(18); // 2 USD per NFT, 18 decimals
+    }, [quantity]);
+    
+    // 通過 DungeonCore 獲取價格（與管理頁面邏輯一致）
     const { data: contractRequiredAmount, isLoading: isLoadingPrice, isError, error, refetch: refetchPrice } = useReadContract({
-        address: contractConfig?.address,
-        abi: contractConfig?.abi,
-        functionName: 'getRequiredSoulShardAmount',
-        args: [BigInt(quantity)],
+        ...dungeonCoreContract,
+        functionName: 'getSoulShardAmountForUSD',
+        args: [totalUSDAmount],
         query: { 
-            enabled: !!contractConfig && quantity > 0 && !PRICE_OVERRIDE.enabled,
+            enabled: !!dungeonCoreContract && quantity > 0 && !PRICE_OVERRIDE.enabled,
             staleTime: 1000 * 60 * 2, // 2分鐘 - 縮短快取時間，平衡性能與準確性
             gcTime: 1000 * 60 * 10,   // 10分鐘
             refetchOnWindowFocus: false,
@@ -130,14 +137,15 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
             const priceInEther = Number(formatEther(requiredAmount));
             const pricePerUnit = priceInEther / quantity;
             
-            console.log(`[MintPage] ${type} 價格調試:`, {
+            console.log(`[MintPage] ${type} 價格調試 (通過 DungeonCore):`, {
                 requiredAmount: requiredAmount.toString(),
                 requiredAmountHex: '0x' + requiredAmount.toString(16),
                 requiredAmountDecimal: requiredAmount.toString(),
                 priceInEther,
                 pricePerUnit,
                 quantity,
-                contractAddress: contractConfig?.address,
+                totalUSDAmount: totalUSDAmount.toString(),
+                dungeonCoreAddress: dungeonCoreContract?.address,
                 // 顯示計算過程
                 calculation: {
                     raw: requiredAmount.toString(),
@@ -592,11 +600,11 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
     };
 
     const actionButton = (paymentSource === 'wallet' && needsApproval)
-        ? <ActionButton onClick={handleApprove} isLoading={isProcessing || isCheckingApproval} className="w-48 h-12">{getButtonText()}</ActionButton>
-        : <ActionButton onClick={handleMint} isLoading={isProcessing || isLoading || isCheckingApproval} disabled={isButtonDisabled} className="w-48 h-12">{getButtonText()}</ActionButton>;
+        ? <ActionButton onClick={handleApprove} isLoading={isProcessing || isCheckingApproval} className="w-full sm:w-48 h-10 sm:h-12 text-sm sm:text-base">{getButtonText()}</ActionButton>
+        : <ActionButton onClick={handleMint} isLoading={isProcessing || isLoading || isCheckingApproval} disabled={isButtonDisabled} className="w-full sm:w-48 h-10 sm:h-12 text-sm sm:text-base">{getButtonText()}</ActionButton>;
 
     return (
-        <div className="card-bg p-6 rounded-xl shadow-lg flex flex-col items-center h-full">
+        <div className="card-bg p-4 sm:p-5 md:p-6 rounded-xl shadow-lg flex flex-col items-center h-full">
             <MintResultModal nft={mintingResult} onClose={() => setMintingResult(null)} />
             <TransactionProgressModal
                 isOpen={showProgressModal}
@@ -605,13 +613,13 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                 title={needsApproval && paymentSource === 'wallet' ? '授權進度' : '鑄造進度'}
             />
             <h3 className="section-title">招募{title}</h3>
-            <div className="bg-amber-900/20 border border-amber-600/30 rounded-lg px-3 py-2 mb-3 mx-4">
+            <div className="bg-amber-900/20 border border-amber-600/30 rounded-lg px-2 sm:px-3 py-2 mb-3 mx-2 sm:mx-4">
                 <p className="text-xs text-amber-400 text-center font-medium">
                     ⚡ 數量越多，稀有度越高！單個最高2★，50個可達5★
                 </p>
             </div>
-            <div className="my-4">
-                <div className="flex items-center justify-center gap-2 mb-2">
+            <div className="my-3 sm:my-4">
+                <div className="flex items-center justify-center gap-1 sm:gap-2 mb-2">
                     {options.map(q => {
                         const tier = getBatchTierForQuantity(q);
                         const tierColors = {
@@ -626,7 +634,7 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                             <div key={q} className="flex flex-col items-center">
                                 <button 
                                     onClick={() => setQuantity(q)} 
-                                    className={`w-14 h-14 rounded-full font-bold text-lg transition-all flex items-center justify-center border-2 ${
+                                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full font-bold text-base sm:text-lg transition-all flex items-center justify-center border-2 ${
                                         quantity === q 
                                             ? `${tierColor} text-white scale-110 shadow-lg` 
                                             : 'bg-gray-700 hover:bg-gray-600 border-gray-600 text-gray-300'
@@ -649,15 +657,15 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                     })}
                 </div>
             </div>
-            <div className="w-full my-4">
+            <div className="w-full my-3 sm:my-4">
                 <label className="block text-sm font-medium mb-2 text-center text-gray-400">選擇支付方式</label>
-                <div className="grid grid-cols-2 gap-2 p-1 bg-gray-900/50 rounded-lg">
-                    <button onClick={() => setPaymentSource('wallet')} className={`px-4 py-2 rounded-md text-sm font-semibold transition ${paymentSource === 'wallet' ? 'bg-gray-700 text-white shadow' : 'text-gray-300'}`}>錢包支付</button>
-                    <button onClick={() => setPaymentSource('vault')} className={`px-4 py-2 rounded-md text-sm font-semibold transition ${paymentSource === 'vault' ? 'bg-gray-700 text-white shadow' : 'text-gray-300'}`}>金庫支付 (免稅)</button>
+                <div className="grid grid-cols-2 gap-1 sm:gap-2 p-1 bg-gray-900/50 rounded-lg">
+                    <button onClick={() => setPaymentSource('wallet')} className={`px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition ${paymentSource === 'wallet' ? 'bg-gray-700 text-white shadow' : 'text-gray-300'}`}>錢包支付</button>
+                    <button onClick={() => setPaymentSource('vault')} className={`px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition ${paymentSource === 'vault' ? 'bg-gray-700 text-white shadow' : 'text-gray-300'}`}>金庫支付 (免稅)</button>
                 </div>
                 <p className="text-xs text-center mt-2 text-gray-500">{paymentSource === 'wallet' ? '錢包餘額' : '金庫餘額'}: {address ? formatPriceDisplay(balance) : '0.00'} $SoulShard</p>
             </div>
-            <div className="text-center mb-4 min-h-[72px] flex-grow flex flex-col justify-center">
+            <div className="text-center mb-3 sm:mb-4 min-h-[60px] sm:min-h-[72px] flex-grow flex flex-col justify-center">
                 {isLoading ? <div className="flex flex-col items-center justify-center"><LoadingSpinner color="border-gray-500" /><p className="text-sm text-gray-400 mt-2">讀取價格中...</p></div>
                 : isError ? <div className="text-red-500 text-center">
                     <p className="font-bold">價格讀取失敗</p>
@@ -670,8 +678,8 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                     </button>
                 </div>
                 : (<div>
-                    <p className="text-lg text-gray-400">總價:</p>
-                    <p className="font-bold text-yellow-400 text-2xl">
+                    <p className="text-base sm:text-lg text-gray-400">總價:</p>
+                    <p className="font-bold text-yellow-400 text-xl sm:text-2xl">
                         {formatPriceDisplay(requiredAmount)}
                     </p>
                     <p className="text-xs text-gray-500">$SoulShard + {formatEther(typeof platformFee === 'bigint' ? platformFee * BigInt(quantity) : 0n)} BNB</p>
@@ -710,7 +718,7 @@ const MintingInterface = memo<{ chainId: typeof bsc.id }>(({ chainId }) => {
     const relicMintOptions = [1, 5, 10, 20, 50]; // 恢復單個鑄造選項
     return (
         <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
                 <MintCard type="hero" options={heroMintOptions} chainId={chainId} />
                 <MintCard type="relic" options={relicMintOptions} chainId={chainId} />
             </div>
@@ -728,13 +736,13 @@ const MintPage: React.FC = memo(() => {
             {chainId === bsc.id ? <MintingInterface chainId={chainId} /> : <div className="card-bg p-10 rounded-xl text-center text-gray-400"><p>請先連接到支援的網路 (BSC 主網) 以使用鑄造功能。</p></div>}
             
             {/* 收益最大化建議 */}
-            <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4 mt-8 mb-6 max-w-4xl mx-auto">
+            <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-3 sm:p-4 mt-6 sm:mt-8 mb-4 sm:mb-6 max-w-4xl mx-auto">
                 <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center mt-0.5">
                         <span className="text-white text-sm">💡</span>
                     </div>
                     <div className="flex flex-col gap-2">
-                        <p className="text-sm text-purple-300 font-semibold">
+                        <p className="text-xs sm:text-sm text-purple-300 font-semibold">
                             收益最大化策略
                         </p>
                         <ul className="text-xs text-gray-300 space-y-1 list-disc list-inside">
@@ -750,20 +758,20 @@ const MintPage: React.FC = memo(() => {
             </div>
             
             {/* 防撞庫機制說明 */}
-            <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/30 rounded-lg p-6 mb-8 max-w-4xl mx-auto">
+            <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/30 rounded-lg p-4 sm:p-5 md:p-6 mb-6 sm:mb-8 max-w-4xl mx-auto">
                 <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                        <span className="text-white text-xl">🛡️</span>
+                    <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-lg sm:text-xl">🛡️</span>
                     </div>
                     <div className="flex-1">
-                        <h3 className="text-lg font-bold text-blue-300 mb-3">
+                        <h3 className="text-base sm:text-lg font-bold text-blue-300 mb-2 sm:mb-3">
                             防撞庫機制 - 批量越大，稀有度越高
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4">
                             {BATCH_TIERS.map((tier, index) => (
-                                <div key={index} className="bg-black/30 rounded-lg p-3 border border-gray-600/50">
+                                <div key={index} className="bg-black/30 rounded-lg p-2 sm:p-3 border border-gray-600/50">
                                     <div className="text-center">
-                                        <div className="text-sm font-bold text-white mb-1">{tier.tierName}</div>
+                                        <div className="text-xs sm:text-sm font-bold text-white mb-1">{tier.tierName}</div>
                                         <div className="text-xs text-gray-400 mb-2">{tier.minQuantity}個起</div>
                                         <div className="text-xs text-gray-300 mb-2">最高 {tier.maxRarity}★</div>
                                         <div className="text-xs text-green-400">
@@ -773,9 +781,9 @@ const MintPage: React.FC = memo(() => {
                                 </div>
                             ))}
                         </div>
-                        <div className="bg-yellow-900/20 border border-yellow-600/50 rounded-lg p-3">
-                            <h4 className="text-yellow-300 font-semibold mb-2">💡 設計理念</h4>
-                            <ul className="text-sm text-gray-300 space-y-1">
+                        <div className="bg-yellow-900/20 border border-yellow-600/50 rounded-lg p-2 sm:p-3">
+                            <h4 className="text-sm sm:text-base text-yellow-300 font-semibold mb-2">💡 設計理念</h4>
+                            <ul className="text-xs sm:text-sm text-gray-300 space-y-1">
                                 <li>• <strong>提高撞庫成本</strong>：科學家必須投入更多資金才能嘗試獲得高稀有度</li>
                                 <li>• <strong>鼓勵大額投入</strong>：50個批量享受完整機率，獲得最佳遊戲體驗</li>
                                 <li>• <strong>機率透明化</strong>：每個批量等級的稀有度機率完全公開</li>

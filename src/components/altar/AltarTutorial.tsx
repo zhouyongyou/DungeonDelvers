@@ -241,22 +241,22 @@ export const AltarTutorial: React.FC<AltarTutorialProps> = ({ isOpen, onClose })
         </div>
 
         {/* 教學內容 */}
-        <div className="min-h-[300px] max-h-[60vh] overflow-y-auto">
-          <h2 className="text-2xl font-bold text-center mb-6 bg-gradient-to-r from-purple-300 to-indigo-300 bg-clip-text text-transparent">
+        <div className="min-h-[250px] sm:min-h-[300px] max-h-[50vh] sm:max-h-[60vh] overflow-y-auto">
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4 sm:mb-6 bg-gradient-to-r from-purple-300 to-indigo-300 bg-clip-text text-transparent">
             {currentTutorial.title}
           </h2>
           
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             {currentTutorial.content}
           </div>
         </div>
 
         {/* 導航按鈕 */}
-        <div className="flex justify-between items-center pt-4 border-t border-gray-700">
+        <div className="flex justify-between items-center pt-3 sm:pt-4 border-t border-gray-700">
           <button
             onClick={handlePrev}
             disabled={currentStep === 0}
-            className={`px-4 py-2 rounded-lg transition-all ${
+            className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-sm sm:text-base ${
               currentStep === 0
                 ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
                 : 'bg-gray-600 text-white hover:bg-gray-500'
@@ -265,12 +265,12 @@ export const AltarTutorial: React.FC<AltarTutorialProps> = ({ isOpen, onClose })
             上一步
           </button>
 
-          <div className="flex space-x-2">
+          <div className="flex space-x-1 sm:space-x-2">
             {tutorialSteps.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentStep(index)}
-                className={`w-3 h-3 rounded-full transition-all ${
+                className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all ${
                   index === currentStep
                     ? 'bg-purple-500'
                     : index < currentStep
@@ -283,7 +283,7 @@ export const AltarTutorial: React.FC<AltarTutorialProps> = ({ isOpen, onClose })
 
           <button
             onClick={handleNext}
-            className="px-6 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg transition-all"
+            className="px-4 sm:px-6 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg transition-all text-sm sm:text-base"
           >
             {currentStep === tutorialSteps.length - 1 ? '開始體驗' : '下一步'}
           </button>

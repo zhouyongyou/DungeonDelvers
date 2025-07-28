@@ -1,6 +1,7 @@
 // VipBenefitsGuide.tsx - VIP 會員全面好處說明組件
 import React, { useState } from 'react';
 import { Modal } from '../ui/Modal';
+import { useAdminAccess } from '../../hooks/useAdminAccess';
 
 interface VipBenefitsGuideProps {
   isOpen: boolean;
@@ -202,7 +203,10 @@ const benefitCategories = [
             <div className="text-white">uint8 effectiveSuccessChance = rule.successChance + totalVipBonus;</div>
           </div>
           <p className="text-xs text-yellow-200 mt-2">
-            ⚡ 新版合約支援自動 VIP 等級加成 + 管理員額外加成，總加成上限 20%！
+            {isAdmin 
+              ? '⚡ 新版合約支援自動 VIP 等級加成 + 管理員額外加成，總加成上限 20%！'
+              : '⚡ 新版合約支援自動 VIP 等級加成，根據您的質押等級提升成功率！'
+            }
           </p>
         </div>
       </div>
@@ -416,6 +420,7 @@ const benefitCategories = [
 
 export const VipBenefitsGuide: React.FC<VipBenefitsGuideProps> = ({ isOpen, onClose }) => {
   const [activeCategory, setActiveCategory] = useState('overview');
+  const { isAdmin } = useAdminAccess();
 
   if (!isOpen) return null;
 

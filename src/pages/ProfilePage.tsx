@@ -374,18 +374,18 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                         <p className="font-mono text-xs break-all bg-black/20 p-2 rounded text-gray-400 mb-4">{targetAddress}</p>
                         
                         {/* 玩家資料顯示 */}
-                        <div className="w-full max-w-lg mb-4 p-4 bg-gray-800/50 rounded-lg">
+                        <div className="w-full max-w-lg mb-3 sm:mb-4 p-3 sm:p-4 bg-gray-800/50 rounded-lg">
                             <div className="text-center mb-3">
-                                <h4 className="text-xl font-bold text-white mb-1">
+                                <h4 className="text-lg sm:text-xl font-bold text-white mb-1">
                                     {profileData?.name || '未命名玩家'}
                                 </h4>
                                 
                                 {/* 等級和經驗值顯示 */}
-                                <div className="flex items-center justify-center gap-4 my-2">
-                                    <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-black px-3 py-1 rounded-full font-bold">
+                                <div className="flex items-center justify-center gap-2 sm:gap-4 my-2">
+                                    <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-black px-2 sm:px-3 py-1 rounded-full font-bold text-sm sm:text-base">
                                         Lv. {level}
                                     </div>
-                                    <div className="text-sm text-gray-300">
+                                    <div className="text-xs sm:text-sm text-gray-300">
                                         經驗值: {experience.toString()}
                                     </div>
                                 </div>
@@ -414,8 +414,8 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                             </div>
                             
                             {profileData && (
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div className="bg-gray-700/50 p-2 rounded relative">
+                                <div className="grid grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
+                                    <div className="bg-gray-700/50 p-2 sm:p-3 rounded relative">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-1">
                                                 <p className="text-gray-400">總獎勵</p>
@@ -457,7 +457,7 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                                             </div>
                                         )}
                                     </div>
-                                    <div className="bg-gray-700/50 p-2 rounded">
+                                    <div className="bg-gray-700/50 p-2 sm:p-3 rounded">
                                         <div className="flex items-center justify-between">
                                             <p className="text-gray-400">傭金收入</p>
                                             <button
@@ -496,7 +496,7 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                             )}
                         </div>
                         
-                        <div className="w-full max-w-lg my-4 border-4 border-gray-700 rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center aspect-square">
+                        <div className="w-full max-w-lg my-3 sm:my-4 border-2 sm:border-4 border-gray-700 rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center aspect-square">
                             {(() => {
                                 const profileDataForSvg: ProfileData = {
                                     address: targetAddress || '0x0000000000000000000000000000000000000000',
@@ -520,32 +520,32 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                         
                         {/* 統計數據顯示在 SVG 外面 - 顯示所有統計數據 */}
                         {playerStats && (
-                            <div className="w-full max-w-lg mb-4">
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                    <div className="text-center bg-gray-800/50 rounded-lg p-3">
-                                        <div className="text-2xl mb-1">⚔️</div>
-                                        <div className="text-xl text-white font-bold">
+                            <div className="w-full max-w-lg mb-3 sm:mb-4">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                                    <div className="text-center bg-gray-800/50 rounded-lg p-2 sm:p-3">
+                                        <div className="text-xl sm:text-2xl mb-1">⚔️</div>
+                                        <div className="text-lg sm:text-xl text-white font-bold">
                                             {playerStats.totalHeroes || 0}
                                         </div>
                                         <div className="text-xs text-gray-400">英雄</div>
                                     </div>
-                                    <div className="text-center bg-gray-800/50 rounded-lg p-3">
-                                        <div className="text-2xl mb-1">💎</div>
-                                        <div className="text-xl text-white font-bold">
+                                    <div className="text-center bg-gray-800/50 rounded-lg p-2 sm:p-3">
+                                        <div className="text-xl sm:text-2xl mb-1">💎</div>
+                                        <div className="text-lg sm:text-xl text-white font-bold">
                                             {playerStats.totalRelics || 0}
                                         </div>
                                         <div className="text-xs text-gray-400">聖物</div>
                                     </div>
-                                    <div className="text-center bg-gray-800/50 rounded-lg p-3">
-                                        <div className="text-2xl mb-1">👥</div>
-                                        <div className="text-xl text-white font-bold">
+                                    <div className="text-center bg-gray-800/50 rounded-lg p-2 sm:p-3">
+                                        <div className="text-xl sm:text-2xl mb-1">👥</div>
+                                        <div className="text-lg sm:text-xl text-white font-bold">
                                             {playerStats.totalParties || 0}
                                         </div>
                                         <div className="text-xs text-gray-400">隊伍</div>
                                     </div>
-                                    <div className="text-center bg-gray-800/50 rounded-lg p-3">
-                                        <div className="text-2xl mb-1">🗺️</div>
-                                        <div className="text-xl text-white font-bold">
+                                    <div className="text-center bg-gray-800/50 rounded-lg p-2 sm:p-3">
+                                        <div className="text-xl sm:text-2xl mb-1">🗺️</div>
+                                        <div className="text-lg sm:text-xl text-white font-bold">
                                             {playerStats.successfulExpeditions || 0}
                                         </div>
                                         <div className="text-xs text-gray-400">成功探險</div>
@@ -569,9 +569,9 @@ const ProfilePage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setAct
                     <p className="text-gray-400 mb-4 max-w-md text-center">
                         您的玩家檔案是一個獨一無二的靈魂綁定代幣 (SBT)，它將在您<strong>首次成功完成地下城遠征</strong>後由系統自動為您鑄造。
                     </p>
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
-                        <ActionButton onClick={() => setActivePage('dungeon')} className="w-48 h-12">前往地下城</ActionButton>
-                        <ActionButton onClick={() => setActivePage('mint')} className="w-48 h-12 bg-teal-600 hover:bg-teal-500">前往鑄造</ActionButton>
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mt-4 sm:mt-6">
+                        <ActionButton onClick={() => setActivePage('dungeon')} className="w-full sm:w-48 h-10 sm:h-12 text-sm sm:text-base">前往地下城</ActionButton>
+                        <ActionButton onClick={() => setActivePage('mint')} className="w-full sm:w-48 h-10 sm:h-12 text-sm sm:text-base bg-teal-600 hover:bg-teal-500">前往鑄造</ActionButton>
                     </div>
                 </EmptyState>
             );

@@ -93,9 +93,9 @@ const QuerySection: React.FC<QuerySectionProps> = ({ title, inputType, inputPlac
     const inputId = `explorer-${title.replace(/\s+/g, '-').toLowerCase()}`;
     
     return (
-        <div className="card-bg p-6 rounded-xl shadow-md">
-            <h3 className="text-xl font-bold text-gray-200 mb-4">{title}</h3>
-            <div className="flex gap-2 mb-4">
+        <div className="card-bg p-4 sm:p-5 md:p-6 rounded-xl shadow-md">
+            <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-200 mb-3 sm:mb-4">{title}</h3>
+            <div className="flex gap-2 mb-3 sm:mb-4">
                 <div className="flex-1">
                     <label htmlFor={inputId} className="sr-only">
                         {inputPlaceholder}
@@ -107,13 +107,13 @@ const QuerySection: React.FC<QuerySectionProps> = ({ title, inputType, inputPlac
                         value={inputValue}
                         onChange={e => setInputValue(e.target.value)}
                         placeholder={inputPlaceholder}
-                        className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none h-10 bg-gray-800 border-gray-700 text-gray-200 placeholder-gray-400"
+                        className="w-full px-2 sm:px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none h-8 sm:h-10 text-sm sm:text-base bg-gray-800 border-gray-700 text-gray-200 placeholder-gray-400"
                         min={inputType === 'number' ? "0" : undefined}
                     />
                 </div>
-                <ActionButton onClick={() => onQuery(inputValue)} className="px-6 py-2 rounded-lg whitespace-nowrap w-24 h-10">查詢</ActionButton>
+                <ActionButton onClick={() => onQuery(inputValue)} className="px-3 sm:px-6 py-2 rounded-lg whitespace-nowrap w-16 sm:w-24 h-8 sm:h-10 text-sm sm:text-base">查詢</ActionButton>
             </div>
-            <div className="mt-4 p-4 bg-gray-800/50 rounded-md min-h-[100px] text-sm space-y-2">
+            <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-gray-800/50 rounded-md min-h-[80px] sm:min-h-[100px] text-xs sm:text-sm space-y-2">
                 {isLoading ? <div className="flex justify-center items-center h-full"><LoadingSpinner size="h-6 w-6" color="border-gray-500" /></div> : children}
             </div>
         </div>
@@ -191,7 +191,7 @@ const PlayerSearchQuery: React.FC = () => {
             <>
                 {/* 同步提示 */}
                 {showSyncWarning && (
-                    <div className="mb-3 p-2 bg-yellow-900/30 border border-yellow-600/50 rounded text-xs text-yellow-400">
+                    <div className="mb-2 sm:mb-3 p-2 bg-yellow-900/30 border border-yellow-600/50 rounded text-xs text-yellow-400">
                         ⚠️ 數據可能有延遲，子圖同步需要時間。
                         <button 
                             onClick={() => {
@@ -205,10 +205,10 @@ const PlayerSearchQuery: React.FC = () => {
                     </div>
                 )}
                 
-                <p><b>玩家地址:</b> <span className="font-mono text-xs break-all">{data.id}</span></p>
-                <p><b>擁有英雄:</b> {data.heros?.length || 0} 個 {totalHeroPower > 0 && `(總戰力: ${totalHeroPower})`}</p>
-                <p><b>擁有聖物:</b> {data.relics?.length || 0} 個 {totalRelicCapacity > 0 && `(總容量: ${totalRelicCapacity})`}</p>
-                <p><b>擁有隊伍:</b> {data.parties?.length || 0} 個 {totalPartyPower > 0 && `(總戰力: ${totalPartyPower})`}</p>
+                <p className="text-xs sm:text-sm"><b>玩家地址:</b> <span className="font-mono text-xs break-all">{data.id}</span></p>
+                <p className="text-xs sm:text-sm"><b>擁有英雄:</b> {data.heros?.length || 0} 個 {totalHeroPower > 0 && `(總戰力: ${totalHeroPower})`}</p>
+                <p className="text-xs sm:text-sm"><b>擁有聖物:</b> {data.relics?.length || 0} 個 {totalRelicCapacity > 0 && `(總容量: ${totalRelicCapacity})`}</p>
+                <p className="text-xs sm:text-sm"><b>擁有隊伍:</b> {data.parties?.length || 0} 個 {totalPartyPower > 0 && `(總戰力: ${totalPartyPower})`}</p>
                 
                 {/* 如果剛鑄造可能沒同步 */}
                 {(data.relics?.length === 0 || data.heros?.length === 0) && (
@@ -219,8 +219,8 @@ const PlayerSearchQuery: React.FC = () => {
                 
                 {data.heros && data.heros.length > 0 && (
                     <div className="mt-2">
-                        <p><b>英雄列表:</b></p>
-                        <div className="text-xs text-gray-400 ml-2">
+                        <p className="text-xs sm:text-sm"><b>英雄列表:</b></p>
+                        <div className="text-xs text-gray-400 ml-1 sm:ml-2">
                             {data.heros.slice(0, 5).map((hero: any) => (
                                 <div key={hero.tokenId}>
                                     #{hero.tokenId} - {hero.rarity}★ ({hero.power}戰力)
@@ -231,10 +231,10 @@ const PlayerSearchQuery: React.FC = () => {
                     </div>
                 )}
                 
-                <div className="mt-2">
+                <div className="mt-2 sm:mt-3">
                     <button
                         onClick={() => window.location.hash = `#/profile?address=${submittedAddress}`}
-                        className="text-blue-400 hover:text-blue-300 text-sm underline"
+                        className="text-blue-400 hover:text-blue-300 text-xs sm:text-sm underline"
                     >
                         查看完整檔案 →
                     </button>
@@ -291,33 +291,33 @@ const NftQuery: React.FC<{ type: 'hero' | 'relic' | 'party' }> = ({ type }) => {
     };
 
     const renderResult = () => {
-        if (!submittedId) return <p className="text-gray-500">請輸入 ID 進行查詢。</p>;
-        if (isError) return <p className="text-red-500">查詢失敗: {(error as Error).message}</p>;
+        if (!submittedId) return <p className="text-gray-500 text-xs sm:text-sm">請輸入 ID 進行查詢。</p>;
+        if (isError) return <p className="text-red-500 text-xs sm:text-sm">查詢失敗: {(error as Error).message}</p>;
         if (!data) {
             // 針對聖物添加特別提示
             if (type === 'relic') {
                 return (
-                    <div className="space-y-2">
-                        <p className="text-red-500">查無此 ID 的資料。</p>
+                    <div className="space-y-1 sm:space-y-2">
+                        <p className="text-red-500 text-xs sm:text-sm">查無此 ID 的資料。</p>
                         <p className="text-yellow-500 text-xs">
                             ⚠️ 注意：子圖可能正在同步聖物數據。如果您剛鑄造聖物，請等待 2-3 分鐘後再試。
                         </p>
                     </div>
                 );
             }
-            return <p className="text-red-500">查無此 ID 的資料。</p>;
+            return <p className="text-red-500 text-xs sm:text-sm">查無此 ID 的資料。</p>;
         }
 
         
         return (
             <>
-                <p><b>擁有者:</b> <span className="font-mono text-xs break-all">{data.owner?.id}</span></p>
-                {type === 'hero' && <><p><b>稀有度:</b> {"★".repeat(data.rarity)}{"☆".repeat(5 - data.rarity)}</p><p><b>戰力:</b> {data.power.toString()}</p></>}
-                {type === 'relic' && <><p><b>稀有度:</b> {"★".repeat(data.rarity)}{"☆".repeat(5 - data.rarity)}</p><p><b>容量:</b> {data.capacity.toString()}</p></>}
+                <p className="text-xs sm:text-sm"><b>擁有者:</b> <span className="font-mono text-xs break-all">{data.owner?.id}</span></p>
+                {type === 'hero' && <><p className="text-xs sm:text-sm"><b>稀有度:</b> {"★".repeat(data.rarity)}{"☆".repeat(5 - data.rarity)}</p><p className="text-xs sm:text-sm"><b>戰力:</b> {data.power.toString()}</p></>}
+                {type === 'relic' && <><p className="text-xs sm:text-sm"><b>稀有度:</b> {"★".repeat(data.rarity)}{"☆".repeat(5 - data.rarity)}</p><p className="text-xs sm:text-sm"><b>容量:</b> {data.capacity.toString()}</p></>}
                 {type === 'party' && <>
-                    <p><b>隊伍稀有度:</b> {"★".repeat(data.partyRarity)}{"☆".repeat(5 - data.partyRarity)}</p>
-                    <p><b>總戰力:</b> {data.totalPower.toString()}</p>
-                    <p><b>總容量:</b> {data.totalCapacity.toString()}</p>
+                    <p className="text-xs sm:text-sm"><b>隊伍稀有度:</b> {"★".repeat(data.partyRarity)}{"☆".repeat(5 - data.partyRarity)}</p>
+                    <p className="text-xs sm:text-sm"><b>總戰力:</b> {data.totalPower.toString()}</p>
+                    <p className="text-xs sm:text-sm"><b>總容量:</b> {data.totalCapacity.toString()}</p>
                     {/* 🎯 移除不可靠的數據顯示 */}
                     <p className="text-gray-500 text-xs mt-2">
                         ⚠️ 注意：疲勞度、儲備、獎勵、英雄/聖物列表需要從實時合約讀取，子圖只記錄靜態的鑄造信息
@@ -451,22 +451,22 @@ const ContractAddressSection: React.FC = () => {
   ];
 
   return (
-    <div className="mt-12 card-bg p-6 rounded-xl shadow-md">
-      <h3 className="text-2xl font-bold text-gray-200 mb-6">智能合約地址與說明</h3>
+    <div className="mt-8 sm:mt-10 md:mt-12 card-bg p-4 sm:p-5 md:p-6 rounded-xl shadow-md">
+      <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-200 mb-4 sm:mb-5 md:mb-6">智能合約地址與說明</h3>
       <div className="space-y-8">
         {contracts.map((category, idx) => (
           <div key={idx}>
-            <h4 className="text-lg font-semibold text-indigo-400 mb-3">{category.category}</h4>
-            <div className="space-y-3">
+            <h4 className="text-base sm:text-lg font-semibold text-indigo-400 mb-2 sm:mb-3">{category.category}</h4>
+            <div className="space-y-2 sm:space-y-3">
               {category.items.map((contract, contractIdx) => (
-                <div key={contractIdx} className="bg-gray-800/50 p-4 rounded-lg">
-                  <div className="flex items-start justify-between mb-2">
-                    <h5 className="font-semibold text-gray-200">{contract.name}</h5>
+                <div key={contractIdx} className="bg-gray-800/50 p-3 sm:p-4 rounded-lg">
+                  <div className="flex items-start justify-between mb-1 sm:mb-2">
+                    <h5 className="font-semibold text-gray-200 text-sm sm:text-base">{contract.name}</h5>
                     <a 
                       href={`https://bscscan.com/address/${contract.address}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                      className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 shrink-0"
                     >
                       查看合約
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -474,8 +474,8 @@ const ContractAddressSection: React.FC = () => {
                       </svg>
                     </a>
                   </div>
-                  <p className="text-sm text-gray-400 mb-2">{contract.description}</p>
-                  <p className="font-mono text-xs text-gray-500 break-all">{contract.address}</p>
+                  <p className="text-xs sm:text-sm text-gray-400 mb-1 sm:mb-2">{contract.description}</p>
+                  <p className="font-mono text-xs text-gray-500 break-all leading-relaxed">{contract.address}</p>
                 </div>
               ))}
             </div>
@@ -483,9 +483,9 @@ const ContractAddressSection: React.FC = () => {
         ))}
       </div>
       
-      <div className="mt-8 p-4 bg-blue-900/20 border border-blue-600/30 rounded-lg">
-        <h4 className="font-semibold text-blue-400 mb-2">遊戲經濟模型</h4>
-        <ul className="text-sm text-gray-300 space-y-1 list-disc list-inside">
+      <div className="mt-6 sm:mt-8 p-3 sm:p-4 bg-blue-900/20 border border-blue-600/30 rounded-lg">
+        <h4 className="font-semibold text-blue-400 mb-2 text-sm sm:text-base">遊戲經濟模型</h4>
+        <ul className="text-xs sm:text-sm text-gray-300 space-y-1 list-disc list-inside">
           <li>使用 SOUL 代幣作為主要遊戲貨幣</li>
           <li>鑄造 NFT 需要支付 SOUL 代幣和 3% 平台費</li>
           <li>地城探索可獲得 SOUL 獎勵，獎勵根據隊伍戰力和地城難度計算</li>
@@ -508,17 +508,17 @@ const ExplorerPage: React.FC = () => {
       <h2 className="page-title">遊戲數據瀏覽器</h2>
       
       {/* 排行榜區域 - 新增 */}
-      <div className="mb-8">
+      <div className="mb-6 sm:mb-8">
         <Leaderboards />
       </div>
       
       {/* 原有的查詢功能 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
+        <div className="space-y-4 sm:space-y-6 md:space-y-8">
           <PlayerSearchQuery />
           <NftQuery type="hero" />
         </div>
-        <div className="space-y-8">
+        <div className="space-y-4 sm:space-y-6 md:space-y-8">
           <NftQuery type="party" />
           <NftQuery type="relic" />
         </div>

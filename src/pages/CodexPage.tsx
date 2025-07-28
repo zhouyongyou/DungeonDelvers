@@ -173,16 +173,16 @@ const CodexPage: React.FC = () => {
     return (
         <section>
             <h2 className="page-title">冒險者圖鑑</h2>
-            <p className="text-center text-gray-400 max-w-2xl mx-auto -mt-4 mb-6">探索埃索斯大陸上所有傳說中的英雄與聖物。點亮您已解鎖的收藏！</p>
-            <div className="text-center mb-8">
-                <a href="#/mint"><ActionButton className="px-8 py-3 text-lg">前往鑄造英雄/聖物</ActionButton></a>
+            <p className="text-center text-gray-400 max-w-2xl mx-auto -mt-3 sm:-mt-4 mb-4 sm:mb-6 text-sm sm:text-base">探索埃索斯大陸上所有傳說中的英雄與聖物。點亮您已解鎖的收藏！</p>
+            <div className="text-center mb-6 sm:mb-8">
+                <a href="#/mint"><ActionButton className="px-6 sm:px-8 py-2 sm:py-3 text-base sm:text-lg">前往鑄造英雄/聖物</ActionButton></a>
             </div>
 
             {/* 圖鑑說明 */}
-            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-6 max-w-4xl mx-auto">
+            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 max-w-4xl mx-auto">
                 <div className="flex items-center gap-2 mb-2">
                     <span className="text-blue-400">📖</span>
-                    <span className="text-sm font-medium text-blue-300">圖鑑說明</span>
+                    <span className="text-xs sm:text-sm font-medium text-blue-300">圖鑑說明</span>
                 </div>
                 <ul className="text-xs text-gray-400 space-y-1">
                     <li>• <strong className="text-blue-300">已解鎖</strong>：擁有該稀有度的 NFT 後即可在圖鑑中查看</li>
@@ -195,14 +195,14 @@ const CodexPage: React.FC = () => {
             {isLoading ? (
                 <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>
             ) : allPossibleNfts ? (
-                <div className="space-y-12">
+                <div className="space-y-8 sm:space-y-12">
                     {/* 英雄圖鑑區 */}
                     <div>
-                        <h3 className="text-2xl font-bold text-yellow-400 mb-6 flex items-center gap-3">
+                        <h3 className="text-xl sm:text-2xl font-bold text-yellow-400 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
                             <span>🦸</span>
                             <span>英雄圖鑑</span>
                         </h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
                             {allPossibleNfts.heroes.map((nft, index) => {
                                 const isUnlocked = getIsUnlocked(nft);
                                 return (
@@ -223,11 +223,11 @@ const CodexPage: React.FC = () => {
 
                     {/* 聖物圖鑑區 */}
                     <div>
-                        <h3 className="text-2xl font-bold text-purple-400 mb-6 flex items-center gap-3">
+                        <h3 className="text-xl sm:text-2xl font-bold text-purple-400 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
                             <span>💎</span>
                             <span>聖物圖鑑</span>
                         </h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
                             {allPossibleNfts.relics.map((nft, index) => {
                                 const isUnlocked = getIsUnlocked(nft);
                                 return (

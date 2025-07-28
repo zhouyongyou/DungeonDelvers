@@ -489,26 +489,26 @@ const PartyStatusCard = memo<PartyStatusCardProps>(({ party, dungeons, onStartEx
     };
 
     return (
-        <div className={`card-bg p-4 rounded-2xl flex flex-col h-full border-2 transition-all ${isAnyTxPendingForThisParty ? 'border-purple-500/50' : isOnCooldown ? 'border-yellow-500/50' : 'border-transparent'}`}>
-            <div className="flex justify-between items-start mb-3">
-                <h4 className="font-bold text-lg text-white truncate pr-2">{party.name}</h4>
+        <div className={`card-bg p-3 sm:p-4 rounded-2xl flex flex-col h-full border-2 transition-all ${isAnyTxPendingForThisParty ? 'border-purple-500/50' : isOnCooldown ? 'border-yellow-500/50' : 'border-transparent'}`}>
+            <div className="flex justify-between items-start mb-2 sm:mb-3">
+                <h4 className="font-bold text-base sm:text-lg text-white truncate pr-2">{party.name}</h4>
                 {renderStatus()}
             </div>
             
             {/* 等級顯示已移除，節省查詢資源 - 可在個人檔案頁面查看 */}
             
-            <div className="grid grid-cols-1 gap-2 mb-4 text-center">
-                <div><p className="text-sm text-gray-400">戰力</p><p className="font-bold text-2xl text-indigo-400">{effectivePower.toString()}</p></div>
+            <div className="grid grid-cols-1 gap-2 mb-3 sm:mb-4 text-center">
+                <div><p className="text-xs sm:text-sm text-gray-400">戰力</p><p className="font-bold text-xl sm:text-2xl text-indigo-400">{effectivePower.toString()}</p></div>
                 {/* 已移除疲勞度顯示 */}
                 {/* <div><p className="text-sm text-gray-400">疲勞度</p><p className={`font-bold text-xl ${fatigueColorClass}`}>{party.fatigueLevel} / 45</p></div> */}
             </div>
             <p className="text-center text-xs text-gray-400 mb-2">直接付費出征</p>
-            <div className="mb-4">
+            <div className="mb-3 sm:mb-4">
                 <label className="text-xs text-gray-400">選擇地城:</label>
                 <select 
                     value={selectedDungeonId.toString()} 
                     onChange={(e) => setSelectedDungeonId(BigInt(e.target.value))}
-                    className="w-full p-2 border rounded-lg bg-gray-900/80 border-gray-700 text-white mt-1"
+                    className="w-full p-2 border rounded-lg bg-gray-900/80 border-gray-700 text-white mt-1 text-sm"
                     disabled={isOnCooldown || isAnyTxPendingForThisParty}
                 >
                     {dungeons.length === 0 ? (
@@ -570,7 +570,7 @@ const DungeonInfoCard = memo<{ dungeon: Dungeon; calculateSoulReward: (usdAmount
     return (
     <div className="card-bg rounded-xl shadow-lg overflow-hidden bg-gray-800/50 hover:transform hover:scale-105 transition-transform duration-200">
         {/* 地下城圖片 */}
-        <div className="relative h-48 overflow-hidden bg-gray-900">
+        <div className="relative h-32 sm:h-40 md:h-48 overflow-hidden bg-gray-900">
             <img 
                 src={`/dungeon/${dungeon.id.toString().padStart(2, '0')}.png`} 
                 alt={dungeon.name}
@@ -582,13 +582,13 @@ const DungeonInfoCard = memo<{ dungeon: Dungeon; calculateSoulReward: (usdAmount
                 }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-            <div className="absolute bottom-2 left-3 right-3">
-                <h4 className="text-lg font-bold font-serif text-yellow-300 drop-shadow-lg">{dungeon.name}</h4>
+            <div className="absolute bottom-2 left-2 sm:left-3 right-2 sm:right-3">
+                <h4 className="text-sm sm:text-base md:text-lg font-bold font-serif text-yellow-300 drop-shadow-lg">{dungeon.name}</h4>
             </div>
         </div>
         
         {/* 地下城資訊 */}
-        <div className="p-4 space-y-1 text-sm">
+        <div className="p-3 sm:p-4 space-y-1 text-xs sm:text-sm">
             <p className="text-gray-300">要求戰力: <span className="font-semibold text-white">{dungeon.requiredPower.toString()}</span></p>
             <p className="text-gray-300">基礎獎勵: 
                 <span className="font-semibold text-white">
@@ -601,7 +601,7 @@ const DungeonInfoCard = memo<{ dungeon: Dungeon; calculateSoulReward: (usdAmount
             <p className="text-gray-300">成功率: 
                 <span className="font-semibold text-white">{actualSuccessRate}%</span>
                 {hasVipBonus && (
-                    <span className="text-xs text-purple-400 ml-2">
+                    <span className="text-xs text-purple-400 ml-1 sm:ml-2">
                         (基礎 {dungeon.baseSuccessRate}% + VIP {vipLevel} = +{vipLevel}%)
                     </span>
                 )}
@@ -1052,7 +1052,7 @@ const DungeonPageContent = memo<{ setActivePage: (page: Page) => void }>(({ setA
 
     return (
         <>
-            <section className="space-y-8">
+            <section className="space-y-4 sm:space-y-6 md:space-y-8">
                 <TransactionProgressModal
                     isOpen={showProgressModal}
                     onClose={() => setShowProgressModal(false)}
@@ -1061,10 +1061,10 @@ const DungeonPageContent = memo<{ setActivePage: (page: Page) => void }>(({ setA
                 />
             {/* 已移除儲備購買 Modal */}
             <div>
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
                     <h2 className="page-title mb-0">遠征指揮中心</h2>
                     {parties && parties.length > 0 && (
-                        <div className="flex gap-3">
+                        <div className="flex flex-wrap gap-2 sm:gap-3">
                             <button
                                 onClick={() => {
                                     refetchParties();
@@ -1072,7 +1072,7 @@ const DungeonPageContent = memo<{ setActivePage: (page: Page) => void }>(({ setA
                                     showToast('正在刷新數據...', 'info');
                                 }}
                                 disabled={isLoadingParties}
-                                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-600 text-white rounded-lg text-sm font-semibold transition-colors duration-200 flex items-center gap-2 disabled:opacity-50"
+                                className="px-3 sm:px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-600 text-white rounded-lg text-xs sm:text-sm font-semibold transition-colors duration-200 flex items-center gap-1 sm:gap-2 disabled:opacity-50"
                             >
                                 <span>🔄</span>
                                 <span>刷新數據</span>
@@ -1080,7 +1080,7 @@ const DungeonPageContent = memo<{ setActivePage: (page: Page) => void }>(({ setA
                             <button
                                 onClick={handleExpediteAll}
                                 disabled={isTxPending || !hasAvailableParties}
-                                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-lg text-sm font-semibold transition-colors duration-200 flex items-center gap-2 disabled:opacity-50"
+                                className="px-3 sm:px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-lg text-xs sm:text-sm font-semibold transition-colors duration-200 flex items-center gap-1 sm:gap-2 disabled:opacity-50"
                             >
                                 <span>🚀</span>
                                 <span>一鍵全部出征</span>
@@ -1088,7 +1088,7 @@ const DungeonPageContent = memo<{ setActivePage: (page: Page) => void }>(({ setA
                             <button
                                 onClick={handleClaimAllRewards}
                                 disabled={isTxPending || (!hasClaimableRewards && !isLoadingStatuses) || isBatchProcessing}
-                                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg text-sm font-semibold transition-colors duration-200 flex items-center gap-2 disabled:opacity-50"
+                                className="px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg text-xs sm:text-sm font-semibold transition-colors duration-200 flex items-center gap-1 sm:gap-2 disabled:opacity-50"
                                 title={
                                     isLoadingStatuses ? '檢查獎勵中...' :
                                     !hasClaimableRewards ? '沒有可領取的獎勵' :
@@ -1104,13 +1104,13 @@ const DungeonPageContent = memo<{ setActivePage: (page: Page) => void }>(({ setA
                 </div>
                 {(!parties || parties.length === 0) ? (
                     <EmptyState message="您還沒有任何隊伍可以派遣。">
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center mt-4">
-                            <ActionButton onClick={() => setActivePage('party')} className="w-48 h-12">前往創建隊伍</ActionButton>
-                            <ActionButton onClick={() => setActivePage('mint')} className="w-48 h-12 bg-teal-600 hover:bg-teal-500">前往鑄造</ActionButton>
+                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mt-4">
+                            <ActionButton onClick={() => setActivePage('party')} className="w-full sm:w-48 h-10 sm:h-12 text-sm sm:text-base">前往創建隊伍</ActionButton>
+                            <ActionButton onClick={() => setActivePage('mint')} className="w-full sm:w-48 h-10 sm:h-12 text-sm sm:text-base bg-teal-600 hover:bg-teal-500">前往鑄造</ActionButton>
                         </div>
                     </EmptyState>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
                         {parties.map((party: unknown) => (
                             <PartyStatusCard
                                 key={party.id.toString()}
@@ -1132,10 +1132,10 @@ const DungeonPageContent = memo<{ setActivePage: (page: Page) => void }>(({ setA
         </section>
         
         {/* 可挑戰的地下城 - 移到隊伍檢查的外面，即使沒有隊伍也能看到 */}
-        <section className="space-y-8 mt-8">
+        <section className="space-y-4 sm:space-y-6 md:space-y-8 mt-6 sm:mt-8">
             <div>
                 <h2 className="page-title">可挑戰的地下城</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                     {[...dungeons].reverse().map(dungeon => (
                         <DungeonInfoCard 
                             key={dungeon.id} 

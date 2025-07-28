@@ -790,7 +790,7 @@ const AltarPage = memo(() => {
                                         <span className="ml-3 text-gray-400">載入祭品材料中...</span>
                                     </div>
                                 ) : availableNfts && availableNfts.length > 0 ? (
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
                                         {availableNfts.map(nft => (
                                             <div 
                                                 key={nft.id.toString()} 
@@ -821,10 +821,10 @@ const AltarPage = memo(() => {
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="text-center py-16">
-                                        <div className="text-6xl mb-4">🔮</div>
+                                    <div className="text-center py-8 sm:py-12 md:py-16">
+                                        <div className="text-4xl sm:text-5xl md:text-6xl mb-3 sm:mb-4">🔮</div>
                                         <EmptyState message={`沒有可用的 ${rarity}★ ${nftType === 'hero' ? '英雄' : '聖物'}`} />
-                                        <div className="mt-6 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg backdrop-blur-sm max-w-md mx-auto">
+                                        <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg backdrop-blur-sm max-w-md mx-auto">
                                             <p className="text-sm text-blue-200">
                                                 📊 <strong>數據同步中</strong>
                                             </p>
@@ -841,7 +841,7 @@ const AltarPage = memo(() => {
                 </div>
 
                 {/* 底部提示信息 */}
-                <div className="bg-gradient-to-r from-indigo-900/20 to-purple-900/20 backdrop-blur-md border border-indigo-500/20 rounded-xl p-6 text-center">
+                <div className="bg-gradient-to-r from-indigo-900/20 to-purple-900/20 backdrop-blur-md border border-indigo-500/20 rounded-xl p-4 sm:p-5 md:p-6 text-center">
                     <p className="text-gray-300 mb-2">
                         💫 <strong>神秘預言：</strong>每次升星都是與命運的對話，結果由區塊鏈上的隨機數決定，確保絕對公平。
                     </p>

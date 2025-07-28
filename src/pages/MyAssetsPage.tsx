@@ -215,15 +215,15 @@ const TeamBuilder = memo<TeamBuilderProps>(({
             </div>
             
             {/* 步驟指引 */}
-            <div className="flex items-center justify-between mb-6 bg-gray-900/50 p-3 rounded-lg">
-                <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between mb-4 sm:mb-6 bg-gray-900/50 p-2 sm:p-3 rounded-lg">
+                <div className="flex items-center gap-2 sm:gap-4">
                     <div className={`flex items-center gap-2 ${currentStep === 'select-relic' ? 'text-yellow-400' : 'text-gray-500'}`}>
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                             selectedRelics.length > 0 ? 'bg-green-600' : currentStep === 'select-relic' ? 'bg-yellow-600' : 'bg-gray-600'
                         }`}>
                             {selectedRelics.length > 0 ? '✓' : '1'}
                         </div>
-                        <span className="text-sm font-medium">選擇聖物</span>
+                        <span className="text-xs sm:text-sm font-medium">選擇聖物</span>
                     </div>
                     <div className="text-gray-600">→</div>
                     <div className={`flex items-center gap-2 ${currentStep === 'select-hero' ? 'text-yellow-400' : 'text-gray-500'}`}>
@@ -232,7 +232,7 @@ const TeamBuilder = memo<TeamBuilderProps>(({
                         }`}>
                             {selectedHeroes.length > 0 ? '✓' : '2'}
                         </div>
-                        <span className="text-sm font-medium">選擇英雄</span>
+                        <span className="text-xs sm:text-sm font-medium">選擇英雄</span>
                     </div>
                     <div className="text-gray-600">→</div>
                     <div className={`flex items-center gap-2 ${currentStep === 'ready' ? 'text-yellow-400' : 'text-gray-500'}`}>
@@ -241,18 +241,18 @@ const TeamBuilder = memo<TeamBuilderProps>(({
                         }`}>
                             {canCreate ? '✓' : '3'}
                         </div>
-                        <span className="text-sm font-medium">創建隊伍</span>
+                        <span className="text-xs sm:text-sm font-medium">創建隊伍</span>
                     </div>
                 </div>
             </div>
             
             {/* 創建隊伍按鈕 - 移到最上方 */}
-            <div className="flex flex-col items-center mb-6">
+            <div className="flex flex-col items-center mb-4 sm:mb-6">
                 <ActionButton 
                     onClick={() => onCreateParty(selectedHeroes, selectedRelics)} 
                     isLoading={isCreating}
                     disabled={!canCreate || isCreating}
-                    className="w-full sm:w-64 h-12 text-lg"
+                    className="w-full sm:w-64 h-10 sm:h-12 text-base sm:text-lg"
                 >
                     {!isHeroAuthorized || !isRelicAuthorized ? '請先完成授權' : '創建隊伍'}
                 </ActionButton>
@@ -274,15 +274,15 @@ const TeamBuilder = memo<TeamBuilderProps>(({
             </div>
             
             {/* 狀態顯示 */}
-            <div className="flex flex-col sm:flex-row justify-between items-center bg-gray-900/50 p-4 rounded-lg mb-6">
-                <div className="flex gap-6 text-center">
+            <div className="flex flex-col sm:flex-row justify-between items-center bg-gray-900/50 p-3 sm:p-4 rounded-lg mb-4 sm:mb-6">
+                <div className="flex gap-4 sm:gap-6 text-center">
                     <div>
-                        <p className="text-sm text-gray-400">總戰力</p>
-                        <p className="text-2xl font-bold text-indigo-400">{totalPower}</p>
+                        <p className="text-xs sm:text-sm text-gray-400">總戰力</p>
+                        <p className="text-xl sm:text-2xl font-bold text-indigo-400">{totalPower}</p>
                     </div>
                     <div>
-                        <p className="text-sm text-gray-400">英雄/容量</p>
-                        <p className={`text-2xl font-bold ${selectedHeroes.length > totalCapacity ? 'text-red-500' : 'text-teal-400'}`}>
+                        <p className="text-xs sm:text-sm text-gray-400">英雄/容量</p>
+                        <p className={`text-xl sm:text-2xl font-bold ${selectedHeroes.length > totalCapacity ? 'text-red-500' : 'text-teal-400'}`}>
                             {selectedHeroes.length}/{totalCapacity}
                         </p>
                     </div>
@@ -296,7 +296,7 @@ const TeamBuilder = memo<TeamBuilderProps>(({
 
             {/* 統一授權按鈕 */}
             {(!isRelicAuthorized || !isHeroAuthorized) && (
-                <div className="flex justify-center mb-6">
+                <div className="flex justify-center mb-4 sm:mb-6">
                     <ActionButton 
                         onClick={handleAuthorizeAll}
                         isLoading={isAuthorizing}
@@ -310,10 +310,10 @@ const TeamBuilder = memo<TeamBuilderProps>(({
 
             {/* 收益最大化策略提醒 - 移到標題上方 */}
 
-            <div className="flex flex-col md:grid md:grid-cols-2 gap-6 mb-4">
+            <div className="flex flex-col md:grid md:grid-cols-2 gap-4 sm:gap-6 mb-4">
                 <div>
                     <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-lg text-white">
+                        <h4 className="font-semibold text-base sm:text-lg text-white">
                             {currentStep === 'select-relic' && '👉 '} 
                             步驟 1：選擇聖物 (上限: 5)
                         </h4>

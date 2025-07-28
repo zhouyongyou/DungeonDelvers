@@ -94,6 +94,21 @@
   --spacing-lg: 1.5rem;
   --spacing-xl: 2rem;
   --spacing-2xl: 3rem;
+
+  /* 響應式間距系統 */
+  --spacing-responsive-xs: 0.25rem;     /* 4px -> 6px on mobile */
+  --spacing-responsive-sm: 0.5rem;      /* 8px -> 12px on mobile */
+  --spacing-responsive-md: 0.75rem;     /* 12px -> 16px on mobile */
+  --spacing-responsive-lg: 1rem;        /* 16px -> 24px on mobile */
+  --spacing-responsive-xl: 1.5rem;      /* 24px -> 32px on mobile */
+  --spacing-responsive-2xl: 2rem;       /* 32px -> 48px on mobile */
+
+  /* 頁面和組件間距 */
+  --page-padding-x: 1rem;               /* 手機: 16px, 桌面: 24px */
+  --page-padding-y: 1rem;               /* 手機: 16px, 桌面: 32px */
+  --section-gap: 1rem;                  /* 手機: 16px, 桌面: 32px */
+  --card-padding: 0.75rem;              /* 手機: 12px, 桌面: 24px */
+  --card-gap: 0.75rem;                  /* 手機: 12px, 桌面: 24px */
 }
 
 /* 🌙 Dark Mode Adjustments */
@@ -359,6 +374,72 @@
   box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
   animation: glow 2s ease-in-out infinite alternate;
 }
+
+/* 📱 Mobile Responsive Spacing System */
+@media (min-width: 640px) {
+  :root {
+    --page-padding-x: 1.5rem;          /* 24px on sm+ */
+    --page-padding-y: 2rem;            /* 32px on sm+ */
+    --section-gap: 2rem;               /* 32px on sm+ */
+    --card-padding: 1.5rem;            /* 24px on sm+ */
+    --card-gap: 1.5rem;                /* 24px on sm+ */
+    
+    --spacing-responsive-xs: 0.375rem; /* 6px on sm+ */
+    --spacing-responsive-sm: 0.75rem;  /* 12px on sm+ */
+    --spacing-responsive-md: 1rem;     /* 16px on sm+ */
+    --spacing-responsive-lg: 1.5rem;   /* 24px on sm+ */
+    --spacing-responsive-xl: 2rem;     /* 32px on sm+ */
+    --spacing-responsive-2xl: 3rem;    /* 48px on sm+ */
+  }
+}
+
+/* 🎨 Responsive Spacing Utility Classes */
+.space-responsive-xs > * + * { margin-top: var(--spacing-responsive-xs); }
+.space-responsive-sm > * + * { margin-top: var(--spacing-responsive-sm); }
+.space-responsive-md > * + * { margin-top: var(--spacing-responsive-md); }
+.space-responsive-lg > * + * { margin-top: var(--spacing-responsive-lg); }
+.space-responsive-xl > * + * { margin-top: var(--spacing-responsive-xl); }
+.space-responsive-2xl > * + * { margin-top: var(--spacing-responsive-2xl); }
+
+.gap-responsive-xs { gap: var(--spacing-responsive-xs); }
+.gap-responsive-sm { gap: var(--spacing-responsive-sm); }
+.gap-responsive-md { gap: var(--spacing-responsive-md); }
+.gap-responsive-lg { gap: var(--spacing-responsive-lg); }
+.gap-responsive-xl { gap: var(--spacing-responsive-xl); }
+.gap-responsive-2xl { gap: var(--spacing-responsive-2xl); }
+
+.p-responsive-xs { padding: var(--spacing-responsive-xs); }
+.p-responsive-sm { padding: var(--spacing-responsive-sm); }
+.p-responsive-md { padding: var(--spacing-responsive-md); }
+.p-responsive-lg { padding: var(--spacing-responsive-lg); }
+.p-responsive-xl { padding: var(--spacing-responsive-xl); }
+.p-responsive-2xl { padding: var(--spacing-responsive-2xl); }
+
+.px-responsive-xs { padding-left: var(--spacing-responsive-xs); padding-right: var(--spacing-responsive-xs); }
+.px-responsive-sm { padding-left: var(--spacing-responsive-sm); padding-right: var(--spacing-responsive-sm); }
+.px-responsive-md { padding-left: var(--spacing-responsive-md); padding-right: var(--spacing-responsive-md); }
+.px-responsive-lg { padding-left: var(--spacing-responsive-lg); padding-right: var(--spacing-responsive-lg); }
+.px-responsive-xl { padding-left: var(--spacing-responsive-xl); padding-right: var(--spacing-responsive-xl); }
+.px-responsive-2xl { padding-left: var(--spacing-responsive-2xl); padding-right: var(--spacing-responsive-2xl); }
+
+.py-responsive-xs { padding-top: var(--spacing-responsive-xs); padding-bottom: var(--spacing-responsive-xs); }
+.py-responsive-sm { padding-top: var(--spacing-responsive-sm); padding-bottom: var(--spacing-responsive-sm); }
+.py-responsive-md { padding-top: var(--spacing-responsive-md); padding-bottom: var(--spacing-responsive-md); }
+.py-responsive-lg { padding-top: var(--spacing-responsive-lg); padding-bottom: var(--spacing-responsive-lg); }
+.py-responsive-xl { padding-top: var(--spacing-responsive-xl); padding-bottom: var(--spacing-responsive-xl); }
+.py-responsive-2xl { padding-top: var(--spacing-responsive-2xl); padding-bottom: var(--spacing-responsive-2xl); }
+
+/* 🏗️ Layout Utility Classes */
+.page-container {
+  padding-left: var(--page-padding-x);
+  padding-right: var(--page-padding-x);
+  padding-top: var(--page-padding-y);
+  padding-bottom: var(--page-padding-y);
+}
+
+.section-gap { margin-bottom: var(--section-gap); }
+.card-padding { padding: var(--card-padding); }
+.card-gap { gap: var(--card-gap); }
 
 /* 📱 Mobile Optimizations */
 @media (max-width: 768px) {
