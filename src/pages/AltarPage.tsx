@@ -549,7 +549,7 @@ const AltarPage = memo(() => {
                 ))}
             </div>
 
-            <div className="relative z-10 container mx-auto px-4 py-8 space-y-8">
+            <div className="relative z-10 container mx-auto px-4 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 md:space-y-8">
                 {/* 彈窗組件 */}
                 <UpgradeResultModal result={upgradeResult} onClose={() => setUpgradeResult(null)} />
                 <TransactionProgressModal
@@ -618,17 +618,17 @@ const AltarPage = memo(() => {
                 {/* 頁面標題區域 */}
                 <div className="text-center space-y-4">
                     <div className="flex items-center justify-center gap-4">
-                        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-300 via-indigo-300 to-purple-300 bg-clip-text text-transparent">
+                        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-purple-300 via-indigo-300 to-purple-300 bg-clip-text text-transparent">
                             🏛️ 升星祭壇
                         </h1>
                     </div>
-                    <p className="text-lg text-gray-300 max-w-3xl mx-auto leading-relaxed">
+                    <p className="text-sm sm:text-base md:text-lg text-gray-300 max-w-3xl mx-auto leading-relaxed">
                         在這座古老的神秘祭壇中，將同星級的 NFT 作為祭品獻上，
                         透過鏈上隨機數決定的神聖儀式，有機會獲得更高星級的傳說寶物。
                     </p>
                     
                     {/* 快捷操作按鈕 */}
-                    <div className="flex items-center justify-center gap-4 mt-6">
+                    <div className="flex items-center justify-center gap-3 sm:gap-4 mt-4 sm:mt-5 md:mt-6">
                         <button
                             onClick={() => setShowTutorial(true)}
                             className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 border border-blue-500/30 text-blue-300 rounded-lg hover:bg-blue-600/30 transition-all"
@@ -645,15 +645,15 @@ const AltarPage = memo(() => {
                 </div>
 
                 {/* 主要內容區域 */}
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 md:gap-8 items-start">
                     {/* 左側控制面板 */}
-                    <div className="xl:col-span-1 space-y-6">
+                    <div className="xl:col-span-1 space-y-4 sm:space-y-5 md:space-y-6">
                         {/* 目標選擇 */}
-                        <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-md border border-gray-600/30 rounded-2xl p-6">
-                            <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                        <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-md border border-gray-600/30 rounded-2xl p-4 sm:p-5 md:p-6">
+                            <h3 className="text-base sm:text-lg md:text-xl font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2">
                                 🎯 選擇升級目標
                             </h3>
-                            <div className="space-y-4">
+                            <div className="space-y-3 sm:space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-300 mb-2">NFT 類型</label>
                                     <div className="flex gap-2 bg-gray-900/50 p-1 rounded-lg">
@@ -736,9 +736,9 @@ const AltarPage = memo(() => {
                     </div>
 
                     {/* 右側內容區域 */}
-                    <div className="xl:col-span-2 space-y-6">
+                    <div className="xl:col-span-2 space-y-4 sm:space-y-5 md:space-y-6">
                         {/* 祭壇動畫 */}
-                        <div className="bg-gradient-to-br from-gray-800/50 to-purple-900/30 backdrop-blur-md border border-purple-500/20 rounded-2xl p-8">
+                        <div className="bg-gradient-to-br from-gray-800/50 to-purple-900/30 backdrop-blur-md border border-purple-500/20 rounded-2xl p-4 sm:p-6 md:p-8">
                             <AltarRitualAnimation
                                 isActive={ritualStage !== 'idle'}
                                 stage={ritualStage}
@@ -759,9 +759,9 @@ const AltarPage = memo(() => {
                                 />
                             }
                         >
-                            <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-md border border-gray-600/30 rounded-2xl p-6">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                            <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-md border border-gray-600/30 rounded-2xl p-4 sm:p-5 md:p-6">
+                                <div className="flex justify-between items-center mb-4 sm:mb-5 md:mb-6">
+                                    <h3 className="text-base sm:text-lg md:text-xl font-semibold text-white flex items-center gap-2">
                                         🎴 選擇祭品材料 ({selectedNfts.length} / {currentRule?.materialsRequired ?? '...'}）
                                     </h3>
                                     <div className="flex items-center gap-2">

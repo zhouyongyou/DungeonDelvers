@@ -153,20 +153,20 @@ const StatCard: React.FC<{ title: string; value: string | number; isLoading?: bo
 );
 
 const QuickActionButton: React.FC<{ title: string; description: string; onAction: () => void; icon: React.ReactNode }> = ({ title, description, onAction, icon }) => (
-    <button onClick={onAction} className="card-bg p-4 rounded-xl text-left w-full hover:bg-gray-700/70 transition-colors duration-200 flex items-center gap-4">
+    <button onClick={onAction} className="card-bg p-3 sm:p-4 rounded-xl text-left w-full hover:bg-gray-700/70 transition-colors duration-200 flex items-center gap-3 sm:gap-4">
         <div className="text-yellow-400">{icon}</div>
         <div>
-            <p className="font-bold text-lg text-white">{title}</p>
+            <p className="font-bold text-base sm:text-lg text-white">{title}</p>
             <p className="text-xs text-gray-400">{description}</p>
         </div>
     </button>
 );
 
 const ExternalLinkButton: React.FC<{ title: string; url: string; icon: React.ReactNode }> = ({ title, url, icon }) => (
-    <a href={url} target="_blank" rel="noopener noreferrer" className="card-bg p-4 rounded-xl text-left w-full hover:bg-gray-700/70 transition-colors duration-200 flex items-center gap-4">
+    <a href={url} target="_blank" rel="noopener noreferrer" className="card-bg p-3 sm:p-4 rounded-xl text-left w-full hover:bg-gray-700/70 transition-colors duration-200 flex items-center gap-3 sm:gap-4">
         <div className="text-gray-400">{icon}</div>
         <div>
-            <p className="font-bold text-lg text-white">{title}</p>
+            <p className="font-bold text-base sm:text-lg text-white">{title}</p>
             <p className="text-xs text-gray-500">在 OKX 市場交易</p>
         </div>
         <Icons.ExternalLink className="w-4 h-4 ml-auto text-gray-500" />
