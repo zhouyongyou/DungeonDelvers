@@ -1,5 +1,5 @@
 // V25 Contract Configuration
-// Generated on 2025-07-28T15:23:45.343Z
+// Generated on 2025-07-28T15:46:16.526Z
 // DO NOT EDIT MANUALLY - Use v25-sync-all.js to update
 
 export const CONTRACTS = {

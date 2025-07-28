@@ -349,14 +349,14 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
       }
       
       const contracts = {
-        hero: getContractWithABI(chainId, 'hero'),
-        relic: getContractWithABI(chainId, 'relic'),
-        party: getContractWithABI(chainId, 'party'),
-        dungeonMaster: getContractWithABI(chainId, 'dungeonMaster'),
-        playerVault: getContractWithABI(chainId, 'playerVault'),
-        vipStaking: getContractWithABI(chainId, 'vipStaking'),
-        oracle: getContractWithABI(chainId, 'oracle'),
-        altarOfAscension: getContractWithABI(chainId, 'altarOfAscension'),
+        hero: getContractWithABI(chainId, 'HERO'),
+        relic: getContractWithABI(chainId, 'RELIC'),
+        party: getContractWithABI(chainId, 'PARTY'),
+        dungeonMaster: getContractWithABI(chainId, 'DUNGEONMASTER'),
+        playerVault: getContractWithABI(chainId, 'PLAYERVAULT'),
+        vipStaking: getContractWithABI(chainId, 'VIPSTAKING'),
+        oracle: getContractWithABI(chainId, 'ORACLE'),
+        altarOfAscension: getContractWithABI(chainId, 'ALTAROFASCENSION'),
       };
       
       // 驗證所有合約

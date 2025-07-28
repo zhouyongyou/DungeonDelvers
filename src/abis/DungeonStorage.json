@@ -1,491 +1,482 @@
-{
-  "_format": "hh-sol-artifact-1",
-  "contractName": "DungeonStorage",
-  "sourceName": "contracts/current/core/DungeonStorage.sol",
-  "abi": [
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "initialOwner",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "constructor"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "owner",
-          "type": "address"
-        }
-      ],
-      "name": "OwnableInvalidOwner",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        }
-      ],
-      "name": "OwnableUnauthorizedAccount",
-      "type": "error"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "newAddress",
-          "type": "address"
-        }
-      ],
-      "name": "LogicContractSet",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "previousOwner",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "newOwner",
-          "type": "address"
-        }
-      ],
-      "name": "OwnershipTransferred",
-      "type": "event"
-    },
-    {
-      "inputs": [],
-      "name": "NUM_DUNGEONS",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
-        }
-      ],
-      "name": "deleteExpeditionRequest",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "dungeons",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "requiredPower",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "rewardAmountUSD",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint8",
-          "name": "baseSuccessRate",
-          "type": "uint8"
-        },
-        {
-          "internalType": "bool",
-          "name": "isInitialized",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_dungeonId",
-          "type": "uint256"
-        }
-      ],
-      "name": "getDungeon",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "requiredPower",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "rewardAmountUSD",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint8",
-              "name": "baseSuccessRate",
-              "type": "uint8"
-            },
-            {
-              "internalType": "bool",
-              "name": "isInitialized",
-              "type": "bool"
-            }
-          ],
-          "internalType": "struct DungeonStorage.Dungeon",
-          "name": "",
-          "type": "tuple"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_requestId",
-          "type": "uint256"
-        }
-      ],
-      "name": "getExpeditionRequest",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "address",
-              "name": "requester",
-              "type": "address"
-            },
-            {
-              "internalType": "uint256",
-              "name": "partyId",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "dungeonId",
-              "type": "uint256"
-            }
-          ],
-          "internalType": "struct DungeonStorage.ExpeditionRequest",
-          "name": "",
-          "type": "tuple"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_partyId",
-          "type": "uint256"
-        }
-      ],
-      "name": "getPartyStatus",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "provisionsRemaining",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "cooldownEndsAt",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "unclaimedRewards",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint8",
-              "name": "fatigueLevel",
-              "type": "uint8"
-            }
-          ],
-          "internalType": "struct DungeonStorage.PartyStatus",
-          "name": "",
-          "type": "tuple"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "logicContract",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "owner",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "partyStatuses",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "provisionsRemaining",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "cooldownEndsAt",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "unclaimedRewards",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint8",
-          "name": "fatigueLevel",
-          "type": "uint8"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "renounceOwnership",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "s_requests",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "requester",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "partyId",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "dungeonId",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
-        },
-        {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "requiredPower",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "rewardAmountUSD",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint8",
-              "name": "baseSuccessRate",
-              "type": "uint8"
-            },
-            {
-              "internalType": "bool",
-              "name": "isInitialized",
-              "type": "bool"
-            }
-          ],
-          "internalType": "struct DungeonStorage.Dungeon",
-          "name": "data",
-          "type": "tuple"
-        }
-      ],
-      "name": "setDungeon",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
-        },
-        {
-          "components": [
-            {
-              "internalType": "address",
-              "name": "requester",
-              "type": "address"
-            },
-            {
-              "internalType": "uint256",
-              "name": "partyId",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "dungeonId",
-              "type": "uint256"
-            }
-          ],
-          "internalType": "struct DungeonStorage.ExpeditionRequest",
-          "name": "data",
-          "type": "tuple"
-        }
-      ],
-      "name": "setExpeditionRequest",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "_logicContract",
-          "type": "address"
-        }
-      ],
-      "name": "setLogicContract",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
-        },
-        {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "provisionsRemaining",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "cooldownEndsAt",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "unclaimedRewards",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint8",
-              "name": "fatigueLevel",
-              "type": "uint8"
-            }
-          ],
-          "internalType": "struct DungeonStorage.PartyStatus",
-          "name": "data",
-          "type": "tuple"
-        }
-      ],
-      "name": "setPartyStatus",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "newOwner",
-          "type": "address"
-        }
-      ],
-      "name": "transferOwnership",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    }
-  ],
-  "bytecode": "0x6080346100bb57601f6108c838819003918201601f19168301916001600160401b038311848410176100c0578084926020946040528339810103126100bb57516001600160a01b0390818116908190036100bb5780156100a257600080546001600160a01b03198116831782556040519316907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09080a36107f190816100d78239f35b604051631e4fbdf760e01b815260006004820152602490fd5b600080fd5b634e487b7160e01b600052604160045260246000fdfe60406080815260048036101561001457600080fd5b600091823560e01c80631ba77917146106035780631ca6589b146105e757806357764d01146105755780635896cccc146104f75780635aa4470f14610490578063715018a61461043357806379a2cc72146103be5780637fa23093146103445780638da5cb5b1461031c578063956e958a146102cd5780639a7db97f14610280578063a168fa891461023b578063b02080ae146101d6578063cc0e97c9146101a957838163d866be0414610162575063f2fde38b146100d257600080fd5b3461015e57602036600319011261015e576001600160a01b0382358181169391929084900361015a5761010361069e565b831561014457505082546001600160a01b0319811683178455167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e08380a380f35b51631e4fbdf760e01b8152908101849052602490fd5b8480fd5b8280fd5b808484346101a55760203660031901126101a55760029161018e60018060a01b03600154163314610744565b803584526020528220828155826001820155015580f35b5050fd5b8382346101d257816003193601126101d25760015490516001600160a01b039091168152602090f35b5080fd5b8382346101d25760ff61022e606060036101ef36610678565b959061020660018060a01b03600154163314610744565b87528160205280872090863582556020870135600183015586013560028201550193016107ad565b1660ff1982541617905580f35b50903461015e57602036600319011261015e576060928183923582526020522060018060a01b0381541691600260018301549201549181519384526020840152820152f35b50903461015e57602036600319011261015e5760809282913581526003602052209081549160018101549160ff600360028401549301541692815194855260208501528301526060820152f35b50903461015e57602036600319011261015e578160809360ff923581526002602052208054926002600183015492015491815194855260208501528282169084015260081c1615156060820152f35b8382346101d257816003193601126101d257905490516001600160a01b039091168152602090f35b50903461015e57602036600319011261015e578160809360ff92610366610720565b50358152600360205220916103796106ca565b90835493848352600181015460208401908152606085600360028501549486880195865201541694019384528251958652516020860152519084015251166060820152f35b50903461015e57602036600319011261015e57828291606094836103e0610700565b82815282602082015201528035825260205220906103fc610700565b60018060a01b0383541692838252826002600183015492602085019384520154920191825282519384525160208401525190820152f35b833461048d578060031936011261048d5761044c61069e565b80546001600160a01b03198116825581906001600160a01b03167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e08280a380f35b80fd5b5050346101d25760203660031901126101d257356001600160a01b038116908190036101d2576104be61069e565b600180546001600160a01b031916821790557f2b77ccf2e5f7da4f5512141431a43bb1733c8f190737ba450f895887eb7037728280a280f35b50903461015e57602036600319011261015e576080928291610517610720565b503581526002602052206105296106ca565b9160ff825493848152600260018501549460208301958652015493826060858401938288168552019560081c161515855283519586525160208601525116908301525115156060820152f35b503461015e57608036600319011261015e57606036602319011261015e576001546001600160a01b0392906105ad9084163314610744565b8035845260205282209060243590811680910361015e5781546001600160a01b031916178155604435600182015560643560029091015580f35b8382346101d257816003193601126101d25760209051600a8152f35b8382346101d25761061336610678565b9061062960018060a01b03600154163314610744565b8352600260205260ff61065160028486208435815560208501356001820155019383016107ad565b166060835492013580151580910361015a5761ff009060081b169161ffff19161717905580f35b9060a060031983011261069957608060043592602319011261069957602490565b600080fd5b6000546001600160a01b031633036106b257565b60405163118cdaa760e01b8152336004820152602490fd5b604051906080820182811067ffffffffffffffff8211176106ea57604052565b634e487b7160e01b600052604160045260246000fd5b604051906060820182811067ffffffffffffffff8211176106ea57604052565b6107286106ca565b9060008252600060208301526000604083015260006060830152565b1561074b57565b60405162461bcd60e51b815260206004820152603460248201527f53746f726167653a2043616c6c6572206973206e6f742074686520617574686f6044820152731c9a5e9959081b1bd9da58c818dbdb9d1c9858dd60621b6064820152608490fd5b3560ff81168103610699579056fea2646970667358221220a1ac7323731c5c23c55e62017c6ad7790ee13650007105e28495cab62f30fc4564736f6c63430008140033",
-  "deployedBytecode": "0x60406080815260048036101561001457600080fd5b600091823560e01c80631ba77917146106035780631ca6589b146105e757806357764d01146105755780635896cccc146104f75780635aa4470f14610490578063715018a61461043357806379a2cc72146103be5780637fa23093146103445780638da5cb5b1461031c578063956e958a146102cd5780639a7db97f14610280578063a168fa891461023b578063b02080ae146101d6578063cc0e97c9146101a957838163d866be0414610162575063f2fde38b146100d257600080fd5b3461015e57602036600319011261015e576001600160a01b0382358181169391929084900361015a5761010361069e565b831561014457505082546001600160a01b0319811683178455167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e08380a380f35b51631e4fbdf760e01b8152908101849052602490fd5b8480fd5b8280fd5b808484346101a55760203660031901126101a55760029161018e60018060a01b03600154163314610744565b803584526020528220828155826001820155015580f35b5050fd5b8382346101d257816003193601126101d25760015490516001600160a01b039091168152602090f35b5080fd5b8382346101d25760ff61022e606060036101ef36610678565b959061020660018060a01b03600154163314610744565b87528160205280872090863582556020870135600183015586013560028201550193016107ad565b1660ff1982541617905580f35b50903461015e57602036600319011261015e576060928183923582526020522060018060a01b0381541691600260018301549201549181519384526020840152820152f35b50903461015e57602036600319011261015e5760809282913581526003602052209081549160018101549160ff600360028401549301541692815194855260208501528301526060820152f35b50903461015e57602036600319011261015e578160809360ff923581526002602052208054926002600183015492015491815194855260208501528282169084015260081c1615156060820152f35b8382346101d257816003193601126101d257905490516001600160a01b039091168152602090f35b50903461015e57602036600319011261015e578160809360ff92610366610720565b50358152600360205220916103796106ca565b90835493848352600181015460208401908152606085600360028501549486880195865201541694019384528251958652516020860152519084015251166060820152f35b50903461015e57602036600319011261015e57828291606094836103e0610700565b82815282602082015201528035825260205220906103fc610700565b60018060a01b0383541692838252826002600183015492602085019384520154920191825282519384525160208401525190820152f35b833461048d578060031936011261048d5761044c61069e565b80546001600160a01b03198116825581906001600160a01b03167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e08280a380f35b80fd5b5050346101d25760203660031901126101d257356001600160a01b038116908190036101d2576104be61069e565b600180546001600160a01b031916821790557f2b77ccf2e5f7da4f5512141431a43bb1733c8f190737ba450f895887eb7037728280a280f35b50903461015e57602036600319011261015e576080928291610517610720565b503581526002602052206105296106ca565b9160ff825493848152600260018501549460208301958652015493826060858401938288168552019560081c161515855283519586525160208601525116908301525115156060820152f35b503461015e57608036600319011261015e57606036602319011261015e576001546001600160a01b0392906105ad9084163314610744565b8035845260205282209060243590811680910361015e5781546001600160a01b031916178155604435600182015560643560029091015580f35b8382346101d257816003193601126101d25760209051600a8152f35b8382346101d25761061336610678565b9061062960018060a01b03600154163314610744565b8352600260205260ff61065160028486208435815560208501356001820155019383016107ad565b166060835492013580151580910361015a5761ff009060081b169161ffff19161717905580f35b9060a060031983011261069957608060043592602319011261069957602490565b600080fd5b6000546001600160a01b031633036106b257565b60405163118cdaa760e01b8152336004820152602490fd5b604051906080820182811067ffffffffffffffff8211176106ea57604052565b634e487b7160e01b600052604160045260246000fd5b604051906060820182811067ffffffffffffffff8211176106ea57604052565b6107286106ca565b9060008252600060208301526000604083015260006060830152565b1561074b57565b60405162461bcd60e51b815260206004820152603460248201527f53746f726167653a2043616c6c6572206973206e6f742074686520617574686f6044820152731c9a5e9959081b1bd9da58c818dbdb9d1c9858dd60621b6064820152608490fd5b3560ff81168103610699579056fea2646970667358221220a1ac7323731c5c23c55e62017c6ad7790ee13650007105e28495cab62f30fc4564736f6c63430008140033",
-  "linkReferences": {},
-  "deployedLinkReferences": {}
-}
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "initialOwner",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableInvalidOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableUnauthorizedAccount",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newAddress",
+        "type": "address"
+      }
+    ],
+    "name": "LogicContractSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferred",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "NUM_DUNGEONS",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      }
+    ],
+    "name": "deleteExpeditionRequest",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "dungeons",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "requiredPower",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "rewardAmountUSD",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "baseSuccessRate",
+        "type": "uint8"
+      },
+      {
+        "internalType": "bool",
+        "name": "isInitialized",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_dungeonId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getDungeon",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "requiredPower",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "rewardAmountUSD",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "baseSuccessRate",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bool",
+            "name": "isInitialized",
+            "type": "bool"
+          }
+        ],
+        "internalType": "struct DungeonStorage.Dungeon",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_requestId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getExpeditionRequest",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "requester",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "partyId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "dungeonId",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct DungeonStorage.ExpeditionRequest",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_partyId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getPartyStatus",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "provisionsRemaining",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "cooldownEndsAt",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "unclaimedRewards",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "fatigueLevel",
+            "type": "uint8"
+          }
+        ],
+        "internalType": "struct DungeonStorage.PartyStatus",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "logicContract",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "partyStatuses",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "provisionsRemaining",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "cooldownEndsAt",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "unclaimedRewards",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "fatigueLevel",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "s_requests",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "requester",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "partyId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "dungeonId",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "requiredPower",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "rewardAmountUSD",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "baseSuccessRate",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bool",
+            "name": "isInitialized",
+            "type": "bool"
+          }
+        ],
+        "internalType": "struct DungeonStorage.Dungeon",
+        "name": "data",
+        "type": "tuple"
+      }
+    ],
+    "name": "setDungeon",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "requester",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "partyId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "dungeonId",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct DungeonStorage.ExpeditionRequest",
+        "name": "data",
+        "type": "tuple"
+      }
+    ],
+    "name": "setExpeditionRequest",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_logicContract",
+        "type": "address"
+      }
+    ],
+    "name": "setLogicContract",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "provisionsRemaining",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "cooldownEndsAt",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "unclaimedRewards",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "fatigueLevel",
+            "type": "uint8"
+          }
+        ],
+        "internalType": "struct DungeonStorage.PartyStatus",
+        "name": "data",
+        "type": "tuple"
+      }
+    ],
+    "name": "setPartyStatus",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
