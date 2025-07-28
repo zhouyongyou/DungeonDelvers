@@ -320,17 +320,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS, GET');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key');
   
-  // 健康檢查
-  if (req.method === 'GET' && req.url?.includes('/health')) {
-    return res.status(200).json({
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      stats: {
-        cache: cache.getStats(),
-        rateLimiter: rateLimiter.getStats(),
-        keyManager: keyManager.getStats(),
-      },
-    });
+  // 健康檢查 - 修正路由判斷
+  if (req.method === 'GET') {
+    // Vercel 中的路徑判斷
+    const isHealthCheck = req.url === '/health' || 
+                         req.url === '/api/rpc-optimized/health' ||
+                         req.url?.endsWith('/health');
+    
+    if (isHealthCheck) {
+      try {
+        const stats = keyManager.getStats();
+        return res.status(200).json({
+          status: 'healthy',
+          timestamp: new Date().toISOString(),
+          stats: {
+            cache: cache.getStats(),
+            rateLimiter: rateLimiter.getStats(),
+            keyManager: stats,
+          },
+          debug: {
+            url: req.url,
+            method: req.method,
+            hasKeys: stats.totalKeys > 0,
+          }
+        });
+      } catch (error: any) {
+        return res.status(500).json({
+          status: 'error',
+          error: error.message,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
   }
   
   // OPTIONS
@@ -384,11 +405,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 獲取 API key
     const key = keyManager.getNextKey();
     if (!key) {
+      console.error('No API keys found. Available env vars:', Object.keys(process.env).filter(k => k.includes('ALCHEMY')));
       return res.status(500).json({
         jsonrpc: '2.0',
         error: {
           code: -32603,
-          message: 'No API keys configured',
+          message: 'No API keys configured. Please check environment variables.',
+          data: {
+            availableEnvKeys: Object.keys(process.env).filter(k => k.includes('ALCHEMY')).length,
+            debug: process.env.NODE_ENV === 'development' ? Object.keys(process.env).filter(k => k.includes('ALCHEMY')) : undefined
+          }
         },
         id,
       });
