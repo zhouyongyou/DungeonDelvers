@@ -1,190 +1,186 @@
 // src/components/admin/RpcMonitoringPanel.tsx - 管理員 RPC 監控面板
 
 import React, { useState, useEffect } from 'react';
-import { useRpcMonitoring, useRpcAnalytics, useRpcRealTimeMonitoring, useRpcAlerts } from '../../hooks/useRpcMonitoring';
-import { rpcHealthManager } from '../../utils/rpcHealthCheck';
 import { ActionButton } from '../ui/ActionButton';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
-import RpcDashboard from '../ui/RpcDashboard';
 import AdminSection from './AdminSection';
-import type { CacheRecommendation, OptimizationSuggestion } from '../../utils/rpcAnalytics';
-import { rpcDiagnostics } from '../../utils/rpcMonitorFix';
-import { useAppToast } from '../../hooks/useAppToast';
+import { useAppToast } from '../../contexts/SimpleToastContext';
+
+interface RpcHealthStats {
+  status: string;
+  timestamp: string;
+  stats: {
+    cache: {
+      hits: number;
+      misses: number;
+      hitRate: string;
+      size: number;
+    };
+    rateLimiter: {
+      activeClients: number;
+    };
+    keyManager: {
+      totalKeys: number;
+      keys: Array<{
+        index: number;
+        requests: number;
+        errors: number;
+        errorRate: string;
+        lastError?: string;
+      }>;
+    };
+  };
+  debug?: {
+    url: string;
+    method: string;
+    hasKeys: boolean;
+  };
+}
 
 const RpcMonitoringPanel: React.FC = () => {
   const { showToast } = useAppToast();
-  const { stats, insights, isLoading, clearStats, exportStats } = useRpcMonitoring();
-  const { 
-    isAnalyzing, 
-    getCacheRecommendations, 
-    getOptimizationSuggestions,
-    detectBottlenecks,
-    generatePerformanceReport 
-  } = useRpcAnalytics();
-  const { realtimeStats, requestHistory } = useRpcRealTimeMonitoring();
-  const { alerts, thresholds, setThresholds, clearAllAlerts, removeAlert } = useRpcAlerts();
+  const [healthData, setHealthData] = useState<RpcHealthStats | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'health' | 'links'>('dashboard');
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'analytics' | 'health' | 'alerts' | 'settings' | 'diagnostics'>('dashboard');
-  const [cacheRecommendations, setCacheRecommendations] = useState<CacheRecommendation[]>([]);
-  const [optimizationSuggestions, setOptimizationSuggestions] = useState<OptimizationSuggestion[]>([]);
-  const [bottlenecks, setBottlenecks] = useState<Array<{ type: string; description: string; impact: string }>>([]);
-  const [nodeStats, setNodeStats] = useState<any[]>([]);
-  const [performanceReport, setPerformanceReport] = useState<string>('');
+  const fetchHealthData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/rpc-optimized?health=true');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      const data = await response.json();
+      setHealthData(data);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '未知錯誤';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  // 定期更新節點狀態
   useEffect(() => {
-    const updateNodeStats = () => {
-      setNodeStats(rpcHealthManager.getNodeStats());
-    };
-
-    updateNodeStats();
-    // TEMP_DISABLED: 暫時禁用節點狀態更新輪詢以避免 RPC 過載
-    // const interval = setInterval(updateNodeStats, 30000); // 每30秒更新
-    // return () => clearInterval(interval);
+    fetchHealthData();
   }, []);
 
-  // 生成分析報告
-  const handleGenerateAnalysis = async () => {
+  useEffect(() => {
+    if (!autoRefresh) return;
+    
+    const interval = setInterval(fetchHealthData, 10000); // 每10秒刷新
+    return () => clearInterval(interval);
+  }, [autoRefresh]);
+
+  const testRpcRequest = async () => {
+    setIsLoading(true);
     try {
-      const [recommendations, suggestions, bottleneckData, report] = await Promise.all([
-        getCacheRecommendations(),
-        getOptimizationSuggestions(),
-        detectBottlenecks(),
-        generatePerformanceReport(),
-      ]);
-
-      setCacheRecommendations(recommendations);
-      setOptimizationSuggestions(suggestions);
-      setBottlenecks(bottleneckData);
-      setPerformanceReport(report);
-    } catch (error) {
-      console.error('生成分析報告失敗:', error);
+      const startTime = Date.now();
+      const response = await fetch('/api/rpc-optimized', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'eth_blockNumber',
+          params: [],
+          id: 1
+        })
+      });
+      
+      const endTime = Date.now();
+      const responseTime = endTime - startTime;
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      const cacheStatus = response.headers.get('x-cache') || 'UNKNOWN';
+      
+      showToast(`RPC 測試成功！響應時間: ${responseTime}ms, 緩存: ${cacheStatus}, 區塊: ${parseInt(data.result, 16)}`, 'success');
+      
+      // 刷新健康數據
+      await fetchHealthData();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '未知錯誤';
+      showToast(`RPC 測試失敗: ${errorMessage}`, 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // 導出完整報告
-  const handleExportReport = () => {
-    const reportData = {
-      stats,
-      insights,
-      cacheRecommendations,
-      optimizationSuggestions,
-      bottlenecks,
-      nodeStats,
-      performanceReport,
-      alerts,
-      exportTime: new Date().toISOString(),
-    };
-
-    const dataStr = JSON.stringify(reportData, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `rpc-monitoring-report-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // 獲取節點健康狀態顏色
-  const getNodeHealthColor = (isHealthy: boolean, failureCount: number) => {
-    if (!isHealthy) return 'text-red-400';
-    if (failureCount > 0) return 'text-yellow-400';
-    return 'text-green-400';
-  };
-
-  // 格式化延遲時間
-  const formatLatency = (latency: number) => {
-    if (latency === 0) return 'N/A';
-    return `${latency}ms`;
-  };
-
-  // 獲取影響級別顏色
-  const getImpactColor = (impact: string) => {
-    switch (impact) {
-      case 'high': return 'text-red-400';
-      case 'medium': return 'text-yellow-400';
-      case 'low': return 'text-green-400';
-      default: return 'text-gray-400';
-    }
-  };
-
-  // 獲取優先級顏色
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'bg-red-900/20 text-red-400';
-      case 'medium': return 'bg-yellow-900/20 text-yellow-400';
-      case 'low': return 'bg-green-900/20 text-green-400';
-      default: return 'bg-gray-900/20 text-gray-400';
-    }
+  const formatTimestamp = (timestamp: string) => {
+    return new Date(timestamp).toLocaleString('zh-TW', {
+      timeZone: 'Asia/Taipei',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
   };
 
   return (
     <div className="space-y-6">
-      {/* 標題和控制按鈕 */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-white">RPC 監控系統</h2>
-        <div className="flex items-center gap-2">
-          <ActionButton
-            onClick={handleGenerateAnalysis}
-            isLoading={isAnalyzing}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            {isAnalyzing ? '分析中...' : '生成分析'}
-          </ActionButton>
-          <ActionButton
-            onClick={handleExportReport}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            導出報告
-          </ActionButton>
-          <ActionButton
-            onClick={clearStats}
-            className="bg-red-600 hover:bg-red-700"
-          >
-            清除數據
-          </ActionButton>
-        </div>
+      {/* 快速連結和控制按鈕 */}
+      <div className="flex flex-wrap gap-3">
+        <ActionButton 
+          onClick={fetchHealthData} 
+          isLoading={isLoading}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          刷新狀態
+        </ActionButton>
+        
+        <ActionButton 
+          onClick={testRpcRequest} 
+          isLoading={isLoading}
+          className="bg-green-600 hover:bg-green-700"
+        >
+          測試 RPC
+        </ActionButton>
+        
+        <ActionButton 
+          onClick={() => setAutoRefresh(!autoRefresh)}
+          className={autoRefresh ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-600 hover:bg-gray-700'}
+        >
+          {autoRefresh ? '停止自動刷新' : '開始自動刷新'}
+        </ActionButton>
+        
+        <a 
+          href="/api/rpc-optimized?health=true" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+        >
+          🔗 查看原始數據
+        </a>
       </div>
 
-      {/* 實時狀態摘要 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-gray-800 p-4 rounded-lg">
-          <h3 className="text-sm font-medium text-gray-400">當前請求/秒</h3>
-          <div className="text-2xl font-bold text-blue-400">
-            {realtimeStats.requestsPerSecond}
-          </div>
+      {/* 錯誤顯示 */}
+      {error && (
+        <div className="bg-red-900/50 border border-red-600 text-red-300 px-4 py-3 rounded-lg">
+          <strong>錯誤：</strong>{error}
         </div>
-        <div className="bg-gray-800 p-4 rounded-lg">
-          <h3 className="text-sm font-medium text-gray-400">平均響應時間</h3>
-          <div className="text-2xl font-bold text-green-400">
-            {realtimeStats.averageResponseTime.toFixed(0)}ms
-          </div>
+      )}
+
+      {/* 載入狀態 */}
+      {isLoading && !healthData && (
+        <div className="flex justify-center py-8">
+          <LoadingSpinner />
         </div>
-        <div className="bg-gray-800 p-4 rounded-lg">
-          <h3 className="text-sm font-medium text-gray-400">實時錯誤率</h3>
-          <div className="text-2xl font-bold text-red-400">
-            {(realtimeStats.errorRate * 100).toFixed(1)}%
-          </div>
-        </div>
-        <div className="bg-gray-800 p-4 rounded-lg">
-          <h3 className="text-sm font-medium text-gray-400">活動警報</h3>
-          <div className="text-2xl font-bold text-yellow-400">
-            {alerts.length}
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* 標籤頁導航 */}
       <div className="border-b border-gray-700">
         <nav className="flex space-x-8">
           {[
             { key: 'dashboard', label: '儀表板' },
-            { key: 'analytics', label: '分析報告' },
-            { key: 'health', label: '節點健康' },
-            { key: 'alerts', label: '警報系統' },
-            { key: 'diagnostics', label: '診斷工具' },
-            { key: 'settings', label: '設置' },
+            { key: 'health', label: '健康狀態' },
+            { key: 'links', label: '有用連結' },
           ].map(tab => (
             <button
               key={tab.key}
@@ -203,344 +199,215 @@ const RpcMonitoringPanel: React.FC = () => {
 
       {/* 內容區域 */}
       <div className="space-y-6">
-        {activeTab === 'dashboard' && (
-          <div>
-            <RpcDashboard showExportButton={false} />
-          </div>
-        )}
-
-        {activeTab === 'analytics' && (
-          <div className="space-y-6">
-            {/* 緩存建議 */}
-            <AdminSection title="緩存優化建議">
-              {cacheRecommendations.length === 0 ? (
-                <div className="text-center text-gray-400 py-8">
-                  點擊 "生成分析" 來獲取緩存建議
+        {activeTab === 'dashboard' && healthData && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* 系統狀態 */}
+            <div className="bg-gray-800 rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-3 text-green-400">系統狀態</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>狀態：</span>
+                  <span className={healthData.status === 'healthy' ? 'text-green-400' : 'text-red-400'}>
+                    {healthData.status === 'healthy' ? '✅ 健康' : '❌ 異常'}
+                  </span>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {cacheRecommendations.map((rec, index) => (
-                    <div key={index} className={`p-4 rounded-lg border-l-4 ${
-                      rec.priority === 'high' ? 'border-red-500 bg-red-900/10' :
-                      rec.priority === 'medium' ? 'border-yellow-500 bg-yellow-900/10' :
-                      'border-green-500 bg-green-900/10'
-                    }`}>
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-white">{rec.queryKey}</h4>
-                          <p className="text-gray-300 text-sm mt-1">{rec.reason}</p>
-                          <div className="mt-2 text-sm text-gray-400">
-                            建議：staleTime={rec.recommendedStaleTime}ms, gcTime={rec.recommendedGcTime}ms
-                          </div>
-                        </div>
-                        <span className={`px-2 py-1 text-xs rounded ${getPriorityColor(rec.priority)}`}>
-                          {rec.priority}
-                        </span>
-                      </div>
+                <div className="flex justify-between">
+                  <span>更新時間：</span>
+                  <span className="text-gray-300 text-sm">
+                    {formatTimestamp(healthData.timestamp)}
+                  </span>
+                </div>
+                {autoRefresh && (
+                  <div className="text-yellow-400 text-sm">
+                    🔄 自動刷新中 (每10秒)
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 緩存統計 */}
+            <div className="bg-gray-800 rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-3 text-blue-400">緩存統計</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>命中率：</span>
+                  <span className="text-blue-300">{healthData.stats.cache.hitRate}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>命中次數：</span>
+                  <span>{healthData.stats.cache.hits}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>未命中：</span>
+                  <span>{healthData.stats.cache.misses}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>緩存條目：</span>
+                  <span>{healthData.stats.cache.size}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 速率限制 */}
+            <div className="bg-gray-800 rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-3 text-yellow-400">速率限制</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>活躍客戶端：</span>
+                  <span>{healthData.stats.rateLimiter.activeClients}</span>
+                </div>
+                <div className="text-sm text-gray-400">
+                  限制：100 req/min/IP
+                </div>
+              </div>
+            </div>
+
+            {/* API Key 管理 */}
+            <div className="bg-gray-800 rounded-lg p-4 md:col-span-2 lg:col-span-3">
+              <h3 className="text-lg font-semibold mb-3 text-purple-400">API Key 狀態</h3>
+              <div className="mb-3">
+                <span>總共 {healthData.stats.keyManager.totalKeys} 個 API Key</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {healthData.stats.keyManager.keys.map((key) => (
+                  <div key={key.index} className="bg-gray-700 rounded p-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-medium">Key #{key.index}</span>
+                      <span className={`text-sm ${key.errors === 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {key.errors === 0 ? '✅' : '⚠️'}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              )}
-            </AdminSection>
-
-            {/* 優化建議 */}
-            <AdminSection title="性能優化建議">
-              {optimizationSuggestions.length === 0 ? (
-                <div className="text-center text-gray-400 py-8">
-                  點擊 "生成分析" 來獲取優化建議
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {optimizationSuggestions.map((suggestion, index) => (
-                    <div key={index} className="p-4 bg-gray-700 rounded-lg">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-white">{suggestion.title}</h4>
-                          <p className="text-gray-300 text-sm mt-1">{suggestion.description}</p>
-                          <div className="mt-2 text-sm text-gray-400">
-                            實施方案：{suggestion.implementation}
-                          </div>
-                          <div className="mt-2 flex gap-4 text-xs">
-                            <span className={`${getImpactColor(suggestion.expectedImpact)}`}>
-                              預期影響：{suggestion.expectedImpact}
-                            </span>
-                            <span className="text-gray-400">
-                              實施難度：{suggestion.difficulty}
-                            </span>
-                          </div>
+                    <div className="text-sm space-y-1">
+                      <div>請求數：{key.requests}</div>
+                      <div>錯誤數：{key.errors}</div>
+                      <div>錯誤率：{key.errorRate}</div>
+                      {key.lastError && (
+                        <div className="text-red-400 text-xs">
+                          上次錯誤：{formatTimestamp(key.lastError)}
                         </div>
-                        <span className={`px-2 py-1 text-xs rounded bg-blue-900/20 text-blue-400`}>
-                          {suggestion.type}
-                        </span>
-                      </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </AdminSection>
-
-            {/* 性能瓶頸 */}
-            <AdminSection title="性能瓶頸分析">
-              {bottlenecks.length === 0 ? (
-                <div className="text-center text-gray-400 py-8">
-                  點擊 "生成分析" 來檢測性能瓶頸
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {bottlenecks.map((bottleneck, index) => (
-                    <div key={index} className="p-4 bg-gray-700 rounded-lg">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-white">{bottleneck.type}</h4>
-                          <p className="text-gray-300 text-sm mt-1">{bottleneck.description}</p>
-                        </div>
-                        <span className={`px-2 py-1 text-xs rounded ${
-                          bottleneck.impact === 'high' ? 'bg-red-900/20 text-red-400' :
-                          bottleneck.impact === 'medium' ? 'bg-yellow-900/20 text-yellow-400' :
-                          'bg-green-900/20 text-green-400'
-                        }`}>
-                          {bottleneck.impact}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </AdminSection>
-
-            {/* 詳細報告 */}
-            {performanceReport && (
-              <AdminSection title="詳細性能報告">
-                <pre className="bg-gray-900 p-4 rounded-lg text-sm text-gray-300 overflow-x-auto whitespace-pre-wrap">
-                  {performanceReport}
-                </pre>
-              </AdminSection>
-            )}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
         {activeTab === 'health' && (
-          <AdminSection title="RPC 節點健康狀態">
-            <div className="space-y-4">
-              {nodeStats.map((node, index) => (
-                <div key={index} className="p-4 bg-gray-700 rounded-lg">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-white">{node.url}</h4>
-                      <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-400">狀態：</span>
-                          <span className={`ml-2 ${getNodeHealthColor(node.isHealthy, node.failureCount)}`}>
-                            {node.isHealthy ? '健康' : '故障'}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">延遲：</span>
-                          <span className="ml-2 text-white">{formatLatency(node.latency)}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">失敗次數：</span>
-                          <span className="ml-2 text-white">{node.failureCount}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">最後檢查：</span>
-                          <span className="ml-2 text-white">
-                            {new Date(node.lastCheck).toLocaleTimeString()}
-                          </span>
-                        </div>
-                      </div>
+          <AdminSection title="RPC 系統健康詳情">
+            {healthData ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-gray-700 rounded-lg p-4">
+                    <h4 className="font-semibold mb-2">緩存性能</h4>
+                    <div className="space-y-2 text-sm">
+                      <div>命中率：{healthData.stats.cache.hitRate}</div>
+                      <div>總請求：{healthData.stats.cache.hits + healthData.stats.cache.misses}</div>
+                      <div>緩存大小：{healthData.stats.cache.size} 項目</div>
                     </div>
-                    <div className={`w-3 h-3 rounded-full ${
-                      node.isHealthy ? 'bg-green-500' : 'bg-red-500'
-                    }`}></div>
+                  </div>
+                  
+                  <div className="bg-gray-700 rounded-lg p-4">
+                    <h4 className="font-semibold mb-2">流量控制</h4>
+                    <div className="space-y-2 text-sm">
+                      <div>活躍連接：{healthData.stats.rateLimiter.activeClients}</div>
+                      <div>流量分配：100% 優化版本</div>
+                      <div>限制策略：100 req/min/IP</div>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
+                
+                <div className="bg-gray-700 rounded-lg p-4">
+                  <h4 className="font-semibold mb-2">API Key 健康狀況</h4>
+                  <div className="text-sm text-gray-300">
+                    <div>總 Key 數量：{healthData.stats.keyManager.totalKeys}</div>
+                    <div>健康 Key 數量：{healthData.stats.keyManager.keys.filter(k => k.errors === 0).length}</div>
+                    <div>總請求數：{healthData.stats.keyManager.keys.reduce((sum, k) => sum + k.requests, 0)}</div>
+                    <div>總錯誤數：{healthData.stats.keyManager.keys.reduce((sum, k) => sum + k.errors, 0)}</div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center text-gray-400 py-8">
+                點擊 "刷新狀態" 來載入健康數據
+              </div>
+            )}
           </AdminSection>
         )}
 
-        {activeTab === 'alerts' && (
-          <div className="space-y-6">
-            <AdminSection title="警報設置">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    最大請求數/分鐘
-                  </label>
-                  <input
-                    type="number"
-                    value={thresholds.maxRequestsPerMinute}
-                    onChange={(e) => setThresholds(prev => ({ 
-                      ...prev, 
-                      maxRequestsPerMinute: parseInt(e.target.value) 
-                    }))}
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    最大響應時間 (ms)
-                  </label>
-                  <input
-                    type="number"
-                    value={thresholds.maxResponseTime}
-                    onChange={(e) => setThresholds(prev => ({ 
-                      ...prev, 
-                      maxResponseTime: parseInt(e.target.value) 
-                    }))}
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    最大錯誤率
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={thresholds.maxErrorRate}
-                    onChange={(e) => setThresholds(prev => ({ 
-                      ...prev, 
-                      maxErrorRate: parseFloat(e.target.value) 
-                    }))}
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
-                  />
-                </div>
-              </div>
-            </AdminSection>
-
-            <AdminSection title="活動警報">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-white">
-                  當前警報 ({alerts.length})
-                </h3>
-                <ActionButton
-                  onClick={clearAllAlerts}
-                  className="bg-red-600 hover:bg-red-700"
-                >
-                  清除所有警報
-                </ActionButton>
-              </div>
-              
-              {alerts.length === 0 ? (
-                <div className="text-center text-gray-400 py-8">
-                  暫無活動警報
-                </div>
-              ) : (
+        {activeTab === 'links' && (
+          <AdminSection title="RPC 監控相關連結">
+            <div className="space-y-4">
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h4 className="text-lg font-semibold mb-3">🔗 有用的連結</h4>
                 <div className="space-y-3">
-                  {alerts.map((alert) => (
-                    <div key={alert.id} className={`p-4 rounded-lg border-l-4 ${
-                      alert.type === 'error' ? 'border-red-500 bg-red-900/10' :
-                      alert.type === 'warning' ? 'border-yellow-500 bg-yellow-900/10' :
-                      'border-blue-500 bg-blue-900/10'
-                    }`}>
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h4 className={`font-semibold ${
-                            alert.type === 'error' ? 'text-red-400' :
-                            alert.type === 'warning' ? 'text-yellow-400' :
-                            'text-blue-400'
-                          }`}>
-                            {alert.title}
-                          </h4>
-                          <p className="text-gray-300 text-sm mt-1">{alert.message}</p>
-                          <p className="text-gray-400 text-xs mt-2">
-                            {new Date(alert.timestamp).toLocaleString()}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            removeAlert(alert.id);
-                          }}
-                          className="text-gray-400 hover:text-white ml-4"
-                        >
-                          ✕
-                        </button>
-                      </div>
+                  <div className="flex justify-between items-center p-3 bg-gray-700 rounded">
+                    <div>
+                      <span className="text-gray-300 font-medium">健康檢查端點</span>
+                      <div className="text-sm text-gray-400">即時查看 RPC 系統健康狀況</div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </AdminSection>
-          </div>
-        )}
-
-        {activeTab === 'diagnostics' && (
-          <AdminSection title="RPC 診斷工具">
-            <div className="space-y-6">
-              <div className="p-4 bg-gray-700 rounded-lg">
-                <h4 className="font-semibold text-white mb-4">監控準確性診斷</h4>
-                <div className="space-y-4">
-                  <ActionButton
-                    onClick={() => {
-                      const report = rpcDiagnostics.getDiagnosticsReport();
-                      console.log('診斷報告:', report);
-                      showToast('診斷報告已輸出到控制台', 'info');
-                    }}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    生成診斷報告
-                  </ActionButton>
+                    <a 
+                      href="/api/rpc-optimized?health=true" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+                    >
+                      打開
+                    </a>
+                  </div>
                   
-                  <ActionButton
-                    onClick={() => {
-                      rpcDiagnostics.reset();
-                      showToast('診斷數據已重置', 'success');
-                    }}
-                    className="bg-yellow-600 hover:bg-yellow-700"
-                  >
-                    重置診斷數據
-                  </ActionButton>
+                  <div className="flex justify-between items-center p-3 bg-gray-700 rounded">
+                    <div>
+                      <span className="text-gray-300 font-medium">RPC 優化端點</span>
+                      <div className="text-sm text-gray-400">POST /api/rpc-optimized - 主要 RPC 代理</div>
+                    </div>
+                    <span className="px-3 py-1 bg-gray-600 text-gray-300 text-sm rounded">POST</span>
+                  </div>
                   
-                  <div className="mt-4 p-3 bg-gray-800 rounded">
-                    <p className="text-sm text-gray-300">
-                      診斷工具會比較前端監控統計和實際網絡請求的差異，幫助識別監控系統的問題。
-                    </p>
+                  <div className="flex justify-between items-center p-3 bg-gray-700 rounded">
+                    <div>
+                      <span className="text-gray-300 font-medium">舊版 RPC 端點</span>
+                      <div className="text-sm text-gray-400">POST /api/rpc - 備用端點（0% 流量）</div>
+                    </div>
+                    <span className="px-3 py-1 bg-gray-600 text-gray-300 text-sm rounded">POST</span>
                   </div>
                 </div>
               </div>
               
-              <div className="p-4 bg-gray-700 rounded-lg">
-                <h4 className="font-semibold text-white mb-4">實時診斷數據</h4>
-                <div id="diagnostics-realtime" className="space-y-2 text-sm">
-                  <p className="text-gray-300">診斷數據將在這裡顯示...</p>
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h4 className="text-lg font-semibold mb-3">📊 監控指標</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <h5 className="font-medium text-gray-300 mb-2">緩存指標</h5>
+                    <ul className="space-y-1 text-gray-400">
+                      <li>• 緩存命中率 (目標 > 60%)</li>
+                      <li>• 響應時間 (緩存命中 < 10ms)</li>
+                      <li>• 緩存大小 (< 1000 條目)</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 className="font-medium text-gray-300 mb-2">性能指標</h5>
+                    <ul className="space-y-1 text-gray-400">
+                      <li>• API Key 錯誤率 (< 5%)</li>
+                      <li>• 速率限制觸發 (監控)</li>
+                      <li>• 系統健康狀態</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
-            </div>
-          </AdminSection>
-        )}
-
-        {activeTab === 'settings' && (
-          <AdminSection title="監控設置">
-            <div className="space-y-4">
-              <div className="p-4 bg-gray-700 rounded-lg">
-                <h4 className="font-semibold text-white mb-2">監控配置</h4>
+              
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h4 className="text-lg font-semibold mb-3">⚡ 快速調試命令</h4>
                 <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      defaultChecked
-                      className="mr-2"
-                    />
-                    <span className="text-gray-300">啟用 RPC 監控</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      defaultChecked
-                      className="mr-2"
-                    />
-                    <span className="text-gray-300">啟用性能分析</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      defaultChecked
-                      className="mr-2"
-                    />
-                    <span className="text-gray-300">啟用警報系統</span>
-                  </label>
+                  <div className="bg-gray-900 p-3 rounded font-mono text-sm">
+                    <div className="text-gray-400">健康檢查：</div>
+                    <div className="text-green-400">curl /api/rpc-optimized?health=true</div>
+                  </div>
+                  <div className="bg-gray-900 p-3 rounded font-mono text-sm">
+                    <div className="text-gray-400">測試 RPC 請求：</div>
+                    <div className="text-green-400">curl -X POST /api/rpc-optimized -d '{`"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1`}'</div>
+                  </div>
                 </div>
               </div>
             </div>

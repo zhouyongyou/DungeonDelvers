@@ -76,7 +76,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
     gameParams: true,
     oracle: true,
     contractControl: true,
-    // rpcMonitor: false, // 移除RPC監控
+    rpcMonitor: false, // RPC監控默認不展開
   });
 
   // 移除 watchManager 相關代碼以解決循環依賴
@@ -1177,15 +1177,13 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
         </div>
       </AdminSection>
 
-      {/* RPC Monitoring Panel - DISABLED
       <AdminSection 
-        title="RPC 監控系統"
+        title="🚀 RPC 監控系統"
         defaultExpanded={false}
         onExpand={() => setLoadedSections(prev => ({ ...prev, rpcMonitor: true }))}
       >
         <RpcMonitoringPanel />
       </AdminSection>
-      */}
     </>
   );
 });
