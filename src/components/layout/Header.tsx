@@ -12,6 +12,7 @@ import { Icons } from '../ui/icons';
 import { NetworkSwitcher } from '../ui/NetworkSwitcher';
 import { useMobileOptimization } from '../../hooks/useMobileOptimization';
 import { formatMobileAddress } from '../../utils/mobileUtils';
+import { usePagePreload } from '../ui/PageTransition';
 
 const usePlayerLevel = () => {
     // 簡化版本，暫時返回 null 避免 TypeScript 錯誤
@@ -55,45 +56,29 @@ export const Header: React.FC<HeaderProps> = ({
 
   const [isTxPopoverOpen, setIsTxPopoverOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const [openMobileCategory, setOpenMobileCategory] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const { level } = usePlayerLevel();
+  const { preloadPage } = usePagePreload();
 
   const isDeveloper = isConnected && address?.toLowerCase() === DEVELOPER_ADDRESS.toLowerCase();
 
-  const gameMenus = useMemo(() => {
-      const baseMenus = {
-          '總覽': [
-              { key: 'dashboard' as Page, label: '總覽' },
-              { key: 'profile' as Page, label: '檔案' },
-              { key: 'explorer' as Page, label: '探索' },
-          ],
-          '成長': [
-              { key: 'mint' as Page, label: '鑄造' },
-              { key: 'altar' as Page, label: '升星' },
-          ],
-          '冒險': [
-              { key: 'party' as Page, label: '組隊' },
-              { key: 'dungeon' as Page, label: '地城' },
-          ],
-          '社群': [
-              { key: 'referral' as Page, label: '推薦' },
-              { key: 'vip' as Page, label: 'VIP' },
-          ]
-      };
+  const navItems: { key: Page; label: string; icon?: string }[] = useMemo(() => {
+      const items = [
+          { key: 'dashboard' as Page, label: '總覽', icon: '🏠' },
+          { key: 'myAssets' as Page, label: '我的資產', icon: '💎' },
+          { key: 'mint' as Page, label: '鑄造', icon: '🔨' },
+          { key: 'altar' as Page, label: '升星', icon: '⭐' },
+          { key: 'dungeon' as Page, label: '地城', icon: '⚔️' },
+          { key: 'vip' as Page, label: 'VIP', icon: '👑' },
+          { key: 'referral' as Page, label: '推薦', icon: '🤝' },
+      ];
       
       if (isDeveloper) {
-          baseMenus['總覽'].push({ key: 'admin' as Page, label: '管理' });
+          items.push({ key: 'admin' as Page, label: '管理', icon: '🛠️' });
       }
       
-      return baseMenus;
+      return items;
   }, [isDeveloper]);
-
-  const navItems: { key: Page; label: string }[] = useMemo(() => {
-      return Object.values(gameMenus).flat();
-  }, [gameMenus]);
 
   const handleConnectClick = () => { if (isConnected) disconnect(); else connect({ connector: injected() }); };
 
@@ -101,9 +86,6 @@ export const Header: React.FC<HeaderProps> = ({
     const handleClickOutside = (event: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
         setIsTxPopoverOpen(false);
-      }
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setOpenDropdown(null);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -117,15 +99,6 @@ export const Header: React.FC<HeaderProps> = ({
   const handleNavClick = (page: Page) => {
       setActivePage(page);
       setIsMenuOpen(false);
-      setOpenDropdown(null);
-  };
-
-  const toggleDropdown = (category: string) => {
-      setOpenDropdown(openDropdown === category ? null : category);
-  };
-
-  const toggleMobileCategory = (category: string) => {
-      setOpenMobileCategory(openMobileCategory === category ? null : category);
   };
 
   return (
@@ -171,47 +144,22 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
             </div>
             
-            <nav className="hidden md:flex mt-4 flex-wrap justify-center gap-6 text-sm" ref={dropdownRef}>
-              {Object.entries(gameMenus).map(([category, items]) => (
-                  <div key={category} className="relative">
-                      <button 
-                          className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                              items.some(item => item.key === activePage) 
-                                  ? 'bg-[#C0A573] text-white' 
-                                  : 'text-gray-300 hover:bg-gray-700'
-                          }`}
-                          onClick={() => toggleDropdown(category)}
-                      >
-                          {category}
-                          <svg 
-                              className={`w-4 h-4 transition-transform ${openDropdown === category ? 'rotate-180' : ''}`} 
-                              fill="none" 
-                              stroke="currentColor" 
-                              viewBox="0 0 24 24"
-                          >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m19 9-7 7-7-7" />
-                          </svg>
-                      </button>
-                      
-                      {openDropdown === category && (
-                          <div className="absolute top-full left-0 mt-2 bg-[#2A2B3D] border border-gray-600 rounded-lg shadow-lg z-50 min-w-[120px]">
-                              {items.map(item => (
-                                  <a 
-                                      key={item.key} 
-                                      href={`#/${item.key}`} 
-                                      className={`block px-4 py-3 text-sm transition-colors border-b border-gray-600 last:border-b-0 ${
-                                          activePage === item.key 
-                                              ? 'bg-[#C0A573] text-white font-semibold' 
-                                              : 'text-gray-300 hover:bg-gray-600'
-                                      }`}
-                                      onClick={(e) => { e.preventDefault(); handleNavClick(item.key); }}
-                                  >
-                                      {item.label}
-                                  </a>
-                              ))}
-                          </div>
-                      )}
-                  </div>
+            <nav className="hidden md:flex mt-4 flex-wrap justify-center gap-3 text-sm">
+              {navItems.map(item => (
+                  <a 
+                      key={item.key} 
+                      href={`#/${item.key}`} 
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                          activePage === item.key 
+                              ? 'bg-[#C0A573] text-white shadow-lg transform scale-105' 
+                              : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                      }`}
+                      onClick={(e) => { e.preventDefault(); handleNavClick(item.key); }}
+                      onMouseEnter={() => preloadPage(item.key)}
+                  >
+                      {item.icon && <span className="text-base">{item.icon}</span>}
+                      {item.label}
+                  </a>
               ))}
             </nav>
         </div>
@@ -238,47 +186,21 @@ export const Header: React.FC<HeaderProps> = ({
                     )}
                 </div>
                 
-                <nav className="flex flex-col gap-4">
-                    {Object.entries(gameMenus).map(([category, items]) => (
-                        <div key={category} className="bg-gray-700/30 rounded-lg overflow-hidden">
-                            <button 
-                                className={`w-full flex items-center justify-between p-4 text-left transition-colors ${
-                                    items.some(item => item.key === activePage) 
-                                        ? 'bg-[#C0A573] text-white' 
-                                        : 'text-gray-300 hover:bg-gray-600'
-                                }`}
-                                onClick={() => toggleMobileCategory(category)}
-                            >
-                                <span className="text-lg font-semibold">{category}</span>
-                                <svg 
-                                    className={`w-5 h-5 transition-transform ${openMobileCategory === category ? 'rotate-180' : ''}`} 
-                                    fill="none" 
-                                    stroke="currentColor" 
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m19 9-7 7-7-7" />
-                                </svg>
-                            </button>
-                            
-                            {openMobileCategory === category && (
-                                <div className="border-t border-gray-600">
-                                    {items.map((item, index) => (
-                                        <a 
-                                           key={item.key} 
-                                           href={`#/${item.key}`} 
-                                           className={`block px-6 py-4 text-lg transition-colors border-b border-gray-600 last:border-b-0 ${
-                                               activePage === item.key 
-                                                   ? 'bg-[#C0A573] text-white font-semibold' 
-                                                   : 'text-gray-300 hover:bg-gray-600'
-                                           }`}
-                                           onClick={(e) => { e.preventDefault(); handleNavClick(item.key); }}
-                                        >
-                                          {item.label}
-                                        </a>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                <nav className="flex flex-col gap-2 overflow-y-auto">
+                    {navItems.map(item => (
+                        <a 
+                            key={item.key} 
+                            href={`#/${item.key}`} 
+                            className={`flex items-center gap-3 px-5 py-4 rounded-lg text-lg transition-all ${
+                                activePage === item.key 
+                                    ? 'bg-[#C0A573] text-white font-semibold shadow-lg' 
+                                    : 'bg-gray-700/30 text-gray-300 hover:bg-gray-600'
+                            }`}
+                            onClick={(e) => { e.preventDefault(); handleNavClick(item.key); }}
+                        >
+                            {item.icon && <span className="text-xl">{item.icon}</span>}
+                            {item.label}
+                        </a>
                     ))}
                 </nav>
             </div>

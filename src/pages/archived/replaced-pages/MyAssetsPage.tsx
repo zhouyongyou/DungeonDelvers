@@ -40,7 +40,7 @@ interface TeamBuilderProps {
   isAuthorizing: boolean;
 }
 
-const TeamBuilder = memo<TeamBuilderProps>(({ 
+export const TeamBuilder = memo<TeamBuilderProps>(({ 
   heroes, 
   relics, 
   onCreateParty, 

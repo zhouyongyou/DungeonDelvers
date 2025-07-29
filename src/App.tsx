@@ -22,13 +22,15 @@ import { preloadCriticalImages, setupSmartPreloading } from './utils/imagePreloa
 import { usePagePerformance } from './utils/performanceMonitor';
 import { quickDiagnose } from './utils/simpleDiagnostics';
 import { isValidPitchPath } from './utils/pitchAccess';
+import { PageTransition, usePagePreload } from './components/ui/PageTransition';
 // import { WebSocketIndicator } from './components/WebSocketIndicator'; // 移除，因為不再使用 Apollo
 
 // 動態導入所有頁面
+const OverviewPage = lazy(() => import('./pages/OverviewPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const MintPage = lazy(() => import('./pages/MintPage'));
 const ExplorerPage = lazy(() => import('./pages/ExplorerPage'));
-const MyAssetsPage = lazy(() => import('./pages/MyAssetsPage'));
+const MyAssetsPage = lazy(() => import('./pages/MyAssetsPageEnhanced'));
 const DungeonPage = lazy(() => import('./pages/DungeonPage'));
 const AltarPage = lazy(() => import('./pages/AltarPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
@@ -119,7 +121,7 @@ function App() {
   };
 
   const renderPage = () => {
-    const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'admin', 'altar', 'profile', 'vip' /* , 'codex' */];
+    const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'admin', 'altar', 'profile', 'vip', 'myAssets' /* , 'codex' */];
     
     // 如果頁面需要錢包但尚未連接，則顯示提示
     if (!isConnected && pageRequiresWallet.includes(activePage)) {
@@ -133,7 +135,8 @@ function App() {
     switch (activePage) {
         case 'dungeon': return <DungeonPage setActivePage={handleSetPage} />;
         case 'party': return <MyAssetsPage />;
-        case 'dashboard': return <DashboardPage setActivePage={handleSetPage} />;
+        case 'myAssets': return <MyAssetsPage />;
+        case 'dashboard': return <OverviewPage setActivePage={handleSetPage} />;
         case 'mint': return <MintPage />;
         case 'explorer': return <ExplorerPage />;
         case 'admin': return <AdminPage />;
@@ -145,7 +148,7 @@ function App() {
         case 'debug': return <DebugContractPage />;
         case 'priceDebug': return <PriceDebugPage />;
         case 'pitch': return <PitchPage />;
-        default: return <MintPage />; // 預設頁面也改為 MintPage
+        default: return <OverviewPage setActivePage={handleSetPage} />; // 預設頁面改為 OverviewPage
     }
   };
 
@@ -164,7 +167,9 @@ function App() {
             <WrongNetworkBanner />
             <main className="flex-grow container mx-auto px-4 py-8 md:px-6 md:py-12">
                 <Suspense fallback={<PageLoader />}>
-                    {renderPage()}
+                    <PageTransition pageKey={activePage}>
+                        {renderPage()}
+                    </PageTransition>
                 </Suspense>
             </main>
             {!isMobile && <Footer />}
