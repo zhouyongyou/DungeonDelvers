@@ -26,10 +26,10 @@ const GET_REFERRAL_DATA_QUERY = `
   query GetReferralData($owner: ID!) {
     player(id: $owner) {
       id
-      # 假設 vault entity 已經與 player 關聯
-      vault {
-        referrer
-        totalCommissionPaid
+      profile {
+        inviter
+        commissionEarned
+        invitees
       }
     }
   }
@@ -82,7 +82,7 @@ const useReferralData = () => {
             }
             const { data } = await response.json();
             // ★★★ 核心修正：確保在找不到資料時回傳 null 而不是 undefined ★★★
-            return data.player?.vault ?? null;
+            return data.player?.profile ?? null;
         },
         enabled: !!address && chainId === bsc.id,
         staleTime: 1000 * 60 * 10, // 10分鐘快取
@@ -114,8 +114,9 @@ const ReferralPage: React.FC = () => {
     // ★ 核心改造：使用新的 Hook 獲取數據
     const { data: referralData, isLoading } = useReferralData();
     
-    const currentReferrer = referralData?.referrer;
-    const totalCommission = referralData?.totalCommissionPaid ? BigInt(referralData.totalCommissionPaid) : 0n;
+    const currentReferrer = referralData?.inviter;
+    const totalCommission = referralData?.commissionEarned ? BigInt(referralData.commissionEarned) : 0n;
+    const totalReferrals = referralData?.invitees?.length || 0;
 
     const playerVaultContract = getContractWithABI('PLAYERVAULT');
     const { writeContractAsync, isPending: isSettingReferrer } = useWriteContract();
@@ -523,19 +524,10 @@ ${referralLink}
                     {showCommissionDetails && (
                         <div className="mt-4 pt-4 border-t border-gray-700 space-y-2 text-sm">
                             <div className="flex justify-between">
-                                <span className="text-gray-400">一級推薦收益：</span>
+                                <span className="text-gray-400">累計佣金收益：</span>
                                 <span className="text-gray-300 font-mono">
-                                    {referralData?.level1Commission ? 
-                                        formatLargeNumber(BigInt(referralData.level1Commission)) : 
-                                        '0'
-                                    } SOUL
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">二級推薦收益：</span>
-                                <span className="text-gray-300 font-mono">
-                                    {referralData?.level2Commission ? 
-                                        formatLargeNumber(BigInt(referralData.level2Commission)) : 
+                                    {totalCommission ? 
+                                        formatLargeNumber(totalCommission) : 
                                         '0'
                                     } SOUL
                                 </span>
@@ -543,17 +535,9 @@ ${referralLink}
                             <div className="flex justify-between">
                                 <span className="text-gray-400">總推薦人數：</span>
                                 <span className="text-gray-300">
-                                    {referralData?.totalReferrals || 0} 人
+                                    {totalReferrals} 人
                                 </span>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">活躍推薦人數：</span>
-                                <span className="text-gray-300">
-                                    {referralData?.activeReferrals || 0} 人
-                                </span>
-                            </div>
-                            {/* 暫時顯示開發中提示 */}
-                            <p className="text-xs text-gray-500 mt-2 italic text-center">* 明細功能開發中</p>
                         </div>
                     )}
                 </div>

@@ -1,7 +1,7 @@
-// DDgraphql/dungeondelvers/src/player-vault.ts (參數名稱修正版)
+// DDgraphql/dungeondelvers/src/player-vault.ts (CommissionEarned 同步修正版)
 import { Address, BigInt } from "@graphprotocol/graph-ts"
 import { Deposited, Withdrawn, CommissionPaid } from "../generated/PlayerVault/PlayerVault"
-import { PlayerVault } from "../generated/schema"
+import { PlayerVault, PlayerProfile } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 
 function getOrCreatePlayerVault(playerAddress: Address): PlayerVault {
@@ -47,4 +47,15 @@ export function handleCommissionPaid(event: CommissionPaid): void {
     vault.pendingRewards = vault.pendingRewards.plus(event.params.amount)
     vault.lastUpdatedAt = event.block.timestamp
     vault.save()
+    
+    // ★ 新增修正：同步更新 PlayerProfile 的 commissionEarned 字段
+    const player = getOrCreatePlayer(event.params.referrer)
+    if (player.profile) {
+        const profile = PlayerProfile.load(player.profile!)
+        if (profile) {
+            profile.commissionEarned = profile.commissionEarned.plus(event.params.amount)
+            profile.lastUpdatedAt = event.block.timestamp
+            profile.save()
+        }
+    }
 }

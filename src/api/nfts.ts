@@ -22,6 +22,7 @@ import type {
     NftType
 } from '../types/nft';
 import { logger } from '../utils/logger';
+import { getPartyImagePath, getPartyTier } from '../utils/partyTiers';
 
 // =================================================================
 // Section 1: The Graph API 設定 (保持不變)
@@ -288,14 +289,16 @@ function generateFallbackMetadata(nftType: string, tokenId: string, rarity?: num
                 ]
             };
         case 'party':
+            // 如果沒有提供戰力數據，使用默認圖片
             return {
                 ...baseData,
                 name: `隊伍 #${tokenId}`,
-                image: '/images/party/party.png',
+                image: '/images/party/party.png', // fallback 時使用默認圖片
                 attributes: [
                     { trait_type: 'Total Power', value: '載入中...' },
                     { trait_type: 'Heroes Count', value: '載入中...' },
-                    { trait_type: 'Rarity', value: rarity || '載入中...' }
+                    { trait_type: 'Rarity', value: rarity || '載入中...' },
+                    { trait_type: 'Tier', value: '載入中...' }
                 ]
             };
         case 'vip':
@@ -644,6 +647,9 @@ async function parseNfts<T extends AssetWithTokenId>(
             }
             case 'party': {
                 const partyAsset = asset as unknown as PartyAsset;
+                const totalPower = Number(partyAsset.totalPower);
+                const partyTier = getPartyTier(totalPower);
+                
                 return { 
                     ...baseNft, 
                     type, 
@@ -652,10 +658,13 @@ async function parseNfts<T extends AssetWithTokenId>(
                     heroIds: partyAsset.heroIds ? partyAsset.heroIds.map((id) => BigInt(id)) : [], 
                     relicIds: [], // 暫時設為空陣列，等待子圖修復後恢復 
                     partyRarity: Number(partyAsset.partyRarity),
+                    // 根據戰力動態設置圖片
+                    image: getPartyImagePath(totalPower),
                     attributes: [
-                        { trait_type: 'Total Power', value: Number(partyAsset.totalPower) },
+                        { trait_type: 'Total Power', value: totalPower },
                         { trait_type: 'Total Capacity', value: Number(partyAsset.totalCapacity) },
-                        { trait_type: 'Rarity', value: Number(partyAsset.partyRarity) }
+                        { trait_type: 'Rarity', value: Number(partyAsset.partyRarity) },
+                        { trait_type: 'Tier', value: partyTier.displayName }
                     ]
                 };
             }

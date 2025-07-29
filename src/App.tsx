@@ -24,6 +24,7 @@ import { quickDiagnose } from './utils/simpleDiagnostics';
 import { isValidPitchPath } from './utils/pitchAccess';
 import { PageTransition, usePagePreload } from './components/ui/PageTransition';
 import { useSmartPreloader } from './hooks/useSmartPreloader';
+import { NftDisplayProvider } from './hooks/useNftDisplayPreference';
 // import { WebSocketIndicator } from './components/WebSocketIndicator'; // 移除，因為不再使用 Apollo
 
 // 動態導入所有頁面
@@ -40,6 +41,7 @@ const VipPage = lazy(() => import('./pages/VipPage'));
 const ReferralPage = lazy(() => import('./pages/ReferralPage'));
 // 暫時禁用圖鑑功能
 // const CodexPage = lazy(() => import('./pages/CodexPage'));
+const GameDataPage = lazy(() => import('./pages/GameDataPage'));
 // 調試頁面只在開發環境載入
 const DebugContractPage = import.meta.env.DEV ? lazy(() => import('./pages/DebugContractPage')) : null;
 const PriceDebugPage = import.meta.env.DEV ? lazy(() => import('./pages/PriceDebugPage')) : null;
@@ -68,14 +70,14 @@ const getPageFromHash = (): Page => {
         return 'pitch';
     }
     
-    const basePages: Page[] = ['dashboard', 'profile', 'myAssets', 'marketplace', 'mint', 'altar', 'dungeon', 'vip', 'referral', 'admin', 'pitch'];
+    const basePages: Page[] = ['dashboard', 'profile', 'myAssets', 'marketplace', 'mint', 'altar', 'dungeon', 'vip', 'referral', 'gameData', 'admin', 'pitch'];
     const devPages: Page[] = import.meta.env.DEV ? ['debug', 'priceDebug'] : [];
     const validPages: Page[] = [...basePages, ...devPages];
     
     // 舊路由映射到新路由
     const routeMapping: Record<string, Page> = {
       'party': 'myAssets',
-      'explorer': 'myAssets'
+      'explorer': 'gameData'  // 將舊的 explorer 路由映射到新的 gameData 頁面
     };
     // 檢查是否為有效頁面
     if (validPages.includes(page as Page)) {
@@ -157,7 +159,8 @@ function App() {
         case 'myAssets': return <MyAssetsPage />;
         case 'dashboard': return <OverviewPage setActivePage={handleSetPage} />;
         case 'mint': return <MintPage />;
-        case 'explorer': return <MyAssetsPage />;
+        case 'explorer': return <GameDataPage />;  // 舊路由重定向到新頁面
+        case 'gameData': return <GameDataPage />;
         case 'admin': return <AdminPage />;
         case 'altar': return <AltarPage />;
         case 'profile': return <ProfilePage setActivePage={handleSetPage} />;
@@ -175,8 +178,9 @@ function App() {
   return (
     <GlobalErrorBoundary>
       <GlobalLoadingProvider>
-        <ErrorBoundary>
-          <div className="min-h-screen flex flex-col bg-gray-900">
+        <NftDisplayProvider>
+          <ErrorBoundary>
+            <div className="min-h-screen flex flex-col bg-gray-900">
               <Header 
               activePage={activePage} 
               setActivePage={handleSetPage}
@@ -211,6 +215,7 @@ function App() {
             {isMobile && <div className="h-16" />}
           </div>
         </ErrorBoundary>
+      </NftDisplayProvider>
       </GlobalLoadingProvider>
     </GlobalErrorBoundary>
   );

@@ -840,7 +840,7 @@ const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => 
     const { data: dungeonsData, isLoading: isLoadingDungeons } = useSimpleReadContracts(dungeonContracts);
 
     const dungeons: Dungeon[] = useMemo(() => {
-        const getDungeonName = (id: number) => ["", "新手礦洞", "哥布林洞穴", "食人魔山谷", "蜘蛛巢穴", "石化蜥蜴沼澤", "巫妖墓穴", "奇美拉之巢", "惡魔前哨站", "巨龍之巔", "混沌深淵"][id] || "未知地城";
+        const getDungeonName = (id: number) => ["", "新手礦洞", "哥布林洞穴", "食人魔山谷", "蜘蛛巢穴", "石化蜥蜴沼澤", "巫妖墓穴", "奇美拉之巢", "惡魔前哨站", "巨龍之巔", "混沌深淵", "冥界之門", "虛空裂隙"][id] || "未知地城";
         
         logger.info('[DungeonPage] useMemo triggered:', {
             hasData: !!dungeonsData,

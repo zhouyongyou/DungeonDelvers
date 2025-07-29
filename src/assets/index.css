@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 字體設定 - 優先使用 Google Fonts，系統字體作為備用 */
+@layer base {
+  body {
+    font-family: "Noto Sans TC", -apple-system, BlinkMacSystemFont, "Segoe UI", 
+                 "Microsoft JhengHei", "微軟正黑體", "PingFang TC", "蘋方-繁", 
+                 "Helvetica Neue", Arial, sans-serif;
+  }
+  
+  /* 襯線字體用於特殊場合 */
+  .serif {
+    font-family: "Noto Serif TC", "Georgia", "Times New Roman", serif;
+  }
+}
+
 /* 防止 CLS (Cumulative Layout Shift) 的全局樣式 */
 @layer base {
   /* 預設圖片行為以防止 CLS */

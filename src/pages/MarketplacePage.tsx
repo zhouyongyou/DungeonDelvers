@@ -28,6 +28,8 @@ import { MarketplaceNotifications } from '../components/marketplace/MarketplaceN
 import { BatchOperations } from '../components/marketplace/BatchOperations';
 import { MakeOfferModal } from '../components/marketplace/MakeOfferModal';
 import { OffersPanel } from '../components/marketplace/OffersPanel';
+import { NftDisplayToggleMini } from '../components/ui/NftDisplayToggle';
+import { NftSvgDisplay } from '../components/ui/NftSvgDisplay';
 
 // =================================================================
 // Section: Types
@@ -409,11 +411,19 @@ const ListingCard: React.FC<{
     
     return (
         <div className="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors">
-            <div className="aspect-square bg-gray-900 rounded mb-3 flex items-center justify-center relative">
-                <span className="text-4xl">
-                    {listing.nftType === 'hero' ? '⚔️' :
-                     listing.nftType === 'relic' ? '🛡️' : '👥'}
-                </span>
+            <div className="aspect-square bg-gray-900 rounded mb-3 flex items-center justify-center relative overflow-hidden">
+                {listing.nft ? (
+                    <NftSvgDisplay 
+                        nft={listing.nft} 
+                        className="w-full h-full"
+                        interactive={false}
+                    />
+                ) : (
+                    <span className="text-4xl">
+                        {listing.nftType === 'hero' ? '⚔️' :
+                         listing.nftType === 'relic' ? '🛡️' : '👥'}
+                    </span>
+                )}
                 {/* 戰力角標 */}
                 {powerValue && (
                     <div className="absolute top-2 right-2 bg-[#C0A573] text-white text-xs px-2 py-1 rounded-full font-bold">
@@ -720,7 +730,9 @@ const MarketplacePage: React.FC = () => {
                             <TokenBalanceDisplay variant="compact" className="flex gap-4" />
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    {/* 桌面版按鈕 */}
+                    <div className="hidden md:flex items-center gap-2">
+                        <NftDisplayToggleMini />
                         <MarketplaceNotifications />
                         <ActionButton
                             className="px-4 py-2"
@@ -757,6 +769,52 @@ const MarketplacePage: React.FC = () => {
                             <Icons.Plus className="h-4 w-4 mr-2" />
                             創建掛單
                         </ActionButton>
+                    </div>
+                    
+                    {/* 手機版按鈕 - 緊湊排列 */}
+                    <div className="md:hidden">
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                            <NftDisplayToggleMini />
+                            <MarketplaceNotifications />
+                            <ActionButton
+                                className="px-2 py-1 text-xs"
+                                onClick={() => setShowStats(!showStats)}
+                            >
+                                <Icons.TrendingUp className="h-3 w-3 mr-1" />
+                                統計
+                            </ActionButton>
+                            <ActionButton
+                                className="px-2 py-1 text-xs"
+                                onClick={() => setShowOffers(!showOffers)}
+                            >
+                                <Icons.DollarSign className="h-3 w-3 mr-1" />
+                                出價
+                            </ActionButton>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-2">
+                            <ActionButton
+                                className="px-2 py-2 text-xs"
+                                onClick={() => setShowMyListings(!showMyListings)}
+                            >
+                                <Icons.List className="h-3 w-3 mr-1" />
+                                {showMyListings ? '全部' : '我的'}
+                            </ActionButton>
+                            <ActionButton
+                                className="px-2 py-2 text-xs"
+                                onClick={() => setShowBatchOperations(true)}
+                            >
+                                <Icons.Package className="h-3 w-3 mr-1" />
+                                批量
+                            </ActionButton>
+                            <ActionButton
+                                className="px-2 py-2 text-xs"
+                                onClick={() => setShowCreateListing(true)}
+                            >
+                                <Icons.Plus className="h-3 w-3 mr-1" />
+                                掛單
+                            </ActionButton>
+                        </div>
                     </div>
                 </div>
                 

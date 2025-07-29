@@ -24,6 +24,7 @@ import { Icons } from '../components/ui/icons';
 import { THE_GRAPH_API_URL } from '../config/graphConfig';
 import { graphQLRateLimiter } from '../utils/rateLimiter';
 import { QuickActions, usePageQuickActions, PageActionBar } from '../components/ui/QuickActions';
+import { NftDisplayToggleMini } from '../components/ui/NftDisplayToggle';
 
 // Import TeamBuilder from components
 import { TeamBuilder } from '../components/TeamBuilder';
@@ -75,7 +76,7 @@ const useMarketBrowser = (type: 'hero' | 'relic') => {
     const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ['marketBrowser', type, page],
         queryFn: async () => {
-            if (!THE_GRAPH_API_URL) return null;
+            if (!THE_GRAPH_API_URL) return { [type === 'hero' ? 'heros' : 'relics']: [] };
             
             const query = type === 'hero' ? GET_MARKET_HEROES_QUERY : GET_MARKET_RELICS_QUERY;
             
@@ -309,7 +310,28 @@ const MyAssetsPageEnhanced: React.FC = () => {
         switch (activeTab) {
             case 'myHeroes':
                 return !heroes || heroes.length === 0 ? (
-                    <EmptyState message="您還沒有英雄" />
+                    <div className="text-center py-12 space-y-6">
+                        <div className="text-6xl mb-4">⚔️</div>
+                        <h3 className="text-xl font-semibold text-gray-300">還沒有英雄加入您的冒險</h3>
+                        <p className="text-gray-400 max-w-md mx-auto">
+                            英雄是地下城探索的核心！鑄造第一個英雄開始您的傳奇之旅
+                        </p>
+                        <div className="flex gap-3 justify-center">
+                            <ActionButton
+                                onClick={() => window.location.href = '/#/mint'}
+                                className="bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 px-6 py-3 font-semibold"
+                            >
+                                🏺 立即鑄造英雄
+                            </ActionButton>
+                            <ActionButton
+                                onClick={() => setActiveTab('marketHeroes')}
+                                variant="secondary"
+                                className="px-6 py-3"
+                            >
+                                🛒 瀏覽英雄市場
+                            </ActionButton>
+                        </div>
+                    </div>
                 ) : (
                     <OptimizedNftGrid
                         nfts={heroes}
@@ -321,7 +343,28 @@ const MyAssetsPageEnhanced: React.FC = () => {
                 
             case 'myRelics':
                 return !relics || relics.length === 0 ? (
-                    <EmptyState message="您還沒有聖物" />
+                    <div className="text-center py-12 space-y-6">
+                        <div className="text-6xl mb-4">🛡️</div>
+                        <h3 className="text-xl font-semibold text-gray-300">聖物庫房空蕩蕩</h3>
+                        <p className="text-gray-400 max-w-md mx-auto">
+                            聖物提供隊伍容量和特殊能力，是組建強大隊伍的關鍵裝備
+                        </p>
+                        <div className="flex gap-3 justify-center">
+                            <ActionButton
+                                onClick={() => window.location.href = '/#/mint'}
+                                className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 px-6 py-3 font-semibold"
+                            >
+                                ⚡ 立即鑄造聖物
+                            </ActionButton>
+                            <ActionButton
+                                onClick={() => setActiveTab('marketRelics')}
+                                variant="secondary"
+                                className="px-6 py-3"
+                            >
+                                🛒 瀏覽聖物市場
+                            </ActionButton>
+                        </div>
+                    </div>
                 ) : (
                     <OptimizedNftGrid
                         nfts={relics}
@@ -333,7 +376,37 @@ const MyAssetsPageEnhanced: React.FC = () => {
                 
             case 'myParties':
                 return !parties || parties.length === 0 ? (
-                    <EmptyState message="您還沒有隊伍" />
+                    <div className="text-center py-12 space-y-6">
+                        <div className="text-6xl mb-4">👥</div>
+                        <h3 className="text-xl font-semibold text-gray-300">準備組建您的第一支隊伍</h3>
+                        <p className="text-gray-400 max-w-md mx-auto">
+                            {(heroes?.length === 0 && relics?.length === 0) 
+                                ? "需要先擁有英雄和聖物才能組建隊伍"
+                                : heroes?.length === 0 
+                                ? "需要英雄來組建隊伍，快去鑄造一些英雄吧！"
+                                : relics?.length === 0
+                                ? "需要聖物來提供隊伍容量，快去鑄造一些聖物吧！"
+                                : "您已經擁有英雄和聖物，現在可以組建隊伍了！"
+                            }
+                        </p>
+                        <div className="flex gap-3 justify-center">
+                            {(heroes?.length === 0 || relics?.length === 0) ? (
+                                <ActionButton
+                                    onClick={() => window.location.href = '/#/mint'}
+                                    className="bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 px-6 py-3 font-semibold"
+                                >
+                                    🏺 前往鑄造頁面
+                                </ActionButton>
+                            ) : (
+                                <ActionButton
+                                    onClick={() => setShowTeamBuilder(true)}
+                                    className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 px-6 py-3 font-semibold"
+                                >
+                                    ⚔️ 立即組建隊伍
+                                </ActionButton>
+                            )}
+                        </div>
+                    </div>
                 ) : (
                     <OptimizedNftGrid
                         nfts={parties}
@@ -375,6 +448,11 @@ const MyAssetsPageEnhanced: React.FC = () => {
                     showRefresh={true}
                     onRefresh={() => refetchNfts()}
                 />
+                
+                {/* NFT 顯示模式切換 */}
+                <div className="flex justify-end">
+                    <NftDisplayToggleMini className="mb-2" />
+                </div>
                 
                 {/* Tabs */}
                 <div className="flex flex-wrap gap-2 border-b border-gray-700">

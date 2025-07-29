@@ -40,7 +40,7 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
 
   // 根據地城數量動態生成合約讀取配置
   const dungeonContracts = dungeonStorageContract ? 
-    Array.from({ length: Number(numDungeons || 10) }, (_, i) => ({
+    Array.from({ length: Number(numDungeons || 12) }, (_, i) => ({
       address: dungeonStorageContract.address,
       abi: dungeonStorageContract.abi,
       functionName: 'getDungeon',
@@ -66,7 +66,9 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
     { id: 7, name: "奇美拉之巢", requiredPower: 2100, rewardAmountUSD: "113", baseSuccessRate: 59 },
     { id: 8, name: "惡魔前哨站", requiredPower: 2400, rewardAmountUSD: "156", baseSuccessRate: 54 },
     { id: 9, name: "巨龍之巔", requiredPower: 2700, rewardAmountUSD: "209", baseSuccessRate: 49 },
-    { id: 10, name: "混沌深淵", requiredPower: 3000, rewardAmountUSD: "225", baseSuccessRate: 44 }
+    { id: 10, name: "混沌深淵", requiredPower: 3000, rewardAmountUSD: "225", baseSuccessRate: 44 },
+    { id: 11, name: "冥界之門", requiredPower: 3300, rewardAmountUSD: "320", baseSuccessRate: 39 },
+    { id: 12, name: "虛空裂隙", requiredPower: 3600, rewardAmountUSD: "450", baseSuccessRate: 34 }
   ];
   
   // 初始化地城輸入狀態

@@ -290,7 +290,7 @@ const RarityProbabilities = memo<{ quantity: number }>(({ quantity }) => {
             {quantity < 50 && (
                 <div className="mt-2 p-2 bg-orange-900/20 border border-orange-500/30 rounded">
                     <p className="text-xs text-orange-300 text-center">
-                        🛡️ 防撞庫機制啟動 - 數量越多，稀有度上限越高
+                        防撞庫機制啟動 - 數量越多，稀有度上限越高
                     </p>
                 </div>
             )}
@@ -298,29 +298,122 @@ const RarityProbabilities = memo<{ quantity: number }>(({ quantity }) => {
     );
 });
 
-const MintResultModal = memo<{ nft: AnyNft | null; onClose: () => void }>(({ nft, onClose }) => {
-    if (!nft) return null;
-    return (
-        <Modal isOpen={!!nft} onClose={onClose} title="鑄造成功！" confirmText="太棒了！" onConfirm={onClose}>
-            <div className="flex flex-col items-center">
-                <p className="mb-4 text-center text-gray-300">恭喜您獲得了新的{nft.type === 'hero' ? '英雄' : '聖物'}！</p>
-                <div className="w-64"><NftCard nft={nft} /></div>
-                <div className="mt-6 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="text-blue-400">ℹ️</span>
-                        <span className="text-sm font-medium text-blue-300">溫馨提示</span>
+// 批量鑄造結果數據結構
+interface BatchMintResult {
+    type: 'hero' | 'relic';
+    quantity: number;
+    bestNft?: AnyNft;  // 最高稀有度的 NFT
+    allTokenIds?: bigint[];  // 所有鑄造的 Token ID
+    totalValue?: number;  // 總價值 (USD)
+}
+
+const MintResultModal = memo<{ 
+    result: BatchMintResult | AnyNft | null; 
+    onClose: () => void 
+}>(({ result, onClose }) => {
+    if (!result) return null;
+    
+    // 檢查是否為批量鑄造結果
+    const isBatchResult = result && 'quantity' in result;
+    const isSingleNft = result && 'id' in result;
+    
+    if (isBatchResult) {
+        const batchResult = result as BatchMintResult;
+        const { type, quantity, bestNft, allTokenIds } = batchResult;
+        const typeLabel = type === 'hero' ? '英雄' : '聖物';
+        
+        return (
+            <Modal 
+                isOpen={!!result} 
+                onClose={onClose} 
+                title={`鑄造成功！恭喜您獲得了 ${quantity} 個新的${typeLabel}！`} 
+                confirmText="查看我的資產" 
+                onConfirm={() => {
+                    onClose();
+                    window.location.hash = '/myAssets';
+                }}
+            >
+                <div className="flex flex-col items-center">
+                    <div className="text-center mb-4">
+                        <div className="text-2xl mb-2">🎉</div>
+                        <p className="text-green-400 font-bold text-lg">
+                            批量鑄造完成！
+                        </p>
+                        <p className="text-gray-300 text-sm">
+                            成功鑄造 {quantity} 個{typeLabel}
+                        </p>
                     </div>
-                    <ul className="text-xs text-gray-400 space-y-1">
-                        <li>• 您的 NFT 將在 <strong className="text-blue-300">2-3 分鐘</strong> 後可用於組隊</li>
-                        <li>• 需等待區塊鏈確認和數據同步完成</li>
-                        <li>• 建議您可以 <strong className="text-yellow-300">手動刷新頁面</strong> 以更新資料</li>
-                        <li>• 或前往 <strong className="text-yellow-300">「隊伍」頁面</strong> 等待片刻後刷新查看</li>
-                        <li>• 可在「我的資產」頁面查看最新狀態</li>
-                    </ul>
+                    
+                    {/* 批量鑄造的簡化顯示 - 只顯示佔位圖和數量 */}
+                    <div className="w-64 mb-4 p-6 bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-lg border-2 border-dashed border-amber-400/30">
+                        <div className="text-center">
+                            <div className="text-5xl mb-4">🎁</div>
+                            <div className="text-2xl font-bold text-amber-400 mb-2">
+                                {quantity}x {typeLabel}
+                            </div>
+                            <p className="text-gray-400 font-medium mb-1">批量鑄造完成</p>
+                            <p className="text-xs text-gray-500">
+                                請前往資產頁面查看詳細內容
+                            </p>
+                        </div>
+                    </div>
+                    
+                    {allTokenIds && allTokenIds.length > 0 && (
+                        <div className="mb-4 p-3 bg-gray-900/50 rounded-lg w-full max-w-sm">
+                            <h5 className="text-sm font-semibold text-gray-300 mb-2 text-center">
+                                獲得的 NFT ID 範圍
+                            </h5>
+                            <p className="text-center text-yellow-400 font-mono">
+                                #{allTokenIds[0].toString()} - #{allTokenIds[allTokenIds.length - 1].toString()}
+                            </p>
+                        </div>
+                    )}
+                    
+                    <div className="mt-4 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg w-full">
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="text-blue-400">ℹ️</span>
+                            <span className="text-sm font-medium text-blue-300">溫馨提示</span>
+                        </div>
+                        <ul className="text-xs text-gray-400 space-y-1">
+                            <li>• 您的 NFT 將在 <strong className="text-blue-300">2-3 分鐘</strong> 後可用於組隊</li>
+                            <li>• 需等待區塊鏈確認和數據同步完成</li>
+                            <li>• 建議您可以 <strong className="text-yellow-300">手動刷新頁面</strong> 以更新資料</li>
+                            <li>• 或前往 <strong className="text-yellow-300">「隊伍」頁面</strong> 等待片刻後刷新查看</li>
+                            <li>• 可在<strong className="text-green-300">「我的資產」頁面</strong>查看最新狀態</li>
+                        </ul>
+                    </div>
                 </div>
-            </div>
-        </Modal>
-    );
+            </Modal>
+        );
+    }
+    
+    // 單個 NFT 鑄造的原有邏輯
+    if (isSingleNft) {
+        const nft = result as AnyNft;
+        return (
+            <Modal isOpen={!!result} onClose={onClose} title="鑄造成功！" confirmText="太棒了！" onConfirm={onClose}>
+                <div className="flex flex-col items-center">
+                    <p className="mb-4 text-center text-gray-300">恭喜您獲得了新的{nft.type === 'hero' ? '英雄' : '聖物'}！</p>
+                    <div className="w-64"><NftCard nft={nft} /></div>
+                    <div className="mt-6 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="text-blue-400">ℹ️</span>
+                            <span className="text-sm font-medium text-blue-300">溫馨提示</span>
+                        </div>
+                        <ul className="text-xs text-gray-400 space-y-1">
+                            <li>• 您的 NFT 將在 <strong className="text-blue-300">2-3 分鐘</strong> 後可用於組隊</li>
+                            <li>• 需等待區塊鏈確認和數據同步完成</li>
+                            <li>• 建議您可以 <strong className="text-yellow-300">手動刷新頁面</strong> 以更新資料</li>
+                            <li>• 或前往 <strong className="text-yellow-300">「隊伍」頁面</strong> 等待片刻後刷新查看</li>
+                            <li>• 可在「我的資產」頁面查看最新狀態</li>
+                        </ul>
+                    </div>
+                </div>
+            </Modal>
+        );
+    }
+    
+    return null;
 });
 RarityProbabilities.displayName = 'RarityProbabilities';
 MintResultModal.displayName = 'MintResultModal';
@@ -342,7 +435,7 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
     
     const [quantity, setQuantity] = useState(1); // 默認從1個開始
     const [paymentSource, setPaymentSource] = useState<PaymentSource>('wallet');
-    const [mintingResult, setMintingResult] = useState<AnyNft | null>(null);
+    const [mintingResult, setMintingResult] = useState<BatchMintResult | AnyNft | null>(null);
     const [showProgressModal, setShowProgressModal] = useState(false);
     const [isCheckingApproval, setIsCheckingApproval] = useState(false);
     
@@ -387,33 +480,34 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
         return pricePerUnit < expectedRange.min || pricePerUnit > expectedRange.max;
     }, [pricePerUnit, type]);
     
-    // 樂觀更新 Hook
+    // 樂觀更新 Hook - 針對批量鑄造優化
     const { optimisticUpdate, confirmUpdate, rollback } = useOptimisticUpdate({
         queryKey: ['ownedNfts', address, chainId],
         updateFn: (oldData: any) => {
             if (!oldData) return oldData;
             
-            // 創建臨時 NFT 數據
-            const tempNft: AnyNft = {
-                id: BigInt(Date.now()), // 臨時 ID
+            // 為批量鑄造創建多個臨時 NFT
+            const tempNfts: AnyNft[] = Array.from({ length: quantity }, (_, index) => ({
+                id: BigInt(Date.now() + index), // 臨時 ID，避免重複
                 type,
                 contractAddress: contractConfig?.address || '',
-                name: `載入中... ${type === 'hero' ? '英雄' : '聖物'}`,
+                name: `載入中... ${type === 'hero' ? '英雄' : '聖物'} #${index + 1}`,
                 description: '正在鏈上確認...',
                 image: '',
                 attributes: [],
                 ...(type === 'hero' ? { power: 0, rarity: 0 } : { capacity: 0, rarity: 0 })
-            };
+            }));
             
             // 更新對應的 NFT 列表
             return {
                 ...oldData,
                 [type === 'hero' ? 'heroes' : 'relics']: [
                     ...(oldData[type === 'hero' ? 'heroes' : 'relics'] || []),
-                    tempNft
+                    ...tempNfts
                 ]
             };
-        }
+        },
+        revertDelay: 120000 // 增加到 2 分鐘，給批量鑄造更多時間
     });
     
     // 使用新的交易進度 Hook - 優化授權體驗
@@ -450,9 +544,10 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
         onSuccess: async (receipt) => {
             // 確認樂觀更新
             confirmUpdate();
+            
             // 處理鑄造成功邏輯
             const mintEventName = type === 'hero' ? 'HeroMinted' : 'RelicMinted';
-            const mintLog = receipt.logs.find((log: any) => {
+            const allMintLogs = receipt.logs.filter((log: any) => {
                 try {
                     return decodeEventLog({ abi: contractConfig.abi, ...log }).eventName === mintEventName;
                 } catch {
@@ -460,54 +555,86 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                 }
             });
             
-            if (mintLog && contractConfig) {
-                const decodedLog = decodeEventLog({ abi: contractConfig.abi, ...mintLog });
-                const tokenId = (decodedLog.args as { tokenId?: bigint }).tokenId;
+            if (allMintLogs.length > 0 && contractConfig) {
+                // 提取所有 token ID
+                const allTokenIds: bigint[] = [];
+                const allNfts: AnyNft[] = [];
                 
-                if (tokenId) {
-                    const tokenUri = await publicClient?.readContract({
-                        address: contractConfig.address,
-                        abi: contractConfig.abi,
-                        functionName: 'tokenURI',
-                        args: [tokenId]
-                    }) as string;
-
-                    const metadata = await fetchMetadata(tokenUri, tokenId.toString(), contractConfig.address);
-                    const findAttr = (trait: string, defaultValue: string | number = 0) => 
-                        metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
+                // 如果是批量鑄造（超過1個），使用新的批量結果格式
+                if (quantity > 1) {
+                    // 對於批量鑄造，我們先創建基本的批量結果
+                    const batchResult: BatchMintResult = {
+                        type,
+                        quantity,
+                        allTokenIds: allMintLogs.map(log => {
+                            const decoded = decodeEventLog({ abi: contractConfig.abi, ...log });
+                            const tokenId = (decoded.args as { tokenId?: bigint }).tokenId;
+                            return tokenId!;
+                        }).filter(Boolean),
+                        totalValue: quantity * 2 // 每個 NFT 2 USD
+                    };
                     
-                    let nftData: AnyNft;
-                    if (type === 'hero') {
-                        nftData = {
-                            ...metadata,
-                            id: tokenId,
-                            type,
-                            contractAddress: contractConfig.address,
-                            power: Number(findAttr('Power')),
-                            rarity: Number(findAttr('Rarity'))
-                        };
-                    } else {
-                        nftData = {
-                            ...metadata,
-                            id: tokenId,
-                            type,
-                            contractAddress: contractConfig.address,
-                            capacity: Number(findAttr('Capacity')),
-                            rarity: Number(findAttr('Rarity'))
-                        };
+                    // 批量鑄造策略：為提高效率，不嘗試獲取具體 NFT 詳情
+                    // bestNft 保持 undefined，直接顯示佔位符和數量信息
+                    
+                    setMintingResult(batchResult);
+                } else {
+                    // 單個鑄造的原有邏輯
+                    const mintLog = allMintLogs[0];
+                    const decodedLog = decodeEventLog({ abi: contractConfig.abi, ...mintLog });
+                    const tokenId = (decodedLog.args as { tokenId?: bigint }).tokenId;
+                    
+                    if (tokenId) {
+                        const tokenUri = await publicClient?.readContract({
+                            address: contractConfig.address,
+                            abi: contractConfig.abi,
+                            functionName: 'tokenURI',
+                            args: [tokenId]
+                        }) as string;
+
+                        const metadata = await fetchMetadata(tokenUri, tokenId.toString(), contractConfig.address);
+                        const findAttr = (trait: string, defaultValue: string | number = 0) => 
+                            metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
+                        
+                        let nftData: AnyNft;
+                        if (type === 'hero') {
+                            nftData = {
+                                ...metadata,
+                                id: tokenId,
+                                type,
+                                contractAddress: contractConfig.address,
+                                power: Number(findAttr('Power')),
+                                rarity: Number(findAttr('Rarity'))
+                            };
+                        } else {
+                            nftData = {
+                                ...metadata,
+                                id: tokenId,
+                                type,
+                                contractAddress: contractConfig.address,
+                                capacity: Number(findAttr('Capacity')),
+                                rarity: Number(findAttr('Rarity'))
+                            };
+                        }
+                        setMintingResult(nftData);
                     }
-                    setMintingResult(nftData);
-                    // 清理多個相關快取，確保數據更新
-                    queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
-                    queryClient.invalidateQueries({ queryKey: ['dashboardSimpleStats'] });
-                    queryClient.invalidateQueries({ queryKey: ['explorer'] });
-                    // 使用統一的失效策略
-                    if (address) {
-                        invalidationStrategies.onNftMinted(queryClient, address);
-                    }
-                    // 提示用戶數據同步（子圖可能有延遲）
-                    showToast('鑄造成功！子圖數據同步可能需要 1-2 分鐘', 'success');
                 }
+                
+                // 清理多個相關快取，確保數據更新  
+                queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
+                queryClient.invalidateQueries({ queryKey: ['dashboardSimpleStats'] });
+                queryClient.invalidateQueries({ queryKey: ['explorer'] });
+                // 使用統一的失效策略
+                if (address) {
+                    invalidationStrategies.onNftMinted(queryClient, address);
+                }
+                // 提示用戶數據同步（子圖可能有延遲）
+                showToast(
+                    quantity > 1 
+                        ? `批量鑄造成功！${quantity} 個 ${title} 已添加到您的資產` 
+                        : '鑄造成功！子圖數據同步可能需要 1-2 分鐘', 
+                    'success'
+                );
             }
             setShowProgressModal(false);
         },
@@ -658,7 +785,7 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
 
     return (
         <div className="card-bg p-4 sm:p-5 md:p-6 rounded-xl shadow-lg flex flex-col items-center h-full">
-            <MintResultModal nft={mintingResult} onClose={() => setMintingResult(null)} />
+            <MintResultModal result={mintingResult} onClose={() => setMintingResult(null)} />
             <TransactionProgressModal
                 isOpen={showProgressModal}
                 onClose={() => setShowProgressModal(false)}
@@ -772,7 +899,15 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                     <span>價格基於 Oracle 即時匯率計算</span>
                 </span>
             </div>
-            <a href={contractConfig.address ? `https://www.okx.com/web3/nft/markets/collection/bscn/${contractConfig.address}` : '#'} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500 dark:text-indigo-400 hover:underline mt-2">前往市場交易</a>
+            <div className="flex flex-col sm:flex-row items-center gap-2 mt-2">
+                <a href="/#/marketplace" className="text-xs text-indigo-500 dark:text-indigo-400 hover:underline">
+                    🏠 內部市場交易
+                </a>
+                <span className="text-xs text-gray-600 hidden sm:inline">•</span>
+                <a href={contractConfig.address ? `https://www.okx.com/web3/nft/markets/collection/bscn/${contractConfig.address}` : '#'} target="_blank" rel="noopener noreferrer" className="text-xs text-orange-500 dark:text-orange-400 hover:underline">
+                    🌐 OKX 市場
+                </a>
+            </div>
             {contractConfig.address && (
                 <p className="text-xs text-gray-500 mt-1">
                     {type === 'hero' ? '英雄' : '聖物'}合約地址: 
@@ -824,7 +959,7 @@ const MintPage: React.FC = memo(() => {
                         </p>
                         <ul className="text-xs text-gray-300 space-y-1 list-disc list-inside">
                             <li>專注培養 <strong className="text-purple-200">精華隊伍</strong>（可以是一個或多個）</li>
-                            <li>隊伍戰力應達到 <strong className="text-purple-200">3000 以上</strong>，以挑戰最高收益的「混沌深淵」地下城</li>
+                            <li>隊伍戰力應達到 <strong className="text-purple-200">3000 以上</strong>，以挑戰較高收益的「混沌深淵」地下城</li>
                             <li>一般需要鑄造約 <strong className="text-purple-200">100 個聖物</strong> 和 <strong className="text-purple-200">200 個英雄</strong>，才能組建出幾個強力隊伍</li>
                             <li>優先選擇高容量聖物（4-5 星）和高戰力英雄進行組隊</li>
                             <li>記得：品質優於數量，一個強力隊伍勝過多個弱隊</li>
@@ -836,15 +971,11 @@ const MintPage: React.FC = memo(() => {
             
             {/* 防撞庫機制說明 */}
             <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/30 rounded-lg p-4 sm:p-5 md:p-6 mb-6 sm:mb-8 max-w-4xl mx-auto">
-                <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                        <span className="text-white text-lg sm:text-xl">🛡️</span>
-                    </div>
-                    <div className="flex-1">
-                        <h3 className="text-base sm:text-lg font-bold text-blue-300 mb-2 sm:mb-3">
-                            防撞庫機制 - 批量越大，稀有度越高
-                        </h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4">
+                <div>
+                    <h3 className="text-base sm:text-lg font-bold text-blue-300 mb-2 sm:mb-3">
+                        防撞庫機制 - 批量越大，稀有度越高
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4">
                             {BATCH_TIERS.map((tier, index) => (
                                 <div key={index} className="bg-black/30 rounded-lg p-2 sm:p-3 border border-gray-600/50">
                                     <div className="text-center">
@@ -859,7 +990,7 @@ const MintPage: React.FC = memo(() => {
                             ))}
                         </div>
                         <div className="bg-yellow-900/20 border border-yellow-600/50 rounded-lg p-2 sm:p-3">
-                            <h4 className="text-sm sm:text-base text-yellow-300 font-semibold mb-2">💡 設計理念</h4>
+                            <h4 className="text-sm sm:text-base text-yellow-300 font-semibold mb-2">設計理念</h4>
                             <ul className="text-xs sm:text-sm text-gray-300 space-y-1">
                                 <li>• <strong>提高撞庫成本</strong>：科學家必須投入更多資金才能嘗試獲得高稀有度</li>
                                 <li>• <strong>鼓勵大額投入</strong>：50個批量享受完整機率，獲得最佳遊戲體驗</li>
@@ -867,7 +998,6 @@ const MintPage: React.FC = memo(() => {
                                 <li>• <strong>經濟平衡</strong>：防止小額頻繁交易對經濟的影響</li>
                             </ul>
                         </div>
-                    </div>
                 </div>
             </div>
         </section>

@@ -47,12 +47,14 @@ export function useOptimisticUpdate<T = any>({
 
     // 設置回滾計時器
     const timer = setTimeout(() => {
-      logger.warn('樂觀更新超時，執行回滾', { 
+      // 對於批量鑄造，給予更友善的提示
+      const isLargeQuantity = Array.isArray(queryKey) && queryKey.length > 0;
+      logger.info('樂觀更新自動清理', { 
         queryKey, 
         timeoutSeconds: revertDelay / 1000,
-        message: '可能是網路延遲或交易未確認' 
+        message: '交易已完成，清理臨時數據' 
       });
-      rollback();
+      rollback(true); // 傳遞靜默標誌
     }, revertDelay);
 
     setRevertTimer(timer);
@@ -74,8 +76,10 @@ export function useOptimisticUpdate<T = any>({
   }, [queryKey, revertTimer]);
 
   // 回滾更新
-  const rollback = useCallback(() => {
-    logger.debug('回滾樂觀更新', { queryKey });
+  const rollback = useCallback((silent = false) => {
+    if (!silent) {
+      logger.debug('回滾樂觀更新', { queryKey });
+    }
     
     if (revertTimer) {
       clearTimeout(revertTimer);

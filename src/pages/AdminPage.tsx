@@ -66,18 +66,23 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
   
   // 懶加載狀態 - 追蹤哪些區塊應該加載數據
   const [loadedSections, setLoadedSections] = useState<Record<string, boolean>>({
-    contractCenter: true, // 合約串接中心默認展開
-    globalReward: true,
-    dungeonParams: true,
-    altarRules: true,
-    vipSettings: true,
-    corePrice: true,
-    platformFee: true,
-    taxSystem: true,
-    gameParams: true,
-    oracle: true,
-    contractControl: true,
+    contractCenter: false, // 合約串接中心默認收起
+    globalReward: false,
+    dungeonParams: false,
+    altarRules: false,
+    vipSettings: false,
+    corePrice: false,
+    platformFee: false,
+    taxSystem: false,
+    gameParams: false,
+    oracle: false,
+    contractControl: false,
     rpcMonitor: false, // RPC監控默認不展開
+    contractHealth: false, // 合約健康檢查默認不展開
+    oracleTest: false, // Oracle測試默認不展開
+    gameFlowTest: false, // 遊戲流程測試默認不展開
+    expeditionTest: false, // 出征測試默認不展開
+    pitchManager: false // Pitch頁面管理默認不展開
   });
 
   // 移除 watchManager 相關代碼以解決循環依賴
@@ -758,26 +763,48 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
 
   return (
     <>
-      {/* Contract Health Check */}
-      <ContractHealthCheck />
+      {/* 測試組件 - 按需加載以減少 RPC 負載 */}
+      <AdminSection 
+        title="🔗 合約連接狀態" 
+        defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, contractHealth: true }))}
+      >
+        {loadedSections.contractHealth && (
+          <>
+            <ContractHealthCheck />
+            <ContractHealthPanel />
+          </>
+        )}
+      </AdminSection>
       
-      {/* Contract Health Panel */}
-      <ContractHealthPanel />
+      <AdminSection 
+        title="💰 Oracle 價格測試" 
+        defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, oracleTest: true }))}
+      >
+        {loadedSections.oracleTest && <OraclePriceTest />}
+      </AdminSection>
       
-      {/* Oracle Price Test */}
-      <OraclePriceTest />
+      <AdminSection 
+        title="🎮 完整遊戲流程測試" 
+        defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, gameFlowTest: true }))}
+      >
+        {loadedSections.gameFlowTest && <GameFlowTest />}
+      </AdminSection>
       
-      {/* Game Flow Test */}
-      <GameFlowTest />
-      
-      {/* Expedition Test */}
-      <AdminSection title="🔍 出征交易測試" defaultExpanded={false}>
-        <ExpeditionTestComponent />
+      {/* Expedition Test - 也改為按需加載 */}
+      <AdminSection 
+        title="🔍 出征交易測試" 
+        defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, expeditionTest: true }))}
+      >
+        {loadedSections.expeditionTest && <ExpeditionTestComponent />}
       </AdminSection>
       
       <AdminSection 
         title="合約串接中心"
-        defaultExpanded={true}
+        defaultExpanded={loadedSections.contractCenter}
         onExpand={() => setLoadedSections(prev => ({ ...prev, contractCenter: true }))}
         isLoading={isLoadingContracts && loadedSections.contractCenter}
       >
@@ -846,7 +873,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
 
       <AdminSection 
         title="地城參數管理"
-        defaultExpanded={true}
+        defaultExpanded={loadedSections.dungeonParams}
         onExpand={() => setLoadedSections(prev => ({ ...prev, dungeonParams: true }))}
       >
         <DungeonManager chainId={chainId} />
@@ -857,12 +884,12 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
         defaultExpanded={false}
         onExpand={() => setLoadedSections(prev => ({ ...prev, altarRules: true }))}
       >
-        <AltarRuleManager chainId={chainId} />
+        {loadedSections.altarRules && <AltarRuleManager chainId={chainId} />}
       </AdminSection>
       
       <AdminSection 
         title="VIP 質押設定管理"
-        defaultExpanded={true}
+        defaultExpanded={loadedSections.vipSettings}
         onExpand={() => setLoadedSections(prev => ({ ...prev, vipSettings: true }))}
       >
         <VipSettingsManager chainId={chainId} />
@@ -871,13 +898,14 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
       <AdminSection 
         title="📊 Pitch 頁面管理"
         defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, pitchManager: true }))}
       >
-        <PitchUrlManager />
+        {loadedSections.pitchManager && <PitchUrlManager />}
       </AdminSection>
       
       <AdminSection 
         title="核心價格管理 (USD)"
-        defaultExpanded={true}
+        defaultExpanded={loadedSections.corePrice}
         onExpand={() => setLoadedSections(prev => ({ ...prev, corePrice: true }))}
         isLoading={isLoadingParams && loadedSections.corePrice}
         headerActions={paramsError && import.meta.env.DEV ? (
@@ -925,7 +953,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
 
       <AdminSection 
         title="平台費用管理 (BNB)"
-        defaultExpanded={true}
+        defaultExpanded={loadedSections.platformFee}
         onExpand={() => setLoadedSections(prev => ({ ...prev, platformFee: true }))}
         isLoading={isLoadingParams && loadedSections.platformFee}
       >
@@ -966,7 +994,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
 
       <AdminSection 
         title="稅務與提現系統"
-        defaultExpanded={true}
+        defaultExpanded={loadedSections.taxSystem}
         onExpand={() => setLoadedSections(prev => ({ ...prev, taxSystem: true }))}
         isLoading={(isLoadingParams || isLoadingVaultParams) && loadedSections.taxSystem}
       >
@@ -1023,7 +1051,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
 
       <AdminSection 
         title="遊戲機制參數"
-        defaultExpanded={true}
+        defaultExpanded={loadedSections.gameParams}
         onExpand={() => setLoadedSections(prev => ({ ...prev, gameParams: true }))}
         isLoading={isLoadingParams && loadedSections.gameParams}
       >
@@ -1093,7 +1121,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
 
       <AdminSection 
         title="合約控制"
-        defaultExpanded={true}
+        defaultExpanded={loadedSections.contractControl}
         onExpand={() => setLoadedSections(prev => ({ ...prev, contractControl: true }))}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1236,7 +1264,16 @@ const AdminPage: React.FC = () => {
     <ErrorBoundary>
       <section className="space-y-8">
         <div className="flex justify-between items-center">
-          <h2 className="page-title">超級管理控制台</h2>
+          <div>
+            <h2 className="page-title">超級管理控制台</h2>
+            <p className="text-sm text-green-400 mt-1">
+              {(import.meta.env.VITE_USE_RPC_PROXY === 'true' || 
+                import.meta.env.VITE_ADMIN_USE_VERCEL_PROXY === 'true')
+                ? '🛡️ 使用穩定的 Vercel 代理 RPC' 
+                : '🔧 使用直接 Alchemy 連接'
+              }
+            </p>
+          </div>
           {import.meta.env.DEV && (
             <button
               onClick={() => {

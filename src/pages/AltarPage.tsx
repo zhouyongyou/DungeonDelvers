@@ -370,6 +370,9 @@ const AltarPage = memo(() => {
     const [showTutorial, setShowTutorial] = useState(false);
     const [showHistoryStats, setShowHistoryStats] = useState(false);
     const [ritualStage, setRitualStage] = useState<'idle' | 'preparing' | 'ritual' | 'success' | 'great_success' | 'failed'>('idle');
+    const [showSuccessDetails, setShowSuccessDetails] = useState(false);
+    const [showVipBonus, setShowVipBonus] = useState(true);
+    const [showTypeMenu, setShowTypeMenu] = useState(false);
 
     // Always call hooks unconditionally - move early returns after all hooks
     const altarContract = getContractWithABI('ALTAROFASCENSION');

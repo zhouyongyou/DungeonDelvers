@@ -49,12 +49,22 @@ const RpcMonitoringPanel: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/rpc-optimized?health=true');
+      // 根據環境決定 API 端點
+      const isProduction = window.location.hostname !== 'localhost';
+      const apiUrl = isProduction 
+        ? '/api/rpc-optimized?health=true'
+        : 'https://dungeon-delvers.vercel.app/api/rpc-optimized?health=true';
+      
+      const response = await fetch(apiUrl);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       const data = await response.json();
       setHealthData(data);
+      
+      if (!isProduction) {
+        showToast('本地開發：已從 Vercel 生產環境獲取數據', 'info');
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '未知錯誤';
       setError(errorMessage);
@@ -77,8 +87,13 @@ const RpcMonitoringPanel: React.FC = () => {
   const testRpcRequest = async () => {
     setIsLoading(true);
     try {
+      const isProduction = window.location.hostname !== 'localhost';
+      const apiUrl = isProduction 
+        ? '/api/rpc-optimized'
+        : 'https://dungeon-delvers.vercel.app/api/rpc-optimized';
+      
       const startTime = Date.now();
-      const response = await fetch('/api/rpc-optimized', {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -99,7 +114,8 @@ const RpcMonitoringPanel: React.FC = () => {
       const data = await response.json();
       const cacheStatus = response.headers.get('x-cache') || 'UNKNOWN';
       
-      showToast(`RPC 測試成功！響應時間: ${responseTime}ms, 緩存: ${cacheStatus}, 區塊: ${parseInt(data.result, 16)}`, 'success');
+      const message = `RPC 測試成功！響應時間: ${responseTime}ms, 緩存: ${cacheStatus}, 區塊: ${parseInt(data.result, 16)}`;
+      showToast(isProduction ? message : `[本地測試] ${message}`, 'success');
       
       // 刷新健康數據
       await fetchHealthData();

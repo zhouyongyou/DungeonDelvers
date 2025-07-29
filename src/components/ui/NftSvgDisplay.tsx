@@ -1,4 +1,4 @@
-// src/components/ui/NftSvgDisplay.tsx - NFT SVG 顯示組件
+// src/components/ui/NftSvgDisplay.tsx - NFT SVG/PNG 顯示組件
 
 import React, { useMemo } from 'react';
 import type { AnyNft } from '../../types/nft';
@@ -8,6 +8,7 @@ import {
     generatePartySVG, 
     generateVipSVG 
 } from '../../utils/svgGenerators';
+import { useNftDisplay } from '../../hooks/useNftDisplayPreference';
 
 interface NftSvgDisplayProps {
     nft: AnyNft;
@@ -15,6 +16,7 @@ interface NftSvgDisplayProps {
     interactive?: boolean;
     showFallback?: boolean;
     isCodex?: boolean;
+    forceMode?: 'svg' | 'png'; // 強制使用特定模式
 }
 
 export const NftSvgDisplay: React.FC<NftSvgDisplayProps> = ({ 
@@ -22,8 +24,11 @@ export const NftSvgDisplay: React.FC<NftSvgDisplayProps> = ({
     className = '', 
     interactive = true,
     showFallback = true,
-    isCodex = false 
+    isCodex = false,
+    forceMode
 }) => {
+    const { displayMode } = useNftDisplay();
+    const mode = forceMode || displayMode;
     const svgContent = useMemo(() => {
         try {
             
@@ -85,6 +90,46 @@ export const NftSvgDisplay: React.FC<NftSvgDisplayProps> = ({
         );
     }
 
+    // 如果選擇 PNG 模式，顯示 PNG 圖片
+    if (mode === 'png' && nft.image) {
+        return (
+            <div 
+                className={`
+                    ${interactive ? 'hover:scale-105 transition-transform duration-300' : ''} 
+                    ${className}
+                `}
+                style={{ 
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}
+            >
+                <img 
+                    src={nft.image}
+                    alt={`${nft.type} #${nft.id}`}
+                    className="w-full h-full object-contain rounded-lg"
+                    onError={(e) => {
+                        console.error('PNG 載入失敗:', nft.image);
+                        // 如果 PNG 載入失敗，可以考慮回退到 SVG
+                        if (showFallback && svgContent) {
+                            const imgElement = e.target as HTMLImageElement;
+                            imgElement.style.display = 'none';
+                            const parent = imgElement.parentElement;
+                            if (parent) {
+                                const svgContainer = document.createElement('div');
+                                svgContainer.style.width = '100%';
+                                svgContainer.style.height = '100%';
+                                svgContainer.innerHTML = svgContent;
+                                parent.appendChild(svgContainer);
+                            }
+                        }
+                    }}
+                />
+            </div>
+        );
+    }
+
+    // SVG 模式
     return (
         <div 
             className={`
@@ -112,7 +157,7 @@ export const NftSvgDisplay: React.FC<NftSvgDisplayProps> = ({
 };
 
 // 導出一個優化版本，用於列表顯示
-export const NftSvgThumbnail: React.FC<{ nft: AnyNft; size?: number }> = ({ nft, size = 200 }) => {
+export const NftSvgThumbnail: React.FC<{ nft: AnyNft; size?: number; forceMode?: 'svg' | 'png' }> = ({ nft, size = 200, forceMode }) => {
     return (
         <div 
             style={{ width: size, height: size }} 
@@ -122,6 +167,7 @@ export const NftSvgThumbnail: React.FC<{ nft: AnyNft; size?: number }> = ({ nft,
                 nft={nft} 
                 className="absolute inset-0 w-full h-full" 
                 interactive={false}
+                forceMode={forceMode}
             />
         </div>
     );

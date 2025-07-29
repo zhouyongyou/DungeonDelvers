@@ -60,41 +60,53 @@ function getAlchemyKeys(): string[] {
 }
 
 /**
+ * 檢查是否為管理員頁面（需要穩定 RPC）
+ */
+function isCurrentlyAdminPage(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.location.hash?.includes('admin') || false;
+}
+
+/**
  * 獲取 RPC URL
  * 根據環境配置決定使用策略：
- * 1. 如果配置了 VITE_USE_RPC_PROXY=true，使用 API 代理
- * 2. 如果有 Alchemy key，直接使用
- * 3. 否則使用公共節點
+ * 1. 如果配置了 VITE_USE_RPC_PROXY=true，使用 Vercel API 代理
+ * 2. 管理頁面可單獨配置 VITE_ADMIN_USE_VERCEL_PROXY
+ * 3. 如果有 Alchemy key，直接使用
+ * 4. 否則使用公共節點
  */
 function getRpcUrl(): string {
-  // 使用新的 RPC 代理遷移策略
-  const useRpcProxy = import.meta.env.VITE_USE_RPC_PROXY === 'true';
+  // 檢查是否應該使用 RPC 代理
+  const globalUseProxy = import.meta.env.VITE_USE_RPC_PROXY === 'true';
+  const adminUseProxy = import.meta.env.VITE_ADMIN_USE_VERCEL_PROXY === 'true';
   
-  // 生產環境且啟用代理
-  if (import.meta.env.PROD && useRpcProxy) {
+  // 管理頁面專用邏輯
+  if (isCurrentlyAdminPage()) {
+    const shouldUseProxy = adminUseProxy || globalUseProxy;
+    
+    if (shouldUseProxy) {
+      const rpcEndpoint = getRpcEndpoint();
+      const isExternal = rpcEndpoint.startsWith('http');
+      logger.info(`🛡️ 管理頁面：使用${isExternal ? '線上' : '本地'} Vercel 代理 ${rpcEndpoint}`);
+      return rpcEndpoint;
+    } else {
+      logger.info(`🔧 管理頁面：使用直接 Alchemy 連接`);
+      // 繼續使用下面的邏輯
+    }
+  }
+  
+  // 全域 RPC 代理設定
+  if (globalUseProxy) {
     const rpcEndpoint = getRpcEndpoint();
-    logger.info(`🔒 生產環境：使用 ${rpcEndpoint}`);
+    const isExternal = rpcEndpoint.startsWith('http');
+    logger.info(`🔒 使用${isExternal ? '線上' : '本地'} Vercel RPC 代理：${rpcEndpoint}`);
     return rpcEndpoint;
   }
   
-  // 生產環境但未啟用代理 - 使用直接 Alchemy 連接
-  if (import.meta.env.PROD && !useRpcProxy) {
-    // 繼續使用現有的直接連接邏輯
-    const alchemyKeys = getAlchemyKeys();
-    if (alchemyKeys.length > 0) {
-      const key = alchemyKeys[currentKeyIndex++ % alchemyKeys.length];
-      return `https://bnb-mainnet.g.alchemy.com/v2/${key}`;
-    }
-    // 如果沒有 key，使用公共節點
-    logger.warn('🚨 緊急模式：生產環境使用公共 RPC 節點');
-    const rpcIndex = currentKeyIndex++ % PUBLIC_BSC_RPCS.length;
-    return PUBLIC_BSC_RPCS[rpcIndex];
-  }
-  
-  // 檢查本地 Alchemy key（開發環境或未啟用代理的生產環境）
+  // 未啟用代理時的備用邏輯 - 使用直接 Alchemy 連接
   const alchemyKeys = getAlchemyKeys();
   
-  logger.debug('開發環境 RPC 配置:', { 
+  logger.debug('RPC 配置:', { 
     alchemyKeysCount: alchemyKeys.length,
     alchemyKeys: alchemyKeys.map(k => k ? `${k.substring(0, 10)}...` : 'undefined')
   });
@@ -105,7 +117,7 @@ function getRpcUrl(): string {
     if (key && key.length > 20) {
       currentKeyIndex++;
       
-      logger.info(`🔑 使用本地 Alchemy RPC 節點 (Key ${(currentKeyIndex - 1) % alchemyKeys.length + 1}/${alchemyKeys.length})`);
+      logger.info(`🔑 使用直接 Alchemy RPC 節點 (Key ${(currentKeyIndex - 1) % alchemyKeys.length + 1}/${alchemyKeys.length})`);
       return `https://bnb-mainnet.g.alchemy.com/v2/${key}`;
     } else {
       logger.warn('⚠️ Alchemy key 不完整，使用公共 RPC 節點');
@@ -129,6 +141,53 @@ export function createSmartRpcTransport(): Transport {
   return custom({
     async request({ method, params }) {
       let lastError: any;
+      
+      // 檢查是否應該使用 RPC 代理
+      const globalUseProxy = import.meta.env.VITE_USE_RPC_PROXY === 'true';
+      const adminUseProxy = import.meta.env.VITE_ADMIN_USE_VERCEL_PROXY === 'true';
+      
+      // 全域或管理頁面專用代理檢查
+      const shouldUseProxy = globalUseProxy || 
+                            (isCurrentlyAdminPage() && adminUseProxy);
+      
+      if (shouldUseProxy) {
+          try {
+            const proxyUrl = getRpcEndpoint();
+            
+            const response = await fetch(proxyUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                method,
+                params,
+                id: Date.now(),
+              }),
+            });
+            
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.error) {
+              throw new Error(data.error.message || 'RPC error');
+            }
+            
+            return data.result;
+          } catch (error) {
+            logger.error(`Vercel RPC 代理請求失敗:`, {
+              error: error.message,
+              method,
+              endpoint: getRpcEndpoint(),
+              isAdminPage: isCurrentlyAdminPage()
+            });
+            throw error;
+          }
+      }
       
       // 每次請求時輪換使用不同的 key
       const useAlchemyKeys = alchemyKeys.length > 0;

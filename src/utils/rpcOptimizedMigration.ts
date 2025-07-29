@@ -17,8 +17,12 @@ export const RPC_MIGRATION_CONFIG = {
 
 // 獲取用戶應該使用的 RPC 端點
 export function getRpcEndpoint(): string {
-  // 開發環境總是使用優化版本
+  // 開發環境：檢查是否有外部代理 URL
   if (import.meta.env.DEV) {
+    const externalProxyUrl = import.meta.env.VITE_VERCEL_PROXY_URL;
+    if (externalProxyUrl) {
+      return `${externalProxyUrl}/api/rpc-optimized`;
+    }
     return '/api/rpc-optimized';
   }
   

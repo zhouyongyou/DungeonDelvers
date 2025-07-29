@@ -15,6 +15,55 @@ import { useAppToast } from '../contexts/SimpleToastContext';
 import { useAdminAccess } from '../hooks/useAdminAccess';
 import { VipBenefitsGuide } from '../components/vip/VipBenefitsGuide';
 
+// VIP 福利摺疊組件
+const VipBenefitsCollapsible: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    
+    return (
+        <div className="mb-6">
+            {/* 手機版摺疊按鈕 */}
+            <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="w-full md:hidden mb-4 p-3 bg-gradient-to-r from-indigo-900/50 to-purple-900/50 border border-indigo-500/30 rounded-xl flex items-center justify-between hover:from-indigo-900/70 hover:to-purple-900/70 transition-all"
+            >
+                <span className="text-indigo-300 font-medium">VIP 核心福利</span>
+                <span className={`text-indigo-400 text-xl transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                    ▼
+                </span>
+            </button>
+            
+            {/* 福利內容 - 桌面版始終顯示，手機版根據展開狀態顯示 */}
+            <div className={`space-y-4 md:block ${isExpanded ? 'block' : 'hidden'}`}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* 地下城加成 - 簡化版 */}
+                    <div className="bg-gradient-to-br from-blue-900/40 to-blue-800/30 p-4 rounded-xl border border-blue-500/30 hover:border-blue-400/50 transition-all">
+                        <h3 className="font-bold text-blue-300 mb-3">地下城加成</h3>
+                        <p className="text-sm text-gray-300">
+                            VIP 等級直接增加所有地下城的基礎成功率，每級提升 <strong className="text-blue-300">1%</strong>，等級越高加成越多！
+                        </p>
+                    </div>
+                    
+                    {/* 祭壇加成 - 簡化版 */}
+                    <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/30 p-4 rounded-xl border border-purple-500/30 hover:border-purple-400/50 transition-all">
+                        <h3 className="font-bold text-purple-300 mb-3">祭壇加成</h3>
+                        <p className="text-sm text-gray-300">
+                            VIP 等級自動提升升星成功率，每級提升 <strong className="text-purple-300">1%</strong>{isAdmin && ' + 神秘額外加成'}！
+                        </p>
+                    </div>
+                    
+                    {/* 提現稅率減免 - 簡化版 */}
+                    <div className="bg-gradient-to-br from-green-900/40 to-green-800/30 p-4 rounded-xl border border-green-500/30 hover:border-green-400/50 transition-all">
+                        <h3 className="font-bold text-green-300 mb-3">提現稅率減免</h3>
+                        <p className="text-sm text-gray-300">
+                            從金庫提取代幣時享受手續費減免，每級減免 <strong className="text-green-300">0.5%</strong>，最高可減免 10%！
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undefined, vipLevel: number, contractAddress?: string }> = ({ tokenId, chainId, vipLevel, contractAddress }) => {
     const [nftImage, setNftImage] = useState<string | null>(null);
     const [imageError, setImageError] = useState(false);
@@ -411,56 +460,8 @@ const VipPageContent: React.FC = () => {
                 質押您的 $SoulShard 代幣以提升 VIP 等級，享受提現稅率減免等尊榮禮遇。
             </p>
             
-            {/* VIP 核心福利展示 - 新設計 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                {/* 地下城加成 */}
-                <div className="bg-gradient-to-br from-blue-900/40 to-blue-800/30 p-4 rounded-xl border border-blue-500/30 hover:border-blue-400/50 transition-all">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                            <span className="text-2xl">⚔️</span>
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-blue-300">地下城加成</h3>
-                            <p className="text-xs text-blue-400">自動生效</p>
-                        </div>
-                    </div>
-                    <p className="text-sm text-gray-300">
-                        VIP 等級直接增加所有地下城的<strong className="text-blue-300">基礎成功率</strong>，每級提升 <strong className="text-blue-300">1%</strong>，等級越高加成越多！
-                    </p>
-                </div>
-                
-                {/* 祭壇加成 */}
-                <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/30 p-4 rounded-xl border border-purple-500/30 hover:border-purple-400/50 transition-all">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
-                            <span className="text-2xl">🏰</span>
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-purple-300">祭壇加成</h3>
-                            <p className="text-xs text-purple-400">自動計算</p>
-                        </div>
-                    </div>
-                    <p className="text-sm text-gray-300">
-                        VIP 等級自動提升<strong className="text-purple-300">升星成功率</strong>，每級提升 <strong className="text-purple-300">1%</strong>{isAdmin && ' + 神秘額外加成'}！
-                    </p>
-                </div>
-                
-                {/* 提現稅率減免 */}
-                <div className="bg-gradient-to-br from-green-900/40 to-green-800/30 p-4 rounded-xl border border-green-500/30 hover:border-green-400/50 transition-all">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
-                            <span className="text-2xl">💰</span>
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-green-300">提現稅率減免</h3>
-                            <p className="text-xs text-green-400">每級 0.5%</p>
-                        </div>
-                    </div>
-                    <p className="text-sm text-gray-300">
-                        從金庫提取代幣時享受<strong className="text-green-300">手續費減免</strong>，最高可減免 10%！
-                    </p>
-                </div>
-            </div>
+            {/* VIP 核心福利展示 - 手機版優化設計 */}
+            <VipBenefitsCollapsible isAdmin={isAdmin} />
             
             {/* VIP 等級詳情卡片 */}
             <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 p-4 sm:p-6 rounded-xl border border-purple-500/20">
