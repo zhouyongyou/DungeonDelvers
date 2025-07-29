@@ -44,9 +44,9 @@ const DEFAULT_CONFIG: AppConfig = {
     UNISWAP_POOL: '0x1e5Cd5F386Fb6F39cD8788675dd3A5ceB6521C82',
   },
   subgraph: {
-    studio: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.2.1',
+    studio: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.2.3',
     decentralized: 'https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs',
-    useDecentralized: import.meta.env.PROD
+    useDecentralized: true // 全面使用去中心化端點
   },
   network: {
     chainId: 56,
@@ -116,7 +116,7 @@ class ConfigLoader {
         decentralized: import.meta.env.VITE_THE_GRAPH_DECENTRALIZED_API_URL || 
                       import.meta.env.VITE_GRAPH_DECENTRALIZED_URL || 
                       DEFAULT_CONFIG.subgraph.decentralized,
-        useDecentralized: import.meta.env.PROD
+        useDecentralized: true // 全面使用去中心化端點
       }
     };
   }
@@ -142,7 +142,7 @@ class ConfigLoader {
         subgraph: {
           studio: remoteConfig.subgraph?.studio?.url || DEFAULT_CONFIG.subgraph.studio,
           decentralized: this.buildDecentralizedUrl(remoteConfig.subgraph?.decentralized) || DEFAULT_CONFIG.subgraph.decentralized,
-          useDecentralized: remoteConfig.subgraph?.useDecentralized ?? import.meta.env.PROD
+          useDecentralized: true // 強制使用去中心化端點
         },
         network: remoteConfig.network
       };

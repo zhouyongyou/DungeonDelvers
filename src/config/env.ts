@@ -31,7 +31,7 @@ export const ENV = {
     // 各版本 URL（從 configLoader 載入，保留環境變數作為備份）
     get STUDIO_URL() {
       return cachedStudioUrl || import.meta.env.VITE_THE_GRAPH_API_URL || 
-             'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.2.0';
+             'https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs';
     },
     get NETWORK_URL() {
       return cachedNetworkUrl || import.meta.env.VITE_THE_GRAPH_NETWORK_URL ||

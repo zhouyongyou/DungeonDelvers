@@ -3,6 +3,13 @@
 import { custom, type Transport } from 'viem';
 import { logger } from '../utils/logger';
 import { getRpcEndpoint } from '../utils/rpcOptimizedMigration';
+import { 
+  shouldActivateEmergencyMode, 
+  activateEmergencyMode, 
+  getEmergencyRpcUrl, 
+  isEmergencyModeActive,
+  findFastestEmergencyRpc 
+} from './emergencyRpcFallback';
 // import { rpcMonitor } from '../utils/rpcMonitor'; // Removed RPC monitoring
 
 // 公共 BSC RPC 節點列表（作為後備）
@@ -11,8 +18,7 @@ const PUBLIC_BSC_RPCS = [
   'https://bsc-dataseed2.binance.org/',
   'https://bsc-dataseed3.binance.org/',
   'https://bsc-dataseed4.binance.org/',
-  'https://rpc.ankr.com/bsc',
-  'https://bsc-rpc.publicnode.com',
+  'https://bsc.publicnode.com',
 ];
 
 // 輪換索引
@@ -22,6 +28,53 @@ let currentKeyIndex = 0;
 let lastLoggedKeyIndex = -1;
 let lastLogTime = 0;
 const LOG_THROTTLE_MS = 30000; // 30 秒內不重複記錄相同 key
+
+/**
+ * 緊急 RPC 請求函數
+ */
+async function makeEmergencyRpcRequest(method: string, params: any[]): Promise<any> {
+  logger.info('🆘 使用緊急 RPC 執行請求:', method);
+  
+  // 嘗試最多 3 個緊急節點
+  for (let i = 0; i < 3; i++) {
+    const emergencyRpc = getEmergencyRpcUrl();
+    
+    try {
+      const response = await fetch(emergencyRpc, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method,
+          params,
+          id: Date.now(),
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error.message || 'RPC error');
+      }
+      
+      logger.info('✅ 緊急 RPC 請求成功');
+      return data.result;
+      
+    } catch (error) {
+      logger.warn(`緊急 RPC 嘗試 ${i + 1}/3 失敗:`, error);
+      
+      if (i === 2) {
+        throw new Error(`所有緊急 RPC 嘗試都失敗: ${error.message}`);
+      }
+    }
+  }
+}
 
 /**
  * 獲取所有可用的 Alchemy API keys
@@ -150,7 +203,7 @@ export function createSmartRpcTransport(): Transport {
       const shouldUseProxy = globalUseProxy || 
                             (isCurrentlyAdminPage() && adminUseProxy);
       
-      if (shouldUseProxy) {
+      if (shouldUseProxy && !isEmergencyModeActive()) {
           try {
             const proxyUrl = getRpcEndpoint();
             
@@ -185,8 +238,23 @@ export function createSmartRpcTransport(): Transport {
               endpoint: getRpcEndpoint(),
               isAdminPage: isCurrentlyAdminPage()
             });
+            
+            // 檢查是否應該啟用緊急模式
+            if (shouldActivateEmergencyMode(error)) {
+              logger.warn('🚨 檢測到 RPC 代理連接問題，啟用緊急模式');
+              activateEmergencyMode();
+              
+              // 使用緊急 RPC 重試請求
+              return await makeEmergencyRpcRequest(method, params);
+            }
+            
             throw error;
           }
+      }
+      
+      // 如果已經在緊急模式，直接使用緊急 RPC
+      if (isEmergencyModeActive()) {
+        return await makeEmergencyRpcRequest(method, params);
       }
       
       // 每次請求時輪換使用不同的 key

@@ -232,12 +232,12 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
             </div>
             
-            <nav className="hidden md:flex mt-4 flex-wrap justify-center gap-3 text-sm">
+            <nav className="hidden md:flex mt-4 flex-wrap justify-center gap-4 text-sm">
               {navItems.map(item => (
                   <a 
                       key={item.key} 
                       href={`#/${item.key}`} 
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                           activePage === item.key 
                               ? 'bg-[#C0A573] text-white shadow-lg transform scale-105' 
                               : 'text-gray-300 hover:bg-gray-700 hover:text-white'
@@ -245,7 +245,6 @@ export const Header: React.FC<HeaderProps> = ({
                       onClick={(e) => { e.preventDefault(); handleNavClick(item.key); }}
                       onMouseEnter={() => preloadPage(item.key)}
                   >
-                      <span className="text-base">{item.icon}</span>
                       {item.label}
                   </a>
               ))}

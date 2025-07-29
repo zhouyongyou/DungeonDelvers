@@ -1,0 +1,45 @@
+// Auto-generated from config-reader.js
+// Version: V25
+// Updated: 2025-07-29T20:05:52.486Z
+
+export const contractAddresses = {
+  // 核心合約
+  DUNGEONCORE: '0x8D231b151282Dbc15F1d8A930216D9b6BB502560',
+  DUNGEONMASTER: '0xC1efB792496265fe9a4205af2360BCDAf0424825',
+  DUNGEONSTORAGE: '0xF7BAb4BCD86CB09Ed7490918655caA89817Ba699',
+  DUNGEONMASTERWALLET: '0x10925A7138649C7E1794CE646182eeb5BF8ba647',
+  
+  // NFT 合約
+  HERO: '0xC2e1C9670Dc5ea1ec2FB39018426B84b0d3Fa09E',
+  RELIC: '0xf25cb80cc6a9a83783F88f6AF4F6CB33dba312E4',
+  PARTY: '0xcc5Ea0ab61009317381CAFbBFA0D4164051C80ab',
+  
+  // 功能合約
+  VIPSTAKING: '0xd7E805b398dE47b0cE1f0C26422C935b27bff3e4',
+  PLAYERPROFILE: '0xEf3b95aE52B2192f467fC0545980EAce68C506a2',
+  PLAYERVAULT: '0xCA0c4F5DbC250F71f200243eb6a3850Cc5B96c37',
+  ALTAROFASCENSION: '0xdA17FdeAf7B5bBc3848e41F35EbaDAFF2c673E10',
+  
+  // 代幣合約
+  SOULSHARD: '0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF',
+  
+  // 系統合約
+  ORACLE: '0xc0BF0Eb9907E0E3e36C41db3267BD0C393000b03'
+} as const;
+
+// 網路配置
+export const networkConfig = {
+  "chainId": 56,
+  "name": "BSC Mainnet",
+  "rpc": "https://bsc-dataseed.binance.org/",
+  "explorer": "https://bscscan.com"
+};
+
+// 服務端點
+export const services = {
+  "frontend": "https://dungeondelvers.xyz",
+  "backend": "https://dungeon-delvers-metadata-server.onrender.com"
+};
+
+// 版本資訊
+export const configVersion = 'V25';

@@ -14,7 +14,7 @@ import { subgraphConfig } from './subgraphConfig';
 export async function initializeSubgraphConfig() {
   const studioUrl = await subgraphConfig.getStudioUrl();
   const decentralizedUrl = await subgraphConfig.getDecentralizedUrl();
-  const activeUrl = import.meta.env.PROD ? decentralizedUrl : studioUrl;
+  const activeUrl = decentralizedUrl; // 全面使用去中心化端點
   
   cachedConfig = {
     STUDIO_URL: studioUrl,
@@ -27,7 +27,7 @@ export async function initializeSubgraphConfig() {
 export const SUBGRAPH_CONFIG = {
   // Studio endpoint (for development/testing)
   get STUDIO_URL() {
-    return cachedConfig?.STUDIO_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.2.0';
+    return cachedConfig?.STUDIO_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.2.3';
   },
   
   // Decentralized network endpoint (for production)
@@ -40,23 +40,19 @@ export const SUBGRAPH_CONFIG = {
   
   // Current active endpoint
   get ACTIVE_URL() {
-    return cachedConfig?.ACTIVE_URL || (import.meta.env.PROD 
-      ? 'https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs'
-      : 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.2.0');
+    return cachedConfig?.ACTIVE_URL || 'https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs';
   }
 };
 
 // Helper function to get query URL with API key
 export function getSubgraphUrl(): string {
   const baseUrl = SUBGRAPH_CONFIG.ACTIVE_URL;
-  const apiKey = SUBGRAPH_CONFIG.API_KEY;
-  
-  if (apiKey && SUBGRAPH_CONFIG.ACTIVE_URL.includes('gateway.thegraph.com')) {
-    // Add API key as query parameter for decentralized network
-    return `${baseUrl}?api-key=${apiKey}`;
-  }
-  
-  return baseUrl;
+  return baseUrl; // API key will be handled in Authorization header
+}
+
+// Helper function to get API key for requests
+export function getApiKey(): string {
+  return SUBGRAPH_CONFIG.API_KEY;
 }
 
 // Export for backward compatibility

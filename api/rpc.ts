@@ -3,13 +3,11 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 // BSC Mainnet Chain ID - kept for reference
 // const BSC_CHAIN_ID = '0x38'; // 56 in hex
 
-// 獲取需要代理保護的 Alchemy API Keys
+// 獲取需要代理保護的 Alchemy API Keys (按優先級排序)
 function getProtectedAlchemyKeys(): string[] {
   const keys: string[] = [];
   
-  // 注意：不包括 VITE_ALCHEMY_KEY_PUBLIC（那個是公開的）
-  
-  // 收集需要保護的 keys (不包括公開的 key)
+  // 第一優先：主要私人節點
   for (let i = 1; i <= 5; i++) {
     const key = process.env[`ALCHEMY_API_KEY_${i}`];
     if (key) keys.push(key);
@@ -20,9 +18,24 @@ function getProtectedAlchemyKeys(): string[] {
     keys.push(process.env.ALCHEMY_KEY);
   }
   
-  // 去重
+  // 第二備援：指定的備用私人節點
+  const backupKey = '3lmTWjUVbFylAurhdU-rSUefTC-P4tKf';
+  if (!keys.includes(backupKey)) {
+    keys.push(backupKey);
+  }
+  
+  // 去重並保持順序
   return [...new Set(keys)];
 }
+
+// 公共 BSC RPC 備援節點（最後選擇）
+const PUBLIC_FALLBACK_RPCS = [
+  'https://bsc-dataseed1.binance.org/',
+  'https://bsc-dataseed2.binance.org/',
+  'https://bsc-dataseed3.binance.org/',
+  'https://bsc-dataseed4.binance.org/',
+  'https://bsc.publicnode.com',
+];
 
 // 簡單的輪換機制
 let currentKeyIndex = 0;
@@ -71,51 +84,112 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  try {
-    requestCount++;
+  // 完整備援機制：私人節點 -> 備用私人節點 -> 公共節點
+  const method = req.body?.method || 'unknown';
+  let lastError: any;
+  
+  requestCount++;
+  console.log(`RPC Proxy: ${method} | Total: ${requestCount} | Errors: ${errorCount}`);
 
-    // 記錄請求類型（用於監控）
-    const method = req.body?.method || 'unknown';
-    console.log(`RPC Proxy: ${method} | Key ${currentKeyIndex % keys.length + 1}/${keys.length} | Total: ${requestCount} | Errors: ${errorCount}`);
+  // 第一階段：嘗試所有 Alchemy 私人節點
+  for (let i = 0; i < keys.length; i++) {
+    const keyIndex = (currentKeyIndex + i) % keys.length;
+    const key = keys[keyIndex];
     
-    // 選擇一個 key（輪換）
-    const key = keys[currentKeyIndex % keys.length];
-    currentKeyIndex++;
+    try {
+      console.log(`嘗試 Alchemy Key ${keyIndex + 1}/${keys.length} (${key.substring(0, 8)}...)`);
+      
+      const alchemyUrl = `https://bnb-mainnet.g.alchemy.com/v2/${key}`;
+      const response = await fetch(alchemyUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(req.body),
+        timeout: 10000, // 10秒超時
+      });
 
-    // 構建 Alchemy URL
-    const alchemyUrl = `https://bnb-mainnet.g.alchemy.com/v2/${key}`;
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
 
-    // 轉發請求到 Alchemy
-    const response = await fetch(alchemyUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(req.body),
-    });
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error.message || 'RPC error');
+      }
 
-    // 獲取響應
-    const data = await response.json();
-
-    // 返回響應
-    return res.status(200).json(data);
-  } catch (error: any) {
-    errorCount++;
-    console.error('RPC proxy error:', {
-      message: error.message,
-      method: req.body?.method,
-      keyIndex: keys.length > 0 ? (currentKeyIndex - 1) % keys.length : -1,
-      totalErrors: errorCount
-    });
-    
-    return res.status(500).json({
-      jsonrpc: '2.0',
-      error: { 
-        code: -32603, 
-        message: 'Internal RPC proxy error',
-        data: process.env.NODE_ENV === 'development' ? error.message : undefined
-      },
-      id: req.body?.id || null
-    });
+      // 成功！更新輪換索引
+      currentKeyIndex = (keyIndex + 1) % keys.length;
+      console.log(`✅ Alchemy Key ${keyIndex + 1} 成功`);
+      return res.status(200).json(data);
+      
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`❌ Alchemy Key ${keyIndex + 1} 失敗: ${error.message}`);
+      
+      // 如果不是最後一個 key，繼續嘗試下一個
+      if (i < keys.length - 1) {
+        continue;
+      }
+    }
   }
+
+  // 第二階段：如果所有 Alchemy 節點都失敗，嘗試公共節點
+  console.warn('🚨 所有 Alchemy 節點失敗，嘗試公共備援節點');
+  
+  for (let i = 0; i < PUBLIC_FALLBACK_RPCS.length; i++) {
+    const publicRpc = PUBLIC_FALLBACK_RPCS[i];
+    
+    try {
+      console.log(`嘗試公共節點 ${i + 1}/${PUBLIC_FALLBACK_RPCS.length}: ${publicRpc}`);
+      
+      const response = await fetch(publicRpc, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(req.body),
+        timeout: 8000, // 公共節點8秒超時
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error.message || 'RPC error');
+      }
+
+      console.log(`✅ 公共節點 ${i + 1} 成功`);
+      return res.status(200).json(data);
+      
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`❌ 公共節點 ${i + 1} 失敗: ${error.message}`);
+      continue;
+    }
+  }
+
+  // 所有節點都失敗
+  errorCount++;
+  console.error('💥 所有 RPC 節點都失敗:', {
+    message: lastError?.message,
+    method,
+    totalErrors: errorCount,
+    alchemyKeysCount: keys.length,
+    publicRpcsCount: PUBLIC_FALLBACK_RPCS.length
+  });
+  
+  return res.status(500).json({
+    jsonrpc: '2.0',
+    error: { 
+      code: -32603, 
+      message: '所有 RPC 節點都無法連接',
+      data: process.env.NODE_ENV === 'development' ? lastError?.message : undefined
+    },
+    id: req.body?.id || null
+  });
 }
