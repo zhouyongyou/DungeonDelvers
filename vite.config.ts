@@ -28,6 +28,22 @@ export default defineConfig(({ mode }) => ({
     },
     // 🔥 優化：代碼分割優化
     rollupOptions: {
+      // 明確排除 Next.js 相關模組以避免構建錯誤
+      external: [
+        'next',
+        'next/router',
+        'next/link',
+        'next/image',
+        'next/head'
+      ].filter(dep => {
+        // 只在實際遇到這些模組時才排除
+        try {
+          require.resolve(dep);
+          return false; // 如果能解析，不排除
+        } catch {
+          return true; // 如果不能解析，排除它
+        }
+      }),
       output: {
         manualChunks: {
           // React 相關 - 核心框架
