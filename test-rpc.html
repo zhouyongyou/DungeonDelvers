@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RPC 配置測試</title>
+</head>
+<body>
+    <h1>RPC 配置測試</h1>
+    <button onclick="testRpcConfig()">測試 RPC 配置</button>
+    <button onclick="testAlchemyConnection()">測試 Alchemy 連接</button>
+    <div id="results"></div>
+
+    <script>
+        function log(message) {
+            console.log(message);
+            document.getElementById('results').innerHTML += '<div>' + message + '</div>';
+        }
+
+        function testRpcConfig() {
+            document.getElementById('results').innerHTML = '';
+            log('🔍 開始 RPC 配置測試...');
+            
+            // 讀取 .env 文件（需要在實際應用中運行）
+            const alchemyKeyPublic = 'F7E3-HDwgUHDQvdICnFv_lZ-aQJSyKT3'; // 從你的 .env 文件複製
+            
+            log('✅ VITE_ALCHEMY_KEY_PUBLIC 存在');
+            log('Key 長度: ' + alchemyKeyPublic.length);
+            log('Key 預覽: ' + alchemyKeyPublic.substring(0, 10) + '...');
+            
+            if (alchemyKeyPublic.length > 20) {
+                log('✅ Key 長度驗證通過');
+                const alchemyUrl = `https://bnb-mainnet.g.alchemy.com/v2/${alchemyKeyPublic}`;
+                log('預期 Alchemy URL: ' + alchemyUrl.substring(0, 50) + '...');
+            } else {
+                log('❌ Key 長度不足');
+            }
+        }
+
+        async function testAlchemyConnection() {
+            const alchemyKeyPublic = 'F7E3-HDwgUHDQvdICnFv_lZ-aQJSyKT3';
+            const alchemyUrl = `https://bnb-mainnet.g.alchemy.com/v2/${alchemyKeyPublic}`;
+            
+            log('🔗 測試 Alchemy 連接...');
+            
+            try {
+                const response = await fetch(alchemyUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'eth_blockNumber',
+                        params: [],
+                        id: 1,
+                    }),
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error.message);
+                }
+                
+                const blockNumber = parseInt(data.result, 16);
+                log('✅ Alchemy 連接成功！');
+                log('當前區塊號: ' + blockNumber);
+                
+            } catch (error) {
+                log('❌ Alchemy 連接失敗: ' + error.message);
+                
+                // 測試公共節點作為對比
+                log('🔄 測試公共節點...');
+                try {
+                    const publicResponse = await fetch('https://bsc-dataseed1.binance.org/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            jsonrpc: '2.0',
+                            method: 'eth_blockNumber',
+                            params: [],
+                            id: 1,
+                        }),
+                    });
+                    
+                    const publicData = await publicResponse.json();
+                    const publicBlockNumber = parseInt(publicData.result, 16);
+                    log('✅ 公共節點連接成功，區塊號: ' + publicBlockNumber);
+                    
+                } catch (publicError) {
+                    log('❌ 公共節點也失敗: ' + publicError.message);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

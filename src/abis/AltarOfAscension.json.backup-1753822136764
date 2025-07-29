@@ -1,0 +1,918 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_initialOwner",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "EnforcedPause",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ExpectedPause",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableInvalidOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableUnauthorizedAccount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ReentrancyGuardReentrantCall",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "bonusRate",
+        "type": "uint8"
+      }
+    ],
+    "name": "AdditionalVIPBonusSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newSeed",
+        "type": "uint256"
+      }
+    ],
+    "name": "DynamicSeedUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferred",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "Paused",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "totalAttempts",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "totalBurned",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "totalMinted",
+        "type": "uint256"
+      }
+    ],
+    "name": "PlayerStatsUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "Unpaused",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "tokenContract",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "baseRarity",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "targetRarity",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256[]",
+        "name": "burnedTokenIds",
+        "type": "uint256[]"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256[]",
+        "name": "mintedTokenIds",
+        "type": "uint256[]"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "outcome",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "fee",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "vipLevel",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "totalVipBonus",
+        "type": "uint8"
+      }
+    ],
+    "name": "UpgradeAttempted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint8",
+        "name": "fromRarity",
+        "type": "uint8"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint8",
+            "name": "materialsRequired",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "nativeFee",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "greatSuccessChance",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint8",
+            "name": "successChance",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint8",
+            "name": "partialFailChance",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "cooldownTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "isActive",
+            "type": "bool"
+          }
+        ],
+        "indexed": false,
+        "internalType": "struct AltarOfAscensionV2Fixed.UpgradeRule",
+        "name": "rule",
+        "type": "tuple"
+      }
+    ],
+    "name": "UpgradeRuleSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "reason",
+        "type": "string"
+      }
+    ],
+    "name": "VIPQueryFailed",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_ADDITIONAL_BONUS",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_VIP_BONUS",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "additionalVipBonusRate",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address[]",
+        "name": "_players",
+        "type": "address[]"
+      },
+      {
+        "internalType": "uint8[]",
+        "name": "_bonusRates",
+        "type": "uint8[]"
+      }
+    ],
+    "name": "batchSetAdditionalVIPBonus",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "dungeonCore",
+    "outputs": [
+      {
+        "internalType": "contract IDungeonCore",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "dynamicSeed",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_tokenContract",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_to",
+        "type": "address"
+      }
+    ],
+    "name": "emergencyRecover",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_player",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "_rarity",
+        "type": "uint8"
+      }
+    ],
+    "name": "getCooldownStatus",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "isInCooldown",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "remainingTime",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_player",
+        "type": "address"
+      }
+    ],
+    "name": "getPlayerStats",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "totalAttempts",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalBurned",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalMinted",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalFeesCollected",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_player",
+        "type": "address"
+      }
+    ],
+    "name": "getPlayerVipInfo",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "currentVipLevel",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "additionalBonus",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "totalVipBonus",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "effectiveTotalBonus",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "globalStats",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "totalAttempts",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalBurned",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalMinted",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalFeesCollected",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "heroContract",
+    "outputs": [
+      {
+        "internalType": "contract IHero",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "name": "lastUpgradeTime",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "pause",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "paused",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "playerStats",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "totalAttempts",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalBurned",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalMinted",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalFeesCollected",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_player",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "_baseRarity",
+        "type": "uint8"
+      }
+    ],
+    "name": "previewUpgradeSuccess",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "greatSuccessChance",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "effectiveSuccessChance",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "partialFailChance",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "completeFailChance",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "playerVipLevel",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "totalVipBonus",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "cappedVipBonus",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "relicContract",
+    "outputs": [
+      {
+        "internalType": "contract IRelic",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_player",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "_bonusRate",
+        "type": "uint8"
+      }
+    ],
+    "name": "setAdditionalVIPBonus",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_dungeonCore",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_heroContract",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_relicContract",
+        "type": "address"
+      }
+    ],
+    "name": "setContracts",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "_fromRarity",
+        "type": "uint8"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint8",
+            "name": "materialsRequired",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "nativeFee",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "greatSuccessChance",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint8",
+            "name": "successChance",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint8",
+            "name": "partialFailChance",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "cooldownTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "isActive",
+            "type": "bool"
+          }
+        ],
+        "internalType": "struct AltarOfAscensionV2Fixed.UpgradeRule",
+        "name": "_rule",
+        "type": "tuple"
+      }
+    ],
+    "name": "setUpgradeRule",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "unpause",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_newSeed",
+        "type": "uint256"
+      }
+    ],
+    "name": "updateDynamicSeed",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_tokenContract",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_tokenIds",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "upgradeNFTs",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "name": "upgradeRules",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "materialsRequired",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "nativeFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "greatSuccessChance",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "successChance",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "partialFailChance",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "cooldownTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "isActive",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "withdrawNative",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

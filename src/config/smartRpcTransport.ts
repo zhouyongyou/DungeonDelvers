@@ -12,13 +12,14 @@ import {
 } from './emergencyRpcFallback';
 // import { rpcMonitor } from '../utils/rpcMonitor'; // Removed RPC monitoring
 
-// 公共 BSC RPC 節點列表（作為後備）
+// 公共 BSC RPC 節點列表（作為後備）- 移除有問題的節點
 const PUBLIC_BSC_RPCS = [
   'https://bsc-dataseed1.binance.org/',
   'https://bsc-dataseed2.binance.org/',
   'https://bsc-dataseed3.binance.org/',
   'https://bsc-dataseed4.binance.org/',
   'https://bsc.publicnode.com',
+  'https://1rpc.io/bnb',
 ];
 
 // 輪換索引

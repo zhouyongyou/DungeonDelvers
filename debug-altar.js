@@ -17,7 +17,7 @@ console.log(`  RELIC: ${contracts.RELIC}`);
 console.log(`  ALTAR: ${contracts.ALTAROFASCENSION}\n`);
 
 // 檢查子圖端點
-const subgraphUrl = 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.2.0';
+const subgraphUrl = 'https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.2.3';
 console.log(`🌐 子圖端點: ${subgraphUrl}\n`);
 
 // 測試子圖查詢

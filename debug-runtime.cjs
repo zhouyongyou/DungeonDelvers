@@ -51,7 +51,7 @@ const USE_DECENTRALIZED = process.env.VITE_USE_DECENTRALIZED_GRAPH === 'true' ||
 console.log(`  USE_DECENTRALIZED: ${USE_DECENTRALIZED}`);
 
 // 模擬 API URL 選擇邏輯
-const STUDIO_URL = process.env.VITE_THE_GRAPH_API_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.2.0';
+const STUDIO_URL = process.env.VITE_THE_GRAPH_API_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.2.3';
 const NETWORK_URL = process.env.VITE_THE_GRAPH_NETWORK_URL || 'https://gateway.thegraph.com/api...';
 
 const SELECTED_URL = USE_DECENTRALIZED ? NETWORK_URL : STUDIO_URL;

@@ -1,0 +1,32 @@
+{
+  "bsc": {
+    "Hero": {
+      "address": "0xC2e1C9670Dc5ea1ec2FB39018426B84b0d3Fa09E",
+      "startBlock": 55761797
+    },
+    "Relic": {
+      "address": "0xf25cb80cc6a9a83783F88f6AF4F6CB33dba312E4",
+      "startBlock": 55761797
+    },
+    "PartyV3": {
+      "address": "0xcc5Ea0ab61009317381CAFbBFA0D4164051C80ab",
+      "startBlock": 55761797
+    },
+    "VIPStaking": {
+      "address": "0xd7E805b398dE47b0cE1f0C26422C935b27bff3e4",
+      "startBlock": 55761797
+    },
+    "PlayerProfile": {
+      "address": "0xEf3b95aE52B2192f467fC0545980EAce68C506a2",
+      "startBlock": 55761797
+    },
+    "AltarOfAscensionV2Fixed": {
+      "address": "0xdA17FdeAf7B5bBc3848e41F35EbaDAFF2c673E10",
+      "startBlock": 55761797
+    },
+    "DungeonMaster": {
+      "address": "0xC1efB792496265fe9a4205af2360BCDAf0424825",
+      "startBlock": 55761797
+    }
+  }
+}
