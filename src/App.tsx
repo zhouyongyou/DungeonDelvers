@@ -39,8 +39,9 @@ const VipPage = lazy(() => import('./pages/VipPage'));
 const ReferralPage = lazy(() => import('./pages/ReferralPage'));
 // 暫時禁用圖鑑功能
 // const CodexPage = lazy(() => import('./pages/CodexPage'));
-const DebugContractPage = lazy(() => import('./pages/DebugContractPage'));
-const PriceDebugPage = lazy(() => import('./pages/PriceDebugPage'));
+// 調試頁面只在開發環境載入
+const DebugContractPage = import.meta.env.DEV ? lazy(() => import('./pages/DebugContractPage')) : null;
+const PriceDebugPage = import.meta.env.DEV ? lazy(() => import('./pages/PriceDebugPage')) : null;
 const PitchPage = lazy(() => import('./pages/PitchPage'));
 
 
@@ -145,8 +146,8 @@ function App() {
         case 'vip': return <VipPage />;
         case 'referral': return <ReferralPage />;
         // case 'codex': return <CodexPage />;
-        case 'debug': return <DebugContractPage />;
-        case 'priceDebug': return <PriceDebugPage />;
+        case 'debug': return DebugContractPage ? <DebugContractPage /> : <EmptyState message="調試功能僅在開發環境可用" />;
+        case 'priceDebug': return PriceDebugPage ? <PriceDebugPage /> : <EmptyState message="價格調試僅在開發環境可用" />;
         case 'pitch': return <PitchPage />;
         default: return <OverviewPage setActivePage={handleSetPage} />; // 預設頁面改為 OverviewPage
     }
