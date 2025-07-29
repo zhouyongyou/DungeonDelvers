@@ -9,7 +9,7 @@ import { NftCard } from '../components/ui/NftCard';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
-import { getContract } from '../config/contracts';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';
 import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
@@ -24,8 +24,8 @@ import { Icons } from '../components/ui/icons';
 import { THE_GRAPH_API_URL } from '../config/graphConfig';
 import { graphQLRateLimiter } from '../utils/rateLimiter';
 
-// Import TeamBuilder from original file
-import { TeamBuilder } from './MyAssetsPage';
+// Import TeamBuilder from components
+import { TeamBuilder } from '../components/TeamBuilder';
 
 // =================================================================
 // Section: GraphQL Queries
@@ -151,43 +151,44 @@ const MyAssetsPageEnhanced: React.FC = () => {
     const marketRelics = useMarketBrowser('relic');
     
     // Party contract
-    const partyContract = getContract('PARTYV3');
-    const heroContract = getContract('HERO');
-    const relicContract = getContract('RELIC');
+    const partyContract = getContractWithABI('PARTY');
+    const heroContract = getContractWithABI('HERO');
+    const relicContract = getContractWithABI('RELIC');
     
     // Platform fee
     const { data: platformFeeData, isLoading: isLoadingFee } = useReadContract({
-        address: partyContract.address,
-        abi: partyContract.abi,
+        address: partyContract?.address,
+        abi: partyContract?.abi,
         functionName: 'getPlatformFee',
         chainId: bsc.id,
+        query: { enabled: !!partyContract }
     });
     
     // Authorization checks
     const { data: isHeroAuthorized } = useReadContract({
-        address: heroContract.address,
-        abi: heroContract.abi,
+        address: heroContract?.address,
+        abi: heroContract?.abi,
         functionName: 'isApprovedForAll',
-        args: address ? [address, partyContract.address] : undefined,
-        query: { enabled: !!address }
+        args: address && partyContract ? [address, partyContract.address] : undefined,
+        query: { enabled: !!address && !!heroContract && !!partyContract }
     });
     
     const { data: isRelicAuthorized } = useReadContract({
-        address: relicContract.address,
-        abi: relicContract.abi,
+        address: relicContract?.address,
+        abi: relicContract?.abi,
         functionName: 'isApprovedForAll',
-        args: address ? [address, partyContract.address] : undefined,
-        query: { enabled: !!address }
+        args: address && partyContract ? [address, partyContract.address] : undefined,
+        query: { enabled: !!address && !!relicContract && !!partyContract }
     });
     
     // Authorization transactions
     const authorizeHeroTx = useTransactionWithProgress({
-        contractCall: {
+        contractCall: heroContract && partyContract ? {
             address: heroContract.address,
             abi: heroContract.abi,
             functionName: 'setApprovalForAll',
             args: [partyContract.address, true]
-        },
+        } : undefined,
         actionName: '授權英雄合約',
         onSuccess: () => {
             showToast('成功授權英雄合約', 'success');
@@ -199,12 +200,12 @@ const MyAssetsPageEnhanced: React.FC = () => {
     });
     
     const authorizeRelicTx = useTransactionWithProgress({
-        contractCall: {
+        contractCall: relicContract && partyContract ? {
             address: relicContract.address,
             abi: relicContract.abi,
             functionName: 'setApprovalForAll',
             args: [partyContract.address, true]
-        },
+        } : undefined,
         actionName: '授權聖物合約',
         onSuccess: () => {
             showToast('成功授權聖物合約', 'success');
@@ -232,6 +233,11 @@ const MyAssetsPageEnhanced: React.FC = () => {
     const handleCreateParty = (heroIds: bigint[], relicIds: bigint[]) => {
         if (!platformFeeData) {
             showToast('無法獲取平台費用', 'error');
+            return;
+        }
+        
+        if (!partyContract) {
+            showToast('無法取得合約配置', 'error');
             return;
         }
         

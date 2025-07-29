@@ -1,7 +1,7 @@
 // src/utils/adminConfigValidator.ts - 管理員配置驗證器
 
 import { type Address } from 'viem';
-import { getContract } from '../config/contracts';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { logger } from './logger';
 
 // 合約配置項接口
@@ -131,13 +131,13 @@ export class AdminConfigValidator {
 
     // 檢查合約可用性
     const contracts = {
-      hero: getContract('HERO'),
-      relic: getContract('RELIC'),
-      party: getContract('PARTY'),
-      dungeonMaster: getContract('DUNGEONMASTER'),
-      playerVault: getContract('PLAYERVAULT'),
-      vipStaking: getContract('VIPSTAKING'),
-      oracle: getContract('ORACLE'),
+      hero: getContractWithABI('HERO'),
+      relic: getContractWithABI('RELIC'),
+      party: getContractWithABI('PARTY'),
+      dungeonMaster: getContractWithABI('DUNGEONMASTER'),
+      playerVault: getContractWithABI('PLAYERVAULT'),
+      vipStaking: getContractWithABI('VIPSTAKING'),
+      oracle: getContractWithABI('ORACLE'),
     };
 
     // 只添加有效的合約配置

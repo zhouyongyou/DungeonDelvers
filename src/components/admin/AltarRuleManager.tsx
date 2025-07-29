@@ -3,7 +3,7 @@ import { useReadContracts, useWriteContract } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import type { Abi } from 'viem';
 import { bsc } from 'wagmi/chains';
-import { getContract } from '../../config/contracts';
+import { getContractWithABI } from '../../config/contractsWithABI';
 import { useAppToast } from '../../hooks/useAppToast';
 import { ActionButton } from '../ui/ActionButton';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
@@ -19,7 +19,7 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
   const { writeContractAsync } = useWriteContract();
   const [pendingRule, setPendingRule] = useState<number | null>(null);
   
-  const altarContract = getContract('ALTAROFASCENSION');
+  const altarContract = getContractWithABI('ALTAROFASCENSION');
 
   const { data: rulesData, isLoading, refetch } = useReadContracts({
     contracts: Array.from({ length: 4 }, (_, i) => ({

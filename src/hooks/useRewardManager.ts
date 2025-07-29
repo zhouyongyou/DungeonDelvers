@@ -3,7 +3,7 @@
 import { useWriteContract, useReadContract, useWatchContractEvent } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppToast } from '../contexts/SimpleToastContext';
-import { getContract } from '../config/contracts';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { formatEther } from 'viem';
 import { createEventWatchConfig } from '../utils/rpcErrorHandler';
 import { bsc } from 'wagmi/chains';
@@ -18,8 +18,8 @@ export const useRewardManager = ({ partyId, chainId }: UseRewardManagerProps) =>
     const { showToast } = useAppToast();
     const queryClient = useQueryClient();
     
-    const dungeonStorageContract = getContract('DUNGEONSTORAGE');
-    const dungeonMasterContract = getContract('DUNGEONMASTER');
+    const dungeonStorageContract = getContractWithABI('DUNGEONSTORAGE');
+    const dungeonMasterContract = getContractWithABI('DUNGEONMASTER');
     
     // 讀取隊伍狀態（包含未領取獎勵）
     const { data: partyStatus, refetch: refetchStatus, isLoading: isLoadingStatus } = useReadContract({

@@ -1,0 +1,368 @@
+// src/components/marketplace/CreateListingModal.tsx
+// 創建掛單的模態框組件
+
+import React, { useState, useMemo } from 'react';
+import { useAccount } from 'wagmi';
+import { parseEther, type Address } from 'viem';
+import { ActionButton } from '../ui/ActionButton';
+import { Icons } from '../ui/icons';
+import { LoadingSpinner } from '../ui/LoadingSpinner';
+import type { HeroNft, RelicNft, PartyNft, NftType } from '../../types/nft';
+import { formatSoul } from '../../utils/formatters';
+import { useAppToast } from '../../contexts/SimpleToastContext';
+import { useCreateListing, useApproveNFT } from '../../hooks/useMarketplace';
+import { useHeroPower, usePartyPower, useHeroDetails, useRelicDetails, usePartyDetails, getElementName, getClassName, getRelicCategoryName } from '../../hooks/useNftPower';
+
+interface CreateListingModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    userNfts: {
+        heroes: HeroNft[];
+        relics: RelicNft[];
+        parties: PartyNft[];
+    };
+    onListingCreated?: () => void;
+}
+
+export const CreateListingModal: React.FC<CreateListingModalProps> = ({
+    isOpen,
+    onClose,
+    userNfts,
+    onListingCreated
+}) => {
+    const { address } = useAccount();
+    const { showToast } = useAppToast();
+    const { createListing, isCreating } = useCreateListing();
+    const { checkApproval, isApproving } = useApproveNFT();
+    const [selectedNft, setSelectedNft] = useState<HeroNft | RelicNft | PartyNft | null>(null);
+    const [selectedType, setSelectedType] = useState<NftType>('hero');
+    const [priceInput, setPriceInput] = useState('');
+    const [needsApproval, setNeedsApproval] = useState(false);
+    
+    // 模擬市場地址（實際應該從配置獲取）
+    const MARKETPLACE_ADDRESS = '0x1234567890123456789012345678901234567890' as Address;
+    
+    // 獲取當前類型的 NFT 列表
+    const availableNfts = useMemo(() => {
+        switch (selectedType) {
+            case 'hero':
+                return userNfts.heroes;
+            case 'relic':
+                return userNfts.relics;
+            case 'party':
+                return userNfts.parties;
+            default:
+                return [];
+        }
+    }, [selectedType, userNfts]);
+    
+    const handleCreateListing = async () => {
+        if (!selectedNft || !priceInput) {
+            showToast('請選擇 NFT 並設定價格', 'error');
+            return;
+        }
+        
+        try {
+            const priceInWei = parseEther(priceInput);
+            await createListing(selectedNft, priceInWei, MARKETPLACE_ADDRESS);
+            
+            showToast('成功創建掛單！', 'success');
+            onClose();
+            onListingCreated?.();
+            
+            // 重置表單
+            setSelectedNft(null);
+            setPriceInput('');
+            setNeedsApproval(false);
+        } catch (error) {
+            showToast(`創建掛單失敗: ${error}`, 'error');
+        }
+    };
+    
+    // 檢查選中 NFT 的授權狀態
+    const handleNftSelect = async (nft: HeroNft | RelicNft | PartyNft) => {
+        setSelectedNft(nft);
+        
+        try {
+            const approved = await checkApproval(nft.type, MARKETPLACE_ADDRESS);
+            setNeedsApproval(!approved);
+        } catch (error) {
+            console.error('Error checking approval:', error);
+            setNeedsApproval(true); // 安全起見，假設需要授權
+        }
+    };
+    
+    // NFT 詳細資訊組件
+    const NftDetailsCard = ({ nft }: { nft: HeroNft | RelicNft | PartyNft }) => {
+        const heroPower = useHeroPower(nft.type === 'hero' ? BigInt(nft.tokenId) : 0n);
+        const partyPower = usePartyPower(nft.type === 'party' ? BigInt(nft.tokenId) : 0n);
+        const heroDetails = useHeroDetails(nft.type === 'hero' ? BigInt(nft.tokenId) : 0n);
+        const relicDetails = useRelicDetails(nft.type === 'relic' ? BigInt(nft.tokenId) : 0n);
+        const partyDetails = usePartyDetails(nft.type === 'party' ? BigInt(nft.tokenId) : 0n);
+
+        const powerValue = nft.type === 'hero' ? heroPower.power : 
+                          nft.type === 'party' ? partyPower.power : null;
+
+        return (
+            <div className="p-3 bg-gray-700 rounded-lg">
+                <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 bg-gray-900 rounded-lg flex items-center justify-center text-lg relative">
+                        {nft.type === 'hero' ? '⚔️' :
+                         nft.type === 'relic' ? '🛡️' : '👥'}
+                        {powerValue && (
+                            <div className="absolute -top-1 -right-1 bg-[#C0A573] text-white text-xs px-1 py-0.5 rounded-full font-bold min-w-[16px] text-center">
+                                {powerValue > 999 ? `${Math.floor(powerValue/1000)}k` : powerValue}
+                            </div>
+                        )}
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-white">
+                            {nft.type === 'hero' ? '英雄' :
+                             nft.type === 'relic' ? '聖物' : '隊伍'} #{nft.tokenId.toString()}
+                        </h4>
+                        {powerValue && (
+                            <p className="text-sm text-[#C0A573] font-bold">
+                                戰力: {powerValue.toLocaleString()}
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                {/* 英雄詳細資訊 */}
+                {nft.type === 'hero' && heroDetails.details && (
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">等級:</span>
+                            <span className="text-white">Lv.{heroDetails.details.level}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">品階:</span>
+                            <span className="text-white">T{heroDetails.details.tier}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">職業:</span>
+                            <span className="text-white">{getClassName(heroDetails.details.heroClass)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">元素:</span>
+                            <span className="text-white">{getElementName(heroDetails.details.element)}</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* 聖物詳細資訊 */}
+                {nft.type === 'relic' && relicDetails.details && (
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">類別:</span>
+                            <span className="text-white">{getRelicCategoryName(relicDetails.details.category)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">品階:</span>
+                            <span className="text-white">T{relicDetails.details.tier}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">容量:</span>
+                            <span className="text-white">{relicDetails.details.capacity}</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* 隊伍詳細資訊 */}
+                {nft.type === 'party' && partyDetails.details && (
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">英雄數量:</span>
+                            <span className="text-white">{partyDetails.details.heroes.length}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">聖物數量:</span>
+                            <span className="text-white">{partyDetails.details.relics.length}</span>
+                        </div>
+                        <div className="flex justify-between col-span-2">
+                            <span className="text-gray-400">總戰力:</span>
+                            <span className="text-[#C0A573] font-bold">{partyDetails.details.totalPower.toLocaleString()}</span>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    if (!isOpen) return null;
+    
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold text-white">創建掛單</h2>
+                    <button
+                        onClick={onClose}
+                        className="text-gray-400 hover:text-white"
+                    >
+                        <Icons.X className="h-6 w-6" />
+                    </button>
+                </div>
+                
+                {/* NFT 類型選擇 */}
+                <div className="mb-4">
+                    <label className="block text-gray-400 mb-2">選擇類型</label>
+                    <div className="flex gap-2">
+                        {(['hero', 'relic', 'party'] as NftType[]).map(type => (
+                            <button
+                                key={type}
+                                onClick={() => {
+                                    setSelectedType(type);
+                                    setSelectedNft(null);
+                                }}
+                                className={`px-4 py-2 rounded font-medium transition-colors ${
+                                    selectedType === type
+                                        ? 'bg-[#C0A573] text-white'
+                                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                }`}
+                            >
+                                {type === 'hero' ? '英雄' :
+                                 type === 'relic' ? '聖物' : '隊伍'}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                
+                {/* NFT 選擇 */}
+                <div className="mb-4">
+                    <label className="block text-gray-400 mb-2">選擇 NFT</label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
+                        {availableNfts.map((nft) => {
+                            const NftCard = () => {
+                                const heroPower = useHeroPower(nft.type === 'hero' ? BigInt(nft.tokenId) : 0n);
+                                const partyPower = usePartyPower(nft.type === 'party' ? BigInt(nft.tokenId) : 0n);
+                                const powerValue = nft.type === 'hero' ? heroPower.power : 
+                                                  nft.type === 'party' ? partyPower.power : null;
+                                const isLoadingPower = heroPower.isLoading || partyPower.isLoading;
+
+                                return (
+                                    <button
+                                        key={`${nft.type}-${nft.tokenId}`}
+                                        onClick={() => handleNftSelect(nft)}
+                                        className={`p-3 rounded-lg border-2 transition-all ${
+                                            selectedNft?.tokenId === nft.tokenId
+                                                ? 'border-[#C0A573] bg-gray-700'
+                                                : 'border-gray-600 hover:border-gray-500'
+                                        }`}
+                                    >
+                                        <div className="relative mb-2">
+                                            <div className="text-2xl">
+                                                {nft.type === 'hero' ? '⚔️' :
+                                                 nft.type === 'relic' ? '🛡️' : '👥'}
+                                            </div>
+                                            {powerValue && (
+                                                <div className="absolute -top-1 -right-1 bg-[#C0A573] text-white text-xs px-1 py-0.5 rounded-full font-bold min-w-[16px] text-center">
+                                                    {powerValue > 999 ? `${Math.floor(powerValue/1000)}k` : powerValue}
+                                                </div>
+                                            )}
+                                            {isLoadingPower && (
+                                                <div className="absolute -top-1 -right-1 bg-gray-600 text-white text-xs px-1 py-0.5 rounded-full">
+                                                    <LoadingSpinner size="xs" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <p className="text-sm text-white">#{nft.tokenId.toString()}</p>
+                                        {powerValue && (
+                                            <p className="text-xs text-[#C0A573] font-bold">
+                                                {powerValue.toLocaleString()}
+                                            </p>
+                                        )}
+                                        {'tier' in nft && (
+                                            <p className="text-xs text-gray-400">T{nft.tier}</p>
+                                        )}
+                                    </button>
+                                );
+                            };
+                            
+                            return <NftCard key={`${nft.type}-${nft.tokenId}`} />;
+                        })}
+                    </div>
+                    {availableNfts.length === 0 && (
+                        <p className="text-gray-500 text-center py-4">
+                            沒有可出售的 {selectedType === 'hero' ? '英雄' :
+                                         selectedType === 'relic' ? '聖物' : '隊伍'}
+                        </p>
+                    )}
+                </div>
+                
+                {/* 價格設定 */}
+                <div className="mb-4">
+                    <label className="block text-gray-400 mb-2">設定價格 (SOUL)</label>
+                    <input
+                        type="number"
+                        value={priceInput}
+                        onChange={(e) => setPriceInput(e.target.value)}
+                        placeholder="輸入價格"
+                        className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C0A573]"
+                        step="0.01"
+                        min="0"
+                    />
+                    {priceInput && (
+                        <p className="text-sm text-gray-400 mt-1">
+                            = {formatSoul(parseEther(priceInput).toString())} SOUL
+                        </p>
+                    )}
+                </div>
+                
+                {/* 授權狀態提示 */}
+                {selectedNft && needsApproval && (
+                    <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-700 rounded-lg">
+                        <div className="flex items-center gap-2 text-yellow-400 text-sm">
+                            <Icons.AlertTriangle className="h-4 w-4" />
+                            此 NFT 需要授權才能掛單。創建掛單時會自動處理授權。
+                        </div>
+                    </div>
+                )}
+                
+                {/* 預覽 */}
+                {selectedNft && (
+                    <div className="mb-4">
+                        <h3 className="text-white font-medium mb-2">掛單預覽</h3>
+                        <NftDetailsCard nft={selectedNft} />
+                        
+                        {priceInput && (
+                            <div className="mt-3 p-3 bg-gray-600 rounded-lg">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-gray-400">掛單價格：</span>
+                                    <span className="text-[#C0A573] font-bold text-lg">{priceInput} SOUL</span>
+                                </div>
+                                <div className="flex justify-between text-xs">
+                                    <span className="text-gray-500">授權狀態：</span>
+                                    <span className={needsApproval ? 'text-yellow-400' : 'text-green-400'}>
+                                        {needsApproval ? '需要授權' : '已授權'}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+                
+                {/* 操作按鈕 */}
+                <div className="flex gap-2">
+                    <ActionButton
+                        onClick={handleCreateListing}
+                        disabled={!selectedNft || !priceInput || isCreating || isApproving}
+                        isLoading={isCreating || isApproving}
+                        className="flex-1 py-2"
+                    >
+                        {isApproving ? '授權中...' : 
+                         isCreating ? '創建中...' : 
+                         needsApproval ? '授權並創建' : '確認創建'}
+                    </ActionButton>
+                    <ActionButton
+                        onClick={onClose}
+                        disabled={isCreating || isApproving}
+                        className="px-6 py-2 bg-gray-700 hover:bg-gray-600"
+                    >
+                        取消
+                    </ActionButton>
+                </div>
+            </div>
+        </div>
+    );
+};

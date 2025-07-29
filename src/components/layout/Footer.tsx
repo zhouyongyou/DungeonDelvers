@@ -6,7 +6,7 @@ import { bsc } from 'wagmi/chains';
 import { getBlockNumber }from 'viem/actions';
 import fourLogoUrl from '/assets/images/FOUR-logo4.png';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
-import { getContract } from '../../config/contracts'; // 導入 getContract
+import { getContractWithABI } from '../../config/contractsWithABI'; // 導入 getContract
 import { logger } from '../../utils/logger';
 
 // 新增：複製圖示元件
@@ -139,7 +139,7 @@ export const Footer: React.FC = () => {
 
   // 只允許主網 chain.id
   const soulShardAddress = (chain && chain.id === bsc.id) 
-    ? getContract('SOULSHARD') 
+    ? getContractWithABI('SOULSHARD')?.address 
     : undefined;
 
   return (

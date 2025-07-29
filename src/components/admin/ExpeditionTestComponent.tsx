@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useReadContract, useWriteContract, useSimulateContract } from 'wagmi';
 import { formatEther, parseEther } from 'viem';
 import { bsc } from 'wagmi/chains';
-import { getContract } from '../../config/contracts';
+import { getContractWithABI } from '../../config/contractsWithABI';
 import { logger } from '../../utils/logger';
 
 export const ExpeditionTestComponent: React.FC = () => {
@@ -11,21 +11,21 @@ export const ExpeditionTestComponent: React.FC = () => {
     const [testDungeonId, setTestDungeonId] = useState<string>('1');
     const [testResults, setTestResults] = useState<any[]>([]);
 
-    const dungeonMasterContract = getContract('DUNGEONMASTER');
-    const dungeonStorageContract = getContract('DUNGEONSTORAGE');
-    const dungeonCoreContract = getContract('DUNGEONCORE');
+    const dungeonMasterContract = getContractWithABI('DUNGEONMASTER');
+    const dungeonStorageContract = getContractWithABI('DUNGEONSTORAGE');
+    const dungeonCoreContract = getContractWithABI('DUNGEONCORE');
 
     // 1. 檢查探索費用
     const { data: explorationFee } = useReadContract({
         address: dungeonMasterContract?.address as `0x${string}`,
-        abi: [{"inputs":[],"name":"explorationFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}],
+        abi: dungeonMasterContract?.abi,
         functionName: 'explorationFee',
     });
 
     // 2. 檢查隊伍狀態
     const { data: partyStatus } = useReadContract({
         address: dungeonStorageContract?.address as `0x${string}`,
-        abi: [{"inputs":[{"internalType":"uint256","name":"partyId","type":"uint256"}],"name":"getPartyStatus","outputs":[{"components":[{"internalType":"uint256","name":"provisionsRemaining","type":"uint256"},{"internalType":"uint256","name":"cooldownEndsAt","type":"uint256"},{"internalType":"uint256","name":"unclaimedRewards","type":"uint256"},{"internalType":"uint8","name":"fatigueLevel","type":"uint8"}],"internalType":"struct IDungeonStorage.PartyStatus","name":"","type":"tuple"}],"stateMutability":"view","type":"function"}],
+        abi: dungeonStorageContract?.abi,
         functionName: 'getPartyStatus',
         args: [BigInt(testPartyId)],
     });

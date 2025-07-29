@@ -203,10 +203,7 @@ const benefitCategories = [
             <div className="text-white">uint8 effectiveSuccessChance = rule.successChance + totalVipBonus;</div>
           </div>
           <p className="text-xs text-yellow-200 mt-2">
-            {isAdmin 
-              ? '⚡ 新版合約支援自動 VIP 等級加成 + 管理員額外加成，總加成上限 20%！'
-              : '⚡ 新版合約支援自動 VIP 等級加成，根據您的質押等級提升成功率！'
-            }
+            ⚡ 新版合約支援自動 VIP 等級加成，根據您的質押等級提升成功率！
           </p>
         </div>
       </div>

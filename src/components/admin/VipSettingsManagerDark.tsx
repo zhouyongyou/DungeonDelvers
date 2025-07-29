@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useReadContract, useWriteContract, useReadContracts } from 'wagmi';
 import { parseEther, isAddress } from 'viem';
 import { ActionButton } from '../ui/ActionButton';
-import { getContract } from '../../config/contracts';
+import { getContractWithABI } from '../../config/contractsWithABI';
 import { useAppToast } from '../../hooks/useAppToast';
 import { useTransactionStore } from '../../stores/useTransactionStore';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
@@ -25,8 +25,8 @@ const AltarVipBonusManager: React.FC<{ chainId: number }> = ({ chainId }) => {
   const [isAutoSyncMode, setIsAutoSyncMode] = useState(false);
   const [selectedVipUsers, setSelectedVipUsers] = useState<string[]>([]);
 
-  const altarContract = getContract('ALTAROFASCENSION');
-  const vipContract = getContract('VIPSTAKING');
+  const altarContract = getContractWithABI('ALTAROFASCENSION');
+  const vipContract = getContractWithABI('VIPSTAKING');
 
   // 檢查單個地址的 VIP 加成（新版合約 V2Fixed）
   const { data: playerVipInfo, isLoading: isBonusLoading, refetch: refetchBonus } = useReadContract({
@@ -334,7 +334,7 @@ const VipSettingsManager: React.FC<VipSettingsManagerProps> = ({ chainId }) => {
   const [cooldownUnit, setCooldownUnit] = useState<'seconds' | 'minutes' | 'hours' | 'days'>('days');
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const vipContract = getContract('VIPSTAKING');
+  const vipContract = getContractWithABI('VIPSTAKING');
 
   // 讀取當前冷卻期
   const { data: currentCooldown, isLoading } = useReadContract({

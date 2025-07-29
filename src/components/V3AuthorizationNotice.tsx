@@ -1,7 +1,7 @@
 // 合約授權通知 - V1版本（無祭壇）
 import React, { useState, useEffect } from 'react';
 import { useAccount, useWriteContract, useReadContract } from 'wagmi';
-import { getContract } from '../config/contracts';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { bsc } from 'wagmi/chains';
 import { ActionButton } from './ui/ActionButton';
 import { useAppToast } from '../contexts/SimpleToastContext';
@@ -16,9 +16,9 @@ export const V3AuthorizationNotice: React.FC = () => {
   const [hasUserDismissed, setHasUserDismissed] = useState(false);
 
   // 獲取合約
-  const heroContract = getContract('HERO');
-  const relicContract = getContract('RELIC');
-  const partyContract = getContract('PARTY');
+  const heroContract = getContractWithABI('HERO');
+  const relicContract = getContractWithABI('RELIC');
+  const partyContract = getContractWithABI('PARTY');
   // V1版本：暫時不包含祭壇授權
 
   // 檢查授權狀態

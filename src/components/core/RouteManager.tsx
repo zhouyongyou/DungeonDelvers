@@ -7,20 +7,21 @@ import type { Page } from '../../types/page';
 const pageModules = {
   // 核心頁面 - 高優先級
   mint: lazy(() => import(/* webpackChunkName: "page-mint" */ '../../pages/MintPage')),
-  dashboard: lazy(() => import(/* webpackChunkName: "page-dashboard" */ '../../pages/DashboardPage')),
+  dashboard: lazy(() => import(/* webpackChunkName: "page-dashboard" */ '../../pages/OverviewPage')),
   
   // 遊戲相關頁面
   dungeon: lazy(() => import(/* webpackChunkName: "pages-game" */ '../../pages/DungeonPage')),
   altar: lazy(() => import(/* webpackChunkName: "pages-game" */ '../../pages/AltarPage')),
-  party: lazy(() => import(/* webpackChunkName: "pages-game" */ '../../pages/MyAssetsPage')),
+  party: lazy(() => import(/* webpackChunkName: "pages-game" */ '../../pages/MyAssetsPageEnhanced')),
+  myAssets: lazy(() => import(/* webpackChunkName: "pages-game" */ '../../pages/MyAssetsPageEnhanced')),
   
   // 用戶相關頁面
-  profile: lazy(() => import(/* webpackChunkName: "pages-profile" */ '../../pages/ProfilePage')),
+  profile: lazy(() => import(/* webpackChunkName: "pages-profile" */ '../../pages/OverviewPage')),
   vip: lazy(() => import(/* webpackChunkName: "pages-profile" */ '../../pages/VipPage')),
   referral: lazy(() => import(/* webpackChunkName: "pages-profile" */ '../../pages/ReferralPage')),
   
   // 工具頁面
-  explorer: lazy(() => import(/* webpackChunkName: "pages-misc" */ '../../pages/ExplorerPage')),
+  explorer: lazy(() => import(/* webpackChunkName: "pages-misc" */ '../../pages/MyAssetsPageEnhanced')),
   codex: lazy(() => import(/* webpackChunkName: "pages-misc" */ '../../pages/CodexPage')),
   admin: lazy(() => import(/* webpackChunkName: "pages-misc" */ '../../pages/AdminPage')),
 } as const;

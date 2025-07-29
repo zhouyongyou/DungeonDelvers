@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { useWatchContractEvent, useAccount } from 'wagmi';
 import { formatEther } from 'viem';
-import { getContract } from '../config/contracts';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { logger } from '../utils/logger';
 import { createEventWatchConfig } from '../utils/rpcErrorHandler';
 import { bsc } from 'wagmi/chains';
@@ -58,7 +58,7 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
     const [showBanner, setShowBanner] = useState(false);
     const [latestResult, setLatestResult] = useState<ExpeditionResult | null>(null);
 
-    const dungeonMasterContract = getContract('DUNGEONMASTER');
+    const dungeonMasterContract = getContractWithABI('DUNGEONMASTER');
 
     // Fetch recent expeditions from subgraph with caching
     const { data: graphResults, refetch } = useQuery({

@@ -41,11 +41,11 @@ export const analyzeBundleSize = (): BundleAnalysis => {
     { name: 'zustand', size: 15000, type: 'vendor', dynamicImport: false },
     
     // 頁面組件（動態導入）
-    { name: 'pages/DashboardPage', size: 25000, type: 'page', dynamicImport: true },
+    { name: 'pages/OverviewPage', size: 25000, type: 'page', dynamicImport: true },
     { name: 'pages/MintPage', size: 20000, type: 'page', dynamicImport: true },
     { name: 'pages/DungeonPage', size: 35000, type: 'page', dynamicImport: true },
     { name: 'pages/VipPage', size: 30000, type: 'page', dynamicImport: true },
-    { name: 'pages/MyAssetsPage', size: 28000, type: 'page', dynamicImport: true },
+    { name: 'pages/MyAssetsPageEnhanced', size: 28000, type: 'page', dynamicImport: true },
     
     // 工具庫
     { name: 'utils', size: 15000, type: 'utility', dynamicImport: false },

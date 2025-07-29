@@ -44,17 +44,15 @@ export default defineConfig(({ mode }) => ({
           
           // 🔥 新增：按頁面功能分割
           'pages-core': [
-            './src/pages/DashboardPage',
+            './src/pages/OverviewPage',
             './src/pages/MintPage',
-            './src/pages/ExplorerPage'
+            './src/pages/MyAssetsPageEnhanced'
           ],
           'pages-game': [
             './src/pages/DungeonPage',
-            './src/pages/AltarPage', 
-            './src/pages/MyAssetsPage'
+            './src/pages/AltarPage'
           ],
           'pages-profile': [
-            './src/pages/ProfilePage',
             './src/pages/VipPage',
             './src/pages/ReferralPage'
           ],

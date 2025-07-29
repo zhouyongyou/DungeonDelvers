@@ -4,14 +4,12 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ApolloProvider } from '@apollo/client';
 import './assets/index.css';
 import { wagmiConfig } from './wagmi';
 import { ToastProvider } from './contexts/SimpleToastContext';
 import { ExpeditionProvider } from './contexts/ExpeditionContext';
 import App from './App';
 import { checkSubgraphSync } from './utils/checkSubgraphSync';
-import { apolloClient } from './config/apolloClient';
 import { initializeAppConfig } from './config/initConfig';
 
 // 將函數暴露到全局，方便在控制台手動調用
@@ -42,11 +40,9 @@ root.render(
   <React.StrictMode>
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <ApolloProvider client={apolloClient}>
-          <ToastProvider>
-            <App />
-          </ToastProvider>
-        </ApolloProvider>
+        <ToastProvider>
+          <App />
+        </ToastProvider>
       </QueryClientProvider>
     </WagmiProvider>
   </React.StrictMode>

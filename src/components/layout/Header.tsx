@@ -62,19 +62,20 @@ export const Header: React.FC<HeaderProps> = ({
 
   const isDeveloper = isConnected && address?.toLowerCase() === DEVELOPER_ADDRESS.toLowerCase();
 
-  const navItems: { key: Page; label: string; icon?: string }[] = useMemo(() => {
+  const navItems: { key: Page; label: string }[] = useMemo(() => {
       const items = [
-          { key: 'dashboard' as Page, label: '總覽', icon: '🏠' },
-          { key: 'myAssets' as Page, label: '我的資產', icon: '💎' },
-          { key: 'mint' as Page, label: '鑄造', icon: '🔨' },
-          { key: 'altar' as Page, label: '升星', icon: '⭐' },
-          { key: 'dungeon' as Page, label: '地城', icon: '⚔️' },
-          { key: 'vip' as Page, label: 'VIP', icon: '👑' },
-          { key: 'referral' as Page, label: '推薦', icon: '🤝' },
+          { key: 'dashboard' as Page, label: '總覽' },
+          { key: 'myAssets' as Page, label: '我的資產' },
+          { key: 'marketplace' as Page, label: '市場' },
+          { key: 'mint' as Page, label: '鑄造' },
+          { key: 'altar' as Page, label: '升星' },
+          { key: 'dungeon' as Page, label: '地城' },
+          { key: 'vip' as Page, label: 'VIP' },
+          { key: 'referral' as Page, label: '推薦' },
       ];
       
       if (isDeveloper) {
-          items.push({ key: 'admin' as Page, label: '管理', icon: '🛠️' });
+          items.push({ key: 'admin' as Page, label: '管理' });
       }
       
       return items;

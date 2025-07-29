@@ -3,7 +3,7 @@
 import { useWriteContract, useReadContracts } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppToast } from '../contexts/SimpleToastContext';
-import { getContract } from '../config/contracts';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { formatSoul } from '../utils/formatters';
 import { logger } from '../utils/logger';
 import type { PartyNft } from '../types/nft';
@@ -17,8 +17,8 @@ export const useBatchOperations = ({ parties, chainId }: UseBatchOperationsProps
     const { showToast } = useAppToast();
     const queryClient = useQueryClient();
     
-    const dungeonStorageContract = getContract('DUNGEONSTORAGE');
-    const dungeonMasterContract = getContract('DUNGEONMASTER');
+    const dungeonStorageContract = getContractWithABI('DUNGEONSTORAGE');
+    const dungeonMasterContract = getContractWithABI('DUNGEONMASTER');
     
     // 批量讀取所有隊伍的獎勵狀態
     const partyStatusCalls = parties?.map(party => ({

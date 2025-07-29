@@ -61,9 +61,9 @@ type PaymentSource = 'wallet' | 'vault';
  */
 const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: PaymentSource, chainId: typeof bsc.id) => {
     const { address } = useAccount();
-    const contractConfig = getContract(type === 'hero' ? 'HERO' : 'RELIC');
-    const soulShardContract = getContract('SOULSHARD');
-    const playerVaultContract = getContract('PLAYERVAULT');
+    const contractConfig = getContractWithABI(type === 'hero' ? 'HERO' : 'RELIC');
+    const soulShardContract = getContractWithABI('SOULSHARD');
+    const playerVaultContract = getContractWithABI('PLAYERVAULT');
 
     // ★★★【核心修復】★★★
     // 改用與管理頁面相同的 Oracle 直接查詢方式，避免 Hero 合約的問題
@@ -181,8 +181,9 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
         },
     });
 
-    // 獲取錢包和金庫餘額的邏輯保持不變
-    const { data: walletBalance } = useBalance({ address, token: soulShardContract?.address });
+    // 獲取錢包和金庫餘額的邏輯
+    const { data: soulBalance } = useBalance({ address, token: soulShardContract?.address });
+    const { data: bnbBalance } = useBalance({ address });
     const { data: vaultInfo } = useReadContract({
         address: playerVaultContract?.address,
         abi: playerVaultContract?.abi,
@@ -224,7 +225,8 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
 
     return {
         requiredAmount: finalRequiredAmount,
-        balance: paymentSource === 'wallet' ? (walletBalance?.value ?? 0n) : vaultBalance,
+        balance: paymentSource === 'wallet' ? (soulBalance?.value ?? 0n) : vaultBalance,
+        bnbBalance: bnbBalance?.value ?? 0n,
         needsApproval,
         isLoading: isLoadingPrice || isLoadingFee, // 簡化後的載入狀態
         isError,
@@ -349,7 +351,7 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
 
     const debouncedQuantity = useDebounce(quantity, 300);
     
-    const { requiredAmount, balance, needsApproval: baseNeedsApproval, isLoading, isError, error, platformFee, refetchAllowance, allowance } = useMintLogic(type, debouncedQuantity, paymentSource, chainId);
+    const { requiredAmount, balance, bnbBalance, needsApproval: baseNeedsApproval, isLoading, isError, error, platformFee, refetchAllowance, allowance } = useMintLogic(type, debouncedQuantity, paymentSource, chainId);
     
     // 合併實際授權狀態與樂觀狀態
     const needsApproval = baseNeedsApproval && !optimisticApprovalGranted;
@@ -528,8 +530,8 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
     const currentProgress = needsApproval && paymentSource === 'wallet' ? approveProgress : mintProgress;
     const isProcessing = currentProgress.status !== 'idle' && currentProgress.status !== 'error';
     
-    const contractConfig = getContract(type === 'hero' ? 'HERO' : 'RELIC');
-    const soulShardContract = getContract('SOULSHARD');
+    const contractConfig = getContractWithABI(type === 'hero' ? 'HERO' : 'RELIC');
+    const soulShardContract = getContractWithABI('SOULSHARD');
 
     if (!contractConfig || !soulShardContract) {
         return <div className="card-bg p-6 rounded-xl shadow-lg flex flex-col items-center justify-center h-full text-center"><h3 className="text-xl font-bold text-red-500">設定錯誤</h3><p className="text-gray-400 mt-2">找不到 '{type}' 或 '$SoulShard' 的合約地址。</p><p className="text-gray-400 text-xs mt-1">請檢查您的 <code>.env</code> 環境變數設定是否正確。</p></div>;
@@ -588,12 +590,14 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
         }
     };
     
-    const isButtonDisabled = !address || isLoading || isError || balance < requiredAmount || requiredAmount === 0n || isProcessing || isCheckingApproval;
+    const isInsufficientBalance = balance < requiredAmount;
+    const isButtonDisabled = !address || isLoading || isError || isInsufficientBalance || requiredAmount === 0n || isProcessing || isCheckingApproval;
 
     const getButtonText = () => {
         if (!address) return '請先連接錢包';
         if (isProcessing) return '處理中...';
         if (isCheckingApproval) return '檢查授權狀態...';
+        if (isInsufficientBalance) return '餘額不足';
         if (paymentSource === 'wallet' && needsApproval) return '授權代幣使用';
         if (optimisticApprovalGranted && paymentSource === 'wallet') return `招募 ${quantity} 個 ⚡`;
         return `招募 ${quantity} 個`;
@@ -663,7 +667,24 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                     <button onClick={() => setPaymentSource('wallet')} className={`px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition ${paymentSource === 'wallet' ? 'bg-gray-700 text-white shadow' : 'text-gray-300'}`}>錢包支付</button>
                     <button onClick={() => setPaymentSource('vault')} className={`px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition ${paymentSource === 'vault' ? 'bg-gray-700 text-white shadow' : 'text-gray-300'}`}>金庫支付 (免稅)</button>
                 </div>
-                <p className="text-xs text-center mt-2 text-gray-500">{paymentSource === 'wallet' ? '錢包餘額' : '金庫餘額'}: {address ? formatPriceDisplay(balance) : '0.00'} $SoulShard</p>
+                <div className="text-xs text-center mt-2 space-y-1">
+                    <p className="text-gray-500">
+                        {paymentSource === 'wallet' ? '錢包餘額' : '金庫餘額'}: 
+                        <span className={isInsufficientBalance ? 'text-red-400' : 'text-gray-300'}>
+                            {address ? formatPriceDisplay(balance) : '0.00'} SOUL
+                        </span>
+                    </p>
+                    {paymentSource === 'wallet' && (
+                        <p className="text-gray-600">
+                            BNB: {address ? Number(formatEther(bnbBalance)).toFixed(10) : '0.00'}
+                        </p>
+                    )}
+                    {isInsufficientBalance && (
+                        <p className="text-red-400 font-medium">
+                            需要 {formatPriceDisplay(requiredAmount)} SOUL
+                        </p>
+                    )}
+                </div>
             </div>
             <div className="text-center mb-3 sm:mb-4 min-h-[60px] sm:min-h-[72px] flex-grow flex flex-col justify-center">
                 {isLoading ? <div className="flex flex-col items-center justify-center"><LoadingSpinner color="border-gray-500" /><p className="text-sm text-gray-400 mt-2">讀取價格中...</p></div>
@@ -746,7 +767,7 @@ const MintPage: React.FC = memo(() => {
                             收益最大化策略
                         </p>
                         <ul className="text-xs text-gray-300 space-y-1 list-disc list-inside">
-                            <li>建議每個帳號專注培養 <strong className="text-purple-200">一個精華隊伍</strong></li>
+                            <li>專注培養 <strong className="text-purple-200">精華隊伍</strong>（可以是一個或多個）</li>
                             <li>隊伍戰力應達到 <strong className="text-purple-200">3000 以上</strong>，以挑戰最高收益的「混沌深淵」地下城</li>
                             <li>一般需要鑄造約 <strong className="text-purple-200">100 個聖物</strong> 和 <strong className="text-purple-200">200 個英雄</strong>，才能組建出幾個強力隊伍</li>
                             <li>優先選擇高容量聖物（4-5 星）和高戰力英雄進行組隊</li>

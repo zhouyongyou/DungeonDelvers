@@ -4,7 +4,7 @@ import { useAccount, useReadContract, useBalance, useReadContracts } from 'wagmi
 // import { useMonitoredReadContracts } from './useMonitoredContract';
 import { useMemo, useEffect } from 'react';
 import { bsc } from 'wagmi/chains';
-import { getContractWithABI as getContract } from '../config/contractsWithABI';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { useCountdown } from './useCountdown';
 import { logger } from '../utils/logger';
 
@@ -42,7 +42,7 @@ export const useVipStatus = () => {
 
     const vipStakingContract = useMemo(() => {
         if (!isSupportedChain) return null;
-        const contract = getContract('VIPSTAKING');
+        const contract = getContractWithABI('VIPSTAKING');
         
         if (!contract) {
             logger.error('無法獲取 VIP Staking 合約配置', { chainId });
@@ -60,7 +60,7 @@ export const useVipStatus = () => {
     
     const soulShardContract = useMemo(() => {
         if (!isSupportedChain) return null;
-        const contract = getContract('SOULSHARD');
+        const contract = getContractWithABI('SOULSHARD');
         
         if (!contract) {
             logger.error('無法獲取 SoulShard 合約配置', { chainId });
@@ -78,7 +78,7 @@ export const useVipStatus = () => {
     
     const oracleContract = useMemo(() => {
         if (!isSupportedChain) return null;
-        const contract = getContract('ORACLE');
+        const contract = getContractWithABI('ORACLE');
         
         if (!contract) {
             logger.error('無法獲取 Oracle 合約配置', { chainId });

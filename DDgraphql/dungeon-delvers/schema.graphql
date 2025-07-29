@@ -125,6 +125,10 @@ type PlayerProfile @entity(immutable: false) {
   owner: Player!
   " 玩家設定的名稱 "
   name: String!
+  " 玩家等級 (根據經驗值計算) "
+  level: Int!
+  " 總經驗值 "
+  experience: BigInt!
   " 成功的遠征次數 "
   successfulExpeditions: Int!
   " 總獲得獎勵 "

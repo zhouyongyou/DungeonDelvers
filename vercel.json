@@ -8,6 +8,12 @@
     },
     "api/rpc-optimized.ts": {
       "maxDuration": 30
+    },
+    "api/listings.ts": {
+      "maxDuration": 10
+    },
+    "api/purchase.ts": {
+      "maxDuration": 10
     }
   },
   "headers": [
@@ -29,6 +35,23 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=300"
+        }
+      ]
+    },
+    {
+      "source": "/api/(listings|purchase)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
         }
       ]
     },

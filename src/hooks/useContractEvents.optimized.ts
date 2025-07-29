@@ -6,7 +6,7 @@ import { useAccount, useWatchContractEvent } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { decodeEventLog, type Log, type Abi } from 'viem';
-import { getContract } from '../config/contracts';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { useAppToast } from './useAppToast';
 import { useExpeditionResult } from '../contexts/ExpeditionContext';
 import type { AllNftCollections, PartyNft } from '../types/nft';
@@ -199,13 +199,13 @@ export const useContractEventsOptimized = () => {
     }, [queryClient]);
 
     // --- 合約實例 ---
-    const heroContract = getContract('HERO');
-    const relicContract = getContract('RELIC');
-    const partyContract = getContract('PARTY');
-    const dungeonMasterContract = getContract('DUNGEONMASTER');
-    const playerVaultContract = getContract('PLAYERVAULT');
-    const altarOfAscensionContract = getContract('ALTAROFASCENSION');
-    const playerProfileContract = getContract('PLAYERPROFILE');
+    const heroContract = getContractWithABI('HERO');
+    const relicContract = getContractWithABI('RELIC');
+    const partyContract = getContractWithABI('PARTY');
+    const dungeonMasterContract = getContractWithABI('DUNGEONMASTER');
+    const playerVaultContract = getContractWithABI('PLAYERVAULT');
+    const altarOfAscensionContract = getContractWithABI('ALTAROFASCENSION');
+    const playerProfileContract = getContractWithABI('PLAYERPROFILE');
 
     // 🔥 優化：顯示當前輪詢狀態（開發階段可用）
     useEffect(() => {

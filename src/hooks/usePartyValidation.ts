@@ -1,6 +1,6 @@
 // usePartyValidation.ts - 隊伍存在性驗證 Hook
 import { useReadContracts } from 'wagmi';
-import { getContract } from '../config/contracts';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { bsc } from 'wagmi/chains';
 import { logger } from '../utils/logger';
 
@@ -10,12 +10,12 @@ interface PartyValidationOptions {
 }
 
 export const usePartyValidation = ({ partyIds, enabled = true }: PartyValidationOptions) => {
-    const partyContract = getContract('PARTY');
+    const partyContract = getContractWithABI('PARTY');
 
     // 批量檢查隊伍存在性
     const contracts = partyIds.map(partyId => ({
         address: partyContract?.address as `0x${string}`,
-        abi: [{"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"ownerOf","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}],
+        abi: partyContract?.abi,
         functionName: 'ownerOf',
         args: [partyId],
     }));

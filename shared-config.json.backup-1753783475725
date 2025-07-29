@@ -1,0 +1,58 @@
+{
+  "project": {
+    "name": "DungeonDelvers",
+    "version": "1.0.0",
+    "description": "Web3 RPG Game with NFT Assets"
+  },
+  "network": {
+    "chainId": 56,
+    "name": "bsc",
+    "rpcUrl": "https://bsc-dataseed1.binance.org/",
+    "explorerUrl": "https://bscscan.com"
+  },
+  "contracts": {
+    "hero": "0x162b0b673f38C11732b0bc0B4B026304e563e8e2",
+    "relic": "0x15c2454A31Abc0063ef4a71d0640057d71847a22",
+    "party": "0xab07E90d44c34FB62313C74F3C7b4b343E52a253",
+    "vipStaking": "0xdC285539069Fa51b9259bd1F1d66f23f74B96A6c",
+    "playerProfile": "0x145F19e672a7D53ddb16bcE3fdeAd976bb3ef82f",
+    "dungeonCore": "0x04b33eEB6Da358ea9Dd002a1E1c28AC90A25881E",
+    "dungeonMaster": "0x08Bd8E0D85A7F10bEecCBA9a67da9033f9a7C8D9",
+    "oracle": "0x2350D85e5DF1b6a6d055CD61FeD27d5dC36B6F52",
+    "playerVault": "0x4d06483c907DB1CfA9C2207D9DC5a1Abad86544b",
+    "altarOfAscension": "0x0148Aff0Dee6D31BA9825e66ED34a66BCeF45845",
+    "dungeonStorage": "0x4b1A9a45d0a1C35CDbae04272814f3daA9b59c47"
+  },
+  "tokens": {
+    "soulShard": "0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF",
+    "usd": "0x7C67Af4EBC6651c95dF78De11cfe325660d935FE"
+  },
+  "services": {
+    "subgraph": {
+      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.2.0",
+      "id": "dungeon-delvers"
+    },
+    "metadataServer": {
+      "development": "https://dungeon-delvers-metadata-server.onrender.com",
+      "production": "https://dungeon-delvers-metadata-server.onrender.com"
+    },
+    "frontend": {
+      "development": "http://localhost:5173",
+      "production": "https://dungeondelvers.xyz"
+    }
+  },
+  "ipfs": {
+    "gateway": "https://ipfs.io/ipfs/",
+    "pinataApiKey": "",
+    "pinataSecretKey": ""
+  },
+  "deployment": {
+    "environments": [
+      "development",
+      "staging",
+      "production"
+    ],
+    "autoVerify": true,
+    "gasLimit": 8000000
+  }
+}

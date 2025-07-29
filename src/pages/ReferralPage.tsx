@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useWriteContract } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getContract } from '../config/contracts';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { ActionButton } from '../components/ui/ActionButton';
@@ -117,7 +117,7 @@ const ReferralPage: React.FC = () => {
     const currentReferrer = referralData?.referrer;
     const totalCommission = referralData?.totalCommissionPaid ? BigInt(referralData.totalCommissionPaid) : 0n;
 
-    const playerVaultContract = getContract('PLAYERVAULT');
+    const playerVaultContract = getContractWithABI('PLAYERVAULT');
     const { writeContractAsync, isPending: isSettingReferrer } = useWriteContract();
 
     // 判斷是否已有邀請人 - 移到 useEffect 之前

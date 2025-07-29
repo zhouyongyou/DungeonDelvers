@@ -1,11 +1,12 @@
 // src/pages/OverviewPage.tsx
 
 import React, { useState, useMemo } from 'react';
-import { useAccount, useReadContract, useReadContracts } from 'wagmi';
+import { useAccount } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
+import { useCachedReadContract } from '../hooks/useCachedReadContract';
 import { formatEther } from 'viem';
 import { formatSoul, formatLargeNumber } from '../utils/formatters';
-import { getContract } from '../config/contracts';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { ActionButton } from '../components/ui/ActionButton';
 import type { Page } from '../types/page';
 import { useAppToast } from '../contexts/SimpleToastContext';
@@ -20,106 +21,7 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { generateProfileSVG, type ProfileData } from '../utils/svgGenerators';
 import { logger } from '../utils/logger';
-import { THE_GRAPH_API_URL } from '../config/graphConfig';
-import { graphQLRateLimiter } from '../utils/rateLimiter';
-
-// =================================================================
-// Section: GraphQL 查詢
-// =================================================================
-
-const GET_PLAYER_OVERVIEW_QUERY = `
-  query GetPlayerOverview($owner: ID!) {
-    player(id: $owner) {
-      id
-      profile {
-        id
-        level
-        experience
-        name
-        successfulExpeditions
-        totalRewardsEarned
-        createdAt
-      }
-      heros {
-        id
-      }
-      relics {
-        id
-      }
-      parties {
-        id
-        unclaimedRewards
-      }
-      vip {
-        id
-        tier
-        stakingAmount
-      }
-      vault {
-        id
-        pendingRewards
-      }
-    }
-    playerVaults(where: { owner: $owner }) {
-      id
-      pendingRewards
-      claimedRewards
-    }
-  }
-`;
-
-// =================================================================
-// Section: Hooks
-// =================================================================
-
-const usePlayerOverview = () => {
-    const { address, chainId } = useAccount();
-    
-    const { data, isLoading, isError, refetch } = useQuery({
-        queryKey: ['playerOverview', address, chainId],
-        queryFn: async () => {
-            if (!address || !THE_GRAPH_API_URL) return null;
-            
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-            
-            try {
-                const response = await graphQLRateLimiter.execute(async () => {
-                    return fetch(THE_GRAPH_API_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            query: GET_PLAYER_OVERVIEW_QUERY,
-                            variables: { owner: address.toLowerCase() },
-                        }),
-                        signal: controller.signal
-                    });
-                });
-                
-                clearTimeout(timeoutId);
-                
-                if (!response.ok) throw new Error('Network response was not ok');
-                const { data, errors } = await response.json();
-                
-                if (errors) {
-                    logger.error('GraphQL errors:', errors);
-                    throw new Error(errors[0]?.message || 'GraphQL error');
-                }
-                
-                return data;
-            } catch (error) {
-                logger.error('Error fetching dashboard stats:', error);
-                throw error;
-            }
-        },
-        enabled: !!address && !!THE_GRAPH_API_URL,
-        staleTime: 30 * 1000,
-        gcTime: 5 * 60 * 1000,
-        refetchInterval: 60 * 1000,
-    });
-
-    return { data, isLoading, isError, refetch };
-};
+import { usePlayerOverview } from '../hooks/usePlayerOverview';
 
 // =================================================================
 // Section: Components
@@ -157,28 +59,32 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     const { address, isConnected } = useAccount();
     const [showProfileSVG, setShowProfileSVG] = useState(false);
     const { showToast } = useAppToast();
-    const { data, isLoading, isError, refetch } = usePlayerOverview();
+    const { data, isLoading, isError, refetch } = usePlayerOverview(address);
     
     // Contract reads
-    const playerProfileContract = getContract('PLAYERPROFILE');
-    const dungeonMasterContract = getContract('DUNGEONMASTER');
+    const playerProfileContract = getContractWithABI('PLAYERPROFILE');
+    const dungeonMasterContract = getContractWithABI('DUNGEONMASTER');
     
-    // Read player level from contract
-    const { data: levelData } = useReadContract({
+    // Read player level from contract with caching
+    const { data: levelData } = useCachedReadContract({
         address: playerProfileContract.address,
         abi: playerProfileContract.abi,
         functionName: 'getPlayerLevel',
         args: address ? [address] : undefined,
-        query: { enabled: !!address }
+        query: { enabled: !!address },
+        cacheKey: `playerLevel-${address}`,
+        cacheTime: 300000 // 5 分鐘緩存
     });
     
-    // Read vault balance from contract
-    const { data: vaultBalance } = useReadContract({
+    // Read vault balance from contract with caching
+    const { data: vaultBalance } = useCachedReadContract({
         address: dungeonMasterContract.address,
         abi: dungeonMasterContract.abi,
         functionName: 'getPlayerVaultBalance',
         args: address ? [address] : undefined,
-        query: { enabled: !!address }
+        query: { enabled: !!address },
+        cacheKey: `vaultBalance-${address}`,
+        cacheTime: 60000 // 1 分鐘緩存（金庫餘額變化較頻繁）
     });
     
     // Transaction hooks
@@ -352,6 +258,41 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         }
                     />
                 </div>
+
+                {/* Detailed Stats Section */}
+                {player?.stats && (
+                    <div className="bg-gray-800 rounded-lg p-6">
+                        <h2 className="text-xl font-bold text-white mb-4">詳細統計</h2>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="text-center">
+                                <p className="text-2xl font-bold text-[#C0A573]">{player.stats.totalExpeditions || 0}</p>
+                                <p className="text-sm text-gray-400">總遠征次數</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-2xl font-bold text-green-500">{player.stats.successfulExpeditions || 0}</p>
+                                <p className="text-sm text-gray-400">成功遠征</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-2xl font-bold text-blue-500">{player.stats.highestPartyPower || 0}</p>
+                                <p className="text-sm text-gray-400">最高隊伍戰力</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-2xl font-bold text-purple-500">{player.stats.totalUpgradeAttempts || 0}</p>
+                                <p className="text-sm text-gray-400">升級嘗試次數</p>
+                            </div>
+                        </div>
+                        {player.profile?.inviter && (
+                            <div className="mt-4 pt-4 border-t border-gray-700">
+                                <p className="text-sm text-gray-400">
+                                    推薦人：<span className="text-white">{player.profile.inviter}</span>
+                                </p>
+                                <p className="text-sm text-gray-400">
+                                    傭金收入：<span className="text-[#C0A573]">{formatSoul(player.profile.commissionEarned || '0')} SOUL</span>
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Expedition Tracker */}
                 <ExpeditionTracker />

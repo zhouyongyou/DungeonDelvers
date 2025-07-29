@@ -1,7 +1,7 @@
 // V3 合約遷移通知組件
 import React, { useState } from 'react';
 import { useAccount, useWriteContract, useReadContract } from 'wagmi';
-import { getContract } from '../config/contracts';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { bsc } from 'wagmi/chains';
 import { ActionButton } from './ui/ActionButton';
 import { Modal } from './ui/Modal';
@@ -21,13 +21,13 @@ export const V3MigrationNotice: React.FC<V3MigrationNoticeProps> = ({ onClose })
   const [currentStep, setCurrentStep] = useState(0);
 
   // 獲取所有需要的合約
-  const heroContract = getContract('HERO');
-  const relicContract = getContract('RELIC');
-  const partyContract = getContract('PARTY');
-  const altarContract = getContract('ALTAROFASCENSION');
-  const soulShardContract = getContract('SOULSHARD');
-  const dungeonMasterContract = getContract('DUNGEONMASTER');
-  const playerVaultContract = getContract('PLAYERVAULT');
+  const heroContract = getContractWithABI('HERO');
+  const relicContract = getContractWithABI('RELIC');
+  const partyContract = getContractWithABI('PARTY');
+  const altarContract = getContractWithABI('ALTAROFASCENSION');
+  const soulShardContract = getContractWithABI('SOULSHARD');
+  const dungeonMasterContract = getContractWithABI('DUNGEONMASTER');
+  const playerVaultContract = getContractWithABI('PLAYERVAULT');
 
   // 檢查各種授權狀態
   const { data: heroToParty } = useReadContract({

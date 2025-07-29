@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useReadContracts, useWriteContract } from 'wagmi';
 import { formatEther, parseEther } from 'viem';
-import { getContract } from '../../config/contracts';
+import { getContractWithABI } from '../../config/contractsWithABI';
 import { useAppToast } from '../../hooks/useAppToast';
 import { useTransactionStore } from '../../stores/useTransactionStore';
 import { ActionButton } from '../ui/ActionButton';
@@ -25,7 +25,7 @@ const GlobalRewardSettings: React.FC<GlobalRewardSettingsProps> = ({ chainId }) 
     restCostPowerDivisor: ''
   });
 
-  const dungeonMasterContract = useMemo(() => getContract('DUNGEONMASTER'), [chainId]);
+  const dungeonMasterContract = useMemo(() => getContractWithABI('DUNGEONMASTER'), [chainId]);
 
   // 讀取當前參數
   const { data: currentParams, isLoading } = useReadContracts({

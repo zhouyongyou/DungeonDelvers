@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
-import { getContract } from '../config/contracts';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { bsc } from 'wagmi/chains';
 import { logger } from '../utils/logger';
 
@@ -11,7 +11,7 @@ const DebugContractPage: React.FC = () => {
   const [debugInfo, setDebugInfo] = useState<any>({});
 
   // 讀取 DungeonCore 的 owner
-  const dungeonCoreContract = getContract('DUNGEONCORE');
+  const dungeonCoreContract = getContractWithABI('DUNGEONCORE');
   
   const { data: owner, error: ownerError, isLoading } = useReadContract({
     address: dungeonCoreContract?.address,

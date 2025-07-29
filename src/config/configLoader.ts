@@ -44,7 +44,7 @@ const DEFAULT_CONFIG: AppConfig = {
     UNISWAP_POOL: '0x1e5Cd5F386Fb6F39cD8788675dd3A5ceB6521C82',
   },
   subgraph: {
-    studio: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.2.0',
+    studio: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.2.1',
     decentralized: 'https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs',
     useDecentralized: import.meta.env.PROD
   },

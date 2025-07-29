@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { useReadContracts, useWriteContract, useBalance } from 'wagmi';
 import { formatEther } from 'viem';
 import { ActionButton } from '../ui/ActionButton';
-import { getContract } from '../../config/contracts';
 import { getContractWithABI } from '../../config/contractsWithABI';
 import { useAppToast } from '../../hooks/useAppToast';
 import { useTransactionStore } from '../../stores/useTransactionStore';
@@ -37,21 +36,21 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
   const getContractAddress = (name: string): string | null => {
     switch (name) {
       case 'dungeonMaster':
-        return getContract('DUNGEONMASTER');
+        return getContractWithABI('DUNGEONMASTER')?.address || null;
       case 'hero':
-        return getContract('HERO');
+        return getContractWithABI('HERO')?.address || null;
       case 'relic':
-        return getContract('RELIC');
+        return getContractWithABI('RELIC')?.address || null;
       case 'party':
-        return getContract('PARTY');
+        return getContractWithABI('PARTY')?.address || null;
       case 'altarOfAscension':
-        return getContract('ALTAROFASCENSION');
+        return getContractWithABI('ALTAROFASCENSION')?.address || null;
       case 'playerVault':
-        return getContract('PLAYERVAULT');
+        return getContractWithABI('PLAYERVAULT')?.address || null;
       case 'vipStaking':
-        return getContract('VIPSTAKING');
+        return getContractWithABI('VIPSTAKING')?.address || null;
       case 'dungeonCore':
-        return getContract('DUNGEONCORE');
+        return getContractWithABI('DUNGEONCORE')?.address || null;
       default:
         return null;
     }

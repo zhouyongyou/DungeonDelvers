@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useReadContract, useWriteContract } from 'wagmi';
 import { parseEther } from 'viem';
 import { ActionButton } from '../ui/ActionButton';
-import { getContract } from '../../config/contracts';
+import { getContractWithABI } from '../../config/contractsWithABI';
 import { useAppToast } from '../../hooks/useAppToast';
 import { useTransactionStore } from '../../stores/useTransactionStore';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
@@ -21,7 +21,7 @@ const VipSettingsManager: React.FC<VipSettingsManagerProps> = ({ chainId }) => {
   const [cooldownUnit, setCooldownUnit] = useState<'seconds' | 'minutes' | 'hours' | 'days'>('days');
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const vipContract = getContract('VIPSTAKING');
+  const vipContract = getContractWithABI('VIPSTAKING');
 
   // 讀取當前冷卻期
   const { data: currentCooldown, isLoading } = useReadContract({

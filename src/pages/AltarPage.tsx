@@ -6,7 +6,7 @@ import { useContractBatchRead, usePriceSettingsBatchRead } from '../hooks/useCon
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatEther, decodeEventLog, type Abi } from 'viem';
 import { fetchMetadata } from '../api/nfts';
-import { getContract } from '../config/contracts';
+import { getContractWithABI } from '../config/contractsWithABI';
 import altarOfAscensionABI from '../abis/AltarOfAscension.json';
 import heroABI from '../abis/Hero.json';
 import relicABI from '../abis/Relic.json';
@@ -88,7 +88,7 @@ const useAltarMaterials = (nftType: NftType, rarity: number) => {
                     return [];
                 }
 
-                const contractAddress = nftType === 'hero' ? getContract('HERO') : getContract('RELIC');
+                const contractAddress = nftType === 'hero' ? getContractWithABI('HERO')?.address : getContractWithABI('RELIC')?.address;
                 if (!contractAddress) {
                     logger.error(`找不到 ${nftType} 合約地址`);
                     return [];
@@ -258,9 +258,9 @@ const AltarPage = memo(() => {
     const [ritualStage, setRitualStage] = useState<'idle' | 'preparing' | 'ritual' | 'success' | 'great_success' | 'failed'>('idle');
 
     // Always call hooks unconditionally - move early returns after all hooks
-    const altarContract = getContract('ALTAROFASCENSION');
-    const heroContract = getContract('HERO');
-    const relicContract = getContract('RELIC');
+    const altarContract = getContractWithABI('ALTAROFASCENSION');
+    const heroContract = getContractWithABI('HERO');
+    const relicContract = getContractWithABI('RELIC');
 
     // 檢查當前 NFT 類型的授權狀態
     const currentNftContract = nftType === 'hero' ? heroContract : relicContract;

@@ -3,7 +3,7 @@
 import { createPublicClient, http, type Address } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { Buffer } from 'buffer';
-import { getContract } from '../config/contracts.js';
+import { getContractWithABI } from '../config/contractsWithABI.js';
 import { nftMetadataCache } from '../cache/nftMetadataCache.js';
 import { nftMetadataPersistentCache } from '../cache/persistentCache';
 import { nftMetadataBatcher } from '../utils/requestBatcher';
@@ -108,10 +108,10 @@ export async function fetchMetadata(
     // 識別 NFT 類型 - 使用合約地址配置
     const addressLower = contractAddress.toLowerCase();
     const nftType = 
-        addressLower === getContract('HERO').toLowerCase() ? 'hero' :
-        addressLower === getContract('RELIC').toLowerCase() ? 'relic' :
-        addressLower === getContract('PARTY').toLowerCase() ? 'party' :
-        addressLower === getContract('VIPSTAKING').toLowerCase() ? 'vip' :
+        addressLower === getContractWithABI('HERO')?.address?.toLowerCase() ? 'hero' :
+        addressLower === getContractWithABI('RELIC')?.address?.toLowerCase() ? 'relic' :
+        addressLower === getContractWithABI('PARTY')?.address?.toLowerCase() ? 'party' :
+        addressLower === getContractWithABI('VIPSTAKING')?.address?.toLowerCase() ? 'vip' :
         'unknown';
 
     // 🔥 1. 先检查持久化缓存

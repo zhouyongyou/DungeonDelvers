@@ -3,7 +3,7 @@ import { useWriteContract, useReadContract, useReadContracts } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import type { Abi } from 'viem';
 import { bsc } from 'wagmi/chains';
-import { getContract } from '../../config/contracts';
+import { getContractWithABI } from '../../config/contractsWithABI';
 import { useAppToast } from '../../hooks/useAppToast';
 import { ActionButton } from '../ui/ActionButton';
 import { useQueryClient } from '@tanstack/react-query';
@@ -20,8 +20,8 @@ const DungeonManager: React.FC<DungeonManagerProps> = ({ chainId }) => {
   const queryClient = useQueryClient();
   const [pendingDungeon, setPendingDungeon] = useState<number | null>(null);
   
-  const dungeonMasterContract = getContract('DUNGEONMASTER');
-  const dungeonStorageContract = getContract('DUNGEONSTORAGE');
+  const dungeonMasterContract = getContractWithABI('DUNGEONMASTER');
+  const dungeonStorageContract = getContractWithABI('DUNGEONSTORAGE');
 
   // 讀取地城總數量
   const { data: numDungeons } = useReadContract({

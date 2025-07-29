@@ -27,14 +27,14 @@ import { PageTransition, usePagePreload } from './components/ui/PageTransition';
 
 // 動態導入所有頁面
 const OverviewPage = lazy(() => import('./pages/OverviewPage'));
-const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const MintPage = lazy(() => import('./pages/MintPage'));
-const ExplorerPage = lazy(() => import('./pages/ExplorerPage'));
+// const ExplorerPage = lazy(() => import('./pages/ExplorerPage')); // Moved to archived
 const MyAssetsPage = lazy(() => import('./pages/MyAssetsPageEnhanced'));
 const DungeonPage = lazy(() => import('./pages/DungeonPage'));
 const AltarPage = lazy(() => import('./pages/AltarPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
-const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const MarketplacePage = lazy(() => import('./pages/MarketplacePage'));
 const VipPage = lazy(() => import('./pages/VipPage'));
 const ReferralPage = lazy(() => import('./pages/ReferralPage'));
 // 暫時禁用圖鑑功能
@@ -67,9 +67,23 @@ const getPageFromHash = (): Page => {
         return 'pitch';
     }
     
-    const validPages: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'explorer', 'admin', 'altar', 'profile', 'vip', 'referral', /* 'codex', */ 'debug', 'pitch'];
+    const basePages: Page[] = ['dashboard', 'profile', 'myAssets', 'marketplace', 'mint', 'altar', 'dungeon', 'vip', 'referral', 'admin', 'pitch'];
+    const devPages: Page[] = import.meta.env.DEV ? ['debug', 'priceDebug'] : [];
+    const validPages: Page[] = [...basePages, ...devPages];
+    
+    // 舊路由映射到新路由
+    const routeMapping: Record<string, Page> = {
+      'party': 'myAssets',
+      'explorer': 'myAssets'
+    };
+    // 檢查是否為有效頁面
     if (validPages.includes(page as Page)) {
         return page as Page;
+    }
+    
+    // 檢查是否為舊路由，需要映射
+    if (routeMapping[page]) {
+        return routeMapping[page];
     }
     // ★ 核心優化：將預設首頁從 'dashboard' 改為 'mint'
     // 這將極大地改善首次載入的體驗和 RPC 負載。
@@ -139,10 +153,11 @@ function App() {
         case 'myAssets': return <MyAssetsPage />;
         case 'dashboard': return <OverviewPage setActivePage={handleSetPage} />;
         case 'mint': return <MintPage />;
-        case 'explorer': return <ExplorerPage />;
+        case 'explorer': return <MyAssetsPage />;
         case 'admin': return <AdminPage />;
         case 'altar': return <AltarPage />;
         case 'profile': return <ProfilePage setActivePage={handleSetPage} />;
+        case 'marketplace': return <MarketplacePage />;
         case 'vip': return <VipPage />;
         case 'referral': return <ReferralPage />;
         // case 'codex': return <CodexPage />;

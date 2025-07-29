@@ -246,7 +246,7 @@ const usePlayerParties = () => {
                 image: '', 
                 description: '',
                 attributes: [],
-                contractAddress: getContract('PARTY') ?? '0x',
+                contractAddress: getContract('PARTY')?.address ?? '0x',
                 type: 'party',
                 totalPower: BigInt(p.totalPower || '0'),
                 totalCapacity: BigInt(p.totalCapacity || '0'),

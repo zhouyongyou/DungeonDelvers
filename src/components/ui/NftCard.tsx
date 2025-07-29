@@ -2,7 +2,7 @@
 
 import React, { memo } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
-import { getContract } from '../../config/contracts';
+import { getContractWithABI } from '../../config/contractsWithABI';
 import { bsc } from 'wagmi/chains';
 import type { AnyNft, HeroNft, RelicNft, PartyNft, VipNft } from '../../types/nft';
 import { getRarityChineseName, getRarityColor as getRarityColorUtil } from '../../utils/rarityConverter';
@@ -24,7 +24,7 @@ interface NftCardProps {
 
 const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, fallbackImage }) => {
   const { address, chainId } = useAccount();
-  const vipStakingContract = getContract('VIPSTAKING');
+  const vipStakingContract = getContractWithABI('VIPSTAKING');
   
   // ✅ 使用實時合約數據獲取VIP等級，而不是元數據
   const { data: realTimeVipLevel } = useReadContract({

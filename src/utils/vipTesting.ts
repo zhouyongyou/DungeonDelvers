@@ -2,7 +2,7 @@
 
 import { createPublicClient, http, type Address } from 'viem';
 import { bsc } from 'wagmi/chains';
-import { getContract } from '../config/contracts';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { logger } from './logger';
 
 /**
@@ -19,7 +19,7 @@ export class VipTester {
      */
     async testVipContract(address: string) {
 
-        const vipContract = getContract('VIPSTAKING');
+        const vipContract = getContractWithABI('VIPSTAKING');
         if (!vipContract) {
             throw new Error('VIP合約未找到');
         }
@@ -90,7 +90,7 @@ export class VipTester {
      */
     async testSoulShardContract(address: string) {
 
-        const soulShardContract = getContract('SOULSHARD');
+        const soulShardContract = getContractWithABI('SOULSHARD');
         if (!soulShardContract) {
             throw new Error('SoulShard合約未找到');
         }

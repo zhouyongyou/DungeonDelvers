@@ -14,6 +14,8 @@ export function handleProfileCreated(event: ProfileCreated): void {
         profile = new PlayerProfile(profileId)
         profile.owner = player.id
         profile.name = "Player #" + event.params.tokenId.toString()
+        profile.level = 1
+        profile.experience = BigInt.fromI32(0)
         profile.successfulExpeditions = 0
         profile.totalRewardsEarned = BigInt.fromI32(0)
         profile.invitees = []
@@ -31,10 +33,21 @@ export function handleExperienceAdded(event: ExperienceAdded): void {
     const profile = PlayerProfile.load(profileId)
 
     if (profile) {
-        // 修正：ExperienceAdded 事件不應該影響 totalRewardsEarned
-        // totalRewardsEarned 只應該在獲得 SOUL 獎勵時更新
+        // 更新總經驗值（事件提供的是新的總經驗值）
+        profile.experience = event.params.newTotalExperience
+        
+        // 計算等級（使用 utils 中的 calculateLevel 函數）
+        profile.level = calculateLevel(event.params.newTotalExperience)
+        
         profile.lastUpdatedAt = event.block.timestamp
         profile.save()
+        
+        log.info("Experience added for player {}: amount={}, newTotal={}, level={}", [
+            profileId.toHexString(),
+            event.params.amount.toString(),
+            event.params.newTotalExperience.toString(),
+            profile.level.toString()
+        ])
     } else {
         log.warning("ExperienceAdded for a non-existent profile: {}. A profile should be created first.", [profileId.toHexString()])
     }

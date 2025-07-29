@@ -2,7 +2,7 @@
 
 import { createPublicClient, http } from 'viem';
 import { bsc } from 'wagmi/chains';
-import { getContract } from '../config/contracts';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { logger } from './logger';
 
 export class PartyOwnershipChecker {
@@ -22,7 +22,7 @@ export class PartyOwnershipChecker {
     error?: string;
   }> {
     try {
-      const partyContract = getContract('PARTY');
+      const partyContract = getContractWithABI('PARTY');
       
       if (!partyContract) {
         throw new Error('Party 合約配置不存在');
@@ -53,7 +53,7 @@ export class PartyOwnershipChecker {
     error?: string;
   }> {
     try {
-      const partyContract = getContract('PARTY');
+      const partyContract = getContractWithABI('PARTY');
       
       if (!partyContract) {
         throw new Error('Party 合約配置不存在');
@@ -97,7 +97,7 @@ export class PartyOwnershipChecker {
     error?: string;
   }> {
     try {
-      const dungeonCoreContract = getContract('DUNGEONCORE');
+      const dungeonCoreContract = getContractWithABI('DUNGEONCORE');
       
       if (!dungeonCoreContract) {
         throw new Error('DungeonCore 合約配置不存在');
