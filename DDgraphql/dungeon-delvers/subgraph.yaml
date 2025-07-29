@@ -1,4 +1,4 @@
-# Generated from v25-config.js on 2025-07-29T20:48:56.822Z
+# Generated from v25-config.js on 2025-07-29T21:12:48.680Z
 # V25 Production Deployment
 specVersion: 0.0.4
 schema:
@@ -8,7 +8,7 @@ dataSources:
     name: Hero
     network: bsc
     source:
-      address: '0x76C9c7E9a82132739A6E6B04FD87f16801F4EF22'
+      address: '0x2F9c6EF3B2447417E633fD9e05E30B152dC691EE'
       abi: Hero
       startBlock: 55761797
     mapping:
@@ -35,7 +35,7 @@ dataSources:
     name: Relic
     network: bsc
     source:
-      address: '0xe66036839c7E5F8372ADC36da8f0357429a96A34'
+      address: '0x9f367175c88394A3A924bd3778B09F98b9F1587a'
       abi: Relic
       startBlock: 55761797
     mapping:
@@ -62,7 +62,7 @@ dataSources:
     name: PartyV3
     network: bsc
     source:
-      address: '0x22Ac9b248716FA64eD97025c77112c4c3e0169ab'
+      address: '0x4d058545FCe6d3511960B2706b9D529E9aBb78D3'
       abi: PartyV3
       startBlock: 55761797
     mapping:
@@ -87,7 +87,7 @@ dataSources:
     name: VIPStaking
     network: bsc
     source:
-      address: '0xf8D77F5588d1F93a18CFe36e3aad4037Cc81038C'
+      address: '0xF503872475bf07048755AA9FAC8B5A9312C91D89'
       abi: VIPStaking
       startBlock: 55761797
     mapping:
@@ -114,7 +114,7 @@ dataSources:
     name: PlayerProfile
     network: bsc
     source:
-      address: '0x90e86Dc3c536B63AF5Df93F29df61Ce3961fcbb4'
+      address: '0x64e8A1F68BFB14cFC8444786F240616068a51b5E'
       abi: PlayerProfile
       startBlock: 55761797
     mapping:
@@ -139,7 +139,7 @@ dataSources:
     name: AltarOfAscension
     network: bsc
     source:
-      address: '0x462fdBAdEc00895ddF168197Be16fff9ed786DC8'
+      address: '0xa1F4EF2C5A6078c8D14f0D588cd75497da68Fe3a'
       abi: AltarOfAscensionV2Fixed
       startBlock: 55761797
     mapping:
@@ -159,7 +159,7 @@ dataSources:
     name: DungeonMaster
     network: bsc
     source:
-      address: '0xf7143B7644219e896D2013Fc01bc9e9e006C6Dca'
+      address: '0x6503a51b7452Fd9c8D17CC447C357Eb2c7145789'
       abi: DungeonMaster
       startBlock: 55761797
     mapping:

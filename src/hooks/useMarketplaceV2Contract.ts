@@ -5,7 +5,16 @@ import { useState, useCallback } from 'react';
 import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseUnits, type Address } from 'viem';
 import { useAppToast } from '../contexts/SimpleToastContext';
-import { DUNGEONMARKETPLACE_V2, OFFERSYSTEM_V2, USDT, BUSD, USD1, HERO, RELIC, PARTY } from '../config/contracts';
+// FIXME: V25 removed marketplace contracts - temporarily disabled
+// import { DUNGEONMARKETPLACE_V2, OFFERSYSTEM_V2, USDT, BUSD, USD1, HERO, RELIC, PARTY } from '../config/contracts';
+import { HERO, RELIC, PARTY } from '../config/contracts';
+
+// Temporarily hardcoded addresses until marketplace V2 is redeployed
+const DUNGEONMARKETPLACE_V2 = '0x0000000000000000000000000000000000000000' as const;
+const OFFERSYSTEM_V2 = '0x0000000000000000000000000000000000000000' as const;
+const USDT = '0x0000000000000000000000000000000000000000' as const;
+const BUSD = '0x0000000000000000000000000000000000000000' as const;
+const USD1 = '0x0000000000000000000000000000000000000000' as const;
 import marketplaceV2Abi from '../abis/DungeonMarketplaceV2.json';
 import offerSystemV2Abi from '../abis/OfferSystemV2.json';
 import erc20Abi from '../abis/ERC20.json';

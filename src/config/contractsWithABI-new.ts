@@ -4,16 +4,16 @@
 import { getContract, LEGACY_CONTRACT_NAMES } from './contracts';
 
 // 直接從 JSON 檔案導入 ABI
-import heroABI from './abis/Hero.json';
-import relicABI from './abis/Relic.json';
-import partyABI from './abis/Party.json';
-import dungeonCoreABI from './abis/DungeonCore.json';
-import dungeonMasterABI from './abis/DungeonMaster.json';
-import playerProfileABI from './abis/PlayerProfile.json';
-import vipStakingABI from './abis/VIPStaking.json';
-import oracleABI from './abis/Oracle.json';
-import altarOfAscensionABI from './abis/AltarOfAscension.json';
-import playerVaultABI from './abis/PlayerVault.json';
+import heroABI from '../abis/Hero.json';
+import relicABI from '../abis/Relic.json';
+import partyABI from '../abis/Party.json';
+import dungeonCoreABI from '../abis/DungeonCore.json';
+import dungeonMasterABI from '../abis/DungeonMaster.json';
+import playerProfileABI from '../abis/PlayerProfile.json';
+import vipStakingABI from '../abis/VIPStaking.json';
+import oracleABI from '../abis/Oracle.json';
+import altarOfAscensionABI from '../abis/AltarOfAscension.json';
+import playerVaultABI from '../abis/PlayerVault.json';
 
 // 需要從舊的 abis.ts 導入的 ABI（尚未同步到 JSON）
 import { 
