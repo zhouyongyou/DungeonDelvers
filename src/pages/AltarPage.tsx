@@ -243,16 +243,23 @@ const VipBonusDisplay: React.FC<{ address: string | undefined }> = ({ address })
   );
 };
 
-const UpgradeInfoCard: React.FC<{ rule: { materialsRequired: number; nativeFee: bigint; greatSuccessChance: number; successChance: number; partialFailChance: number } | null; isLoading: boolean; address?: string; }> = ({ rule, isLoading, address }) => {
-  if (isLoading) return <div className="card-bg p-4 rounded-xl animate-pulse h-48"><LoadingSpinner /></div>;
-  if (!rule || !rule.materialsRequired) return <div className="card-bg p-4 rounded-xl text-center text-gray-500">請先選擇要升級的星級</div>;
+// 手機版簡化的升星規則卡片
+const UpgradeInfoCard: React.FC<{ 
+  rule: { materialsRequired: number; nativeFee: bigint; greatSuccessChance: number; successChance: number; partialFailChance: number } | null; 
+  isLoading: boolean; 
+  address?: string;
+  showDetails?: boolean;
+  onToggleDetails?: () => void;
+}> = ({ rule, isLoading, address, showDetails = false, onToggleDetails }) => {
+  if (isLoading) return <div className="card-bg p-3 sm:p-4 rounded-xl animate-pulse h-32 sm:h-48"><LoadingSpinner /></div>;
+  if (!rule || !rule.materialsRequired) return <div className="card-bg p-3 sm:p-4 rounded-xl text-center text-gray-500">請先選擇要升級的星級</div>;
   
   // 顯示調整後的中間值機率
   const optimizedRules = {
-    1: { greatSuccessChance: 8, successChance: 77, partialFailChance: 13, completeFailChance: 2 },  // 升2★ (總成功率85%)
-    2: { greatSuccessChance: 6, successChance: 69, partialFailChance: 20, completeFailChance: 5 },  // 升3★ (總成功率75%)
-    3: { greatSuccessChance: 4, successChance: 41, partialFailChance: 40, completeFailChance: 15 }, // 升4★ (總成功率45%)
-    4: { greatSuccessChance: 3, successChance: 22, partialFailChance: 50, completeFailChance: 25 }  // 升5★ (總成功率25%)
+    1: { greatSuccessChance: 8, successChance: 77, partialFailChance: 13, completeFailChance: 2 },
+    2: { greatSuccessChance: 6, successChance: 69, partialFailChance: 20, completeFailChance: 5 },
+    3: { greatSuccessChance: 4, successChance: 41, partialFailChance: 40, completeFailChance: 15 },
+    4: { greatSuccessChance: 3, successChance: 22, partialFailChance: 50, completeFailChance: 25 }
   };
   
   const rarity = rule.materialsRequired === 5 ? 1 : 
@@ -265,33 +272,78 @@ const UpgradeInfoCard: React.FC<{ rule: { materialsRequired: number; nativeFee: 
     completeFailChance: 0
   };
   
+  const totalSuccessRate = displayRule.greatSuccessChance + displayRule.successChance;
+  
   return (
-    <div className="card-bg p-6 rounded-2xl text-sm">
-      <h4 className="section-title text-xl">升星規則</h4>
-      <div className="space-y-2">
-        <p>所需材料: <span className="font-bold text-white">{rule.materialsRequired.toString()} 個</span></p>
-        <p>所需費用: <span className="font-bold text-yellow-400">免費</span></p>
-        <hr className="border-gray-700 my-3" />
-        <p className="text-purple-400">⚜️ 神跡降臨 (獲得2個): <span className="font-bold">{displayRule.greatSuccessChance}%</span></p>
-        <p className="text-green-400">✨ 祝福成功 (獲得1個): <span className="font-bold">{displayRule.successChance}%</span></p>
-        {displayRule.partialFailChance > 0 && (
-          <p className="text-yellow-400">⚡ 部分返還 (返還{Math.floor(rule.materialsRequired / 2)}個): <span className="font-bold">{displayRule.partialFailChance}%</span></p>
-        )}
-        {displayRule.completeFailChance > 0 && (
-          <p className="text-red-400">💀 升星失敗 (無返還): <span className="font-bold">{displayRule.completeFailChance}%</span></p>
-        )}
-        <div className="mt-3 p-2 bg-blue-900/20 border border-blue-500/30 rounded-lg">
-          <p className="text-xs text-blue-300">
-            {rarity <= 2 ? 
-              `✨ 總成功率：${displayRule.greatSuccessChance + displayRule.successChance}% (新手友好)` : 
-              `⚔️ 總成功率：${displayRule.greatSuccessChance + displayRule.successChance}% (挑戰升級)`
-            }
-          </p>
-        </div>
+    <div className="card-bg p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl text-sm">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-sm sm:text-base md:text-lg font-semibold text-white">
+          <span className="hidden sm:inline">⚜️ </span>升星規則
+        </h4>
+        <button 
+          onClick={onToggleDetails}
+          className="sm:hidden text-xs text-gray-400 hover:text-white transition-colors"
+        >
+          {showDetails ? '收縮' : '詳情'}
+        </button>
       </div>
       
-      {/* VIP 加成顯示 */}
-      {address && <VipBonusDisplay address={address} />}
+      {/* 基本信息 - 手機版只顯示核心數據 */}
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
+          <span className="text-gray-400">所需材料:</span>
+          <span className="font-bold text-white">{rule.materialsRequired} 個</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-gray-400">成功率:</span>
+          <span className="font-bold text-green-400">{totalSuccessRate}%</span>
+        </div>
+        
+        {/* 手機版簡化或詳細信息 */}
+        {(showDetails || window.innerWidth >= 640) && (
+          <>
+            <hr className="border-gray-700 my-3" />
+            <div className="space-y-1">
+              <div className="flex justify-between items-center text-xs sm:text-sm">
+                <span className="text-purple-400">
+                  <span className="hidden sm:inline">⚜️ </span>神跡降臨
+                </span>
+                <span className="font-bold">{displayRule.greatSuccessChance}%</span>
+              </div>
+              <div className="flex justify-between items-center text-xs sm:text-sm">
+                <span className="text-green-400">
+                  <span className="hidden sm:inline">✨ </span>祝福成功
+                </span>
+                <span className="font-bold">{displayRule.successChance}%</span>
+              </div>
+              {displayRule.partialFailChance > 0 && (
+                <div className="flex justify-between items-center text-xs sm:text-sm">
+                  <span className="text-yellow-400">
+                    <span className="hidden sm:inline">⚡ </span>部分返還
+                  </span>
+                  <span className="font-bold">{displayRule.partialFailChance}%</span>
+                </div>
+              )}
+              {displayRule.completeFailChance > 0 && (
+                <div className="flex justify-between items-center text-xs sm:text-sm">
+                  <span className="text-red-400">
+                    <span className="hidden sm:inline">💀 </span>升星失敗
+                  </span>
+                  <span className="font-bold">{displayRule.completeFailChance}%</span>
+                </div>
+              )}
+            </div>
+            <div className="mt-3 p-2 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+              <p className="text-xs text-blue-300 text-center">
+                {rarity <= 2 ? 
+                  `✨ 總成功率：${totalSuccessRate}% (新手友好)` : 
+                  `⚔️ 總成功率：${totalSuccessRate}% (挑戰升級)`
+                }
+              </p>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 };
@@ -611,7 +663,7 @@ const AltarPage = memo(() => {
                 ))}
             </div>
 
-            <div className="relative z-10 container mx-auto px-4 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 md:space-y-8">
+            <div className="relative z-10 container mx-auto px-2 sm:px-4 py-3 sm:py-4 md:py-6 space-y-3 sm:space-y-4 md:space-y-6">
                 {/* 彈窗組件 */}
                 <UpgradeResultModal result={upgradeResult} onClose={() => setUpgradeResult(null)} />
                 <TransactionProgressModal
@@ -708,31 +760,31 @@ const AltarPage = memo(() => {
                     </div>
                 </Modal>
 
-                {/* 頁面標題區域 */}
-                <div className="text-center space-y-4">
-                    <div className="flex items-center justify-center gap-4">
-                        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-purple-300 via-indigo-300 to-purple-300 bg-clip-text text-transparent">
-                            🏛️ 升星祭壇
+                {/* 頁面標題區域 - 手機版優化 */}
+                <div className="text-center space-y-3 sm:space-y-4">
+                    <div className="flex items-center justify-center gap-2 sm:gap-4">
+                        <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-purple-300 via-indigo-300 to-purple-300 bg-clip-text text-transparent">
+                            <span className="hidden sm:inline">🏛️ </span>升星祭壇
                         </h1>
                     </div>
-                    <p className="text-sm sm:text-base md:text-lg text-gray-300 max-w-3xl mx-auto leading-relaxed">
-                        在這座古老的神秘祭壇中，將同星級的 NFT 作為祭品獻上，
-                        透過鏈上隨機數決定的神聖儀式，有機會獲得更高星級的傳說寶物。
+                    <p className="text-sm sm:text-base text-gray-300 max-w-2xl mx-auto leading-relaxed px-4">
+                        <span className="hidden sm:inline">在這座古老的神秘祭壇中，</span>將同星級的 NFT 作為祭品獻上，
+                        <span className="hidden sm:inline">透過鏈上隨機數決定的神聖儀式，</span>有機會獲得更高星級的寶物。
                     </p>
                     
-                    {/* 快捷操作按鈕 */}
-                    <div className="flex items-center justify-center gap-3 sm:gap-4 mt-4 sm:mt-5 md:mt-6">
+                    {/* 快捷操作按鈕 - 手機版緊湊 */}
+                    <div className="flex items-center justify-center gap-2 sm:gap-3 mt-3 sm:mt-4">
                         <button
                             onClick={() => setShowTutorial(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 border border-blue-500/30 text-blue-300 rounded-lg hover:bg-blue-600/30 transition-all"
+                            className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600/20 border border-blue-500/30 text-blue-300 rounded-lg hover:bg-blue-600/30 transition-all text-sm"
                         >
-                            📚 使用教學
+                            <span className="hidden sm:inline">📚 </span>教學
                         </button>
                         <button
                             onClick={() => setShowHistoryStats(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-purple-600/20 border border-purple-500/30 text-purple-300 rounded-lg hover:bg-purple-600/30 transition-all"
+                            className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-purple-600/20 border border-purple-500/30 text-purple-300 rounded-lg hover:bg-purple-600/30 transition-all text-sm"
                         >
-                            📊 我的統計
+                            <span className="hidden sm:inline">📊 </span>統計
                         </button>
                     </div>
                 </div>
@@ -741,39 +793,40 @@ const AltarPage = memo(() => {
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 md:gap-8 items-start">
                     {/* 左側控制面板 */}
                     <div className="xl:col-span-1 space-y-4 sm:space-y-5 md:space-y-6">
-                        {/* 目標選擇 */}
-                        <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-md border border-gray-600/30 rounded-2xl p-4 sm:p-5 md:p-6">
-                            <h3 className="text-base sm:text-lg md:text-xl font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2">
-                                🎯 選擇升級目標
+                        {/* 目標選擇 - 手機版優化 */}
+                        <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-md border border-gray-600/30 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6">
+                            <h3 className="text-sm sm:text-base md:text-lg font-semibold text-white mb-2 sm:mb-3 flex items-center gap-1 sm:gap-2">
+                                <span className="hidden sm:inline">🎯 </span>升級目標
                             </h3>
                             <div className="space-y-3 sm:space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">NFT 類型</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">NFT 類型</label>
                                     <div className="flex gap-2 bg-gray-900/50 p-1 rounded-lg">
                                         {(['hero', 'relic'] as const).map(t => (
                                             <button 
                                                 key={t} 
                                                 onClick={() => setNftType(t)} 
-                                                className={`flex-1 py-3 px-4 text-sm font-medium rounded-md transition-all ${
+                                                className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium rounded-md transition-all ${
                                                     nftType === t 
                                                         ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg' 
                                                         : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'
                                                 }`}
                                             >
-                                                {t === 'hero' ? '🦸 英雄' : '🏺 聖物'}
+                                                <span className="hidden sm:inline">{t === 'hero' ? '🦸 ' : '🏺 '}</span>
+                                                {t === 'hero' ? '英雄' : '聖物'}
                                             </button>
                                         ))}
                                     </div>
                                 </div>
                                 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">當前星級</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">當前星級</label>
                                     <div className="grid grid-cols-4 gap-2 bg-gray-900/50 p-1 rounded-lg">
                                         {[1, 2, 3, 4].map(r => (
                                             <button 
                                                 key={r} 
                                                 onClick={() => setRarity(r)} 
-                                                className={`py-3 px-2 text-sm font-medium rounded-md transition-all ${
+                                                className={`py-2 sm:py-3 px-2 text-xs sm:text-sm font-medium rounded-md transition-all ${
                                                     rarity === r 
                                                         ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg' 
                                                         : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'
@@ -787,15 +840,34 @@ const AltarPage = memo(() => {
                             </div>
                         </div>
 
-                        {/* 規則視覺化 */}
-                        <AltarRulesVisualization 
+                        {/* 規則視覺化 - 手機版簡化 */}
+                        <UpgradeInfoCard 
                             rule={currentRule} 
-                            targetRarity={rarity}
                             isLoading={isLoadingRules}
+                            address={address}
+                            showDetails={showSuccessDetails}
+                            onToggleDetails={() => setShowSuccessDetails(!showSuccessDetails)}
                         />
 
-                        {/* VIP 加成顯示 */}
-                        <AltarVipBonus />
+                        {/* VIP 加成顯示 - 手機版可收縮 */}
+                        <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-md border border-gray-600/30 rounded-xl p-3 sm:p-4">
+                            <button 
+                                onClick={() => setShowVipBonus(!showVipBonus)}
+                                className="w-full flex items-center justify-between text-sm sm:text-base font-medium text-white"
+                            >
+                                <span>
+                                    <span className="hidden sm:inline">🎆 </span>VIP 加成
+                                </span>
+                                <span className={`transform transition-transform ${
+                                    showVipBonus ? 'rotate-180' : ''
+                                }`}>▼</span>
+                            </button>
+                            {(showVipBonus || window.innerWidth >= 768) && (
+                                <div className="mt-3">
+                                    <AltarVipBonus />
+                                </div>
+                            )}
+                        </div>
 
                         {/* 授權檢查 */}
                         {!isApprovedForAll && currentRule && (
@@ -853,9 +925,9 @@ const AltarPage = memo(() => {
                             }
                         >
                             <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-md border border-gray-600/30 rounded-2xl p-4 sm:p-5 md:p-6">
-                                <div className="flex justify-between items-center mb-4 sm:mb-5 md:mb-6">
-                                    <h3 className="text-base sm:text-lg md:text-xl font-semibold text-white flex items-center gap-2">
-                                        🎴 選擇祭品材料 ({selectedNfts.length} / {currentRule?.materialsRequired ?? '...'}）
+                                <div className="flex justify-between items-center mb-3 sm:mb-4 md:mb-6">
+                                    <h3 className="text-sm sm:text-base md:text-lg font-semibold text-white flex items-center gap-1 sm:gap-2">
+                                        <span className="hidden sm:inline">🎴 </span>選擇祭品 ({selectedNfts.length}/{currentRule?.materialsRequired ?? '...'})
                                     </h3>
                                     <div className="flex items-center gap-2">
                                         {selectedNfts.length > 0 && (
@@ -883,7 +955,7 @@ const AltarPage = memo(() => {
                                         <span className="ml-3 text-gray-400">載入祭品材料中...</span>
                                     </div>
                                 ) : availableNfts && availableNfts.length > 0 ? (
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1 sm:gap-2 md:gap-3">
                                         {availableNfts.map(nft => (
                                             <div 
                                                 key={nft.id.toString()} 
@@ -917,13 +989,12 @@ const AltarPage = memo(() => {
                                     <div className="text-center py-8 sm:py-12 md:py-16">
                                         <div className="text-4xl sm:text-5xl md:text-6xl mb-3 sm:mb-4">🔮</div>
                                         <EmptyState message={`沒有可用的 ${rarity}★ ${nftType === 'hero' ? '英雄' : '聖物'}`} />
-                                        <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg backdrop-blur-sm max-w-md mx-auto">
-                                            <p className="text-sm text-blue-200">
-                                                📊 <strong>數據同步中</strong>
+                                        <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg backdrop-blur-sm max-w-sm sm:max-w-md mx-auto">
+                                            <p className="text-xs sm:text-sm text-blue-200">
+                                                <span className="hidden sm:inline">📊 </span><strong>數據同步中</strong>
                                             </p>
                                             <p className="text-xs text-blue-300 mt-1">
-                                                合約已升級至最新版本，子圖正在同步新數據。
-                                                請稍後再試或檢查您的資產頁面。
+                                                合約已升級，子圖正在同步。請稍後再試。
                                             </p>
                                         </div>
                                     </div>
@@ -933,12 +1004,14 @@ const AltarPage = memo(() => {
                     </div>
                 </div>
 
-                {/* 底部提示信息 */}
-                <div className="bg-gradient-to-r from-indigo-900/20 to-purple-900/20 backdrop-blur-md border border-indigo-500/20 rounded-xl p-4 sm:p-5 md:p-6 text-center">
-                    <p className="text-gray-300 mb-2">
-                        💫 <strong>神秘預言：</strong>每次升星都是與命運的對話，結果由區塊鏈上的隨機數決定，確保絕對公平。
+                {/* 底部提示信息 - 手機版簡化 */}
+                <div className="bg-gradient-to-r from-indigo-900/20 to-purple-900/20 backdrop-blur-md border border-indigo-500/20 rounded-xl p-3 sm:p-4 md:p-6 text-center">
+                    <p className="text-sm sm:text-base text-gray-300 mb-2">
+                        <span className="hidden sm:inline">💫 <strong>神秘預言：</strong></span>
+                        <span className="sm:hidden"><strong>提示：</strong></span>
+                        結果由區塊鏈隨機數決定，確保公平。
                     </p>
-                    <p className="text-sm text-gray-400">
+                    <p className="text-xs sm:text-sm text-gray-400 hidden sm:block">
                         祭壇已見證無數冒險者的夢想與希望，願星辰指引您獲得傳說級的寶物！
                     </p>
                 </div>

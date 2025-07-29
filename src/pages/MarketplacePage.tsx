@@ -16,7 +16,8 @@ import { THE_GRAPH_API_URL } from '../config/graphConfig';
 import { graphQLRateLimiter } from '../utils/rateLimiter';
 import { logger } from '../utils/logger';
 import { CreateListingModal } from '../components/marketplace/CreateListingModal';
-import { PurchaseModal } from '../components/marketplace/PurchaseModal';
+import { PurchaseModalV2 } from '../components/marketplace/PurchaseModalV2';
+import { TokenBalanceDisplay } from '../components/marketplace/TokenBalanceDisplay';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { getLocalListings, type MarketListing as MarketListingType } from '../hooks/useMarketplace';
 import { useHeroPower, usePartyPower, useHeroDetails, useRelicDetails, usePartyDetails, getElementName, getClassName, getRelicCategoryName } from '../hooks/useNftPower';
@@ -710,9 +711,14 @@ const MarketplacePage: React.FC = () => {
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
+                    <div className="flex-1">
                         <h1 className="text-2xl md:text-3xl font-bold text-white">內部市場</h1>
                         <p className="text-gray-400 mt-1">直接交易英雄、聖物和隊伍</p>
+                        
+                        {/* Token Balance Display */}
+                        <div className="mt-4">
+                            <TokenBalanceDisplay variant="compact" className="flex gap-4" />
+                        </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <MarketplaceNotifications />
@@ -850,7 +856,7 @@ const MarketplacePage: React.FC = () => {
                 )}
                 
                 {/* Purchase Modal */}
-                <PurchaseModal
+                <PurchaseModalV2
                     isOpen={showPurchaseModal}
                     onClose={() => {
                         setShowPurchaseModal(false);

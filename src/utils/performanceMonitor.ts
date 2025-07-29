@@ -337,11 +337,14 @@ if (typeof window !== 'undefined') {
   (window as any).disablePerformanceMonitoring = () => performanceMonitor.setEnabled(false);
   (window as any).enablePerformanceMonitoring = () => performanceMonitor.setEnabled(true);
   
-  logger.info('性能監控器已載入。使用以下命令控制：');
-  logger.info('- disablePerformanceWarnings() - 關閉性能警告');
-  logger.info('- enablePerformanceWarnings() - 開啟性能警告');
-  logger.info('- disablePerformanceMonitoring() - 完全關閉性能監控');
-  logger.info('- enablePerformanceMonitoring() - 開啟性能監控');
+  // 只在啟用詳細日誌時顯示初始化信息
+  if (import.meta.env.VITE_ENABLE_DEBUG === 'true') {
+    logger.info('性能監控器已載入。使用以下命令控制：');
+    logger.info('- disablePerformanceWarnings() - 關閉性能警告');
+    logger.info('- enablePerformanceWarnings() - 開啟性能警告');
+    logger.info('- disablePerformanceMonitoring() - 完全關閉性能監控');
+    logger.info('- enablePerformanceMonitoring() - 開啟性能監控');
+  }
 }
 
 // 工具函數

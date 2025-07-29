@@ -166,44 +166,52 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {isMenuOpen && (
-            <div className="md:hidden fixed inset-0 bg-[#1F1D36]/95 backdrop-blur-sm z-50 flex flex-col p-4 animate-zoom-in">
-                <div className="flex justify-between items-center mb-8">
+            <div className="md:hidden fixed inset-0 bg-[#1F1D36]/95 backdrop-blur-sm z-50 flex flex-col animate-zoom-in">
+                <div className="flex justify-between items-center p-4 mb-4">
                     <h2 className="text-2xl font-bold text-white">選單</h2>
                     <button onClick={() => setIsMenuOpen(false)} className="p-2 text-gray-300">
                         <XIcon />
                     </button>
                 </div>
                 
-                {/* 移動端功能選項 */}
-                <div className="flex justify-center gap-4 mb-6 bg-gray-700/50 rounded-lg p-3">
-                    <NetworkSwitcher />
-                    {isConnected && (
-                      <div className="relative" ref={popoverRef}>
-                        <button onClick={() => setIsTxPopoverOpen(prev => !prev)} className="p-2 rounded-full text-gray-300 hover:bg-gray-700 transition-colors" aria-label="最近交易">
-                          <Icons.History className="h-5 w-5" />
-                        </button>
-                        {isTxPopoverOpen && <RecentTransactions />}
-                      </div>
-                    )}
+                {/* 移動端功能選項 - 移到下方 */}
+                <div className="flex justify-center gap-4 mb-4 px-4">
+                    <div className="flex gap-4 bg-gray-700/50 rounded-lg p-3">
+                        <NetworkSwitcher />
+                        {isConnected && (
+                          <div className="relative" ref={popoverRef}>
+                            <button onClick={() => setIsTxPopoverOpen(prev => !prev)} className="p-2 rounded-full text-gray-300 hover:bg-gray-700 transition-colors" aria-label="最近交易">
+                              <Icons.History className="h-5 w-5" />
+                            </button>
+                            {isTxPopoverOpen && <RecentTransactions />}
+                          </div>
+                        )}
+                    </div>
                 </div>
                 
-                <nav className="flex flex-col gap-2 overflow-y-auto">
+                {/* 導航選項 - 優化間距和高度 */}
+                <nav className="flex flex-col gap-2 overflow-y-auto px-4 pb-4 flex-1">
                     {navItems.map(item => (
                         <a 
                             key={item.key} 
                             href={`#/${item.key}`} 
-                            className={`flex items-center gap-3 px-5 py-4 rounded-lg text-lg transition-all ${
+                            className={`flex items-center gap-3 px-5 py-3 rounded-lg text-base transition-all ${
                                 activePage === item.key 
                                     ? 'bg-[#C0A573] text-white font-semibold shadow-lg' 
                                     : 'bg-gray-700/30 text-gray-300 hover:bg-gray-600'
                             }`}
                             onClick={(e) => { e.preventDefault(); handleNavClick(item.key); }}
                         >
-                            {item.icon && <span className="text-xl">{item.icon}</span>}
+                            {item.icon && <span className="text-lg">{item.icon}</span>}
                             {item.label}
                         </a>
                     ))}
                 </nav>
+                
+                {/* 底部說明文字 */}
+                <div className="px-4 py-2 text-center text-gray-400 text-xs border-t border-gray-700">
+                    <p>綠色圓點：連接狀態 | 時鐘圖標：交易歷史</p>
+                </div>
             </div>
         )}
     </header>

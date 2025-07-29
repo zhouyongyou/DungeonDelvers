@@ -1,6 +1,9 @@
 // 簡化的診斷工具，用於快速定位問題
 
 export function quickDiagnose() {
+  // 只在 DEBUG 模式下運行診斷
+  if (import.meta.env.VITE_ENABLE_DEBUG !== 'true') return;
+  
   console.log('🔍 開始快速診斷...');
   
   // 檢查 localStorage

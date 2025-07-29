@@ -4,7 +4,6 @@
 import React from 'react';
 import { Icons } from './icons';
 import { ActionButton } from './ActionButton';
-import { useRouter } from 'next/router';
 
 interface QuickAction {
   id: string;
@@ -67,37 +66,34 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 
 // 頁面級別的快速操作
 export const usePageQuickActions = () => {
-  const router = useRouter();
-  
   // 通用的導航操作
   const navigationActions: QuickAction[] = [
-    {
-      id: 'assets',
-      label: '我的資產',
-      icon: Icons.Package,
-      onClick: () => router.push('/assets'),
-      condition: () => router.pathname !== '/assets'
-    },
     {
       id: 'dungeon',
       label: '地下城',
       icon: Icons.MapPin,
-      onClick: () => router.push('/dungeon'),
-      condition: () => router.pathname !== '/dungeon'
+      onClick: () => {
+        window.location.hash = '/dungeon';
+      },
+      condition: () => window.location.hash !== '#/dungeon'
     },
     {
       id: 'altar',
       label: '升級',
       icon: Icons.Star,
-      onClick: () => router.push('/altar'),
-      condition: () => router.pathname !== '/altar'
+      onClick: () => {
+        window.location.hash = '/altar';
+      },
+      condition: () => window.location.hash !== '#/altar'
     },
     {
       id: 'marketplace',
       label: '市場',
       icon: Icons.ShoppingCart,
-      onClick: () => router.push('/marketplace'),
-      condition: () => router.pathname !== '/marketplace'
+      onClick: () => {
+        window.location.hash = '/marketplace';
+      },
+      condition: () => window.location.hash !== '#/marketplace'
     }
   ];
 

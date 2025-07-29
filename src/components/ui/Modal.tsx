@@ -1,6 +1,7 @@
 // src/components/ui/Modal.tsx
 
 import React, { useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { ActionButton } from './ActionButton';
 import { Z_INDEX } from '../../config/zIndex';
 
@@ -47,12 +48,23 @@ export const Modal: React.FC<ModalProps> = ({
         onClose();
       }
     };
+    
     if (isOpen) {
+      // 鎖定 body 滾動
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      
+      // 滾動到頂部以確保彈窗可見
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      
       window.addEventListener('keydown', handleKeyDown);
+      
+      return () => {
+        // 恢復 body 滾動
+        document.body.style.overflow = originalOverflow;
+        window.removeEventListener('keydown', handleKeyDown);
+      };
     }
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
   }, [isOpen, onClose]);
 
   if (!isOpen) {
@@ -75,19 +87,29 @@ export const Modal: React.FC<ModalProps> = ({
 
   const modalZIndex = zIndex || (isTutorial ? Z_INDEX.TUTORIAL_BACKDROP : Z_INDEX.MODAL_BACKDROP);
 
-  return (
-    // 背景遮罩層
+  const modalContent = (
+    // 背景遮罩層 - 使用更強的定位確保居中
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
-      className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center backdrop-blur-sm px-4 py-4"
-      style={{ zIndex: modalZIndex }}
+      className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-70 backdrop-blur-sm"
+      style={{ 
+        zIndex: modalZIndex,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem'
+      }}
       onClick={onClose}
     >
       {/* Modal 內容卡片，加入了 animate-zoom-in */}
       <div
-        className={`card-bg p-4 sm:p-6 rounded-2xl shadow-2xl w-full ${maxWidthClass} my-auto animate-zoom-in max-h-[90vh] overflow-hidden flex flex-col ${className}`}
+        className={`card-bg p-4 sm:p-6 rounded-2xl shadow-2xl w-full ${maxWidthClass} animate-zoom-in max-h-[90vh] overflow-hidden flex flex-col ${className}`}
+        style={{
+          margin: 'auto',
+          transform: 'none', // 確保不受父容器 transform 影響
+        }}
         onClick={e => e.stopPropagation()}
       >
         {title && (
@@ -116,4 +138,7 @@ export const Modal: React.FC<ModalProps> = ({
       </div>
     </div>
   );
+
+  // 使用 Portal 渲染到 body，避免父容器 CSS 影響
+  return createPortal(modalContent, document.body);
 };

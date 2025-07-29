@@ -9,14 +9,26 @@ import { Icons } from '../ui/icons';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { useAppToast } from '../../contexts/SimpleToastContext';
 import { 
-    usePurchaseItemV2, 
-    useApproveToken,
-    type MarketListingV2,
+    useMarketplaceV2,
     SUPPORTED_STABLECOINS,
     type StablecoinSymbol 
 } from '../../hooks/useMarketplaceV2Contract';
 import { useHeroPower, usePartyPower, useHeroDetails, useRelicDetails, usePartyDetails, getElementName, getClassName, getRelicCategoryName } from '../../hooks/useNftPower';
 import { StablecoinSelector } from './StablecoinSelector';
+import type { HeroNft, RelicNft, PartyNft, NftType } from '../../types/nft';
+
+// Define MarketListingV2 type
+export interface MarketListingV2 {
+    id: string;
+    seller: string;
+    nftType: NftType;
+    tokenId: string;
+    price: string;
+    acceptedTokens: string[]; // Array of token addresses
+    status: 'active' | 'sold' | 'cancelled';
+    createdAt: string;
+    nft: HeroNft | RelicNft | PartyNft;
+}
 
 interface PurchaseModalV2Props {
     isOpen: boolean;
@@ -33,8 +45,12 @@ export const PurchaseModalV2: React.FC<PurchaseModalV2Props> = ({
 }) => {
     const { address } = useAccount();
     const { showToast } = useAppToast();
-    const { purchaseItemV2, isPurchasing } = usePurchaseItemV2();
-    const { approveToken, checkTokenAllowance, isApproving } = useApproveToken();
+    const {
+        purchaseNFT,
+        approveToken,
+        checkTokenAllowance,
+        isProcessing
+    } = useMarketplaceV2();
     
     const [selectedPaymentToken, setSelectedPaymentToken] = useState<StablecoinSymbol>('USDT');
     const [confirmPurchase, setConfirmPurchase] = useState(false);
@@ -50,9 +66,10 @@ export const PurchaseModalV2: React.FC<PurchaseModalV2Props> = ({
     // 獲取可用的付款代幣（僅顯示賣家接受的代幣）
     const availablePaymentTokens = useMemo(() => {
         if (!listing) return [];
-        return listing.acceptedTokens.filter(token => 
-            Object.keys(SUPPORTED_STABLECOINS).includes(token)
-        ) as StablecoinSymbol[];
+        // Convert token addresses to symbols
+        return Object.entries(SUPPORTED_STABLECOINS)
+            .filter(([_, tokenInfo]) => listing.acceptedTokens.includes(tokenInfo.address))
+            .map(([symbol, _]) => symbol as StablecoinSymbol);
     }, [listing]);
     
     // 檢查選中付款代幣的授權狀態
@@ -61,7 +78,11 @@ export const PurchaseModalV2: React.FC<PurchaseModalV2Props> = ({
         
         try {
             const tokenInfo = SUPPORTED_STABLECOINS[token];
-            const allowance = await checkTokenAllowance(tokenInfo.address, address);
+            const allowance = await checkTokenAllowance(
+                tokenInfo.address as `0x${string}`, 
+                address as `0x${string}`,
+                '0xCd2Dc43ddB5f628f98CDAA273bd74605cBDF21F8' // DUNGEONMARKETPLACE_V2 address
+            );
             const requiredAmount = parseUnits(listing.price.toString(), 18);
             setNeedsApproval(allowance < requiredAmount);
         } catch (error) {
@@ -95,11 +116,22 @@ export const PurchaseModalV2: React.FC<PurchaseModalV2Props> = ({
                 const requiredAmount = parseUnits(listing.price.toString(), 18);
                 
                 showToast('正在授權代幣...', 'info');
-                await approveToken(tokenInfo.address, requiredAmount);
+                const approved = await approveToken(tokenInfo.address as `0x${string}`, requiredAmount);
+                if (!approved) {
+                    throw new Error('代幣授權失敗');
+                }
                 setNeedsApproval(false);
             }
             
-            await purchaseItemV2(listing, selectedPaymentToken);
+            const success = await purchaseNFT(
+                listing.id,
+                listing.price,
+                selectedPaymentToken
+            );
+            
+            if (!success) {
+                throw new Error('購買交易失敗');
+            }
             showToast('購買成功！NFT 已轉移到您的錢包', 'success');
             onClose();
             onPurchaseComplete?.();

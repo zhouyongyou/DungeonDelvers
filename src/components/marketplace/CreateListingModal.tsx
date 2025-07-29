@@ -19,9 +19,9 @@ interface CreateListingModalProps {
     isOpen: boolean;
     onClose: () => void;
     userNfts: {
-        heroes: HeroNft[];
-        relics: RelicNft[];
-        parties: PartyNft[];
+        heros?: HeroNft[];  // Note: "heros" not "heroes" to match AllNftCollections
+        relics?: RelicNft[];
+        parties?: PartyNft[];
     };
     onListingCreated?: () => void;
 }
@@ -34,8 +34,12 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
 }) => {
     const { address } = useAccount();
     const { showToast } = useAppToast();
-    const { createListingV2, isCreating } = useCreateListingV2();
-    const { checkNftApprovalV2, isCheckingApproval } = useApproveNFTV2();
+    const {
+        createListing,
+        checkNFTApproval,
+        approveNFT,
+        isProcessing
+    } = useMarketplaceV2();
     const [selectedNft, setSelectedNft] = useState<HeroNft | RelicNft | PartyNft | null>(null);
     const [selectedType, setSelectedType] = useState<NftType>('hero');
     const [priceInput, setPriceInput] = useState('');
@@ -47,13 +51,15 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
     
     // 獲取當前類型的 NFT 列表
     const availableNfts = useMemo(() => {
+        if (!userNfts) return [];
+        
         switch (selectedType) {
             case 'hero':
-                return userNfts.heroes;
+                return userNfts.heros || [];  // Fixed: "heros" not "heroes"
             case 'relic':
-                return userNfts.relics;
+                return userNfts.relics || [];
             case 'party':
-                return userNfts.parties;
+                return userNfts.parties || [];
             default:
                 return [];
         }
@@ -68,7 +74,10 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
         try {
             // 使用第一個選中的代幣精度來解析價格（V2合約使用固定精度）
             const priceInWei = parseUnits(priceInput, 18);
-            await createListingV2(selectedNft, priceInWei, acceptedTokens);
+            const success = await createListing(selectedNft, priceInput, acceptedTokens);
+            if (!success) {
+                throw new Error('創建掛單失敗');
+            }
             
             showToast('成功創建掛單！', 'success');
             onClose();
@@ -89,7 +98,14 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
         setSelectedNft(nft);
         
         try {
-            const approved = await checkNftApprovalV2(nft.type);
+            // Get NFT contract address based on type
+            const nftContractAddresses = {
+                hero: '0x162b0b673f38C11732b0bc0B4B026304e563e8e2',
+                relic: '0x15c2454A31Abc0063ef4a71d0640057d71847a22',
+                party: '0xab07E90d44c34FB62313C74F3C7b4b343E52a253'
+            };
+            const contractAddress = nftContractAddresses[nft.type as keyof typeof nftContractAddresses];
+            const approved = await checkNFTApproval(contractAddress as `0x${string}`, address as `0x${string}`);
             setNeedsNftApproval(!approved);
         } catch (error) {
             console.error('Error checking NFT approval:', error);
@@ -373,17 +389,16 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
                 <div className="flex gap-2">
                     <ActionButton
                         onClick={handleCreateListing}
-                        disabled={!selectedNft || !priceInput || acceptedTokens.length === 0 || isCreating || isCheckingApproval}
-                        isLoading={isCreating || isCheckingApproval}
+                        disabled={!selectedNft || !priceInput || acceptedTokens.length === 0 || isProcessing}
+                        isLoading={isProcessing}
                         className="flex-1 py-2"
                     >
-                        {isCheckingApproval ? '檢查授權中...' : 
-                         isCreating ? '創建中...' : 
+                        {isProcessing ? '處理中...' : 
                          needsNftApproval ? '授權並創建' : '確認創建'}
                     </ActionButton>
                     <ActionButton
                         onClick={onClose}
-                        disabled={isCreating || isCheckingApproval}
+                        disabled={isProcessing}
                         className="px-6 py-2 bg-gray-700 hover:bg-gray-600"
                     >
                         取消

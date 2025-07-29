@@ -220,67 +220,34 @@ export const AltarHistoryStats: React.FC<AltarHistoryStatsProps> = ({ isOpen, on
                   </div>
                 </div>
 
-                {/* 詳細統計 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* 星級分布 */}
-                  <div className="bg-gray-800/50 border border-gray-600/20 rounded-xl p-6">
-                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                      ⭐ 升星分布
-                    </h3>
-                    <div className="space-y-3">
-                      {Object.entries(stats.rarityStats).map(([rarity, count]) => (
-                        <div key={rarity} className="flex items-center justify-between">
-                          <span className="text-gray-300">{rarity}★ → {parseInt(rarity) + 1}★</span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-24 bg-gray-700 rounded-full h-2">
-                              <div
-                                className="bg-gradient-to-r from-purple-500 to-indigo-500 h-2 rounded-full"
-                                style={{ 
-                                  width: `${stats.totalUpgrades > 0 ? (count / stats.totalUpgrades) * 100 : 0}%` 
-                                }}
-                              />
-                            </div>
-                            <span className="text-sm text-gray-400 w-8">{count}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                {/* 升星分布 - 緊湊排列 */}
+                <div className="bg-gray-800/50 border border-gray-600/20 rounded-xl p-4">
+                  <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                    ⭐ 升星分布
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {Object.entries(stats.rarityStats).map(([rarity, count]) => (
+                      <div key={rarity} className="text-center">
+                        <div className="text-sm text-gray-400 mb-1">{rarity}★ → {parseInt(rarity) + 1}★</div>
+                        <div className="text-xl font-bold text-purple-300">{count}</div>
+                      </div>
+                    ))}
                   </div>
+                </div>
 
-                  {/* NFT 類型分布 */}
-                  <div className="bg-gray-800/50 border border-gray-600/20 rounded-xl p-6">
-                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                      🎭 類型分布
-                    </h3>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-300">🦸 英雄升星</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-24 bg-gray-700 rounded-full h-2">
-                            <div
-                              className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full"
-                              style={{ 
-                                width: `${stats.totalUpgrades > 0 ? (stats.typeStats.hero / stats.totalUpgrades) * 100 : 0}%` 
-                              }}
-                            />
-                          </div>
-                          <span className="text-sm text-gray-400 w-8">{stats.typeStats.hero}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-300">🏺 聖物升星</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-24 bg-gray-700 rounded-full h-2">
-                            <div
-                              className="bg-gradient-to-r from-amber-500 to-orange-500 h-2 rounded-full"
-                              style={{ 
-                                width: `${stats.totalUpgrades > 0 ? (stats.typeStats.relic / stats.totalUpgrades) * 100 : 0}%` 
-                              }}
-                            />
-                          </div>
-                          <span className="text-sm text-gray-400 w-8">{stats.typeStats.relic}</span>
-                        </div>
-                      </div>
+                {/* 類型分布 - 緊湊排列 */}
+                <div className="bg-gray-800/50 border border-gray-600/20 rounded-xl p-4">
+                  <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                    🎭 類型分布
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center">
+                      <div className="text-sm text-gray-400 mb-1">🦸 英雄升星</div>
+                      <div className="text-xl font-bold text-blue-300">{stats.typeStats.hero}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-sm text-gray-400 mb-1">🏺 聖物升星</div>
+                      <div className="text-xl font-bold text-amber-300">{stats.typeStats.relic}</div>
                     </div>
                   </div>
                 </div>

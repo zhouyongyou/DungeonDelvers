@@ -36,6 +36,7 @@ class SubgraphConfigManager {
     studio: string;
     decentralized: string;
   } | null = null;
+  private hasLoggedConfig = false;
 
   // 獲取配置（帶緩存）
   private async getConfig() {
@@ -45,7 +46,12 @@ class SubgraphConfigManager {
         studio: appConfig.subgraph.studio,
         decentralized: appConfig.subgraph.decentralized
       };
-      logger.info('Subgraph config loaded:', this.config);
+      
+      // 只記錄一次配置載入信息
+      if (!this.hasLoggedConfig && import.meta.env.VITE_ENABLE_DEBUG === 'true') {
+        logger.info('Subgraph config loaded:', this.config);
+        this.hasLoggedConfig = true;
+      }
     }
     return this.config;
   }

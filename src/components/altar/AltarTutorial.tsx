@@ -87,11 +87,6 @@ const tutorialSteps = [
             <p className="text-sm text-red-200">失去所有祭品材料</p>
           </div>
         </div>
-        <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3">
-          <p className="text-sm text-green-200">
-            🛡️ <strong>新手保護：</strong>1★→2★ 和 2★→3★ 保證成功，無失敗風險！
-          </p>
-        </div>
       </div>
     )
   },

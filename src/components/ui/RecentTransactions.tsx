@@ -52,7 +52,7 @@ export const RecentTransactions: React.FC = () => {
   const explorerUrl = chain?.blockExplorers?.default.url;
 
   return (
-          <div className="absolute top-full right-0 mt-2 w-72 bg-gray-800/80 backdrop-blur-lg shadow-2xl rounded-xl border border-white/10 z-50 overflow-hidden">
+          <div className="absolute top-full right-0 mt-2 w-80 max-w-[calc(100vw-1rem)] sm:max-w-none bg-gray-800/95 backdrop-blur-lg shadow-2xl rounded-xl border border-white/10 z-[60] overflow-hidden transform -translate-x-full sm:translate-x-0">
               <div className="p-3 border-b border-white/10 flex justify-between items-center">
                     <h4 className="font-bold text-base text-gray-200">最近交易</h4>
         <button

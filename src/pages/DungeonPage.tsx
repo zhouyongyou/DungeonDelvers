@@ -9,8 +9,7 @@ import { wagmiConfig as config } from '../wagmi';
 import { useSimpleReadContracts } from '../hooks/useSimpleReadContracts';
 import { formatEther, parseEther } from 'viem';
 import { formatSoul, formatLargeNumber } from '../utils/formatters';
-// 不再需要從 nfts.ts 獲取數據
-// import { fetchAllOwnedNfts } from '../api/nfts';
+import { useNfts } from '../stores/useNftStore';
 import { getContractWithABI as getContract } from '../config/contractsWithABI';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -28,6 +27,7 @@ import { bsc } from 'wagmi/chains';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 // import { useGlobalLoading } from '../components/core/GlobalLoadingProvider'; // 移除未使用的 Provider
 import { logger } from '../utils/logger';
+import { PageActionBar, usePageQuickActions } from '../components/ui/QuickActions';
 import { RewardClaimSection } from '../components/RewardClaimSection';
 import { ExpeditionHistory } from '../components/ExpeditionHistory';
 import { CooldownTimer } from '../components/CooldownTimer';
@@ -623,12 +623,19 @@ DungeonInfoCard.displayName = 'DungeonInfoCard';
 // Section: 主頁面元件
 // =================================================================
 
-const DungeonPageContent = memo<{ setActivePage: (page: Page) => void }>(({ setActivePage }) => {
+interface DungeonPageContentProps {
+    setActivePage: (page: Page) => void;
+}
+
+const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => {
     // const { setLoading } = useGlobalLoading(); // 移除未使用的 hook
     const { chainId, address } = useAccount();
     const { showToast } = useAppToast();
     const { transactions } = useTransactionStore();
     const queryClient = useQueryClient();
+    
+    // 頁面快速操作
+    const quickActions = usePageQuickActions();
     
     // 使用即時遠征通知
     const { } = useRealtimeExpeditions({
@@ -675,8 +682,9 @@ const DungeonPageContent = memo<{ setActivePage: (page: Page) => void }>(({ setA
         return (adjustedUsdAmount * usdToSoulRate) / parseEther('1');
     };
 
-    // ★ 核心改造：使用新的 Hook 獲取隊伍數據
-    const { data: partiesFromGraph, isLoading: isLoadingParties, refetch: refetchParties, error: partiesError } = usePlayerParties();
+    // ★ 核心改造：使用全局 NFT store 獲取隊伍數據
+    const { nfts: nftsData, isLoading: isLoadingParties, refetch: refetchParties } = useNfts(address, chainId || 56);
+    const partiesFromGraph = nftsData?.parties || [];
     
     // 獲取所有隊伍的冷卻時間
     const dungeonStorageContractForCooldown = getContract('DUNGEONSTORAGE');
@@ -1017,41 +1025,6 @@ const DungeonPageContent = memo<{ setActivePage: (page: Page) => void }>(({ setA
     
     const isLoading = isLoadingParties || isLoadingDungeons;
 
-    if (partiesError) {
-        const errorMessage = (partiesError as Error).message;
-        const is429Error = errorMessage.includes('429') || errorMessage.includes('頻率限制');
-        const isGraphQLError = errorMessage.includes('GraphQL');
-        const isRetrying = errorMessage.includes('retry');
-        
-        return (
-            <EmptyState 
-                message="載入隊伍失敗" 
-                description={
-                    is429Error 
-                        ? "子圖 API 請求過於頻繁，正在自動重試..."
-                        : isGraphQLError
-                        ? "無法連接到數據服務，請檢查網路連線"
-                        : errorMessage
-                }
-            >
-                <div className="flex flex-col items-center gap-4 mt-4">
-                    <ActionButton onClick={() => refetchParties()} className="min-w-[120px]">
-                        重新載入
-                    </ActionButton>
-                    {is429Error && (
-                        <div className="text-sm text-yellow-400 bg-yellow-900/20 px-4 py-2 rounded-lg">
-                            💡 提示：如果持續遇到此問題，請嘗試：
-                            <ul className="list-disc list-inside mt-2 text-left">
-                                <li>減少頁面刷新頻率</li>
-                                <li>避免同時開啟多個頁籤</li>
-                                <li>等待幾分鐘後再試</li>
-                            </ul>
-                        </div>
-                    )}
-                </div>
-            </EmptyState>
-        );
-    }
 
     if (isLoading) return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
 
@@ -1066,9 +1039,37 @@ const DungeonPageContent = memo<{ setActivePage: (page: Page) => void }>(({ setA
                 />
             {/* 已移除儲備購買 Modal */}
             <div>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
-                    <h2 className="page-title mb-0">遠征指揮中心</h2>
-                    {parties && parties.length > 0 && (
+                <PageActionBar
+                    title="遠征指揮中心"
+                    actions={[
+                        ...(parties && parties.length > 0 ? [
+                            {
+                                id: 'expediteAll',
+                                label: '一鍵全部出征',
+                                icon: Icons.Send,
+                                onClick: handleExpediteAll,
+                                condition: () => hasAvailableParties && !isTxPending
+                            },
+                            {
+                                id: 'claimAll',
+                                label: isLoadingStatuses ? '檢查中...' : '一鍵領取獎勵',
+                                icon: Icons.DollarSign,
+                                onClick: handleClaimAllRewards,
+                                condition: () => hasClaimableRewards && !isTxPending && !isBatchProcessing
+                            }
+                        ] : []),
+                        ...quickActions
+                    ]}
+                    showRefresh={true}
+                    onRefresh={() => {
+                        refetchParties();
+                        queryClient.invalidateQueries({ queryKey: ['partyStatus'] });
+                        showToast('正在刷新數據...', 'info');
+                    }}
+                />
+                {parties && parties.length > 0 && (
+                    <div className="hidden">
+                        {/* Original buttons hidden */}
                         <div className="flex flex-wrap gap-2 sm:gap-3">
                             <button
                                 onClick={() => {
@@ -1105,8 +1106,8 @@ const DungeonPageContent = memo<{ setActivePage: (page: Page) => void }>(({ setA
                                 <span>{isLoadingStatuses ? '檢查中...' : '一鍵領取獎勵'}</span>
                             </button>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
                 {(!parties || parties.length === 0) ? (
                     <EmptyState message="您還沒有任何隊伍可以派遣。">
                         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mt-4">

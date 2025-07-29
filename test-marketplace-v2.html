@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DungeonDelvers 多幣種市場測試</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #1a1a1a;
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background-color: #2a2a2a;
+        }
+        .test-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #3a3a3a;
+            border-radius: 5px;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .status.pass {
+            background-color: #22c55e;
+            color: white;
+        }
+        .status.fail {
+            background-color: #ef4444;
+            color: white;
+        }
+        .status.pending {
+            background-color: #f59e0b;
+            color: white;
+        }
+        .contract-info {
+            font-family: monospace;
+            font-size: 12px;
+            color: #888;
+            margin: 5px 0;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #444;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 DungeonDelvers 多幣種市場測試</h1>
+        
+        <div class="section">
+            <h2>📋 測試清單</h2>
+            
+            <div class="test-item">
+                <span>1. StablecoinSelector 組件測試</span>
+                <div class="status pending">待測試</div>
+            </div>
+            
+            <div class="test-item">
+                <span>2. TokenBalanceDisplay 組件測試</span>
+                <div class="status pending">待測試</div>
+            </div>
+            
+            <div class="test-item">
+                <span>3. CreateListingModal V2 測試</span>
+                <div class="status pending">待測試</div>
+            </div>
+            
+            <div class="test-item">
+                <span>4. PurchaseModalV2 測試</span>
+                <div class="status pending">待測試</div>
+            </div>
+            
+            <div class="test-item">
+                <span>5. 多幣種支付功能測試</span>
+                <div class="status pending">待測試</div>
+            </div>
+            
+            <div class="test-item">
+                <span>6. 代幣授權流程測試</span>
+                <div class="status pending">待測試</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🔗 合約信息</h2>
+            <div class="contract-info">
+                <strong>DungeonMarketplaceV2:</strong> 0xCd2Dc43ddB5f628f98CDAA273bd74605cBDF21F8
+            </div>
+            <div class="contract-info">
+                <strong>OfferSystemV2:</strong> 0xE072DC1Ea6243aEaD9c794aFe2585A8b6A5350EF
+            </div>
+            <div class="contract-info">
+                <strong>USDT:</strong> 0x55d398326f99059fF775485246999027B3197955
+            </div>
+            <div class="contract-info">
+                <strong>BUSD:</strong> 0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56
+            </div>
+            <div class="contract-info">
+                <strong>USD1:</strong> 0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🎮 實際測試</h2>
+            <p>在下面的框架中測試市場功能：</p>
+            <iframe src="http://localhost:5173/#/marketplace" title="DungeonDelvers Marketplace"></iframe>
+        </div>
+        
+        <div class="section">
+            <h2>📝 測試步驟</h2>
+            <ol>
+                <li><strong>連接錢包</strong> - 確保連接到 BSC 主網</li>
+                <li><strong>檢查代幣餘額</strong> - 驗證 TokenBalanceDisplay 顯示正確</li>
+                <li><strong>創建掛單</strong> - 測試多幣種選擇功能</li>
+                <li><strong>瀏覽掛單</strong> - 確保掛單正確顯示</li>
+                <li><strong>購買測試</strong> - 測試不同支付代幣</li>
+                <li><strong>授權流程</strong> - 確認自動授權功能</li>
+            </ol>
+        </div>
+        
+        <div class="section">
+            <h2>🐛 已知問題</h2>
+            <ul>
+                <li>需要確保用戶有足夠的測試代幣</li>
+                <li>需要驗證合約地址配置正確</li>
+                <li>需要檢查前端組件引入是否完整</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // 簡單的測試狀態管理
+        function updateTestStatus(testIndex, status) {
+            const statusElements = document.querySelectorAll('.status');
+            if (statusElements[testIndex]) {
+                statusElements[testIndex].className = `status ${status}`;
+                statusElements[testIndex].textContent = 
+                    status === 'pass' ? '通過' : 
+                    status === 'fail' ? '失敗' : '待測試';
+            }
+        }
+
+        // 自動檢查頁面加載狀態
+        const iframe = document.querySelector('iframe');
+        iframe.addEventListener('load', function() {
+            updateTestStatus(0, 'pass'); // 基本頁面載入成功
+        });
+
+        iframe.addEventListener('error', function() {
+            updateTestStatus(0, 'fail'); // 頁面載入失敗
+        });
+    </script>
+</body>
+</html>

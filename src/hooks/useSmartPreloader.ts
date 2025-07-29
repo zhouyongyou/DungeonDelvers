@@ -3,23 +3,22 @@
 
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/router';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { logger } from '../utils/logger';
+import type { Page } from '../types/page';
 
 interface PreloadStrategy {
   // 預載入優先級
   priority: 'high' | 'medium' | 'low';
-  // 觸發條件
-  triggers: string[];
+  // 觸發條件 - 使用 Page 類型而非路由
+  triggers: Page[];
   // 預載入的數據
   queryKey: string[];
   queryFn: () => Promise<any>;
 }
 
-export const useSmartPreloader = (userAddress?: string, chainId?: number) => {
+export const useSmartPreloader = (currentPage: Page, userAddress?: string, chainId?: number) => {
   const queryClient = useQueryClient();
-  const router = useRouter();
   const preloadedPages = useRef(new Set<string>());
 
   // 定義預載入策略
@@ -27,7 +26,7 @@ export const useSmartPreloader = (userAddress?: string, chainId?: number) => {
     // 用戶在首頁時，預載入資產數據
     {
       priority: 'high',
-      triggers: ['/', '/overview'],
+      triggers: ['overview'],
       queryKey: ['ownedNfts', userAddress],
       queryFn: () => userAddress ? fetchAllOwnedNfts(userAddress as any, chainId || 56) : Promise.resolve(null)
     },
@@ -35,7 +34,7 @@ export const useSmartPreloader = (userAddress?: string, chainId?: number) => {
     // 用戶在資產頁面時，預載入地下城相關數據
     {
       priority: 'medium', 
-      triggers: ['/assets', '/my-assets'],
+      triggers: ['myAssets'],
       queryKey: ['playerParties', userAddress, chainId],
       queryFn: async () => {
         // 預載入地下城需要的隊伍數據
@@ -48,7 +47,7 @@ export const useSmartPreloader = (userAddress?: string, chainId?: number) => {
     // 用戶在地下城頁面時，預載入升級相關數據  
     {
       priority: 'medium',
-      triggers: ['/dungeon', '/expedition'],
+      triggers: ['dungeon'],
       queryKey: ['upgradeStats', userAddress],
       queryFn: async () => {
         // 預載入升級成功率等數據
@@ -61,9 +60,8 @@ export const useSmartPreloader = (userAddress?: string, chainId?: number) => {
   useEffect(() => {
     if (!userAddress || !chainId) return;
 
-    const currentPath = router.pathname;
     const applicableStrategies = strategies.filter(strategy => 
-      strategy.triggers.some(trigger => currentPath.startsWith(trigger))
+      strategy.triggers.includes(currentPage)
     );
 
     applicableStrategies.forEach(strategy => {
@@ -95,7 +93,7 @@ export const useSmartPreloader = (userAddress?: string, chainId?: number) => {
         });
       }, delay);
     });
-  }, [router.pathname, userAddress, chainId, queryClient]);
+  }, [currentPage, userAddress, chainId, queryClient]);
 
   // 清理函數
   useEffect(() => {

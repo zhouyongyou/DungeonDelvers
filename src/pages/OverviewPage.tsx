@@ -22,6 +22,8 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { generateProfileSVG, type ProfileData } from '../utils/svgGenerators';
 import { logger } from '../utils/logger';
 import { usePlayerOverview } from '../hooks/usePlayerOverview';
+import { WithdrawalHistoryButton } from '../components/ui/WithdrawalHistory';
+import { useTransactionHistory, createTransactionRecord } from '../stores/useTransactionPersistence';
 
 // =================================================================
 // Section: Components
@@ -60,6 +62,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     const [showProfileSVG, setShowProfileSVG] = useState(false);
     const { showToast } = useAppToast();
     const { data, isLoading, isError, refetch } = usePlayerOverview(address);
+    const { addTransaction, updateTransaction } = useTransactionHistory(address);
     
     // Contract reads
     const playerProfileContract = getContractWithABI('PLAYERPROFILE');
@@ -96,12 +99,47 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
             args: []
         },
         actionName: '領取金庫獎勵',
-        onSuccess: () => {
+        onSuccess: (txHash) => {
             showToast('成功領取金庫獎勵！', 'success');
+            
+            // 記錄成功的提取交易
+            if (address) {
+                const txRecord = createTransactionRecord(
+                    'claim',
+                    `成功提取金庫獎勵 ${formatSoul(pendingVaultRewards)} SOUL`,
+                    address,
+                    56,
+                    { amount: pendingVaultRewards }
+                );
+                const txId = addTransaction(txRecord);
+                // 立即更新為成功狀態
+                updateTransaction(txId, {
+                    status: 'success',
+                    hash: txHash,
+                    confirmedAt: Date.now()
+                });
+            }
+            
             refetch();
         },
         onError: (error) => {
             showToast(error, 'error');
+            
+            // 記錄失敗的提取交易
+            if (address) {
+                const txRecord = createTransactionRecord(
+                    'claim',
+                    `提取金庫獎勵失敗 ${formatSoul(pendingVaultRewards)} SOUL`,
+                    address,
+                    56,
+                    { amount: pendingVaultRewards, error }
+                );
+                const txId = addTransaction(txRecord);
+                updateTransaction(txId, {
+                    status: 'failed',
+                    error: error
+                });
+            }
         }
     });
 
@@ -236,15 +274,18 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         value={`${formatSoul(pendingVaultRewards)} SOUL`}
                         icon={<Icons.DollarSign className="h-5 w-5" />}
                         action={
-                            Number(pendingVaultRewards) > 0 && (
+                            <div className="flex gap-1">
                                 <ActionButton
                                     onClick={() => claimVaultTx.execute()}
                                     isLoading={claimVaultTx.isLoading}
+                                    disabled={Number(pendingVaultRewards) <= 0}
                                     className="text-xs px-2 py-1"
+                                    title={Number(pendingVaultRewards) <= 0 ? '目前沒有可提取的餘額' : '提取金庫餘額'}
                                 >
-                                    領取
+                                    提取
                                 </ActionButton>
-                            )
+                                <WithdrawalHistoryButton userAddress={address} />
+                            </div>
                         }
                     />
                     

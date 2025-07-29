@@ -519,14 +519,16 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
         errorMessage: '鑄造失敗',
     });
     
-    // 每次 needsApproval 狀態變化時記錄
+    // 每次 needsApproval 狀態變化時記錄（只在 DEBUG 模式下）
     useEffect(() => {
-        console.log('[MintPage] 授權狀態:', {
-            needsApproval,
-            allowance: allowance?.toString(),
-            requiredAmount: requiredAmount?.toString(),
-            paymentSource
-        });
+        if (import.meta.env.VITE_ENABLE_DEBUG === 'true') {
+            console.log('[MintPage] 授權狀態:', {
+                needsApproval,
+                allowance: allowance?.toString(),
+                requiredAmount: requiredAmount?.toString(),
+                paymentSource
+            });
+        }
     }, [needsApproval, allowance, requiredAmount, paymentSource]);
 
     // 決定使用哪個進度狀態 - 修復樂觀更新後的進度顯示問題

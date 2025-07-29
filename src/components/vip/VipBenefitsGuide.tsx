@@ -11,8 +11,8 @@ interface VipBenefitsGuideProps {
 const benefitCategories = [
   {
     id: 'overview',
-    title: '🌟 VIP 系統總覽',
-    icon: '👑',
+    title: 'VIP 系統總覽',
+    icon: null,
     content: (
       <div className="space-y-4">
         <div className="text-center mb-6">
@@ -66,8 +66,8 @@ const benefitCategories = [
   },
   {
     id: 'vault',
-    title: '💰 玩家金庫稅率減免',
-    icon: '🏦',
+    title: '金庫稅率減免',
+    icon: null,
     content: (
       <div className="space-y-4">
         <div className="text-center">
@@ -127,8 +127,8 @@ const benefitCategories = [
   },
   {
     id: 'altar',
-    title: '🏛️ 升星祭壇成功率加成',
-    icon: '⚜️',
+    title: '升星祭壇加成',
+    icon: null,
     content: (
       <div className="space-y-4">
         <div className="text-center">
@@ -162,7 +162,7 @@ const benefitCategories = [
               <div className="text-xs space-y-1">
                 <div className="flex justify-between">
                   <span className="text-gray-400">基礎成功率</span>
-                  <span className="text-white">90%</span>
+                  <span className="text-white">77%</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-purple-400">VIP 加成</span>
@@ -170,7 +170,7 @@ const benefitCategories = [
                 </div>
                 <div className="flex justify-between border-t border-gray-600 pt-1">
                   <span className="text-green-300 font-semibold">最終成功率</span>
-                  <span className="text-green-300 font-bold">95%</span>
+                  <span className="text-green-300 font-bold">82%</span>
                 </div>
               </div>
             </div>
@@ -179,7 +179,7 @@ const benefitCategories = [
               <div className="text-xs space-y-1">
                 <div className="flex justify-between">
                   <span className="text-gray-400">基礎成功率</span>
-                  <span className="text-white">85%</span>
+                  <span className="text-white">41%</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-purple-400">VIP 加成</span>
@@ -187,7 +187,7 @@ const benefitCategories = [
                 </div>
                 <div className="flex justify-between border-t border-gray-600 pt-1">
                   <span className="text-green-300 font-semibold">最終成功率</span>
-                  <span className="text-green-300 font-bold">95%</span>
+                  <span className="text-green-300 font-bold">51%</span>
                 </div>
               </div>
             </div>
@@ -195,15 +195,9 @@ const benefitCategories = [
         </div>
 
         <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
-          <h4 className="font-semibold text-yellow-300 mb-2">🎮 合約實現（V2Fixed 新版）</h4>
-          <div className="bg-gray-800/50 p-3 rounded font-mono text-xs">
-            <div className="text-yellow-300">// AltarOfAscensionV2Fixed.sol 第205-210行</div>
-            <div className="text-white mt-1">uint8 rawTotalBonus = vipLevel + additionalVipBonusRate[_player];</div>
-            <div className="text-white">totalVipBonus = rawTotalBonus {`>`} MAX_VIP_BONUS ? MAX_VIP_BONUS : rawTotalBonus;</div>
-            <div className="text-white">uint8 effectiveSuccessChance = rule.successChance + totalVipBonus;</div>
-          </div>
-          <p className="text-xs text-yellow-200 mt-2">
-            ⚡ 新版合約支援自動 VIP 等級加成，根據您的質押等級提升成功率！
+          <h4 className="font-semibold text-yellow-300 mb-2">加成機制</h4>
+          <p className="text-yellow-200 text-sm">
+            VIP 等級自動提升升星成功率，等級越高加成越多。系統會根據您的質押等級實時計算並應用加成。
           </p>
         </div>
       </div>
@@ -211,8 +205,8 @@ const benefitCategories = [
   },
   {
     id: 'dungeon',
-    title: '⚔️ 地城探索成功率加成',
-    icon: '🗡️',
+    title: '地城探索加成',
+    icon: null,
     content: (
       <div className="space-y-4">
         <div className="text-center">
@@ -320,14 +314,9 @@ const benefitCategories = [
         </div>
 
         <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
-          <h4 className="font-semibold text-blue-300 mb-2">⚙️ 合約實現</h4>
-          <div className="bg-gray-800/50 p-3 rounded font-mono text-xs">
-            <div className="text-yellow-300">// DungeonMaster.sol 第85-86行</div>
-            <div className="text-white mt-1">uint8 vipBonus = IVIPStaking().getVipLevel(_requester);</div>
-            <div className="text-white">uint256 finalSuccessRate = dungeon.baseSuccessRate + vipBonus;</div>
-          </div>
-          <p className="text-xs text-blue-200 mt-2">
-            ⚔️ VIP 等級直接加到地城基礎成功率，讓您在最危險的地城中也能更有把握！
+          <h4 className="font-semibold text-blue-300 mb-2">加成機制</h4>
+          <p className="text-blue-200 text-sm">
+            VIP 等級直接提升地城探索的基礎成功率，讓您在最危險的地城中也能更有把握完成挑戰！
           </p>
         </div>
       </div>
@@ -335,8 +324,8 @@ const benefitCategories = [
   },
   {
     id: 'nft',
-    title: '🎨 VIP NFT 身份象徵',
-    icon: '🎭',
+    title: 'VIP NFT 身份象徵',
+    icon: null,
     content: (
       <div className="space-y-4">
         <div className="text-center">
@@ -433,19 +422,18 @@ export const VipBenefitsGuide: React.FC<VipBenefitsGuideProps> = ({ isOpen, onCl
     >
       <div className="relative">
         {/* 上方導航分頁 */}
-        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 border-b border-gray-700">
+        <div className="flex items-center gap-1 mb-6 overflow-x-auto pb-2 border-b border-gray-700">
           {benefitCategories.map((category) => (
             <button
               key={category.id}
               onClick={() => setActiveCategory(category.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+              className={`px-3 py-2 rounded-md whitespace-nowrap transition-all text-sm font-medium ${
                 activeCategory === category.id
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg'
-                  : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 hover:text-white'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+                  : 'bg-gray-800/40 text-gray-300 hover:bg-gray-700/60 hover:text-white'
               }`}
             >
-              <span className="text-lg">{category.icon}</span>
-              <span className="font-medium text-sm">{category.title}</span>
+              {category.title}
             </button>
           ))}
         </div>
