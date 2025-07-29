@@ -7,6 +7,7 @@ import { getContractWithABI } from '../../config/contractsWithABI';
 import { useAppToast } from '../../hooks/useAppToast';
 import { ActionButton } from '../ui/ActionButton';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
+import { formatAddress } from 'viem';
 
 type SupportedChainId = typeof bsc.id;
 
@@ -18,6 +19,9 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
   const { showToast } = useAppToast();
   const { writeContractAsync } = useWriteContract();
   const [pendingRule, setPendingRule] = useState<number | null>(null);
+  const [vipBonusAddress, setVipBonusAddress] = useState('');
+  const [vipBonusRate, setVipBonusRate] = useState('');
+  const [isSettingBonus, setIsSettingBonus] = useState(false);
   
   const altarContract = getContractWithABI('ALTAROFASCENSION');
 
@@ -122,6 +126,29 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
 
   if (isLoading) return <LoadingSpinner />;
 
+  const handleSetVipBonus = async () => {
+    if (!altarContract || !vipBonusAddress || !vipBonusRate) return;
+    
+    setIsSettingBonus(true);
+    try {
+      await writeContractAsync({
+        address: altarContract.address,
+        abi: altarContract.abi as Abi,
+        functionName: 'setAdditionalVIPBonus',
+        args: [vipBonusAddress, Number(vipBonusRate)]
+      });
+      
+      showToast(`神秘加成設定成功！`, 'success');
+      setVipBonusAddress('');
+      setVipBonusRate('');
+    } catch (e) {
+      const error = e as { shortMessage?: string };
+      showToast(error.shortMessage || `神秘加成設定失敗`, "error");
+    } finally {
+      setIsSettingBonus(false);
+    }
+  };
+
   return (
     <div className="space-y-3">
       {rulesData?.map((d: unknown, i: number) =>  {
@@ -219,6 +246,52 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
           </details>
         );
       })}
+      
+      {/* 神秘加成設定 */}
+      <details className="p-3 bg-black/20 rounded-lg">
+        <summary className="font-bold text-lg text-purple-400 cursor-pointer">
+          🎆 神秘加成管理
+        </summary>
+        <div className="pt-3 space-y-3">
+          <p className="text-sm text-gray-400">
+            為特定玩家設定神秘的升星成功率加成（最高20%）
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">玩家地址</label>
+              <input
+                type="text"
+                value={vipBonusAddress}
+                onChange={e => setVipBonusAddress(e.target.value)}
+                placeholder="0x..."
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">加成率 (%)</label>
+              <input
+                type="number"
+                value={vipBonusRate}
+                onChange={e => setVipBonusRate(e.target.value)}
+                placeholder="0-20"
+                min="0"
+                max="20"
+                className="input-field"
+              />
+            </div>
+            <ActionButton
+              onClick={handleSetVipBonus}
+              isLoading={isSettingBonus}
+              className="h-10"
+            >
+              設定加成
+            </ActionButton>
+          </div>
+          <p className="text-xs text-gray-500">
+            注意：神秘加成會與 VIP 等級加成疊加，最高上限 20%
+          </p>
+        </div>
+      </details>
     </div>
   );
 };

@@ -10,6 +10,7 @@ import { createEventWatchConfig } from '../utils/rpcErrorHandler';
 import { bsc } from 'wagmi/chains';
 import { useQuery } from '@tanstack/react-query';
 import { request, gql } from 'graphql-request';
+import { useExpeditionResult } from '../contexts/ExpeditionContext';
 
 interface ExpeditionResult {
     partyId: bigint;
@@ -57,6 +58,7 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
     const { address, chainId } = useAccount();
     const [showBanner, setShowBanner] = useState(false);
     const [latestResult, setLatestResult] = useState<ExpeditionResult | null>(null);
+    const { showExpeditionResult } = useExpeditionResult();
 
     const dungeonMasterContract = getContractWithABI('DUNGEONMASTER');
 
@@ -165,9 +167,16 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
                     expGained: result.expGained,
                 });
 
-                // Update state
+                // Show expedition result modal with images
+                showExpeditionResult({
+                    success: result.success,
+                    reward: result.reward,
+                    expGained: BigInt(result.expGained)
+                });
+                
+                // Update state for banner (optional - can keep both)
                 setLatestResult(result);
-                setShowBanner(true);
+                setShowBanner(false); // Disable banner since we use modal
                 
                 // Refetch from subgraph after a short delay to ensure it's indexed
                 setTimeout(() => {
@@ -178,11 +187,6 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
                 if (onNewResult) {
                     onNewResult(result);
                 }
-
-                // Auto-hide banner after 10 seconds
-                setTimeout(() => {
-                    setShowBanner(false);
-                }, 10000);
             });
         },
         enabled: !!dungeonMasterContract && !!address,

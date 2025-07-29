@@ -348,6 +348,9 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
     
     // 樂觀授權狀態：用於立即更新 UI，無需等待鏈上確認
     const [optimisticApprovalGranted, setOptimisticApprovalGranted] = useState(false);
+    
+    // 授權處理狀態 - 用於更精確的 UI 反饋
+    const [isApprovalProcessing, setIsApprovalProcessing] = useState(false);
 
     const debouncedQuantity = useDebounce(quantity, 300);
     
@@ -360,6 +363,7 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
     useEffect(() => {
         if (paymentSource === 'vault') {
             setOptimisticApprovalGranted(false);
+            setIsApprovalProcessing(false);
         }
     }, [paymentSource]);
     
@@ -367,6 +371,7 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
     useEffect(() => {
         if (allowance && requiredAmount && allowance >= requiredAmount) {
             setOptimisticApprovalGranted(false); // 重置，因為實際授權已經足够
+            setIsApprovalProcessing(false); // 也重置處理狀態
         }
     }, [allowance, requiredAmount]);
     
@@ -417,30 +422,28 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
             setShowProgressModal(false);
             showToast('授權完成！可以開始鑄造了 ⚡', 'success');
             
-            // 🚀 樂觀更新：立即認為授權成功，無需等待鏈上確認
-            // 這樣用戶可以立即看到「招募」按鈕，提升體驗
+            // 授權成功後樂觀更新
             setOptimisticApprovalGranted(true);
+            setIsApprovalProcessing(false);
             setIsCheckingApproval(false);
             
-            // 在背景中更新實際授權狀態，但不阻塞 UI
+            // 在背景中更新實際授權狀態
             setTimeout(async () => {
                 try {
                     await refetchAllowance();
                 } catch (error) {
                     console.log('背景更新授權狀態失敗，但不影響用戶操作:', error);
                 }
-            }, 500); // 500ms 後在背景更新
-            
-            // 為了保險起見，在 2-3 秒後再次檢查
-            setTimeout(() => {
-                refetchAllowance().catch(() => {
-                    // 如果還是失敗，手動觸發頁面刷新提示
-                    console.log('授權狀態檢查失敗，但用戶體驗不受影響');
-                });
-            }, 2500);
+            }, 500);
         },
         successMessage: '授權成功！',
         errorMessage: '授權失敗',
+        onError: () => {
+            // 錯誤時清理所有狀態
+            setOptimisticApprovalGranted(false);
+            setIsApprovalProcessing(false);
+            setShowProgressModal(false);
+        }
     });
     
     const { execute: executeMint, progress: mintProgress, reset: resetMint } = useTransactionWithProgress({
@@ -526,8 +529,10 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
         });
     }, [needsApproval, allowance, requiredAmount, paymentSource]);
 
-    // 決定使用哪個進度狀態
-    const currentProgress = needsApproval && paymentSource === 'wallet' ? approveProgress : mintProgress;
+    // 決定使用哪個進度狀態 - 修復樂觀更新後的進度顯示問題
+    const currentProgress = (needsApproval && paymentSource === 'wallet' && !optimisticApprovalGranted) 
+        ? approveProgress 
+        : mintProgress;
     const isProcessing = currentProgress.status !== 'idle' && currentProgress.status !== 'error';
     
     const contractConfig = getContractWithABI(type === 'hero' ? 'HERO' : 'RELIC');
@@ -540,11 +545,18 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
     const handleApprove = async () => {
         if (!soulShardContract || !contractConfig) return;
         
-        setShowProgressModal(true);
+        // 快速響應：立即更新 UI 狀態
+        setIsApprovalProcessing(true);
+        
+        // 延遲顯示模態框，先給用戶按鈕反饋
+        setTimeout(() => {
+            setShowProgressModal(true);
+        }, 100);
+        
         resetApprove();
         
         try {
-            await executeApprove(
+            const result = await executeApprove(
                 {
                     address: soulShardContract.address,
                     abi: soulShardContract.abi,
@@ -553,7 +565,16 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                 },
                 `批准 ${title} 合約使用代幣`
             );
+            
+            // 如果交易成功發送，立即進行樂觀更新
+            if (result) {
+                setTimeout(() => {
+                    setOptimisticApprovalGranted(true);
+                    setIsApprovalProcessing(false);
+                }, 1500); // 1.5秒後切換到招募按鈕
+            }
         } catch (error) {
+            setIsApprovalProcessing(false);
             // 錯誤已在 hook 中處理
         }
     };
@@ -591,21 +612,47 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
     };
     
     const isInsufficientBalance = balance < requiredAmount;
-    const isButtonDisabled = !address || isLoading || isError || isInsufficientBalance || requiredAmount === 0n || isProcessing || isCheckingApproval;
+    // 授權按鈕不應該因為餘額不足而禁用
+    const isApproveDisabled = !address || isLoading || isError || requiredAmount === 0n || isProcessing || isCheckingApproval || isApprovalProcessing;
+    // 鑄造按鈕需要檢查餘額
+    const isMintDisabled = !address || isLoading || isError || isInsufficientBalance || requiredAmount === 0n || isProcessing || isCheckingApproval || isApprovalProcessing;
 
     const getButtonText = () => {
         if (!address) return '請先連接錢包';
-        if (isProcessing) return '處理中...';
+        if (isApprovalProcessing) return '授權處理中...';
+        if (isProcessing) {
+            // 根據當前流程提供更具體的狀態
+            if (needsApproval && paymentSource === 'wallet') {
+                return '授權處理中...';
+            }
+            return '招募處理中...';
+        }
         if (isCheckingApproval) return '檢查授權狀態...';
-        if (isInsufficientBalance) return '餘額不足';
+        // 授權按鈕優先顯示授權文本，即使餘額不足
         if (paymentSource === 'wallet' && needsApproval) return '授權代幣使用';
-        if (optimisticApprovalGranted && paymentSource === 'wallet') return `招募 ${quantity} 個 ⚡`;
-        return `招募 ${quantity} 個`;
+        // 只有在不需要授權時才顯示餘額不足
+        if (isInsufficientBalance) return '餘額不足';
+        // 樂觀更新生效後，立即顯示招募按鈕
+        return `招募 ${quantity} 個${quantity >= 50 ? ' ⚡' : ''}`;
     };
 
     const actionButton = (paymentSource === 'wallet' && needsApproval)
-        ? <ActionButton onClick={handleApprove} isLoading={isProcessing || isCheckingApproval} className="w-full sm:w-48 h-10 sm:h-12 text-sm sm:text-base">{getButtonText()}</ActionButton>
-        : <ActionButton onClick={handleMint} isLoading={isProcessing || isLoading || isCheckingApproval} disabled={isButtonDisabled} className="w-full sm:w-48 h-10 sm:h-12 text-sm sm:text-base">{getButtonText()}</ActionButton>;
+        ? <ActionButton 
+            onClick={handleApprove} 
+            isLoading={isProcessing || isCheckingApproval || isApprovalProcessing} 
+            className={`w-full sm:w-48 h-10 sm:h-12 text-sm sm:text-base ${isInsufficientBalance ? 'bg-yellow-600 hover:bg-yellow-700' : ''}`} 
+            disabled={isApproveDisabled}
+          >
+            {getButtonText()}
+          </ActionButton>
+        : <ActionButton 
+            onClick={handleMint} 
+            isLoading={isProcessing || isLoading || isCheckingApproval} 
+            disabled={isMintDisabled} 
+            className="w-full sm:w-48 h-10 sm:h-12 text-sm sm:text-base"
+          >
+            {getButtonText()}
+          </ActionButton>;
 
     return (
         <div className="card-bg p-4 sm:p-5 md:p-6 rounded-xl shadow-lg flex flex-col items-center h-full">
@@ -614,7 +661,7 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                 isOpen={showProgressModal}
                 onClose={() => setShowProgressModal(false)}
                 progress={currentProgress}
-                title={needsApproval && paymentSource === 'wallet' ? '授權進度' : '鑄造進度'}
+                title={(needsApproval && paymentSource === 'wallet' && !optimisticApprovalGranted) ? '授權進度' : '鑄造進度'}
             />
             <h3 className="section-title">招募{title}</h3>
             <div className="bg-amber-900/20 border border-amber-600/30 rounded-lg px-2 sm:px-3 py-2 mb-3 mx-2 sm:mx-4">
@@ -680,9 +727,16 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                         </p>
                     )}
                     {isInsufficientBalance && (
-                        <p className="text-red-400 font-medium">
-                            需要 {formatPriceDisplay(requiredAmount)} SOUL
-                        </p>
+                        <>
+                            <p className="text-red-400 font-medium">
+                                需要 {formatPriceDisplay(requiredAmount)} SOUL
+                            </p>
+                            {paymentSource === 'wallet' && needsApproval && (
+                                <p className="text-yellow-400 text-xs animate-pulse">
+                                    💡 您可以先完成授權，等有餘額後即可直接鑄造
+                                </p>
+                            )}
+                        </>
                     )}
                 </div>
             </div>

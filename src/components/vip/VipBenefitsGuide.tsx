@@ -427,55 +427,32 @@ export const VipBenefitsGuide: React.FC<VipBenefitsGuideProps> = ({ isOpen, onCl
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title=""
-      showCloseButton={false}
-      className="max-w-4xl max-h-[90vh] overflow-y-auto"
+      title="VIP 會員完整指南"
+      showCloseButton={true}
+      maxWidth="4xl"
     >
       <div className="relative">
-        {/* 標題欄 */}
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-700">
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
-            🎯 VIP 會員完整指南
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors text-xl"
-          >
-            ✕
-          </button>
+        {/* 上方導航分頁 */}
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 border-b border-gray-700">
+          {benefitCategories.map((category) => (
+            <button
+              key={category.id}
+              onClick={() => setActiveCategory(category.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+                activeCategory === category.id
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg'
+                  : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 hover:text-white'
+              }`}
+            >
+              <span className="text-lg">{category.icon}</span>
+              <span className="font-medium text-sm">{category.title}</span>
+            </button>
+          ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* 左側導航 */}
-          <div className="lg:col-span-1">
-            <div className="space-y-2 sticky top-4">
-              {benefitCategories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => setActiveCategory(category.id)}
-                  className={`w-full text-left p-3 rounded-lg transition-all ${
-                    activeCategory === category.id
-                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg'
-                      : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 hover:text-white'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">{category.icon}</span>
-                    <div>
-                      <div className="font-medium text-sm">{category.title}</div>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 右側內容 */}
-          <div className="lg:col-span-3">
-            <div className="min-h-[500px]">
-              {currentCategory?.content}
-            </div>
-          </div>
+        {/* 內容區域 */}
+        <div className="min-h-[400px]">
+          {currentCategory?.content}
         </div>
 
         {/* 底部總結 */}

@@ -41,7 +41,9 @@ root.render(
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
-          <App />
+          <ExpeditionProvider>
+            <App />
+          </ExpeditionProvider>
         </ToastProvider>
       </QueryClientProvider>
     </WagmiProvider>

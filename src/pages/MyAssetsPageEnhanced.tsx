@@ -4,7 +4,7 @@ import React, { useState, useMemo, useCallback, memo } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import { useContractBatchRead } from '../hooks/useContractBatchRead';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchAllOwnedNfts } from '../api/nfts';
+import { useNfts } from '../stores/useNftStore';
 import { NftCard } from '../components/ui/NftCard';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -23,6 +23,7 @@ import { OptimizedNftGrid } from '../components/ui/OptimizedNftGrid';
 import { Icons } from '../components/ui/icons';
 import { THE_GRAPH_API_URL } from '../config/graphConfig';
 import { graphQLRateLimiter } from '../utils/rateLimiter';
+import { QuickActions, usePageQuickActions, PageActionBar } from '../components/ui/QuickActions';
 
 // Import TeamBuilder from components
 import { TeamBuilder } from '../components/TeamBuilder';
@@ -42,7 +43,6 @@ const GET_MARKET_HEROES_QUERY = `
       id
       tokenId
       owner
-      tier
       power
     }
   }
@@ -59,8 +59,6 @@ const GET_MARKET_RELICS_QUERY = `
       id
       tokenId
       owner
-      tier
-      category
       capacity
     }
   }
@@ -131,20 +129,17 @@ const useMarketBrowser = (type: 'hero' | 'relic') => {
 // =================================================================
 
 const MyAssetsPageEnhanced: React.FC = () => {
-    const { address } = useAccount();
+    const { address, chainId } = useAccount();
     const [activeTab, setActiveTab] = useState<'myHeroes' | 'myRelics' | 'myParties' | 'marketHeroes' | 'marketRelics'>('myHeroes');
     const [showTeamBuilder, setShowTeamBuilder] = useState(false);
     const { showToast } = useAppToast();
     const queryClient = useQueryClient();
     
-    // Fetch owned NFTs
-    const { data: nftsData, isLoading: isLoadingNfts, refetch: refetchNfts } = useQuery({
-        queryKey: ['ownedNfts', address],
-        queryFn: () => fetchAllOwnedNfts(address!),
-        enabled: !!address,
-        gcTime: 5 * 60 * 1000,
-        staleTime: 30 * 1000,
-    });
+    // 獲取頁面級快速操作
+    const quickActions = usePageQuickActions();
+    
+    // Fetch owned NFTs - use global store
+    const { nfts: nftsData, isLoading: isLoadingNfts, refetch: refetchNfts } = useNfts(address, chainId || 56);
     
     // Market browser hooks
     const marketHeroes = useMarketBrowser('hero');
@@ -246,7 +241,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
             abi: partyContract.abi,
             functionName: 'createParty',
             args: [heroIds, relicIds],
-            value: platformFeeData as bigint
+            value: platformFeeData ? (platformFeeData as bigint) : BigInt(0)
         });
         createPartyTx.execute();
     };
@@ -309,11 +304,11 @@ const MyAssetsPageEnhanced: React.FC = () => {
         if (isLoadingNfts) return <LoadingSpinner />;
         if (!nftsData) return <EmptyState message="無法載入資產" />;
         
-        const { heroes, relics, parties } = nftsData;
+        const { heros: heroes, relics, parties } = nftsData;
         
         switch (activeTab) {
             case 'myHeroes':
-                return heroes.length === 0 ? (
+                return !heroes || heroes.length === 0 ? (
                     <EmptyState message="您還沒有英雄" />
                 ) : (
                     <OptimizedNftGrid
@@ -325,7 +320,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
                 );
                 
             case 'myRelics':
-                return relics.length === 0 ? (
+                return !relics || relics.length === 0 ? (
                     <EmptyState message="您還沒有聖物" />
                 ) : (
                     <OptimizedNftGrid
@@ -337,7 +332,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
                 );
                 
             case 'myParties':
-                return parties.length === 0 ? (
+                return !parties || parties.length === 0 ? (
                     <EmptyState message="您還沒有隊伍" />
                 ) : (
                     <OptimizedNftGrid
@@ -354,9 +349,9 @@ const MyAssetsPageEnhanced: React.FC = () => {
     };
     
     const tabs = [
-        { key: 'myHeroes' as const, label: '我的英雄', icon: Icons.Users, count: nftsData?.heroes.length || 0 },
-        { key: 'myRelics' as const, label: '我的聖物', icon: Icons.Shield, count: nftsData?.relics.length || 0 },
-        { key: 'myParties' as const, label: '我的隊伍', icon: Icons.Users, count: nftsData?.parties.length || 0 },
+        { key: 'myHeroes' as const, label: '我的英雄', icon: Icons.Users, count: nftsData?.heros?.length || 0 },
+        { key: 'myRelics' as const, label: '我的聖物', icon: Icons.Shield, count: nftsData?.relics?.length || 0 },
+        { key: 'myParties' as const, label: '我的隊伍', icon: Icons.Users, count: nftsData?.parties?.length || 0 },
         { key: 'marketHeroes' as const, label: '英雄市場', icon: Icons.ShoppingCart },
         { key: 'marketRelics' as const, label: '聖物市場', icon: Icons.ShoppingCart },
     ];
@@ -364,30 +359,22 @@ const MyAssetsPageEnhanced: React.FC = () => {
     return (
         <ErrorBoundary>
             <div className="space-y-6">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-bold text-white">我的資產</h1>
-                        <p className="text-gray-400 mt-1">管理您的英雄、聖物和隊伍</p>
-                    </div>
-                    <div className="flex gap-2">
-                        {activeTab === 'myHeroes' || activeTab === 'myRelics' ? (
-                            <ActionButton
-                                onClick={() => setShowTeamBuilder(!showTeamBuilder)}
-                                className="px-4 py-2"
-                            >
-                                <Icons.Plus className="h-4 w-4 mr-2" />
-                                創建隊伍
-                            </ActionButton>
-                        ) : null}
-                        <ActionButton
-                            onClick={() => refetchNfts()}
-                            className="px-4 py-2"
-                        >
-                            <Icons.RefreshCw className="h-4 w-4" />
-                        </ActionButton>
-                    </div>
-                </div>
+                {/* Header with Quick Actions */}
+                <PageActionBar
+                    title="我的資產"
+                    subtitle="管理您的英雄、聖物和隊伍"
+                    actions={[
+                        {
+                            id: 'createParty',
+                            label: '創建隊伍',
+                            icon: Icons.Plus,
+                            onClick: () => setShowTeamBuilder(!showTeamBuilder)
+                        },
+                        ...quickActions
+                    ]}
+                    showRefresh={true}
+                    onRefresh={() => refetchNfts()}
+                />
                 
                 {/* Tabs */}
                 <div className="flex flex-wrap gap-2 border-b border-gray-700">
@@ -401,7 +388,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
                                     : 'text-gray-400 hover:text-white'
                             }`}
                         >
-                            <tab.icon className="h-4 w-4" />
+                            {tab.icon && <tab.icon className="h-4 w-4" />}
                             {tab.label}
                             {tab.count !== undefined && (
                                 <span className="ml-1 text-xs bg-gray-700 px-2 py-0.5 rounded-full">
@@ -416,11 +403,11 @@ const MyAssetsPageEnhanced: React.FC = () => {
                 {showTeamBuilder && nftsData && (
                     <div className="bg-gray-800 rounded-lg p-4">
                         <TeamBuilder
-                            heroes={nftsData.heroes}
+                            heroes={nftsData.heros}
                             relics={nftsData.relics}
                             onCreateParty={handleCreateParty}
                             isCreating={createPartyTx.isLoading}
-                            platformFee={platformFeeData as bigint}
+                            platformFee={platformFeeData ? (platformFeeData as bigint) : BigInt(0)}
                             isLoadingFee={isLoadingFee}
                             isHeroAuthorized={!!isHeroAuthorized}
                             isRelicAuthorized={!!isRelicAuthorized}

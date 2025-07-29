@@ -19,6 +19,7 @@ const GET_PLAYER_OVERVIEW_QUERY = `
         successfulExpeditions
         totalRewardsEarned
         inviter
+        invitees
         commissionEarned
         createdAt
         lastUpdatedAt
@@ -35,12 +36,21 @@ const GET_PLAYER_OVERVIEW_QUERY = `
       }
       vip {
         id
-        tier
-        stakingAmount
+        stakedAmount
+        stakedAt
+        unlockTime
+        isUnlocking
+        unlockRequestedAt
+        createdAt
+        lastUpdatedAt
       }
       vault {
         id
         pendingRewards
+        totalProvisionSpent
+        lastClaimedAt
+        createdAt
+        lastUpdatedAt
       }
       stats {
         totalHeroes
@@ -57,6 +67,10 @@ const GET_PLAYER_OVERVIEW_QUERY = `
       id
       pendingRewards
       claimedRewards
+      totalProvisionSpent
+      lastClaimedAt
+      createdAt
+      lastUpdatedAt
     }
   }
 `;

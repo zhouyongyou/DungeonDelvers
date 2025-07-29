@@ -19,7 +19,7 @@ export const TransactionProgressModal: React.FC<TransactionProgressModalProps> =
   title = '交易進度',
 }) => {
   // 交易成功或失敗後可以關閉
-  const canClose = progress.status === 'success' || progress.status === 'error' || progress.status === 'idle';
+  const canClose = progress?.status === 'success' || progress?.status === 'error' || progress?.status === 'idle';
 
   return (
     <Modal
@@ -30,9 +30,9 @@ export const TransactionProgressModal: React.FC<TransactionProgressModalProps> =
       closeOnOverlayClick={canClose}
       closeOnEsc={canClose}
     >
-      {progress.hash ? (
+      {progress?.hash ? (
         <TransactionProgress
-          hash={progress.hash}
+          hash={progress?.hash || ''}
           onSuccess={() => {
             // 延遲關閉，讓用戶看到成功狀態
             setTimeout(onClose, 2000);
@@ -44,7 +44,7 @@ export const TransactionProgressModal: React.FC<TransactionProgressModalProps> =
       ) : (
         <div className="text-center py-8">
           <div className="mb-4">
-            {progress.status === 'signing' ? (
+            {progress?.status === 'signing' ? (
               <>
                 <div className="animate-pulse text-4xl mb-4">✍️</div>
                 <p className="text-lg font-medium">請在錢包中簽名...</p>
@@ -52,12 +52,12 @@ export const TransactionProgressModal: React.FC<TransactionProgressModalProps> =
                   請確認 MetaMask 或其他錢包的彈窗
                 </p>
               </>
-            ) : progress.status === 'error' ? (
+            ) : progress?.status === 'error' ? (
               <>
                 <div className="text-4xl mb-4">❌</div>
                 <p className="text-lg font-medium text-red-400">交易失敗</p>
                 <p className="text-sm text-gray-400 mt-2">
-                  {progress.error?.message || '未知錯誤'}
+                  {progress?.error?.message || '未知錯誤'}
                 </p>
               </>
             ) : (

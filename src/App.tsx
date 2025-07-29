@@ -23,6 +23,7 @@ import { usePagePerformance } from './utils/performanceMonitor';
 import { quickDiagnose } from './utils/simpleDiagnostics';
 import { isValidPitchPath } from './utils/pitchAccess';
 import { PageTransition, usePagePreload } from './components/ui/PageTransition';
+import { useSmartPreloader } from './hooks/useSmartPreloader';
 // import { WebSocketIndicator } from './components/WebSocketIndicator'; // 移除，因為不再使用 Apollo
 
 // 動態導入所有頁面
@@ -33,7 +34,7 @@ const MintPage = lazy(() => import('./pages/MintPage'));
 const MyAssetsPage = lazy(() => import('./pages/MyAssetsPageEnhanced'));
 const DungeonPage = lazy(() => import('./pages/DungeonPage'));
 const AltarPage = lazy(() => import('./pages/AltarPage'));
-const AdminPage = lazy(() => import('./pages/AdminPage'));
+const AdminPage = lazy(() => import('./pages/AdminPageFixed'));
 const MarketplacePage = lazy(() => import('./pages/MarketplacePage'));
 const VipPage = lazy(() => import('./pages/VipPage'));
 const ReferralPage = lazy(() => import('./pages/ReferralPage'));
@@ -92,8 +93,11 @@ const getPageFromHash = (): Page => {
 
 function App() {
   const [activePage, setActivePage] = useState<Page>(getPageFromHash());
-  const { isConnected } = useAccount();
+  const { address, isConnected, chainId } = useAccount();
   const { isMobile } = useMobileOptimization();
+  
+  // 智能預載入
+  useSmartPreloader(address, chainId);
   
   // 暫時禁用事件監聽以減少 RPC 請求
   // TODO: 優化事件監聽邏輯，只在需要的頁面啟用

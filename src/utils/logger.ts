@@ -54,8 +54,8 @@ export const logger = {
   },
   
   debug: (message: string, data?: unknown) => {
-    // 只在開發環境或明確開啟 DEBUG 模式時顯示
-    if (import.meta.env.DEV) {
+    // 只在開發環境且明確開啟 DEBUG 模式時顯示
+    if (import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEBUG === 'true') {
       console.log(`[DEBUG] ${message}`, data || '');
     }
   },
@@ -93,11 +93,33 @@ export const logger = {
     }
   },
   
+  // RPC 專用日誌（可獨立控制）
+  rpc: (message: string, data?: unknown) => {
+    if (import.meta.env.DEV && import.meta.env.VITE_ENABLE_RPC_LOGS === 'true') {
+      console.log(`%c[RPC]%c ${message}`, 'color: #10b981; font-weight: bold', 'color: inherit', data || '');
+    }
+  },
+
+  // RPC 錯誤（始終顯示，但用不同顏色標記）
+  rpcError: (message: string, error?: unknown) => {
+    if (import.meta.env.DEV) {
+      console.error(`%c[RPC ERROR]%c ${message}`, 'color: #ef4444; font-weight: bold', 'color: inherit', error || '');
+    }
+  },
+
+  // RPC 警告（始終顯示）
+  rpcWarn: (message: string, data?: unknown) => {
+    if (import.meta.env.DEV) {
+      console.warn(`%c[RPC WARN]%c ${message}`, 'color: #f59e0b; font-weight: bold', 'color: inherit', data || '');
+    }
+  },
+
   // 檢查日誌是否啟用
-  isEnabled: (level: 'debug' | 'info' | 'warn' | 'error') => {
+  isEnabled: (level: 'debug' | 'info' | 'warn' | 'error' | 'rpc') => {
     if (level === 'warn' || level === 'error') return true;
     if (level === 'info') return import.meta.env.DEV || import.meta.env.VITE_ENABLE_PROD_LOGS === 'true';
-    if (level === 'debug') return import.meta.env.DEV;
+    if (level === 'debug') return import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEBUG === 'true';
+    if (level === 'rpc') return import.meta.env.DEV && import.meta.env.VITE_ENABLE_RPC_LOGS === 'true';
     return false;
   }
 };

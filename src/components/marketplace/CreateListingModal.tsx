@@ -3,15 +3,17 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAccount } from 'wagmi';
-import { parseEther, type Address } from 'viem';
+import { parseUnits, type Address } from 'viem';
 import { ActionButton } from '../ui/ActionButton';
 import { Icons } from '../ui/icons';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import type { HeroNft, RelicNft, PartyNft, NftType } from '../../types/nft';
 import { formatSoul } from '../../utils/formatters';
 import { useAppToast } from '../../contexts/SimpleToastContext';
-import { useCreateListing, useApproveNFT } from '../../hooks/useMarketplace';
+import { useMarketplaceV2 } from '../../hooks/useMarketplaceV2Contract';
 import { useHeroPower, usePartyPower, useHeroDetails, useRelicDetails, usePartyDetails, getElementName, getClassName, getRelicCategoryName } from '../../hooks/useNftPower';
+import { StablecoinSelector } from './StablecoinSelector';
+import type { StablecoinSymbol } from '../../hooks/useMarketplaceV2Contract';
 
 interface CreateListingModalProps {
     isOpen: boolean;
@@ -32,12 +34,13 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
 }) => {
     const { address } = useAccount();
     const { showToast } = useAppToast();
-    const { createListing, isCreating } = useCreateListing();
-    const { checkApproval, isApproving } = useApproveNFT();
+    const { createListingV2, isCreating } = useCreateListingV2();
+    const { checkNftApprovalV2, isCheckingApproval } = useApproveNFTV2();
     const [selectedNft, setSelectedNft] = useState<HeroNft | RelicNft | PartyNft | null>(null);
     const [selectedType, setSelectedType] = useState<NftType>('hero');
     const [priceInput, setPriceInput] = useState('');
-    const [needsApproval, setNeedsApproval] = useState(false);
+    const [acceptedTokens, setAcceptedTokens] = useState<StablecoinSymbol[]>([]);
+    const [needsNftApproval, setNeedsNftApproval] = useState(false);
     
     // 模擬市場地址（實際應該從配置獲取）
     const MARKETPLACE_ADDRESS = '0x1234567890123456789012345678901234567890' as Address;
@@ -57,14 +60,15 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
     }, [selectedType, userNfts]);
     
     const handleCreateListing = async () => {
-        if (!selectedNft || !priceInput) {
-            showToast('請選擇 NFT 並設定價格', 'error');
+        if (!selectedNft || !priceInput || acceptedTokens.length === 0) {
+            showToast('請選擇 NFT、設定價格並選擇接受的支付幣種', 'error');
             return;
         }
         
         try {
-            const priceInWei = parseEther(priceInput);
-            await createListing(selectedNft, priceInWei, MARKETPLACE_ADDRESS);
+            // 使用第一個選中的代幣精度來解析價格（V2合約使用固定精度）
+            const priceInWei = parseUnits(priceInput, 18);
+            await createListingV2(selectedNft, priceInWei, acceptedTokens);
             
             showToast('成功創建掛單！', 'success');
             onClose();
@@ -73,7 +77,8 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
             // 重置表單
             setSelectedNft(null);
             setPriceInput('');
-            setNeedsApproval(false);
+            setAcceptedTokens([]);
+            setNeedsNftApproval(false);
         } catch (error) {
             showToast(`創建掛單失敗: ${error}`, 'error');
         }
@@ -84,11 +89,11 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
         setSelectedNft(nft);
         
         try {
-            const approved = await checkApproval(nft.type, MARKETPLACE_ADDRESS);
-            setNeedsApproval(!approved);
+            const approved = await checkNftApprovalV2(nft.type);
+            setNeedsNftApproval(!approved);
         } catch (error) {
-            console.error('Error checking approval:', error);
-            setNeedsApproval(true); // 安全起見，假設需要授權
+            console.error('Error checking NFT approval:', error);
+            setNeedsNftApproval(true); // 安全起見，假設需要授權
         }
     };
     
@@ -292,7 +297,7 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
                 
                 {/* 價格設定 */}
                 <div className="mb-4">
-                    <label className="block text-gray-400 mb-2">設定價格 (SOUL)</label>
+                    <label className="block text-gray-400 mb-2">設定價格 (USD)</label>
                     <input
                         type="number"
                         value={priceInput}
@@ -304,13 +309,29 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
                     />
                     {priceInput && (
                         <p className="text-sm text-gray-400 mt-1">
-                            = {formatSoul(parseEther(priceInput).toString())} SOUL
+                            ${parseFloat(priceInput).toFixed(2)} USD
                         </p>
                     )}
                 </div>
                 
+                {/* 穩定幣選擇 */}
+                <div className="mb-4">
+                    <StablecoinSelector
+                        selectedTokens={acceptedTokens}
+                        onToggle={(token) => {
+                            setAcceptedTokens(prev => 
+                                prev.includes(token)
+                                    ? prev.filter(t => t !== token)
+                                    : [...prev, token]
+                            );
+                        }}
+                        mode="multiple"
+                        address={address}
+                    />
+                </div>
+                
                 {/* 授權狀態提示 */}
-                {selectedNft && needsApproval && (
+                {selectedNft && needsNftApproval && (
                     <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-700 rounded-lg">
                         <div className="flex items-center gap-2 text-yellow-400 text-sm">
                             <Icons.AlertTriangle className="h-4 w-4" />
@@ -325,16 +346,22 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
                         <h3 className="text-white font-medium mb-2">掛單預覽</h3>
                         <NftDetailsCard nft={selectedNft} />
                         
-                        {priceInput && (
+                        {priceInput && acceptedTokens.length > 0 && (
                             <div className="mt-3 p-3 bg-gray-600 rounded-lg">
                                 <div className="flex justify-between items-center mb-2">
                                     <span className="text-gray-400">掛單價格：</span>
-                                    <span className="text-[#C0A573] font-bold text-lg">{priceInput} SOUL</span>
+                                    <span className="text-[#C0A573] font-bold text-lg">${priceInput} USD</span>
+                                </div>
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-gray-400">接受幣種：</span>
+                                    <span className="text-white text-sm">
+                                        {acceptedTokens.join(', ')}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between text-xs">
                                     <span className="text-gray-500">授權狀態：</span>
-                                    <span className={needsApproval ? 'text-yellow-400' : 'text-green-400'}>
-                                        {needsApproval ? '需要授權' : '已授權'}
+                                    <span className={needsNftApproval ? 'text-yellow-400' : 'text-green-400'}>
+                                        {needsNftApproval ? '需要授權' : '已授權'}
                                     </span>
                                 </div>
                             </div>
@@ -346,17 +373,17 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
                 <div className="flex gap-2">
                     <ActionButton
                         onClick={handleCreateListing}
-                        disabled={!selectedNft || !priceInput || isCreating || isApproving}
-                        isLoading={isCreating || isApproving}
+                        disabled={!selectedNft || !priceInput || acceptedTokens.length === 0 || isCreating || isCheckingApproval}
+                        isLoading={isCreating || isCheckingApproval}
                         className="flex-1 py-2"
                     >
-                        {isApproving ? '授權中...' : 
+                        {isCheckingApproval ? '檢查授權中...' : 
                          isCreating ? '創建中...' : 
-                         needsApproval ? '授權並創建' : '確認創建'}
+                         needsNftApproval ? '授權並創建' : '確認創建'}
                     </ActionButton>
                     <ActionButton
                         onClick={onClose}
-                        disabled={isCreating || isApproving}
+                        disabled={isCreating || isCheckingApproval}
                         className="px-6 py-2 bg-gray-700 hover:bg-gray-600"
                     >
                         取消

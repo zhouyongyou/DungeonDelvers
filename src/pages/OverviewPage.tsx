@@ -126,11 +126,17 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     
     // Profile data for SVG
     const profileData: ProfileData = {
-        name: player?.profile?.name || `Player ${address?.slice(0, 6)}`,
+        address: address || '0x0000000000000000000000000000000000000000',
         level,
-        successfulExpeditions: player?.profile?.successfulExpeditions || 0,
-        totalRewardsEarned: player?.profile?.totalRewardsEarned || '0',
-        joinDate: player?.profile?.createdAt || Math.floor(Date.now() / 1000).toString()
+        experience: BigInt(player?.profile?.experience || 0),
+        nextLevelExp: BigInt(level * 100), // 假設值
+        currentLevelExp: BigInt(player?.profile?.experience || 0),
+        progress: 0, // 假設值
+        heroCount: heroCount,
+        relicCount: relicCount,
+        partyCount: partyCount,
+        expeditionCount: player?.profile?.successfulExpeditions || 0,
+        totalRewards: BigInt(player?.profile?.totalRewardsEarned || 0)
     };
     
     if (isLoading) return <LoadingState />;
@@ -192,7 +198,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                 onClick={() => setActivePage('mint')}
                                 className="text-xs px-2 py-1"
                             >
-                                鑄造更多
+                                鑄造英雄
                             </ActionButton>
                         }
                     />
@@ -309,21 +315,14 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                             className="py-3"
                         >
                             <Icons.Plus className="h-5 w-5 mr-2" />
-                            鑄造英雄
-                        </ActionButton>
-                        <ActionButton
-                            onClick={() => setActivePage('dungeon')}
-                            className="py-3"
-                        >
-                            <Icons.Map className="h-5 w-5 mr-2" />
-                            探索地城
+                            鑄造英雄、聖物
                         </ActionButton>
                         <ActionButton
                             onClick={() => setActivePage('altar')}
                             className="py-3"
                         >
                             <Icons.Star className="h-5 w-5 mr-2" />
-                            升級英雄
+                            升級英雄、聖物
                         </ActionButton>
                         <ActionButton
                             onClick={() => setActivePage('myAssets')}
@@ -331,6 +330,13 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         >
                             <Icons.Package className="h-5 w-5 mr-2" />
                             查看資產
+                        </ActionButton>
+                        <ActionButton
+                            onClick={() => setActivePage('dungeon')}
+                            className="py-3"
+                        >
+                            <Icons.Map className="h-5 w-5 mr-2" />
+                            探索地城
                         </ActionButton>
                     </div>
                 </div>

@@ -156,7 +156,7 @@ export const AltarHistoryStats: React.FC<AltarHistoryStatsProps> = ({ isOpen, on
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="📊 升星統計"
+      title="升星統計"
       className="max-w-4xl max-h-[80vh] overflow-y-auto"
     >
       <div className="space-y-6">

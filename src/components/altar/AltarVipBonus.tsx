@@ -148,7 +148,7 @@ export const AltarVipBonus: React.FC<AltarVipBonusProps> = ({ className = '' }) 
               <span className="font-bold text-green-300">+{currentVipLevel}%</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-orange-300">管理員額外加成</span>
+              <span className="text-orange-300">神秘額外加成</span>
               <span className={`font-bold ${
                 additionalBonus > 0 ? 'text-green-300' : 'text-gray-400'
               }`}>
@@ -162,7 +162,7 @@ export const AltarVipBonus: React.FC<AltarVipBonusProps> = ({ className = '' }) 
             <div className="mt-2 pt-2 border-t border-orange-500/20">
               <p className="text-xs text-orange-200 text-center">
                 {effectiveVipBonus > currentVipLevel 
-                  ? `🎉 您獲得了 +${additionalBonus}% 管理員額外加成！`
+                  ? `🎉 您獲得了 +${additionalBonus}% 神秘額外加成！`
                   : effectiveVipBonus === currentVipLevel && currentVipLevel > 0
                     ? '✅ VIP 等級加成自動生效中'
                     : '👤 質押 SoulShard 成為 VIP 以獲得加成'
@@ -187,7 +187,7 @@ export const AltarVipBonus: React.FC<AltarVipBonusProps> = ({ className = '' }) 
             <>
               <p>• 地下城：自動讀取 VIP 等級並應用加成</p>
               <p>• 祭壇：現在也支援自動 VIP 等級加成了！</p>
-              <p>• 上限：總加成上限 20%，管理員額外加成上限 20%</p>
+              <p>• 上限：總加成上限 20%，神秘額外加成上限 20%</p>
             </>
           ) : (
             // 普通用戶：簡化說明

@@ -1,6 +1,7 @@
 // RPC 流量監控和性能分析工具
 
 import { getCurrentRpcVersion, getRpcEndpoint } from './rpcOptimizedMigration';
+import { logger } from './logger';
 
 interface RpcMetrics {
   version: 'legacy' | 'optimized';
@@ -93,8 +94,10 @@ class RpcMonitor {
     this.saveMetrics();
 
     // 在開發環境記錄詳細信息
-    if (import.meta.env.DEV) {
-      console.log(`[RpcMonitor] ${method || 'RPC'}: ${responseTime}ms, success: ${success}, cache: ${cacheHit ? 'HIT' : 'MISS'}, version: ${this.metrics.version}`);
+    if (success) {
+      logger.rpc(`${method || 'RPC'}: ${responseTime}ms, cache: ${cacheHit ? 'HIT' : 'MISS'}, version: ${this.metrics.version}`);
+    } else {
+      logger.rpcError(`${method || 'RPC'}: ${responseTime}ms FAILED, cache: ${cacheHit ? 'HIT' : 'MISS'}, version: ${this.metrics.version}`);
     }
   }
 

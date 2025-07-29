@@ -75,7 +75,6 @@ const GET_MARKET_LISTINGS_QUERY = `
       hero {
         id
         tokenId
-        tier
         power
         element
         class
@@ -83,22 +82,18 @@ const GET_MARKET_LISTINGS_QUERY = `
       relic {
         id
         tokenId
-        tier
         category
         capacity
       }
       party {
         id
         tokenId
-        totalPower
         heroes {
           tokenId
-          tier
           power
         }
         relics {
           tokenId
-          tier
         }
       }
     }
@@ -454,7 +449,7 @@ const ListingCard: React.FC<{
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-400">品階</span>
-                            <span className="text-white">T{heroDetails.details.tier}</span>
+                            <span className="text-white">T{heroDetails.details.tier || heroDetails.details.rarity || 1}</span>
                         </div>
                     </div>
                 )}
@@ -467,7 +462,7 @@ const ListingCard: React.FC<{
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-400">品階</span>
-                            <span className="text-white">T{relicDetails.details.tier}</span>
+                            <span className="text-white">T{relicDetails.details.tier || relicDetails.details.rarity || 1}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-400">容量</span>
@@ -546,7 +541,7 @@ const ListingCard: React.FC<{
 // =================================================================
 
 const MarketplacePage: React.FC = () => {
-    const { address, isConnected } = useAccount();
+    const { address, isConnected, chain } = useAccount();
     const { showToast } = useAppToast();
     const [page, setPage] = useState(0);
     const pageSize = 12;
@@ -572,8 +567,8 @@ const MarketplacePage: React.FC = () => {
     
     // 獲取用戶的 NFT
     const { data: userNfts, isLoading: isLoadingNfts, refetch: refetchNfts } = useQuery({
-        queryKey: ['ownedNfts', address],
-        queryFn: () => fetchAllOwnedNfts(address!),
+        queryKey: ['ownedNfts', address, chain?.id],
+        queryFn: () => fetchAllOwnedNfts(address!, chain?.id || 56),
         enabled: !!address,
         gcTime: 5 * 60 * 1000,
         staleTime: 30 * 1000,

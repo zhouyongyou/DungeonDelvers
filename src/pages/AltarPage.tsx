@@ -204,18 +204,66 @@ const UpgradeResultModal: React.FC<{ result: UpgradeOutcome | null; onClose: () 
     );
 };
 
-const UpgradeInfoCard: React.FC<{ rule: { materialsRequired: number; nativeFee: bigint; greatSuccessChance: number; successChance: number; partialFailChance: number } | null; isLoading: boolean; }> = ({ rule, isLoading }) => {
+// VIP 加成顯示元件
+const VipBonusDisplay: React.FC<{ address: string | undefined }> = ({ address }) => {
+  const altarContract = getContractWithABI('ALTAROFASCENSION');
+  
+  const { data: vipInfo } = useReadContract({
+    address: altarContract?.address as `0x${string}`,
+    abi: altarContract?.abi,
+    functionName: 'getPlayerVipInfo',
+    args: address ? [address] : undefined,
+    query: { 
+      enabled: !!altarContract && !!address,
+      staleTime: 1000 * 60 * 5, // 5分鐘
+    }
+  });
+  
+  if (!vipInfo || !address) return null;
+  
+  const [currentVipLevel, additionalBonus, totalVipBonus, effectiveTotalBonus] = vipInfo as [number, number, number, number];
+  
+  if (effectiveTotalBonus === 0) return null;
+  
+  return (
+    <div className="mt-3 p-3 bg-gradient-to-r from-purple-900/20 to-pink-900/20 border border-purple-500/30 rounded-lg text-sm">
+      <div className="flex items-center justify-between">
+        <span className="text-purple-300">🎆 升星加成</span>
+        <span className="font-bold text-purple-200">+{effectiveTotalBonus}%</span>
+      </div>
+      <div className="mt-2 text-xs text-gray-400 space-y-1">
+        {currentVipLevel > 0 && (
+          <div>VIP{currentVipLevel} 加成：+{currentVipLevel}%</div>
+        )}
+        {additionalBonus > 0 && (
+          <div>神秘加成：+{additionalBonus}%</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const UpgradeInfoCard: React.FC<{ rule: { materialsRequired: number; nativeFee: bigint; greatSuccessChance: number; successChance: number; partialFailChance: number } | null; isLoading: boolean; address?: string; }> = ({ rule, isLoading, address }) => {
   if (isLoading) return <div className="card-bg p-4 rounded-xl animate-pulse h-48"><LoadingSpinner /></div>;
   if (!rule || !rule.materialsRequired) return <div className="card-bg p-4 rounded-xl text-center text-gray-500">請先選擇要升級的星級</div>;
   
-  // 暫時顯示優化後的機率（無失敗機制）
+  // 顯示調整後的中間值機率
   const optimizedRules = {
-    1: { greatSuccessChance: 10, successChance: 90 }, // 升2★
-    2: { greatSuccessChance: 8, successChance: 92 },  // 升3★
+    1: { greatSuccessChance: 8, successChance: 77, partialFailChance: 13, completeFailChance: 2 },  // 升2★ (總成功率85%)
+    2: { greatSuccessChance: 6, successChance: 69, partialFailChance: 20, completeFailChance: 5 },  // 升3★ (總成功率75%)
+    3: { greatSuccessChance: 4, successChance: 41, partialFailChance: 40, completeFailChance: 15 }, // 升4★ (總成功率45%)
+    4: { greatSuccessChance: 3, successChance: 22, partialFailChance: 50, completeFailChance: 25 }  // 升5★ (總成功率25%)
   };
   
-  const rarity = rule.materialsRequired === 5 ? 1 : 2;
-  const displayRule = optimizedRules[rarity as 1 | 2] || { greatSuccessChance: rule.greatSuccessChance, successChance: rule.successChance };
+  const rarity = rule.materialsRequired === 5 ? 1 : 
+                 rule.materialsRequired === 4 ? 2 :
+                 rule.materialsRequired === 3 ? 3 : 4;
+  const displayRule = optimizedRules[rarity as 1 | 2 | 3 | 4] || { 
+    greatSuccessChance: rule.greatSuccessChance, 
+    successChance: rule.successChance,
+    partialFailChance: rule.partialFailChance || 0,
+    completeFailChance: 0
+  };
   
   return (
     <div className="card-bg p-6 rounded-2xl text-sm">
@@ -224,12 +272,26 @@ const UpgradeInfoCard: React.FC<{ rule: { materialsRequired: number; nativeFee: 
         <p>所需材料: <span className="font-bold text-white">{rule.materialsRequired.toString()} 個</span></p>
         <p>所需費用: <span className="font-bold text-yellow-400">免費</span></p>
         <hr className="border-gray-700 my-3" />
-        <p className="text-green-400">⚜️ 大成功 (獲得2個): {displayRule.greatSuccessChance}%</p>
-        <p className="text-sky-400">✨ 普通成功 (獲得1個): {displayRule.successChance}%</p>
-        <div className="mt-2 p-2 bg-green-900/20 border border-green-500/30 rounded-lg">
-          <p className="text-xs text-green-300">✅ 優化版：保證成功，無失敗風險！</p>
+        <p className="text-purple-400">⚜️ 神跡降臨 (獲得2個): <span className="font-bold">{displayRule.greatSuccessChance}%</span></p>
+        <p className="text-green-400">✨ 祝福成功 (獲得1個): <span className="font-bold">{displayRule.successChance}%</span></p>
+        {displayRule.partialFailChance > 0 && (
+          <p className="text-yellow-400">⚡ 部分返還 (返還{Math.floor(rule.materialsRequired / 2)}個): <span className="font-bold">{displayRule.partialFailChance}%</span></p>
+        )}
+        {displayRule.completeFailChance > 0 && (
+          <p className="text-red-400">💀 升星失敗 (無返還): <span className="font-bold">{displayRule.completeFailChance}%</span></p>
+        )}
+        <div className="mt-3 p-2 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+          <p className="text-xs text-blue-300">
+            {rarity <= 2 ? 
+              `✨ 總成功率：${displayRule.greatSuccessChance + displayRule.successChance}% (新手友好)` : 
+              `⚔️ 總成功率：${displayRule.greatSuccessChance + displayRule.successChance}% (挑戰升級)`
+            }
+          </p>
         </div>
       </div>
+      
+      {/* VIP 加成顯示 */}
+      {address && <VipBonusDisplay address={address} />}
     </div>
   );
 };
@@ -592,18 +654,49 @@ const AltarPage = memo(() => {
                                 <div className="space-y-2 text-sm">
                                     <div className="flex justify-between items-center">
                                         <span className="text-purple-400">⚜️ 神跡降臨</span>
-                                        <span className="font-bold text-purple-300">{rarity === 1 ? 10 : 8}%</span>
+                                        <span className="font-bold text-purple-300">{
+                                            rarity === 1 ? 8 : 
+                                            rarity === 2 ? 6 :
+                                            rarity === 3 ? 4 : 3
+                                        }%</span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-green-400">✨ 祝福成功</span>
-                                        <span className="font-bold text-green-300">{rarity === 1 ? 90 : 92}%</span>
+                                        <span className="font-bold text-green-300">{
+                                            rarity === 1 ? 77 : 
+                                            rarity === 2 ? 69 :
+                                            rarity === 3 ? 41 : 22
+                                        }%</span>
                                     </div>
+                                    {rarity <= 4 && (
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-yellow-400">⚡ 部分返還</span>
+                                            <span className="font-bold text-yellow-300">{
+                                                rarity === 1 ? 13 : 
+                                                rarity === 2 ? 20 :
+                                                rarity === 3 ? 40 : 50
+                                            }%</span>
+                                        </div>
+                                    )}
+                                    {rarity <= 4 && (
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-red-400">💀 升星失敗</span>
+                                            <span className="font-bold text-red-300">{
+                                                rarity === 1 ? 2 : 
+                                                rarity === 2 ? 5 :
+                                                rarity === 3 ? 15 : 25
+                                            }%</span>
+                                        </div>
+                                    )}
                                 </div>
-                                {rarity <= 2 && (
-                                    <div className="mt-3 p-2 bg-green-900/20 border border-green-500/30 rounded-lg">
-                                        <p className="text-xs text-green-300 text-center">🛡️ 新手保護：保證成功</p>
-                                    </div>
-                                )}
+                                <div className="mt-3 p-2 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                                    <p className="text-xs text-blue-300 text-center">
+                                        {rarity <= 2 ? 
+                                            `✨ 總成功率：${rarity === 1 ? 85 : 75}% (新手友好)` : 
+                                            `⚔️ 總成功率：${rarity === 3 ? 45 : 25}% (挑戰升級)`
+                                        }
+                                    </p>
+                                </div>
                             </div>
                         )}
 

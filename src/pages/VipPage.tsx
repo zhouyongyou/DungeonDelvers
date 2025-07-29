@@ -411,11 +411,62 @@ const VipPageContent: React.FC = () => {
                 質押您的 $SoulShard 代幣以提升 VIP 等級，享受提現稅率減免等尊榮禮遇。
             </p>
             
-            {/* VIP 等級說明卡片 */}
+            {/* VIP 核心福利展示 - 新設計 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {/* 地下城加成 */}
+                <div className="bg-gradient-to-br from-blue-900/40 to-blue-800/30 p-4 rounded-xl border border-blue-500/30 hover:border-blue-400/50 transition-all">
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                            <span className="text-2xl">⚔️</span>
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-blue-300">地下城加成</h3>
+                            <p className="text-xs text-blue-400">自動生效</p>
+                        </div>
+                    </div>
+                    <p className="text-sm text-gray-300">
+                        VIP 等級直接增加所有地下城的<strong className="text-blue-300">基礎成功率</strong>，每級提升 <strong className="text-blue-300">1%</strong>，等級越高加成越多！
+                    </p>
+                </div>
+                
+                {/* 祭壇加成 */}
+                <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/30 p-4 rounded-xl border border-purple-500/30 hover:border-purple-400/50 transition-all">
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
+                            <span className="text-2xl">🏰</span>
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-purple-300">祭壇加成</h3>
+                            <p className="text-xs text-purple-400">自動計算</p>
+                        </div>
+                    </div>
+                    <p className="text-sm text-gray-300">
+                        VIP 等級自動提升<strong className="text-purple-300">升星成功率</strong>，每級提升 <strong className="text-purple-300">1%</strong>{isAdmin && ' + 神秘額外加成'}！
+                    </p>
+                </div>
+                
+                {/* 提現稅率減免 */}
+                <div className="bg-gradient-to-br from-green-900/40 to-green-800/30 p-4 rounded-xl border border-green-500/30 hover:border-green-400/50 transition-all">
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
+                            <span className="text-2xl">💰</span>
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-green-300">提現稅率減免</h3>
+                            <p className="text-xs text-green-400">每級 0.5%</p>
+                        </div>
+                    </div>
+                    <p className="text-sm text-gray-300">
+                        從金庫提取代幣時享受<strong className="text-green-300">手續費減免</strong>，最高可減免 10%！
+                    </p>
+                </div>
+            </div>
+            
+            {/* VIP 等級詳情卡片 */}
             <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 p-4 sm:p-6 rounded-xl border border-purple-500/20">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-base sm:text-lg font-bold text-purple-300 flex items-center gap-2">
-                        <span>👑</span> VIP 等級與福利
+                        <span>📊</span> VIP 等級詳情
                     </h3>
                     <button
                         onClick={() => setShowBenefitsGuide(true)}
@@ -424,79 +475,101 @@ const VipPageContent: React.FC = () => {
                         📖 查看完整指南
                     </button>
                 </div>
-                {/* 質押冷卻期提示 */}
-                <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-blue-900/20 border border-blue-500/30 rounded">
-                    <p className="text-sm text-blue-300">
-                        ⏱️ <strong>質押冷卻期</strong>：贖回請求後需等待 <span className="text-yellow-400 font-bold">{isLoading ? '讀取中...' : cooldownFormatted}</span> 才能領取
-                    </p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
-                    <div className="space-y-2">
-                        <div className="flex justify-between items-center py-2 px-2 sm:px-3 bg-gray-800/50 rounded">
-                            <span className="text-gray-300">VIP 1</span>
-                            <span className="text-yellow-400">$100+ USD 質押價值</span>
-                            <span className="text-green-400">0.5% 稅率減免</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 px-2 sm:px-3 bg-gray-800/50 rounded">
-                            <span className="text-gray-300">VIP 2</span>
-                            <span className="text-yellow-400">$400+ USD 質押價值</span>
-                            <span className="text-green-400">1% 稅率減免</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 px-2 sm:px-3 bg-gray-800/50 rounded">
-                            <span className="text-gray-300">VIP 3</span>
-                            <span className="text-yellow-400">$900+ USD 質押價值</span>
-                            <span className="text-green-400">1.5% 稅率減免</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 px-2 sm:px-3 bg-gray-800/50 rounded">
-                            <span className="text-gray-300">VIP 4</span>
-                            <span className="text-yellow-400">$1,600+ USD 質押價值</span>
-                            <span className="text-green-400">2% 稅率減免</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 px-2 sm:px-3 bg-gray-800/50 rounded">
-                            <span className="text-gray-300">VIP 5</span>
-                            <span className="text-yellow-400">$2,500+ USD 質押價值</span>
-                            <span className="text-green-400">2.5% 稅率減免</span>
+                {/* 重要提示區 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                    {/* 質押冷卻期 */}
+                    <div className="p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                        <div className="flex items-start gap-2">
+                            <span className="text-lg">⏱️</span>
+                            <div>
+                                <p className="text-sm font-medium text-blue-300">質押冷卻期</p>
+                                <p className="text-xs text-gray-400">
+                                    贖回請求後需等待 <span className="text-yellow-400 font-bold">{isLoading ? '讀取中...' : cooldownFormatted}</span> 才能領取
+                                </p>
+                            </div>
                         </div>
                     </div>
-                    <div className="space-y-2">
-                        <div className="flex justify-between items-center py-2 px-2 sm:px-3 bg-gray-800/50 rounded">
-                            <span className="text-gray-300">VIP 10</span>
-                            <span className="text-yellow-400">$10,000+ USD 質押價值</span>
-                            <span className="text-green-400">5% 稅率減免</span>
+                    
+                    {/* 等級計算公式 */}
+                    <div className="p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg">
+                        <div className="flex items-start gap-2">
+                            <span className="text-lg">🔢</span>
+                            <div>
+                                <p className="text-sm font-medium text-purple-300">等級計算</p>
+                                <p className="text-xs text-gray-400">
+                                    VIP等級 = √(USD價值/100)，平滑成長無上限
+                                </p>
+                            </div>
                         </div>
-                        <div className="flex justify-between items-center py-2 px-2 sm:px-3 bg-gray-800/50 rounded">
-                            <span className="text-gray-300">VIP 20</span>
-                            <span className="text-yellow-400">$40,000+ USD 質押價值</span>
-                            <span className="text-green-400">10% 稅率減免</span>
+                    </div>
+                </div>
+                {/* VIP 等級表格 - 改進版 */}
+                <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-gray-400 mb-2">質押門檻與提現稅率減免</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs sm:text-sm">
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center py-2.5 px-3 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors">
+                                <span className="text-gray-300 font-medium">VIP 1</span>
+                                <span className="text-yellow-400">$100+</span>
+                                <span className="text-green-400 font-medium">-0.5%</span>
+                            </div>
+                            <div className="flex justify-between items-center py-2.5 px-3 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors">
+                                <span className="text-gray-300 font-medium">VIP 2</span>
+                                <span className="text-yellow-400">$400+</span>
+                                <span className="text-green-400 font-medium">-1%</span>
+                            </div>
+                            <div className="flex justify-between items-center py-2.5 px-3 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors">
+                                <span className="text-gray-300 font-medium">VIP 3</span>
+                                <span className="text-yellow-400">$900+</span>
+                                <span className="text-green-400 font-medium">-1.5%</span>
+                            </div>
+                            <div className="flex justify-between items-center py-2.5 px-3 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors">
+                                <span className="text-gray-300 font-medium">VIP 4</span>
+                                <span className="text-yellow-400">$1,600+</span>
+                                <span className="text-green-400 font-medium">-2%</span>
+                            </div>
+                            <div className="flex justify-between items-center py-2.5 px-3 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors">
+                                <span className="text-gray-300 font-medium">VIP 5</span>
+                                <span className="text-yellow-400">$2,500+</span>
+                                <span className="text-green-400 font-medium">-2.5%</span>
+                            </div>
                         </div>
-                        <div className="mt-3 p-2 sm:p-3 bg-blue-900/20 border border-blue-500/30 rounded">
-                            <p className="text-xs text-blue-300 mb-2">
-                                💡 <strong>稅率減免</strong>適用於從玩家金庫提取代幣時的手續費
-                            </p>
-                            <p className="text-xs text-green-300 mb-2">
-                                ✅ <strong>等級計算</strong>：VIP等級 = √(USD價值/100)，平滑成長無上限<br/>
-                                🔢 <strong>稅率公式</strong>：每個VIP等級減免 0.5%
-                            </p>
-                            <p className="text-xs text-purple-300">
-                                {isAdmin ? (
-                                    <>
-                                        🏰 <strong>祭壇加成</strong>：現已支援自動 VIP 等級加成 + 管理員額外加成 ✅<br/>
-                                        ⚔️ <strong>地下城加成</strong>：自動生效，增加所有地下城的基礎成功率 ✅
-                                    </>
-                                ) : (
-                                    <>
-                                        🏰 <strong>祭壇加成</strong>：VIP 等級自動提升升星成功率 ✅<br/>
-                                        ⚔️ <strong>地下城加成</strong>：自動生效，增加所有地下城的基礎成功率 ✅
-                                    </>
-                                )}
-                            </p>
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center py-2.5 px-3 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors">
+                                <span className="text-gray-300 font-medium">VIP 10</span>
+                                <span className="text-yellow-400">$10,000+</span>
+                                <span className="text-green-400 font-medium">-5%</span>
+                            </div>
+                            <div className="flex justify-between items-center py-2.5 px-3 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors">
+                                <span className="text-gray-300 font-medium">VIP 20</span>
+                                <span className="text-yellow-400">$40,000+</span>
+                                <span className="text-green-400 font-medium">-10%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* 提現稅率說明 */}
+                    <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                        <div className="flex items-start gap-2">
+                            <span className="text-yellow-400">💡</span>
+                            <div className="text-xs space-y-1">
+                                <p className="text-yellow-300 font-medium">什麼是提現稅率？</p>
+                                <p className="text-gray-400">
+                                    當您從<strong className="text-yellow-300">玩家金庫</strong>提取代幣時，系統會收取基礎手續費。
+                                    <strong className="text-green-400">VIP 等級越高，手續費減免越多！</strong>
+                                </p>
+                                <div className="mt-2 space-y-1 text-xs">
+                                    <p>• 基礎稅率：由合約決定（通常為 10%）</p>
+                                    <p>• VIP 減免：每級減免 0.5%</p>
+                                    <p>• 範例：VIP 10 = 減免 5%，實際稅率 5%</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
             
             {/* 錢包授權說明 */}
-
             
             {isLoading && !tokenId ? (
                 <div className="flex justify-center"><LoadingSpinner /></div>
@@ -525,9 +598,12 @@ const VipPageContent: React.FC = () => {
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="text-xs sm:text-sm text-gray-400">稅率減免</div>
+                                    <div className="text-xs sm:text-sm text-gray-400">您的提現稅率</div>
                                     <div className="font-bold text-lg sm:text-2xl text-green-400">
-                                        {isLoading ? '...' : `${(Number(taxReduction) / 10000 * 100).toFixed(1)}%`}
+                                        {isLoading ? '...' : `${Math.max(0, 10 - (Number(taxReduction) / 10000 * 100)).toFixed(1)}%`}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                        減免: {isLoading ? '...' : `-${(Number(taxReduction) / 10000 * 100).toFixed(1)}%`}
                                     </div>
                                 </div>
                             </div>

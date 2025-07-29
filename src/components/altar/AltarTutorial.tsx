@@ -213,7 +213,7 @@ export const AltarTutorial: React.FC<AltarTutorialProps> = ({ isOpen, onClose })
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title=""
+      title="使用教學"
       showCloseButton={false}
       maxWidth="2xl"
       isTutorial={true}

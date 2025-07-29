@@ -81,7 +81,7 @@ export const Modal: React.FC<ModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
-      className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center backdrop-blur-sm px-4 py-4 overflow-y-auto overscroll-contain"
+      className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center backdrop-blur-sm px-4 py-4"
       style={{ zIndex: modalZIndex }}
       onClick={onClose}
     >

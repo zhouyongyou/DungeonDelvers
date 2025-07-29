@@ -1,0 +1,640 @@
+# =================================================================
+# Schema 設計藍圖 (最終修正版)
+# =================================================================
+
+type Player @entity(immutable: false) {
+  " 玩家的錢包地址 "
+  id: Bytes!
+  " 玩家擁有的所有英雄 "
+  heros: [Hero!] @derivedFrom(field: "owner")
+  " 玩家擁有的所有聖物 "
+  relics: [Relic!] @derivedFrom(field: "owner")
+  " 玩家擁有的所有隊伍 "
+  parties: [Party!] @derivedFrom(field: "owner")
+  " 玩家的 VIP 卡 (SBT)，一個玩家只會有一個 "
+  vip: VIP
+  " 玩家的個人檔案 (SBT)，一個玩家只會有一個 "
+  profile: PlayerProfile
+  " 玩家的金庫 "
+  vault: PlayerVault
+  " 玩家的所有升星嘗試紀錄 "
+  upgradeAttempts: [UpgradeAttempt!] @derivedFrom(field: "player")
+  " 玩家的統計數據 "
+  stats: PlayerStats @derivedFrom(field: "player")
+  " 玩家的所有出征紀錄 "
+  expeditions: [Expedition!] @derivedFrom(field: "player")
+}
+
+type Hero @entity(immutable: false) {
+  " 全域唯一 ID，格式為：`contractAddress-tokenId` "
+  id: String!
+  " NFT 的合約地址 "
+  contractAddress: Bytes!
+  " NFT 的 Token ID "
+  tokenId: BigInt!
+  " 英雄的擁有者 "
+  owner: Player!
+  " 稀有度 (1-5) "
+  rarity: Int!
+  " 戰力 "
+  power: BigInt!
+  " 創建時間戳 "
+  createdAt: BigInt!
+  " 最後升級時間戳 "
+  lastUpgradedAt: BigInt
+  " 是否已被銷毀 "
+  isBurned: Boolean!
+  " 銷毀時間戳 "
+  burnedAt: BigInt
+  " 升級歷史 "
+  upgradeHistory: [HeroUpgrade!] @derivedFrom(field: "hero")
+}
+
+type Relic @entity(immutable: false) {
+  " 全域唯一 ID，格式為：`contractAddress-tokenId` "
+  id: String!
+  " NFT 的合約地址 "
+  contractAddress: Bytes!
+  " NFT 的 Token ID "
+  tokenId: BigInt!
+  " 聖物的擁有者 "
+  owner: Player!
+  " 稀有度 (1-5) "
+  rarity: Int!
+  " 儲備容量 "
+  capacity: Int!
+  " 創建時間戳 "
+  createdAt: BigInt!
+  " 最後升級時間戳 "
+  lastUpgradedAt: BigInt
+  " 是否已被銷毀 "
+  isBurned: Boolean!
+  " 銷毀時間戳 "
+  burnedAt: BigInt
+  " 升級歷史 "
+  upgradeHistory: [RelicUpgrade!] @derivedFrom(field: "relic")
+}
+
+type Party @entity(immutable: false) {
+  " 全域唯一 ID，格式為：`contractAddress-tokenId` "
+  id: String!
+  " NFT 的合約地址 "
+  contractAddress: Bytes!
+  " NFT 的 Token ID "
+  tokenId: BigInt!
+  " 隊伍的擁有者 "
+  owner: Player!
+  " 隊伍名稱 "
+  name: String!
+  " 目前配置的英雄 ID 列表 "
+  heroIds: [String!]!
+  " 目前配置的英雄實體列表 "
+  heroes: [Hero!]!
+  " 總戰力 "
+  totalPower: BigInt!
+  " 總容量 (基於聖物) "
+  totalCapacity: BigInt!
+  " 隊伍稀有度 (1-5) "
+  partyRarity: Int!
+  # " 疲勞等級 (0-255) - 已禁用 "
+  # fatigueLevel: Int!
+  " 剩餘補給品數量 "
+  provisionsRemaining: Int!
+  " 未領取的獎勵 (SoulShard 數量) "
+  unclaimedRewards: BigInt!
+  " 冷卻結束時間戳 "
+  cooldownEndsAt: BigInt!
+  " 創建時間戳 "
+  createdAt: BigInt!
+  " 最後更新時間戳 (配置英雄或改名) "
+  lastUpdatedAt: BigInt
+  " 是否已被銷毀 "
+  isBurned: Boolean!
+  " 銷毀時間戳 "
+  burnedAt: BigInt
+  " 成員變更歷史 "
+  memberChanges: [PartyMemberChange!] @derivedFrom(field: "party")
+  " 出征歷史紀錄 "
+  expeditions: [Expedition!] @derivedFrom(field: "party")
+}
+
+type PlayerProfile @entity(immutable: false) {
+  " 使用錢包地址作為 ID "
+  id: Bytes!
+  " 擁有者 "
+  owner: Player!
+  " 玩家設定的名稱 "
+  name: String!
+  " 玩家等級 (根據經驗值計算) "
+  level: Int!
+  " 總經驗值 "
+  experience: BigInt!
+  " 成功的遠征次數 "
+  successfulExpeditions: Int!
+  " 總獲得獎勵 "
+  totalRewardsEarned: BigInt!
+  " 邀請人地址 "
+  inviter: Bytes
+  " 被邀請的玩家列表 "
+  invitees: [Bytes!]!
+  " 佣金獲得總額 "
+  commissionEarned: BigInt!
+  " 創建時間戳 "
+  createdAt: BigInt!
+  " 最後更新時間戳 "
+  lastUpdatedAt: BigInt
+}
+
+type VIP @entity(immutable: false) {
+  " 使用錢包地址作為 ID "
+  id: Bytes!
+  " 擁有者 "
+  owner: Player!
+  " 質押的 USDT 數量 "
+  stakedAmount: BigInt!
+  " 開始質押時間戳 "
+  stakedAt: BigInt!
+  " 解鎖時間戳 (如果有冷卻期) "
+  unlockTime: BigInt
+  " 是否正在解鎖中 "
+  isUnlocking: Boolean!
+  " 請求解鎖的時間戳 "
+  unlockRequestedAt: BigInt
+  " 創建時間戳 "
+  createdAt: BigInt!
+  " 最後更新時間戳 "
+  lastUpdatedAt: BigInt
+}
+
+type PlayerVault @entity(immutable: false) {
+  " 使用錢包地址作為 ID "
+  id: Bytes!
+  " 擁有者 "
+  owner: Player!
+  " 待領取的總獎勵 "
+  pendingRewards: BigInt!
+  " 已領取的總獎勵 "
+  claimedRewards: BigInt!
+  " 總儲備花費 "
+  totalProvisionSpent: BigInt!
+  " 最後領取時間戳 "
+  lastClaimedAt: BigInt
+  " 創建時間戳 "
+  createdAt: BigInt!
+  " 最後更新時間戳 "
+  lastUpdatedAt: BigInt
+}
+
+type UpgradeAttempt @entity(immutable: true) {
+  " 使用 `txHash-logIndex` 作為唯一 ID "
+  id: String!
+  " 執行升級的玩家 "
+  player: Player!
+  " 升級類型 (hero/relic) "
+  type: String!
+  " 被升級的目標 "
+  targetId: String!
+  " 被銷毀的材料 ID 列表 "
+  materialIds: [String!]!
+  " 被銷毀的材料實體列表 (英雄或聖物) "
+  materials: [String!]!
+  " 是否成功 "
+  isSuccess: Boolean!
+  " 新稀有度 (如果成功) "
+  newRarity: Int
+  " 時間戳 "
+  timestamp: BigInt!
+  
+  " V2Fixed new fields "
+  baseRarity: Int!
+  outcome: Int!
+  fee: BigInt!
+  burnedTokenIds: [BigInt!]!
+  mintedTokenIds: [BigInt!]!
+  
+  " V5 Optimized new fields "
+  vipLevel: Int
+  totalVipBonus: Int
+}
+
+type GlobalStats @entity(immutable: false) {
+  " 固定 ID = 'global' "
+  id: String!
+  " 總玩家數 "
+  totalPlayers: Int!
+  " 總英雄數 (包含已銷毀) "
+  totalHeroes: Int!
+  " 總聖物數 (包含已銷毀) "
+  totalRelics: Int!
+  " 總隊伍數 (包含已銷毀) "
+  totalParties: Int!
+  " 總升星嘗試次數 "
+  totalUpgradeAttempts: Int!
+  " 成功升星次數 "
+  successfulUpgrades: Int!
+  " 總遠征次數 "
+  totalExpeditions: Int!
+  " 成功遠征次數 "
+  successfulExpeditions: Int!
+  " 總獎勵發放 "
+  totalRewardsDistributed: BigInt!
+  " 最後更新時間戳 "
+  lastUpdatedAt: BigInt!
+}
+
+type PlayerStats @entity(immutable: false) {
+  " 使用錢包地址作為 ID "
+  id: Bytes!
+  " 關聯的玩家 "
+  player: Player!
+  " 總擁有英雄數 (不含已銷毀) "
+  totalHeroes: Int!
+  " 總擁有聖物數 (不含已銷毀) "
+  totalRelics: Int!
+  " 總擁有隊伍數 (不含已銷毀) "
+  totalParties: Int!
+  " 總遠征次數 "
+  totalExpeditions: Int!
+  " 成功遠征次數 "
+  successfulExpeditions: Int!
+  " 總獲得獎勵 "
+  totalRewardsEarned: BigInt!
+  " 最高隊伍戰力 "
+  highestPartyPower: BigInt!
+  " 總升星嘗試次數 "
+  totalUpgradeAttempts: Int!
+  " 成功升星次數 "
+  successfulUpgrades: Int!
+  " 最後活動時間戳 "
+  lastActivityAt: BigInt!
+}
+
+" V2Fixed Player Upgrade Stats "
+type PlayerUpgradeStats @entity(immutable: false) {
+  " Player address as ID "
+  id: String!
+  " Total upgrade attempts "
+  totalAttempts: BigInt!
+  " Total NFTs burned "
+  totalBurned: BigInt!
+  " Total NFTs minted "
+  totalMinted: BigInt!
+  " Total fees spent "
+  totalFeesSpent: BigInt!
+  " Last updated timestamp "
+  lastUpdated: BigInt!
+}
+
+" V2Fixed Global Upgrade Stats "
+type GlobalUpgradeStats @entity(immutable: false) {
+  " Fixed ID = 'global' "
+  id: String!
+  " Total upgrade attempts "
+  totalAttempts: BigInt!
+  " Total NFTs burned "
+  totalBurned: BigInt!
+  " Total NFTs minted "
+  totalMinted: BigInt!
+  " Total fees collected "
+  totalFeesCollected: BigInt!
+  " Last updated timestamp "
+  lastUpdated: BigInt!
+}
+
+type HeroUpgrade @entity(immutable: true) {
+  " 使用 `txHash-logIndex` 作為唯一 ID "
+  id: String!
+  " 升級的英雄 "
+  hero: Hero!
+  " 執行升級的玩家 "
+  owner: Player!
+  " 原始稀有度 "
+  oldRarity: Int!
+  " 新稀有度 "
+  newRarity: Int!
+  " 新戰力 "
+  newPower: BigInt!
+  " 時間戳 "
+  timestamp: BigInt!
+}
+
+type RelicUpgrade @entity(immutable: true) {
+  " 使用 `txHash-logIndex` 作為唯一 ID "
+  id: String!
+  " 升級的聖物 "
+  relic: Relic!
+  " 執行升級的玩家 "
+  owner: Player!
+  " 原始稀有度 "
+  oldRarity: Int!
+  " 新稀有度 "
+  newRarity: Int!
+  " 新容量 "
+  newCapacity: Int!
+  " 時間戳 "
+  timestamp: BigInt!
+}
+
+type PartyMemberChange @entity(immutable: true) {
+  " 使用 `txHash-logIndex` 作為唯一 ID "
+  id: String!
+  " 變更的隊伍 "
+  party: Party!
+  " 執行變更的玩家 "
+  owner: Player!
+  " 變更類型 (0: 添加, 1: 移除) "
+  changeType: Int!
+  " 相關的英雄 "
+  hero: Hero!
+  " 時間戳 "
+  timestamp: BigInt!
+}
+
+type Expedition @entity(immutable: true) {
+  " 使用 `txHash-logIndex` 作為唯一 ID "
+  id: String!
+  " 執行遠征的玩家 "
+  player: Player!
+  " 參與的隊伍 "
+  party: Party!
+  " 目標地下城 ID "
+  dungeonId: BigInt!
+  " 地下城名稱 "
+  dungeonName: String!
+  " 地下城戰力要求 "
+  dungeonPowerRequired: BigInt!
+  " 隊伍戰力 "
+  partyPower: BigInt!
+  " 是否成功 "
+  success: Boolean!
+  " 獲得的獎勵 (SoulShard) "
+  reward: BigInt!
+  " 獲得的經驗值 "
+  expGained: BigInt!
+  " 時間戳 "
+  timestamp: BigInt!
+  " 交易哈希 "
+  transactionHash: Bytes!
+}
+
+# =================================================================
+# 管理員數據實體 (新增)
+# =================================================================
+
+type AdminParameters @entity(immutable: false) {
+  " 固定 ID = 'admin' "
+  id: String!
+  
+  # 鑄造價格
+  " 英雄鑄造價格 (USD) "
+  heroMintPriceUSD: BigInt!
+  " 聖物鑄造價格 (USD) "
+  relicMintPriceUSD: BigInt!
+  " 儲備購買價格 (USD) "
+  provisionPriceUSD: BigInt!
+  
+  # 平台費用
+  " 英雄平台費 (BNB) "
+  heroPlatformFee: BigInt!
+  " 聖物平台費 (BNB) "
+  relicPlatformFee: BigInt!
+  " 隊伍平台費 (BNB) "
+  partyPlatformFee: BigInt!
+  " 遠征探索費 (BNB) "
+  explorationFee: BigInt!
+  
+  # 遊戲參數
+  " 休息成本係數 "
+  restCostPowerDivisor: BigInt!
+  " VIP 取消質押冷卻時間 (秒) "
+  vipUnstakeCooldown: BigInt!
+  " 全域獎勵倍率 (萬分位) "
+  globalRewardMultiplier: BigInt!
+  
+  # 稅務系統
+  " 邀請佣金率 (萬分位) "
+  commissionRate: BigInt!
+  
+  # Oracle 設定
+  " TWAP 週期 (秒) "
+  twapPeriod: BigInt!
+  
+  # 元數據
+  " 最後更新時間戳 "
+  lastUpdatedAt: BigInt!
+  " 更新者地址 "
+  updatedBy: Bytes!
+}
+
+type ContractRegistry @entity(immutable: false) {
+  " 固定 ID = 'contracts' "
+  id: String!
+  
+  # 核心合約
+  " DungeonCore 合約地址 "
+  dungeonCore: Bytes!
+  " Hero NFT 合約地址 "
+  hero: Bytes!
+  " Relic NFT 合約地址 "
+  relic: Bytes!
+  " Party NFT 合約地址 "
+  party: Bytes!
+  
+  # 遊戲邏輯合約
+  " DungeonMaster 合約地址 "
+  dungeonMaster: Bytes!
+  " PlayerVault 合約地址 "
+  playerVault: Bytes!
+  " Oracle 合約地址 "
+  oracle: Bytes!
+  " VipStaking 合約地址 "
+  vipStaking: Bytes!
+  " PlayerProfile 合約地址 "
+  playerProfile: Bytes!
+  " AltarOfAscension 合約地址 "
+  altarOfAscension: Bytes!
+  
+  # 元數據
+  " 最後更新時間戳 "
+  lastUpdatedAt: BigInt!
+  " 更新者地址 "
+  updatedBy: Bytes!
+}
+
+# =================================================================
+# 管理員操作日誌 (用於追蹤參數變更)
+# =================================================================
+
+type AdminAction @entity(immutable: true) {
+  " 使用 `txHash-logIndex` 作為唯一 ID "
+  id: String!
+  " 操作類型 (setParameter, setContract, etc.) "
+  actionType: String!
+  " 目標合約 "
+  targetContract: Bytes!
+  " 函數名稱 "
+  functionName: String!
+  " 參數名稱 "
+  parameterName: String!
+  " 舊值 (字符串格式) "
+  oldValue: String
+  " 新值 (字符串格式) "
+  newValue: String!
+  " 執行者地址 "
+  executor: Bytes!
+  " 交易哈希 "
+  transactionHash: Bytes!
+  " 時間戳 "
+  timestamp: BigInt!
+}
+
+# =================================================================
+# 市場相關實體
+# =================================================================
+
+type MarketListing @entity(immutable: false) {
+  " 掛單 ID "
+  id: String!
+  " 賣家地址 "
+  seller: Player!
+  " NFT 類型 (0=Hero, 1=Relic, 2=Party) "
+  nftType: Int!
+  " NFT 合約地址 "
+  nftContract: Bytes!
+  " NFT Token ID "
+  tokenId: BigInt!
+  " 價格 (SOUL tokens) "
+  price: BigInt!
+  " 掛單狀態 (0=Active, 1=Sold, 2=Cancelled) "
+  status: Int!
+  " 創建時間戳 "
+  createdAt: BigInt!
+  " 更新時間戳 "
+  updatedAt: BigInt!
+  " 關聯的英雄 (如果是英雄NFT) "
+  hero: Hero
+  " 關聯的聖物 (如果是聖物NFT) "
+  relic: Relic
+  " 關聯的隊伍 (如果是隊伍NFT) "
+  party: Party
+  " 價格歷史 "
+  priceHistory: [ListingPriceUpdate!] @derivedFrom(field: "listing")
+  " 相關出價 "
+  offers: [Offer!] @derivedFrom(field: "listing")
+}
+
+type ListingPriceUpdate @entity(immutable: true) {
+  " 使用 `listingId-timestamp` 作為 ID "
+  id: String!
+  " 關聯的掛單 "
+  listing: MarketListing!
+  " 舊價格 "
+  oldPrice: BigInt!
+  " 新價格 "
+  newPrice: BigInt!
+  " 更新時間戳 "
+  timestamp: BigInt!
+  " 交易哈希 "
+  transactionHash: Bytes!
+}
+
+type MarketTransaction @entity(immutable: true) {
+  " 使用 `txHash-logIndex` 作為 ID "
+  id: String!
+  " 交易類型 (ListingSold, ListingCancelled) "
+  type: String!
+  " 關聯的掛單 "
+  listing: MarketListing!
+  " 賣家 "
+  seller: Player!
+  " 買家 (如果是銷售) "
+  buyer: Player
+  " 成交價格 "
+  price: BigInt!
+  " 平台手續費 "
+  platformFee: BigInt!
+  " 交易時間戳 "
+  timestamp: BigInt!
+  " 交易哈希 "
+  transactionHash: Bytes!
+  " 區塊號 "
+  blockNumber: BigInt!
+}
+
+type Offer @entity(immutable: false) {
+  " 出價 ID "
+  id: String!
+  " 出價者 "
+  buyer: Player!
+  " NFT 擁有者 "
+  seller: Player!
+  " 關聯的掛單 (可選) "
+  listing: MarketListing
+  " NFT 類型 (0=Hero, 1=Relic, 2=Party) "
+  nftType: Int!
+  " NFT 合約地址 "
+  nftContract: Bytes!
+  " NFT Token ID "
+  tokenId: BigInt!
+  " 出價金額 (SOUL tokens) "
+  amount: BigInt!
+  " 到期時間戳 "
+  expiresAt: BigInt!
+  " 出價狀態 (0=Active, 1=Accepted, 2=Declined, 3=Expired, 4=Cancelled) "
+  status: Int!
+  " 出價信息 "
+  message: String!
+  " 創建時間戳 "
+  createdAt: BigInt!
+  " 關聯的英雄 (如果是英雄NFT) "
+  hero: Hero
+  " 關聯的聖物 (如果是聖物NFT) "
+  relic: Relic
+  " 關聯的隊伍 (如果是隊伍NFT) "
+  party: Party
+}
+
+type OfferTransaction @entity(immutable: true) {
+  " 使用 `txHash-logIndex` 作為 ID "
+  id: String!
+  " 交易類型 (OfferAccepted, OfferDeclined, OfferCancelled, OfferExpired) "
+  type: String!
+  " 關聯的出價 "
+  offer: Offer!
+  " 出價者 "
+  buyer: Player!
+  " NFT 擁有者 "
+  seller: Player!
+  " 出價金額 "
+  amount: BigInt!
+  " 平台手續費 (如果接受) "
+  platformFee: BigInt!
+  " 交易時間戳 "
+  timestamp: BigInt!
+  " 交易哈希 "
+  transactionHash: Bytes!
+  " 區塊號 "
+  blockNumber: BigInt!
+}
+
+# 市場統計
+type MarketStats @entity(immutable: false) {
+  " 固定 ID = 'market' "
+  id: String!
+  " 總掛單數 "
+  totalListings: Int!
+  " 活躍掛單數 "
+  activeListings: Int!
+  " 總成交數 "
+  totalSales: Int!
+  " 總成交額 "
+  totalVolume: BigInt!
+  " 總出價數 "
+  totalOffers: Int!
+  " 活躍出價數 "
+  activeOffers: Int!
+  " 已接受出價數 "
+  acceptedOffers: Int!
+  " 最後更新時間戳 "
+  lastUpdatedAt: BigInt!
+}

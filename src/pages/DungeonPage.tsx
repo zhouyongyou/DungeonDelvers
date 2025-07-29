@@ -66,13 +66,18 @@ const GET_PLAYER_PARTIES_QUERY = `
       parties {
         id
         tokenId
+        name
         totalPower
         totalCapacity
         partyRarity
         heroIds
         contractAddress
+        provisionsRemaining
+        cooldownEndsAt
         createdAt
+        lastUpdatedAt
         unclaimedRewards
+        isBurned
       }
     }
   }
@@ -248,7 +253,7 @@ const usePlayerParties = () => {
                 attributes: [],
                 contractAddress: getContract('PARTY')?.address ?? '0x',
                 type: 'party',
-                totalPower: BigInt(p.totalPower || '0'),
+                totalPower: BigInt(p.totalPower || p.power || '0'),
                 totalCapacity: BigInt(p.totalCapacity || '0'),
                 heroIds: (p.heroIds || []).map((id: string) => BigInt(id)),
                 relicIds: [], // 聖物數據需要從其他查詢獲取

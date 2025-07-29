@@ -57,9 +57,9 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
     React.useEffect(() => {
         if (isOpen && mode === 'create') {
             const allNfts = [
-                ...userNfts.heroes,
-                ...userNfts.relics,
-                ...userNfts.parties
+                ...(userNfts?.heros || []),
+                ...(userNfts?.relics || []),
+                ...(userNfts?.parties || [])
             ];
             
             // Filter out NFTs that are already listed

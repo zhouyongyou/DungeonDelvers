@@ -37,6 +37,9 @@ const GET_PLAYER_ASSETS_QUERY = `
       rarity 
       contractAddress
       createdAt
+      lastUpgradedAt
+      isBurned
+      burnedAt
     }
     relics(where: { owner: $owner }, skip: $skip, first: $first, orderBy: tokenId, orderDirection: asc) { 
       id 
@@ -45,18 +48,27 @@ const GET_PLAYER_ASSETS_QUERY = `
       rarity 
       contractAddress
       createdAt
+      lastUpgradedAt
+      isBurned
+      burnedAt
     }
     parties(where: { owner: $owner }, skip: $skip, first: $first, orderBy: tokenId, orderDirection: asc) {
       id
       tokenId
+      name
       totalPower
       totalCapacity
       partyRarity
       contractAddress
       heroIds
+      provisionsRemaining
+      cooldownEndsAt
+      createdAt
+      lastUpdatedAt
+      isBurned
+      burnedAt
       # NOTE: relicIds 欄位被暫時移除，因為子圖 schema 中 Party 實體沒有此欄位
       # TODO: 需要在子圖中添加 relicIds 欄位並重新部署
-      createdAt
     }
   }
 `;
@@ -67,9 +79,13 @@ const GET_PLAYER_VIP_QUERY = `
     player(id: $owner) {
       vip { 
         id 
-        stakedAmount 
+        stakedAmount
         stakedAt
+        unlockTime
         isUnlocking
+        unlockRequestedAt
+        createdAt
+        lastUpdatedAt
       }
     }
   }

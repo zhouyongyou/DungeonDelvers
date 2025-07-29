@@ -82,7 +82,8 @@ export const AltarRulesVisualization: React.FC<AltarRulesVisualizationProps> = (
   // 應用 VIP 加成到成功率（只影響普通成功率）
   const displayRule = {
     ...baseRule,
-    successChance: Math.min(baseRule.successChance + bonusRate, 95), // 限制最大95%
+    // 調整成功率，但確保總成功率不超過100%
+    successChance: Math.min(baseRule.successChance + bonusRate, 100 - baseRule.greatSuccessChance),
     // 大成功率不變
     greatSuccessChance: baseRule.greatSuccessChance,
     // 調整失敗率（如果有的話）

@@ -204,7 +204,7 @@ const AltarVipBonusManager: React.FC<{ chainId: number }> = ({ chainId }) => {
                       VIP 等級加成: <strong>{currentVipLevel}%</strong>
                     </div>
                     <div className="text-green-300">
-                      管理員額外加成: <strong>{additionalBonus}%</strong>
+                      神秘額外加成: <strong>{additionalBonus}%</strong>
                     </div>
                     <div className="text-yellow-300">
                       總加成: <strong>{effectiveVipBonus}%</strong> 

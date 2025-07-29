@@ -378,7 +378,9 @@ export function generateProfileSVG(profile: ProfileData): string {
     `;
     
     // 格式化地址
-    const shortAddress = `${profile.address.slice(0, 6)}...${profile.address.slice(-4)}`;
+    const shortAddress = profile.address 
+        ? `${profile.address.slice(0, 6)}...${profile.address.slice(-4)}`
+        : '0x0000...0000';
     
     return `${getSVGHeader()}
         ${getGlobalStyles()}

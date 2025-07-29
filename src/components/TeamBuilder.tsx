@@ -350,7 +350,7 @@ export const TeamBuilder = memo<TeamBuilderProps>(({
                                 variant="primary"
                                 className="flex-1"
                                 disabled={isAuthorizing}
-                                loading={isAuthorizing}
+                                isLoading={isAuthorizing}
                             >
                                 {isAuthorizing ? '授權中...' : 
                                  !isHeroAuthorized ? '授權英雄 NFT' : '授權聖物 NFT'}
@@ -361,7 +361,7 @@ export const TeamBuilder = memo<TeamBuilderProps>(({
                                 variant="primary"
                                 className="flex-1"
                                 disabled={!canCreateParty || isCreating}
-                                loading={isCreating}
+                                isLoading={isCreating}
                             >
                                 {isCreating ? '創建中...' : '創建隊伍'}
                             </ActionButton>
