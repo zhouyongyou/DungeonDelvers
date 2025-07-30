@@ -6,8 +6,9 @@ import { useQuery } from '@tanstack/react-query';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { formatEther, isAddress } from 'viem';
-import { Leaderboards } from '../components/leaderboards';
+import { LeaderboardsFixed } from '../components/leaderboards/LeaderboardsFixed';
 import { THE_GRAPH_API_URL, isGraphConfigured } from '../config/graphConfig';
+import { getContractWithABI } from '../config/contractsWithABI';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取
@@ -85,6 +86,15 @@ const GET_PLAYER_BASIC_INFO_QUERY = `
     }
   }
 `;
+
+// 構造 NFT ID（格式：contractAddress-tokenId）
+const constructNftId = (contractType: 'HERO' | 'RELIC' | 'PARTY', tokenId: string): string => {
+    const contract = getContractWithABI(contractType);
+    if (!contract) {
+        throw new Error(`合約配置未找到: ${contractType}`);
+    }
+    return `${contract.address.toLowerCase()}-${tokenId}`;
+};
 
 // 通用的 GraphQL 請求函式
 const fetchFromGraph = async (query: string, variables: Record<string, unknown>) => {
@@ -173,7 +183,8 @@ const HeroQuery: React.FC = () => {
         queryKey: ['gamedata', 'hero', submittedId],
         queryFn: async () => {
             if (!submittedId) return null;
-            const result = await fetchFromGraph(GET_HERO_BY_ID_QUERY, { id: submittedId });
+            const nftId = constructNftId('HERO', submittedId);
+            const result = await fetchFromGraph(GET_HERO_BY_ID_QUERY, { id: nftId });
             return result.hero;
         },
         enabled: !!submittedId,
@@ -217,7 +228,8 @@ const RelicQuery: React.FC = () => {
         queryKey: ['gamedata', 'relic', submittedId],
         queryFn: async () => {
             if (!submittedId) return null;
-            const result = await fetchFromGraph(GET_RELIC_BY_ID_QUERY, { id: submittedId });
+            const nftId = constructNftId('RELIC', submittedId);
+            const result = await fetchFromGraph(GET_RELIC_BY_ID_QUERY, { id: nftId });
             return result.relic;
         },
         enabled: !!submittedId,
@@ -261,7 +273,8 @@ const PartyQuery: React.FC = () => {
         queryKey: ['gamedata', 'party', submittedId],
         queryFn: async () => {
             if (!submittedId) return null;
-            const result = await fetchFromGraph(GET_PARTY_BY_ID_QUERY, { id: submittedId });
+            const nftId = constructNftId('PARTY', submittedId);
+            const result = await fetchFromGraph(GET_PARTY_BY_ID_QUERY, { id: nftId });
             return result.party;
         },
         enabled: !!submittedId,
@@ -421,7 +434,7 @@ const GameDataPage: React.FC = () => {
             <div className="space-y-6">
                 {activeTab === 'leaderboard' && (
                     <div>
-                        <Leaderboards />
+                        <LeaderboardsFixed />
                     </div>
                 )}
                 
