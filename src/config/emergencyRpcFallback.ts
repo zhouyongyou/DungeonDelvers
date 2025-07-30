@@ -20,8 +20,10 @@ const EMERGENCY_BSC_RPCS = [
   'https://bsc-dataseed2.binance.org/',
   'https://bsc-dataseed3.binance.org/',
   'https://bsc-dataseed4.binance.org/',
-  'https://bsc.publicnode.com',
+  // 'https://bsc.publicnode.com', // 移除：ERR_CONNECTION_CLOSED
   'https://1rpc.io/bnb',
+  'https://binance.nodereal.io',
+  'https://bsc-rpc.gateway.pokt.network',
   // 'https://bsc.meowrpc.com', // 移除：CORS 配置錯誤
 ];
 

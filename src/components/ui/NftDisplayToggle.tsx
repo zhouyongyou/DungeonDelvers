@@ -29,32 +29,34 @@ export const NftDisplayToggle: React.FC<NftDisplayToggleProps> = ({
       className={`
         ${sizeClasses[size]}
         flex items-center gap-2
-        bg-gray-700 hover:bg-gray-600
-        border border-gray-600 hover:border-gray-500
-        rounded-lg transition-all
-        text-gray-300 hover:text-white
+        bg-gradient-to-r ${displayMode === 'svg' ? 'from-blue-600 to-blue-700' : 'from-green-600 to-green-700'}
+        hover:${displayMode === 'svg' ? 'from-blue-500 to-blue-600' : 'from-green-500 to-green-600'}
+        border ${displayMode === 'svg' ? 'border-blue-500' : 'border-green-500'}
+        rounded-lg transition-all shadow-lg
+        text-white font-medium
         ${className}
       `}
       title={`切換到 ${displayMode === 'svg' ? 'PNG' : 'SVG'} 顯示`}
     >
       {/* 圖標 */}
-      <span className="text-lg">
+      <span className="flex items-center">
         {displayMode === 'svg' ? (
           // SVG 圖標
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <path d="M9 9l6 6M15 9l-6 6" />
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M10,19L8,14H10L12,19H10M14,19L12,14H14L16,19H14Z"/>
           </svg>
         ) : (
           // PNG 圖標
-          '🖼️'
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8.5,13.5L11,16.5L14.5,12L19,18H5M21,19V5C21,3.89 20.1,3 19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19Z"/>
+          </svg>
         )}
       </span>
       
       {/* 標籤 */}
       {showLabel && (
-        <span>
-          {displayMode === 'svg' ? 'SVG' : 'PNG'}
+        <span className="uppercase tracking-wide">
+          {displayMode === 'svg' ? 'SVG' : 'PNG'} 模式
         </span>
       )}
     </button>

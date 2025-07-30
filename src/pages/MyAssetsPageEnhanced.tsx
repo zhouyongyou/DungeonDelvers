@@ -129,12 +129,47 @@ const useMarketBrowser = (type: 'hero' | 'relic') => {
 // Section: Main Component
 // =================================================================
 
+// 排序選項類型
+type SortOption = {
+    value: string;
+    label: string;
+    icon?: string;
+};
+
+const sortOptions: Record<string, SortOption[]> = {
+    hero: [
+        { value: 'power-desc', label: '戰力高到低', icon: '⚔️' },
+        { value: 'power-asc', label: '戰力低到高', icon: '🗡️' },
+        { value: 'id-desc', label: 'ID 新到舊', icon: '🔢' },
+        { value: 'id-asc', label: 'ID 舊到新', icon: '🔤' },
+    ],
+    relic: [
+        { value: 'capacity-desc', label: '容量高到低', icon: '📦' },
+        { value: 'capacity-asc', label: '容量低到高', icon: '📦' },
+        { value: 'id-desc', label: 'ID 新到舊', icon: '🔢' },
+        { value: 'id-asc', label: 'ID 舊到新', icon: '🔤' },
+    ],
+    party: [
+        { value: 'power-desc', label: '總戰力高到低', icon: '⚔️' },
+        { value: 'power-asc', label: '總戰力低到高', icon: '🗡️' },
+        { value: 'id-desc', label: 'ID 新到舊', icon: '🔢' },
+        { value: 'id-asc', label: 'ID 舊到新', icon: '🔤' },
+    ],
+};
+
 const MyAssetsPageEnhanced: React.FC = () => {
     const { address, chainId } = useAccount();
     const [activeTab, setActiveTab] = useState<'myHeroes' | 'myRelics' | 'myParties' | 'marketHeroes' | 'marketRelics'>('myHeroes');
     const [showTeamBuilder, setShowTeamBuilder] = useState(false);
     const { showToast } = useAppToast();
     const queryClient = useQueryClient();
+    
+    // 排序狀態
+    const [heroSort, setHeroSort] = useState('power-desc');
+    const [relicSort, setRelicSort] = useState('capacity-desc');
+    const [partySort, setPartySort] = useState('power-desc');
+    const [marketHeroSort, setMarketHeroSort] = useState('power-desc');
+    const [marketRelicSort, setMarketRelicSort] = useState('capacity-desc');
     
     // 獲取頁面級快速操作
     const quickActions = usePageQuickActions();
@@ -226,6 +261,36 @@ const MyAssetsPageEnhanced: React.FC = () => {
         }
     });
     
+    // 排序函數
+    const sortNfts = <T extends any>(nfts: T[], sortOption: string, type: 'hero' | 'relic' | 'party'): T[] => {
+        const sorted = [...nfts];
+        
+        switch (sortOption) {
+            case 'power-desc':
+                return sorted.sort((a, b) => {
+                    const aPower = type === 'party' ? Number(a.totalPower) : a.power;
+                    const bPower = type === 'party' ? Number(b.totalPower) : b.power;
+                    return bPower - aPower;
+                });
+            case 'power-asc':
+                return sorted.sort((a, b) => {
+                    const aPower = type === 'party' ? Number(a.totalPower) : a.power;
+                    const bPower = type === 'party' ? Number(b.totalPower) : b.power;
+                    return aPower - bPower;
+                });
+            case 'capacity-desc':
+                return sorted.sort((a, b) => b.capacity - a.capacity);
+            case 'capacity-asc':
+                return sorted.sort((a, b) => a.capacity - b.capacity);
+            case 'id-desc':
+                return sorted.sort((a, b) => Number(b.id) - Number(a.id));
+            case 'id-asc':
+                return sorted.sort((a, b) => Number(a.id) - Number(b.id));
+            default:
+                return sorted;
+        }
+    };
+    
     const handleCreateParty = (heroIds: bigint[], relicIds: bigint[]) => {
         if (!platformFeeData) {
             showToast('無法獲取平台費用', 'error');
@@ -247,6 +312,28 @@ const MyAssetsPageEnhanced: React.FC = () => {
         createPartyTx.execute();
     };
     
+    // 排序選擇器組件
+    const SortSelector: React.FC<{
+        options: SortOption[];
+        value: string;
+        onChange: (value: string) => void;
+    }> = ({ options, value, onChange }) => (
+        <div className="flex items-center gap-2 mb-4">
+            <span className="text-gray-400 text-sm">排序方式：</span>
+            <select
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="bg-gray-700 text-gray-300 px-3 py-1 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
+            >
+                {options.map(option => (
+                    <option key={option.value} value={option.value}>
+                        {option.icon} {option.label}
+                    </option>
+                ))}
+            </select>
+        </div>
+    );
+    
     // Tab content renderer
     const renderTabContent = () => {
         if (activeTab.startsWith('market')) {
@@ -259,7 +346,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
             
             return (
                 <div className="space-y-4">
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center mb-2">
                         <p className="text-gray-400">
                             顯示 {marketData.page * marketData.pageSize + 1} - {Math.min((marketData.page + 1) * marketData.pageSize, marketData.data.length)} 項
                         </p>
@@ -280,18 +367,27 @@ const MyAssetsPageEnhanced: React.FC = () => {
                             </ActionButton>
                         </div>
                     </div>
+                    <SortSelector
+                        options={sortOptions[isHero ? 'hero' : 'relic']}
+                        value={isHero ? marketHeroSort : marketRelicSort}
+                        onChange={isHero ? setMarketHeroSort : setMarketRelicSort}
+                    />
                     <OptimizedNftGrid
-                        nfts={marketData.data.map((item: any) => ({
-                            ...item,
-                            type: (isHero ? 'hero' : 'relic') as NftType,
-                            tokenId: item.tokenId,
-                            metadata: {
-                                name: `${isHero ? 'Hero' : 'Relic'} #${item.tokenId}`,
-                                description: '',
-                                image: '',
-                                attributes: []
-                            }
-                        }))}
+                        nfts={sortNfts(
+                            marketData.data.map((item: any) => ({
+                                ...item,
+                                type: (isHero ? 'hero' : 'relic') as NftType,
+                                tokenId: item.tokenId,
+                                metadata: {
+                                    name: `${isHero ? 'Hero' : 'Relic'} #${item.tokenId}`,
+                                    description: '',
+                                    image: '',
+                                    attributes: []
+                                }
+                            })),
+                            isHero ? marketHeroSort : marketRelicSort,
+                            isHero ? 'hero' : 'relic'
+                        )}
                         onViewDetails={(nft) => {
                             // TODO: Implement view details modal
                             showToast(`查看 ${nft.type} #${nft.tokenId} 詳情`, 'info');
@@ -333,12 +429,19 @@ const MyAssetsPageEnhanced: React.FC = () => {
                         </div>
                     </div>
                 ) : (
-                    <OptimizedNftGrid
-                        nfts={heroes}
-                        onViewDetails={(nft) => {
-                            showToast(`查看英雄 #${nft.tokenId} 詳情`, 'info');
-                        }}
-                    />
+                    <>
+                        <SortSelector
+                            options={sortOptions.hero}
+                            value={heroSort}
+                            onChange={setHeroSort}
+                        />
+                        <OptimizedNftGrid
+                            nfts={sortNfts(heroes, heroSort, 'hero')}
+                            onViewDetails={(nft) => {
+                                showToast(`查看英雄 #${nft.tokenId} 詳情`, 'info');
+                            }}
+                        />
+                    </>
                 );
                 
             case 'myRelics':
@@ -366,12 +469,19 @@ const MyAssetsPageEnhanced: React.FC = () => {
                         </div>
                     </div>
                 ) : (
-                    <OptimizedNftGrid
-                        nfts={relics}
-                        onViewDetails={(nft) => {
-                            showToast(`查看聖物 #${nft.tokenId} 詳情`, 'info');
-                        }}
-                    />
+                    <>
+                        <SortSelector
+                            options={sortOptions.relic}
+                            value={relicSort}
+                            onChange={setRelicSort}
+                        />
+                        <OptimizedNftGrid
+                            nfts={sortNfts(relics, relicSort, 'relic')}
+                            onViewDetails={(nft) => {
+                                showToast(`查看聖物 #${nft.tokenId} 詳情`, 'info');
+                            }}
+                        />
+                    </>
                 );
                 
             case 'myParties':
@@ -408,12 +518,19 @@ const MyAssetsPageEnhanced: React.FC = () => {
                         </div>
                     </div>
                 ) : (
-                    <OptimizedNftGrid
-                        nfts={parties}
-                        onViewDetails={(nft) => {
-                            showToast(`查看隊伍 #${nft.tokenId} 詳情`, 'info');
-                        }}
-                    />
+                    <>
+                        <SortSelector
+                            options={sortOptions.party}
+                            value={partySort}
+                            onChange={setPartySort}
+                        />
+                        <OptimizedNftGrid
+                            nfts={sortNfts(parties, partySort, 'party')}
+                            onViewDetails={(nft) => {
+                                showToast(`查看隊伍 #${nft.tokenId} 詳情`, 'info');
+                            }}
+                        />
+                    </>
                 );
                 
             default:

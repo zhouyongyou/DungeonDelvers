@@ -579,7 +579,7 @@ async function parseNfts<T extends AssetWithTokenId>(
         const baseMetadata = {
             name: `${type.charAt(0).toUpperCase() + type.slice(1)} #${tokenId}`,
             description: `${type.charAt(0).toUpperCase() + type.slice(1)} NFT from DungeonDelvers`,
-            image: `/images/${type}/${type}.png`, // 使用默認圖片
+            image: '', // 圖片路徑將根據類型和稀有度設置
             attributes: [] as NftAttribute[]
         };
 
@@ -615,6 +615,7 @@ async function parseNfts<T extends AssetWithTokenId>(
                     type, 
                     power, 
                     rarity,
+                    image: `/images/hero/hero-${Math.max(1, Math.min(5, rarity))}.png`,
                     attributes: [
                         { trait_type: 'Power', value: power },
                         { trait_type: 'Rarity', value: rarity }
@@ -639,6 +640,7 @@ async function parseNfts<T extends AssetWithTokenId>(
                     type, 
                     capacity, 
                     rarity,
+                    image: `/images/relic/relic-${Math.max(1, Math.min(5, rarity))}.png`,
                     attributes: [
                         { trait_type: 'Capacity', value: capacity },
                         { trait_type: 'Rarity', value: rarity }
@@ -676,6 +678,7 @@ async function parseNfts<T extends AssetWithTokenId>(
                     level: Number(vipAsset.level || 0),
                     stakedAmount: BigInt(vipAsset.stakedAmount || 0),
                     stakedValueUSD: vipAsset.stakedValueUSD ? BigInt(vipAsset.stakedValueUSD) : undefined,
+                    image: '/images/vip/vip.png',
                     attributes: [
                         { trait_type: 'Level', value: Number(vipAsset.level || 0) },
                         { trait_type: 'Staked Amount', value: Number(vipAsset.stakedAmount || 0) }
