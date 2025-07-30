@@ -50,6 +50,14 @@ export function useEnhancedNfts({ owner, chainId }: UseEnhancedNftsProps) {
   const enhancedData: EnhancedNftCollections | undefined = useMemo(() => {
     if (!baseNftData) return undefined;
 
+    // 調試信息
+    console.log('🔍 Enhanced NFTs Debug:', {
+      baseVipCards: baseNftData.vipCards.length,
+      enhancedVipCard: enhancedVipCard ? 'exists' : 'null',
+      vipName: enhancedVipCard?.name,
+      vipLevel: enhancedVipCard?.currentLevel
+    });
+
     return {
       heros: baseNftData.heros,
       relics: baseNftData.relics,

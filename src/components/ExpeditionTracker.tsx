@@ -10,7 +10,7 @@ import { logger } from '../utils/logger';
 import { useQuery } from '@tanstack/react-query';
 import { request, gql } from 'graphql-request';
 import { useExpeditionResult } from '../contexts/ExpeditionContext';
-import { useEventPolling } from '../utils/eventPolling';
+import { useSmartEventListener } from '../utils/smartEventSystem';
 
 interface ExpeditionResult {
     partyId: bigint;
@@ -186,8 +186,8 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
             });
         };
 
-        // 註冊事件監聽
-        const unsubscribe = useEventPolling(
+        // 註冊智能事件監聽（自動選擇 Filter 或輪詢模式）
+        const unsubscribe = useSmartEventListener(
             'ExpeditionFulfilled-Tracker',
             dungeonMasterContract.address,
             'event ExpeditionFulfilled(indexed address player, indexed uint256 partyId, bool success, uint256 reward, uint256 expGained)',

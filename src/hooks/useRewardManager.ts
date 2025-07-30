@@ -7,7 +7,7 @@ import { getContractWithABI } from '../config/contractsWithABI';
 import { formatEther } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { logger } from '../utils/logger';
-import { useEventPolling } from '../utils/eventPolling';
+import { useSmartEventListener } from '../utils/smartEventSystem';
 import { useEffect } from 'react';
 
 interface UseRewardManagerProps {
@@ -109,8 +109,8 @@ export const useRewardManager = ({ partyId, chainId }: UseRewardManagerProps) =>
             });
         };
 
-        // 註冊事件監聽
-        const unsubscribeExpedition = useEventPolling(
+        // 註冊智能事件監聽（自動選擇 Filter 或輪詢模式）
+        const unsubscribeExpedition = useSmartEventListener(
             `ExpeditionFulfilled-RewardManager-${partyId}`,
             dungeonMasterContract.address,
             'event ExpeditionFulfilled(indexed address player, indexed uint256 partyId, bool success, uint256 reward, uint256 expGained)',
@@ -118,7 +118,7 @@ export const useRewardManager = ({ partyId, chainId }: UseRewardManagerProps) =>
             true
         );
 
-        const unsubscribeRewards = useEventPolling(
+        const unsubscribeRewards = useSmartEventListener(
             `RewardsBanked-RewardManager-${partyId}`,
             dungeonMasterContract.address,
             'event RewardsBanked(indexed address player, indexed uint256 partyId, uint256 amount)',
