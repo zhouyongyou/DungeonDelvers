@@ -32,6 +32,7 @@ import { AltarTutorial } from '../components/altar/AltarTutorial';
 import { AltarHistoryStats } from '../components/altar/AltarHistoryStats';
 import { AltarVipBonus } from '../components/altar/AltarVipBonus';
 import { AltarNftAuthManager } from '../components/altar/AltarNftAuthManager';
+import { AltarNftSelector } from '../components/altar/AltarNftSelector';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取 Hooks
@@ -949,78 +950,23 @@ const AltarPage = memo(() => {
                             <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-md border border-gray-600/30 rounded-2xl p-4 sm:p-5 md:p-6">
                                 <div className="flex justify-between items-center mb-3 sm:mb-4 md:mb-6">
                                     <h3 className="text-sm sm:text-base md:text-lg font-semibold text-white flex items-center gap-1 sm:gap-2">
-                                        <span className="hidden sm:inline">🎴 </span>選擇祭品 ({selectedNfts.length}/{currentRule?.materialsRequired ?? '...'})
+                                        <span className="hidden sm:inline">🎴 </span>選擇祭品
                                     </h3>
-                                    <div className="flex items-center gap-2">
-                                        {selectedNfts.length > 0 && (
-                                            <button
-                                                onClick={() => {
-                                                    setSelectedNfts([]);
-                                                    setShowConfirmModal(false);
-                                                }}
-                                                className="px-4 py-2 text-sm bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-all"
-                                            >
-                                                🗑️ 清除選擇
-                                            </button>
-                                        )}
-                                        {currentRule && selectedNfts.length === currentRule.materialsRequired - 1 && (
-                                            <span className="text-sm text-yellow-400 animate-pulse flex items-center gap-1">
-                                                ✨ 再選 1 個將自動彈出確認窗口
-                                            </span>
-                                        )}
-                                    </div>
+                                    {currentRule && selectedNfts.length === currentRule.materialsRequired - 1 && (
+                                        <span className="text-sm text-yellow-400 animate-pulse flex items-center gap-1">
+                                            ✨ 再選 1 個將自動彈出確認窗口
+                                        </span>
+                                    )}
                                 </div>
                                 
-                                {isLoading ? (
-                                    <div className="flex items-center justify-center py-16">
-                                        <LoadingSpinner />
-                                        <span className="ml-3 text-gray-400">載入祭品材料中...</span>
-                                    </div>
-                                ) : availableNfts && availableNfts.length > 0 ? (
-                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1 sm:gap-2 md:gap-3">
-                                        {availableNfts.map(nft => (
-                                            <div 
-                                                key={nft.id.toString()} 
-                                                onClick={() => handleSelectNft(nft.id)}
-                                                className={`relative cursor-pointer transition-all duration-300 ${
-                                                    selectedNfts.includes(nft.id) 
-                                                        ? 'ring-2 ring-yellow-400 scale-105 shadow-2xl shadow-yellow-400/40 transform -translate-y-1' 
-                                                        : 'hover:scale-105 hover:shadow-xl hover:transform hover:-translate-y-0.5'
-                                                }`}
-                                            >
-                                                {/* 選中時的光暈效果 */}
-                                                {selectedNfts.includes(nft.id) && (
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-yellow-400/20 to-transparent rounded-xl blur-xl"></div>
-                                                )}
-                                                
-                                                <NftCard 
-                                                    nft={nft} 
-                                                    selected={selectedNfts.includes(nft.id)}
-                                                />
-                                                
-                                                {/* 選中狀態指示器 */}
-                                                {selectedNfts.includes(nft.id) && (
-                                                    <div className="absolute top-2 left-2 bg-gradient-to-br from-yellow-400 to-yellow-600 text-gray-900 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-xl border-2 border-yellow-300">
-                                                        {selectedNfts.indexOf(nft.id) + 1}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-8 sm:py-12 md:py-16">
-                                        <div className="text-4xl sm:text-5xl md:text-6xl mb-3 sm:mb-4">🔮</div>
-                                        <EmptyState message={`沒有可用的 ${rarity}★ ${nftType === 'hero' ? '英雄' : '聖物'}`} />
-                                        <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg backdrop-blur-sm max-w-sm sm:max-w-md mx-auto">
-                                            <p className="text-xs sm:text-sm text-blue-200">
-                                                <span className="hidden sm:inline">📊 </span><strong>數據同步中</strong>
-                                            </p>
-                                            <p className="text-xs text-blue-300 mt-1">
-                                                合約已升級，子圖正在同步。請稍後再試。
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
+                                <AltarNftSelector
+                                    nfts={availableNfts || []}
+                                    selectedIds={selectedNfts}
+                                    onSelectNft={handleSelectNft}
+                                    maxSelection={currentRule?.materialsRequired || 1}
+                                    nftType={nftType}
+                                    isLoading={isLoading}
+                                />
                             </div>
                         </LocalErrorBoundary>
                     </div>

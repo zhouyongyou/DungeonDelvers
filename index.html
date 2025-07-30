@@ -17,8 +17,8 @@
     -->
 
     <!-- 基本資訊 -->
-    <title>Dungeon Delvers - 你的奇幻冒險由此開始</title>
-    <meta name="description" content="招募傳奇英雄，組建最強隊伍，深入被遺忘的地下城，尋找蘊含著世界本源能量的「魂晶」($SoulShard)！" />
+    <title>Soulbound Saga: 靈魂契約傳奇 - 完全上鏈的 Roguelike 史詩</title>
+    <meta name="description" content="在區塊鏈永恆記憶中譜寫您的傳奇。完全上鏈的 Roguelike 遊戲，探索程序地城，賺取 $SOUL，成為靈魂探索者！" />
 
     <!-- 網站圖示 (Favicon) - 路徑指向 public 資料夾 -->
     <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -29,20 +29,20 @@
     <meta name="theme-color" content="#1F1D36" />
 
     <!-- Open Graph (OG) 標籤 - 用於 Facebook, Telegram, Discord 等 -->
-    <meta property="og:title" content="Dungeon Delvers - 你的奇幻冒險由此開始" />
-    <meta property="og:description" content="招募傳奇英雄，組建最強隊伍，深入地城尋找「魂晶」($SoulShard)！" />
+    <meta property="og:title" content="Soulbound Saga: 靈魂契約傳奇" />
+    <meta property="og:description" content="完全上鏈的 Roguelike 史詩遊戲。在區塊鏈永恆記憶中譜寫您的傳奇，探索程序地城，賺取 $SOUL！" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://www.dungeondelvers.xyz/" />
     <!-- 【注意】請確保您 public 資料夾中的檔案名稱與此處完全一致 -->
     <meta property="og:image" content="https://www.dungeondelvers.xyz/og-cover-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:site_name" content="Dungeon Delvers" />
+    <meta property="og:site_name" content="Soulbound Saga" />
 
     <!-- Twitter Card 標籤 -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Dungeon Delvers - 你的奇幻冒險由此開始" />
-    <meta name="twitter:description" content="招募傳奇英雄，組建最強隊伍，深入地城尋找「魂晶」($SoulShard)！" />
+    <meta name="twitter:title" content="Soulbound Saga: 靈魂契約傳奇" />
+    <meta name="twitter:description" content="完全上鏈的 Roguelike 史詩遊戲。在區塊鏈永恆記憶中譜寫您的傳奇，探索程序地城，賺取 $SOUL！" />
     <!-- 【注意】請確保您 public 資料夾中的檔案名稱與此處完全一致 -->
     <meta name="twitter:image" content="https://www.dungeondelvers.xyz/twitter-cover-image.png" />
 
@@ -57,5 +57,12 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <!-- 修復 MIME type 錯誤 -->
+    <script>
+      // 確保模塊正確載入
+      if (typeof module === 'undefined') {
+        window.module = { exports: {} };
+      }
+    </script>
   </body>
 </html>
