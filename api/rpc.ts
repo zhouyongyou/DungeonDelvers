@@ -25,7 +25,7 @@ function getProtectedAlchemyKeys(): string[] {
   }
   
   // 去重並保持順序
-  return [...new Set(keys)];
+  return Array.from(new Set(keys));
 }
 
 // 公共 BSC RPC 備援節點（最後選擇）
@@ -106,7 +106,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(req.body),
-        timeout: 10000, // 10秒超時
       });
 
       if (!response.ok) {
@@ -150,7 +149,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(req.body),
-        timeout: 8000, // 公共節點8秒超時
       });
 
       if (!response.ok) {
