@@ -1,5 +1,5 @@
 // V25 Contract Configuration
-// Generated on 2025-07-30T13:48:02.217Z
+// Generated on 2025-07-30T17:27:43.327Z
 // DO NOT EDIT MANUALLY - Use v25-sync-all.js to update
 
 export const CONTRACTS = {
@@ -67,7 +67,7 @@ export const getContractAddress = (name: string): string => {
 export const CONTRACT_INFO = {
   version: CONTRACT_VERSION,
   network: "BSC Mainnet",
-  deploymentBlock: 55761797,
+  deploymentBlock: 55808316,
   lastUpdated: new Date().toISOString()
 };
 
