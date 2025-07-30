@@ -18,9 +18,9 @@
   },
   "subgraph": {
     "studio": {
-      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.2.9",
+      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.3.1",
       "description": "Studio version - 免費但有延遲，僅供探索功能",
-      "version": "v3.2.9"
+      "version": "v3.3.1"
     },
     "decentralized": {
       "url": "https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs",

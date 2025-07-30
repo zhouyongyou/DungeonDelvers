@@ -4,10 +4,31 @@ import { VIP } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { BigInt, log } from "@graphprotocol/graph-ts"
 
-// 根據質押金額計算VIP等級（模擬合約邏輯）
+// 安全的 BigInt 平方根計算
+function sqrtBigInt(value: BigInt): BigInt {
+    if (value.isZero()) return BigInt.fromI32(0)
+    if (value.equals(BigInt.fromI32(1))) return BigInt.fromI32(1)
+    
+    // 使用牛頓法計算平方根
+    let x = value
+    let y = value.plus(BigInt.fromI32(1)).div(BigInt.fromI32(2))
+    
+    // 限制迭代次數防止無限循環
+    let iterations = 0
+    const maxIterations = 100
+    
+    while (y.lt(x) && iterations < maxIterations) {
+        x = y
+        y = x.plus(value.div(x)).div(BigInt.fromI32(2))
+        iterations++
+    }
+    
+    return x
+}
+
+// 根據質押金額計算VIP等級（安全版本）
 function calculateVipTier(stakedAmount: BigInt): i32 {
     // 假設每100 SoulShard = 1 USD，需要100 USD才有VIP 1
-    // 這裡簡化處理，實際應該使用Oracle價格
     const usdValue = stakedAmount.div(BigInt.fromI32(100))
     if (usdValue.lt(BigInt.fromI32(100))) return 0
     
@@ -15,36 +36,16 @@ function calculateVipTier(stakedAmount: BigInt): i32 {
     // level = sqrt(usdValue / 100)
     const valueFor100 = usdValue.div(BigInt.fromI32(100))
     
-    // 簡單的平方根實現
-    // 對於 400 USD: valueFor100 = 4, sqrt(4) = 2, 所以 VIP 2
     if (valueFor100.isZero()) return 0
     
-    // 轉換為 i32 進行平方根計算
-    const valueI32 = valueFor100.toI32()
-    if (valueI32 > 2147483647) {
-        return 255 // 防止溢出
-    }
+    // 使用安全的BigInt平方根
+    const sqrtResult = sqrtBigInt(valueFor100)
     
-    // 簡單的整數平方根算法
-    let result = 0
-    let x = valueI32
-    let bit = 1 << 30 // 最高位開始
+    // 安全轉換為 i32，設定合理上限
+    const maxTier = BigInt.fromI32(255)
+    const tier = sqrtResult.gt(maxTier) ? maxTier : sqrtResult
     
-    while (bit > x) {
-        bit >>= 2
-    }
-    
-    while (bit != 0) {
-        if (x >= result + bit) {
-            x -= result + bit
-            result = (result >> 1) + bit
-        } else {
-            result >>= 1
-        }
-        bit >>= 2
-    }
-    
-    return result > 255 ? 255 : result
+    return tier.toI32()
 }
 
 export function handleStaked(event: Staked): void {
