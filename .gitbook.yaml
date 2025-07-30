@@ -1,3 +1,4 @@
+# GitBook configuration for Soulbound Saga documentation
 root: ./dungeon-delvers-whitepaper/gitbook-zh/
 
 structure:
@@ -8,4 +9,6 @@ redirects:
   - from: /
     to: /README.md
   - from: /index
+    to: /README.md
+  - from: /home
     to: /README.md

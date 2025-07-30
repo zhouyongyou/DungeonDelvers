@@ -66,7 +66,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     const { addTransaction, updateTransaction } = useTransactionHistory(address);
     
     // 使用合約直接讀取 VIP 等級和稅率資訊
-    const { vipLevel, taxReduction } = useVipStatus();
+    const { vipLevel, taxReduction, stakedAmount, isLoading: isLoadingVip, error: vipError } = useVipStatus();
     
     // Contract reads
     const playerProfileContract = getContractWithABI('PLAYERPROFILE');
@@ -184,6 +184,12 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     // Debug log
     if (import.meta.env.DEV) {
         console.log('Overview Page Data:', {
+            vipLevel,
+            vipTier,
+            taxReduction: taxReduction?.toString(),
+            stakedAmount: stakedAmount?.toString(),
+            isLoadingVip,
+            vipError,
             player,
             heroCount,
             relicCount,
@@ -344,17 +350,28 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                     
                     <StatCard
                         title="VIP 等級"
-                        value={vipTier > 0 ? `VIP ${vipTier}` : '未加入'}
+                        value={
+                            isLoadingVip 
+                                ? '讀取中...' 
+                                : vipTier > 0 
+                                    ? `VIP ${vipTier}` 
+                                    : stakedAmount && stakedAmount > 0n 
+                                        ? '計算中...' 
+                                        : '未加入'
+                        }
                         icon={<Icons.Crown className="h-5 w-5" />}
                         description={
                             vipTier > 0 
-                                ? "質押獲得：祭壇加成、稅率減免、地城加成"
-                                : "質押 SoulShard 獲得多重收益加成"
+                                ? `質押獲得：祭壇加成、稅率減免、地城加成`
+                                : stakedAmount && stakedAmount > 0n
+                                    ? `已質押 ${(Number(stakedAmount) / 1e18).toFixed(2)} SOUL`
+                                    : "質押 SoulShard 獲得多重收益加成"
                         }
                         action={
                             <ActionButton
                                 onClick={() => setActivePage('vip')}
                                 className="text-xs px-2 py-1"
+                                disabled={isLoadingVip}
                             >
                                 {vipTier > 0 ? '管理 VIP' : '成為 VIP'}
                             </ActionButton>

@@ -216,11 +216,22 @@ export const useVipStatus = () => {
     
     // ★ 核心修正 #2: 使用合約方法獲取VIP等級和稅率減免
     const { vipLevel, taxReduction } = useMemo(() => {
+        // 調試日誌
+        logger.debug('VIP 等級計算:', {
+            contractVipLevel,
+            contractTaxReduction,
+            stakedAmount: stakedAmount?.toString(),
+            vipData,
+            hasVipData: !!vipData,
+            vipDataLength: vipData?.length
+        });
+        
         // 優先使用合約返回的數據
         if (contractVipLevel !== undefined && contractTaxReduction !== undefined) {
             const level = Number(contractVipLevel);
             const reduction = BigInt(contractTaxReduction);
 
+            logger.info('使用合約返回的 VIP 等級:', { level, reduction: reduction.toString() });
             return { vipLevel: level, taxReduction: reduction };
         }
         
