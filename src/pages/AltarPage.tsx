@@ -518,16 +518,39 @@ const AltarPage = memo(() => {
         query: { enabled: !!altarContract && chainId === bsc.id },
     });
     
+    // 讀取玩家的最後升級時間
+    const { data: lastUpgradeTime } = useReadContract({
+        ...altarContract,
+        functionName: 'lastUpgradeTime',
+        args: address && rarity ? [address, rarity] : undefined,
+        query: { 
+            enabled: !!address && !!altarContract && !!rarity,
+            refetchInterval: 10000, // 每10秒更新一次
+        },
+    });
+    
     const currentRule = useMemo(() => {
         if (!upgradeRulesData || rarity < 1 || rarity > 4) return null;
         const ruleResult = upgradeRulesData[rarity - 1];
         if (ruleResult.status === 'success' && Array.isArray(ruleResult.result)) {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            const [materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance] = ruleResult.result as unknown as [number, bigint, number, number, number];
-            return { materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance };
+            const [materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance, cooldownTime, isActive] = ruleResult.result as unknown as [number, bigint, number, number, number, bigint, boolean];
+            return { materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance, cooldownTime, isActive };
         }
         return null;
     }, [upgradeRulesData, rarity]);
+    
+    // 計算剩餘冷卻時間
+    const remainingCooldown = useMemo(() => {
+        if (!lastUpgradeTime || !currentRule?.cooldownTime) return 0;
+        
+        const now = Math.floor(Date.now() / 1000);
+        const lastTime = Number(lastUpgradeTime);
+        const cooldown = Number(currentRule.cooldownTime);
+        const elapsed = now - lastTime;
+        
+        return Math.max(0, cooldown - elapsed);
+    }, [lastUpgradeTime, currentRule]);
 
     const handleSelectNft = (id: bigint) => {
         setSelectedNfts(prev => {
@@ -912,14 +935,31 @@ const AltarPage = memo(() => {
                             </div>
                         )}
 
+                        {/* 冷卻時間提示 */}
+                        {remainingCooldown > 0 && (
+                            <div className="bg-gradient-to-r from-blue-900/30 to-cyan-900/30 border border-blue-500/30 rounded-xl p-4 text-center">
+                                <div className="flex items-center justify-center gap-2 text-blue-300">
+                                    <span className="text-2xl">⏱️</span>
+                                    <div>
+                                        <p className="font-semibold">冷卻中</p>
+                                        <p className="text-sm">
+                                            剩餘時間：{Math.floor(remainingCooldown / 3600)}小時 
+                                            {Math.floor((remainingCooldown % 3600) / 60)}分 
+                                            {remainingCooldown % 60}秒
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* 升星按鈕 */}
                         <ActionButton 
                             onClick={() => setShowConfirmModal(true)} 
                             isLoading={isTxPending} 
-                            disabled={isTxPending || !currentRule || selectedNfts.length !== currentRule.materialsRequired || !isApprovedForAll} 
+                            disabled={isTxPending || !currentRule || selectedNfts.length !== currentRule.materialsRequired || !isApprovedForAll || remainingCooldown > 0} 
                             className="w-full h-16 text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:from-gray-600 disabled:to-gray-700 shadow-xl"
                         >
-                            {isTxPending ? '⚡ 神秘儀式進行中...' : '🔮 開始升星儀式'}
+                            {remainingCooldown > 0 ? '⏱️ 冷卻中...' : isTxPending ? '⚡ 神秘儀式進行中...' : '🔮 開始升星儀式'}
                         </ActionButton>
                     </div>
 

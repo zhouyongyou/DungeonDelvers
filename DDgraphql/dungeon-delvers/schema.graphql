@@ -150,6 +150,8 @@ type VIP @entity(immutable: false) {
   id: Bytes!
   " 擁有者 "
   owner: Player!
+  " VIP 等級 (1-5) "
+  tier: Int!
   " 質押的 USDT 數量 "
   stakedAmount: BigInt!
   " 開始質押時間戳 "

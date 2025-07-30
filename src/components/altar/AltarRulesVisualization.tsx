@@ -10,6 +10,8 @@ interface RuleData {
   greatSuccessChance: number;
   successChance: number;
   partialFailChance: number;
+  cooldownTime?: bigint;
+  isActive?: boolean;
 }
 
 interface AltarRulesVisualizationProps {
@@ -192,6 +194,12 @@ export const AltarRulesVisualization: React.FC<AltarRulesVisualizationProps> = (
               <span className="text-purple-300">💎 儀式費用</span>
               <span className="font-bold text-yellow-400">免費</span>
             </div>
+            {rule.cooldownTime && (
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-purple-300">⏱️ 冷卻時間</span>
+                <span className="font-bold text-blue-400">{Number(rule.cooldownTime) / 3600} 小時</span>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

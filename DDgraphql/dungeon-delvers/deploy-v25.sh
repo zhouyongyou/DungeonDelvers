@@ -12,14 +12,13 @@ fi
 
 # 檢查 networks.json 是否包含新地址
 echo "📋 檢查合約地址..."
-HERO_ADDRESS=$(grep -o '"0x2F9c6EF3B2447417E633fD9e05E30B152dC691EE"' networks.json)
+HERO_ADDRESS=$(grep -o '"0xF6A318568CFF7704c24C1Ab81B34de26Cd473d40"' networks.json)
 if [ -z "$HERO_ADDRESS" ]; then
-    echo "❌ 錯誤：networks.json 中沒有找到 V25 合約地址"
-    echo "請先執行 v25-sync-all.js 同步合約地址"
+    echo "❌ 錯誤：networks.json 中沒有找到合約地址"
     exit 1
 fi
 
-echo "✅ 確認使用 V25 合約地址"
+echo "✅ 確認使用合約地址"
 
 # 1. 運行 codegen
 echo "🔧 運行 graph codegen..."

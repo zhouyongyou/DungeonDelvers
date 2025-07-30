@@ -13,15 +13,14 @@ const tutorialSteps = [
     content: (
       <div className="space-y-4">
         <div className="text-center">
-          <div className="text-6xl mb-4">🏛️</div>
-          <p className="text-lg text-gray-300 leading-relaxed">
+          <p className="text-lg text-gray-300 leading-relaxed mb-4">
             這裡是古老的升星祭壇，您可以將多個同星級的 NFT 作為祭品，
             通過神秘儀式合成更高星級的強大資產。
           </p>
         </div>
-        <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4">
+        <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-3">
           <p className="text-sm text-purple-200">
-            ✨ <strong>重要提醒：</strong>升星結果完全由鏈上隨機數決定，
+            <strong>重要提醒：</strong>升星結果完全由鏈上隨機數決定，
             確保絕對公平且無法人為操控。
           </p>
         </div>
@@ -32,26 +31,23 @@ const tutorialSteps = [
     title: "選擇升級目標",
     content: (
       <div className="space-y-4">
-        <div className="text-center mb-4">
-          <div className="text-5xl mb-3">🎯</div>
-        </div>
-        <div className="grid grid-cols-1 gap-4">
-          <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
-            <h4 className="font-semibold text-blue-300 mb-2">1️⃣ 選擇 NFT 類型</h4>
+        <div className="grid grid-cols-1 gap-3">
+          <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
+            <h4 className="font-semibold text-blue-300 mb-1">1. 選擇 NFT 類型</h4>
             <p className="text-sm text-blue-200">
               選擇要升星的 NFT 類型：<strong>英雄</strong> 或 <strong>聖物</strong>
             </p>
           </div>
-          <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-lg p-4">
-            <h4 className="font-semibold text-indigo-300 mb-2">2️⃣ 選擇當前星級</h4>
+          <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-lg p-3">
+            <h4 className="font-semibold text-indigo-300 mb-1">2. 選擇當前星級</h4>
             <p className="text-sm text-indigo-200">
               選擇要升星的 NFT 當前星級 (1★ → 2★, 2★ → 3★, 等等)
             </p>
           </div>
         </div>
-        <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3">
+        <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-2 mt-3">
           <p className="text-xs text-yellow-200">
-            💡 <strong>小提示：</strong>不同星級需要的祭品數量和成功率都不同哦！
+            <strong>小提示：</strong>不同星級需要的祭品數量和成功率都不同哦！
           </p>
         </div>
       </div>
@@ -61,29 +57,17 @@ const tutorialSteps = [
     title: "理解升星規則",
     content: (
       <div className="space-y-4">
-        <div className="text-center">
-          <div className="text-5xl mb-3">📊</div>
-        </div>
-        <div className="space-y-3">
-          <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-purple-400">⚜️</span>
-              <strong className="text-purple-300">神跡降臨 (大成功)</strong>
-            </div>
+        <div className="space-y-2">
+          <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-2">
+            <strong className="text-purple-300">神跡降臨 (大成功)</strong>
             <p className="text-sm text-purple-200">獲得 <strong>2 個</strong>更高星級的 NFT</p>
           </div>
-          <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-green-400">✨</span>
-              <strong className="text-green-300">祝福成功 (普通成功)</strong>
-            </div>
+          <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-2">
+            <strong className="text-green-300">祝福成功 (普通成功)</strong>
             <p className="text-sm text-green-200">獲得 <strong>1 個</strong>更高星級的 NFT</p>
           </div>
-          <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-red-400">💀</span>
-              <strong className="text-red-300">祭品消散 (失敗)</strong>
-            </div>
+          <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-2">
+            <strong className="text-red-300">祭品消散 (失敗)</strong>
             <p className="text-sm text-red-200">失去所有祭品材料</p>
           </div>
         </div>
@@ -94,20 +78,17 @@ const tutorialSteps = [
     title: "選擇祭品材料",
     content: (
       <div className="space-y-4">
-        <div className="text-center">
-          <div className="text-5xl mb-3">🎴</div>
-        </div>
         <div className="space-y-3">
-          <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
-            <h4 className="font-semibold text-blue-300 mb-2">材料選擇策略</h4>
+          <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
+            <h4 className="font-semibold text-blue-300 mb-1">材料選擇策略</h4>
             <ul className="text-sm text-blue-200 space-y-1">
               <li>• 點擊 NFT 卡片來選擇/取消選擇</li>
               <li>• 建議優先選擇戰力/容量較低的作為祭品</li>
               <li>• 選滿所需數量後會自動彈出確認窗口</li>
             </ul>
           </div>
-          <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4">
-            <h4 className="font-semibold text-purple-300 mb-2">授權提醒</h4>
+          <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-3">
+            <h4 className="font-semibold text-purple-300 mb-1">授權提醒</h4>
             <p className="text-sm text-purple-200">
               首次使用需要先授權祭壇合約操作您的 NFT，
               這是區塊鏈安全機制的必要步驟。
@@ -121,12 +102,9 @@ const tutorialSteps = [
     title: "執行神秘儀式",
     content: (
       <div className="space-y-4">
-        <div className="text-center">
-          <div className="text-5xl mb-3">⚡</div>
-        </div>
         <div className="space-y-3">
-          <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
-            <h4 className="font-semibold text-yellow-300 mb-2">儀式流程</h4>
+          <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3">
+            <h4 className="font-semibold text-yellow-300 mb-1">儀式流程</h4>
             <ol className="text-sm text-yellow-200 space-y-1 list-decimal list-inside">
               <li>確認選擇的祭品和規則</li>
               <li>點擊「開始升星」按鈕</li>
@@ -136,8 +114,8 @@ const tutorialSteps = [
               <li>查看升星結果</li>
             </ol>
           </div>
-          <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
-            <h4 className="font-semibold text-red-300 mb-2">⚠️ 風險提醒</h4>
+          <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
+            <h4 className="font-semibold text-red-300 mb-1">風險提醒</h4>
             <ul className="text-sm text-red-200 space-y-1">
               <li>• 升星有失敗風險，祭品可能完全消失</li>
               <li>• 高星級升星失敗率較高，請謹慎考慮</li>
@@ -152,24 +130,23 @@ const tutorialSteps = [
     title: "開始您的升星之旅",
     content: (
       <div className="space-y-4">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🌟</div>
-          <h3 className="text-xl font-bold text-white mb-4">準備好挑戰命運了嗎？</h3>
+        <div className="text-center mb-4">
+          <h3 className="text-xl font-bold text-white">準備好挑戰命運了嗎？</h3>
         </div>
         
-        <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 border border-purple-500/30 rounded-lg p-6">
-          <h4 className="text-lg font-semibold text-purple-300 mb-3 text-center">
-            ✨ 升星小貼士 ✨
+        <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 border border-purple-500/30 rounded-lg p-4">
+          <h4 className="text-lg font-semibold text-purple-300 mb-2 text-center">
+            升星小貼士
           </h4>
-          <div className="space-y-2 text-sm text-purple-200">
-            <p>🎯 <strong>建議策略：</strong>先用低價值的 NFT 熟悉流程</p>
-            <p>📊 <strong>數據分析：</strong>關注成功率圓形圖，理性評估風險</p>
-            <p>💎 <strong>長期思維：</strong>高星級 NFT 價值更高，但風險也更大</p>
-            <p>🤝 <strong>社群討論：</strong>與其他玩家分享升星經驗</p>
+          <div className="space-y-1 text-sm text-purple-200">
+            <p><strong>建議策略：</strong>先用低價值的 NFT 熟悉流程</p>
+            <p><strong>數據分析：</strong>關注成功率圓形圖，理性評估風險</p>
+            <p><strong>長期思維：</strong>高星級 NFT 價值更高，但風險也更大</p>
+            <p><strong>社群討論：</strong>與其他玩家分享升星經驗</p>
           </div>
         </div>
 
-        <div className="text-center">
+        <div className="text-center mt-4">
           <p className="text-gray-400 text-sm italic">
             "願星辰指引您的道路，祝您獲得傳說級的寶物！"
           </p>

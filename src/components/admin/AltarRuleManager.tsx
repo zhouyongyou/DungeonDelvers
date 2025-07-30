@@ -46,6 +46,8 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
     greatSuccessChance: string;
     successChance: string;
     partialFailChance: string;
+    cooldownTime: string;
+    isActive: boolean;
   }>>({});
 
   useEffect(() => {
@@ -58,16 +60,20 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
           greatSuccessChance: string;
           successChance: string;
           partialFailChance: string;
+          cooldownTime: string;
+          isActive: boolean;
         }
       > = {};
       rulesData.forEach((d, i) => {
         if (d.status === 'success' && Array.isArray(d.result)) {
-          const [materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance] = d.result as [
+          const [materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance, cooldownTime, isActive] = d.result as [
             number,
             bigint,
             number,
             number,
-            number
+            number,
+            bigint,
+            boolean
           ];
           if (materialsRequired !== undefined) {
             initialInputs[i + 1] = {
@@ -75,7 +81,9 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
               nativeFee: formatEther(nativeFee),
               greatSuccessChance: greatSuccessChance.toString(),
               successChance: successChance.toString(),
-              partialFailChance: partialFailChance.toString()
+              partialFailChance: partialFailChance.toString(),
+              cooldownTime: (Number(cooldownTime) / 3600).toString(), // 轉換為小時
+              isActive: isActive
             };
           }
         }
@@ -84,7 +92,7 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
     }
   }, [rulesData]);
 
-  const handleInputChange = (id: number, field: string, value: string) => {
+  const handleInputChange = (id: number, field: string, value: string | boolean) => {
     setRuleInputs(prev => ({
       ...prev,
       [id]: { ...prev[id], [field]: value }
@@ -109,7 +117,9 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
             nativeFee: parseEther(inputs.nativeFee),
             greatSuccessChance: Number(inputs.greatSuccessChance),
             successChance: Number(inputs.successChance),
-            partialFailChance: Number(inputs.partialFailChance)
+            partialFailChance: Number(inputs.partialFailChance),
+            cooldownTime: BigInt(Number(inputs.cooldownTime) * 3600), // 轉換小時為秒
+            isActive: inputs.isActive
           }
         ],
       });
@@ -166,7 +176,9 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
           nativeFee: '',
           greatSuccessChance: '',
           successChance: '',
-          partialFailChance: ''
+          partialFailChance: '',
+          cooldownTime: '',
+          isActive: true
         };
         
         return (
@@ -235,10 +247,35 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
                   className="input-field"
                 />
               </div>
+              <div>
+                <label htmlFor={`rule-${ruleId}-cooldown`} className="text-xs text-gray-400 block mb-1">冷卻時間 (小時)</label>
+                <input
+                  id={`rule-${ruleId}-cooldown`}
+                  name={`rule-${ruleId}-cooldown`}
+                  type="text"
+                  value={inputs.cooldownTime}
+                  onChange={e => handleInputChange(ruleId, 'cooldownTime', e.target.value)}
+                  placeholder="冷卻時間 (小時)"
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label htmlFor={`rule-${ruleId}-active`} className="text-xs text-gray-400 block mb-1">啟用狀態</label>
+                <select
+                  id={`rule-${ruleId}-active`}
+                  name={`rule-${ruleId}-active`}
+                  value={inputs.isActive ? 'true' : 'false'}
+                  onChange={e => handleInputChange(ruleId, 'isActive', e.target.value === 'true')}
+                  className="input-field"
+                >
+                  <option value="true">啟用</option>
+                  <option value="false">停用</option>
+                </select>
+              </div>
               <ActionButton
                 onClick={() => handleUpdateRule(ruleId)}
                 isLoading={pendingRule === ruleId}
-                className="h-10"
+                className="h-10 sm:col-span-3"
               >
                 更新
               </ActionButton>

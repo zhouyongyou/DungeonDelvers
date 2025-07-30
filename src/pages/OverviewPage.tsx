@@ -153,6 +153,19 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     const pendingVaultRewards = vaultBalance ? formatEther(vaultBalance as bigint) : '0';
     const vipTier = player?.vip?.tier || 0;
     
+    // Debug log
+    if (import.meta.env.DEV) {
+        console.log('Overview Page Data:', {
+            player,
+            heroCount,
+            relicCount,
+            vipTier,
+            rawVipData: player?.vip,
+            rawHeroData: player?.heros,
+            rawRelicData: player?.relics
+        });
+    }
+    
     // Calculate unclaimed party rewards
     const unclaimedPartyRewards = useMemo(() => {
         if (!player?.parties) return '0';
@@ -198,8 +211,12 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                             {showProfileSVG ? '隱藏' : '顯示'}檔案卡片
                         </ActionButton>
                         <ActionButton
-                            onClick={() => refetch()}
+                            onClick={() => {
+                                refetch();
+                                showToast('正在刷新數據...', 'info');
+                            }}
                             className="px-4 py-2"
+                            title="刷新數據"
                         >
                             <Icons.RefreshCw className="h-4 w-4" />
                         </ActionButton>
