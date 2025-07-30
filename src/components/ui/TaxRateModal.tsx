@@ -19,8 +19,11 @@ export const TaxRateModal: React.FC<TaxRateModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 relative animate-fadeIn">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+            <div 
+                className="bg-gray-800 rounded-lg max-w-lg w-full p-6 relative animate-fadeIn shadow-2xl border border-gray-700"
+                onClick={(e) => e.stopPropagation()}
+            >
                 <button
                     onClick={onClose}
                     className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
@@ -84,19 +87,61 @@ export const TaxRateModal: React.FC<TaxRateModalProps> = ({
                         </div>
                     </div>
 
-                    {/* 公式說明 */}
-                    <div className="bg-blue-900/20 border border-blue-700/30 rounded-lg p-4">
-                        <p className="text-sm text-blue-300">
-                            <span className="font-semibold">📚 計算公式：</span><br />
-                            實際稅率 = 25% - (VIP 等級 × 0.5%)
+                    {/* 詳細計算說明 */}
+                    <div className="bg-gray-700/50 rounded-lg p-4">
+                        <h3 className="text-lg font-semibold text-[#C0A573] mb-3">計算機制</h3>
+                        <div className="space-y-3">
+                            <div className="bg-gray-800/50 rounded p-3">
+                                <p className="text-sm font-semibold text-white mb-1">基礎公式</p>
+                                <p className="text-sm text-gray-300 font-mono">
+                                    實際稅率 = 基礎稅率 - VIP 減免
+                                </p>
+                            </div>
+                            <div className="bg-gray-800/50 rounded p-3">
+                                <p className="text-sm font-semibold text-white mb-1">VIP 減免計算</p>
+                                <p className="text-sm text-gray-300 font-mono">
+                                    VIP 減免 = VIP 等級 × 0.5%
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                    每個 VIP 等級減少 0.5% 稅率
+                                </p>
+                            </div>
+                            <div className="bg-gray-800/50 rounded p-3">
+                                <p className="text-sm font-semibold text-white mb-1">範例計算</p>
+                                <p className="text-sm text-gray-300">
+                                    VIP 5：25% - (5 × 0.5%) = 22.5%<br />
+                                    VIP 10：25% - (10 × 0.5%) = 20.0%
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 稅率上限說明 */}
+                    <div className="bg-yellow-900/20 border border-yellow-700/30 rounded-lg p-4">
+                        <p className="text-sm text-yellow-300">
+                            <span className="font-semibold">⚠️ 注意：</span><br />
+                            最低稅率為 20%（需要 VIP 10）<br />
+                            提款時將自動扣除相應稅額
                         </p>
                     </div>
 
                     {/* 行動呼籲 */}
-                    {vipTier === 0 && (
+                    {vipTier === 0 ? (
                         <div className="bg-gradient-to-r from-purple-900/20 to-pink-900/20 border border-purple-700/30 rounded-lg p-4 text-center">
-                            <p className="text-purple-300 font-medium">
+                            <p className="text-purple-300 font-medium mb-2">
                                 💎 質押 SoulShard 成為 VIP，享受稅率減免！
+                            </p>
+                            <p className="text-xs text-purple-400">
+                                質押金額決定 VIP 等級，等級越高減免越多
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="bg-gradient-to-r from-green-900/20 to-emerald-900/20 border border-green-700/30 rounded-lg p-4 text-center">
+                            <p className="text-green-300 font-medium">
+                                ✨ 您已享有 VIP {vipTier} 稅率優惠
+                            </p>
+                            <p className="text-xs text-green-400">
+                                繼續質押可提升等級，獲得更多減免
                             </p>
                         </div>
                     )}

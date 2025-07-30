@@ -36,6 +36,8 @@ import { useRealtimeExpeditions } from '../hooks/useRealtimeExpeditions';
 import { usePartyValidation } from '../hooks/usePartyValidation';
 import { useBatchOperations } from '../hooks/useBatchOperations';
 import { Icons } from '../components/ui/icons';
+import { generatePartySVG } from '../utils/svgGenerators';
+import { useNftDisplayPreference } from '../hooks/useNftDisplayPreference';
 
 // RewardClaimButton 已移至統一的 RewardClaimSection 組件
 
@@ -494,8 +496,79 @@ const PartyStatusCard = memo<PartyStatusCardProps>(({ party, dungeons, onStartEx
         return <ActionButton onClick={() => onStartExpedition(party.id, selectedDungeonId, fee)} isLoading={isTxPending} className="w-full h-10">開始遠征</ActionButton>;
     };
 
+    // 使用 NFT 顯示偏好
+    const { displayMode, toggleDisplayMode } = useNftDisplayPreference();
+    const partySvg = generatePartySVG(party);
+    
+    // 根據戰力決定使用哪張圖片
+    const getPartyImagePath = (power: bigint): string => {
+        const powerNum = Number(power.toString());
+        if (powerNum >= 3900) return '/images/party/300-4199/3900-4199.png';
+        if (powerNum >= 3600) return '/images/party/300-4199/3600-3899.png';
+        if (powerNum >= 3300) return '/images/party/300-4199/3300-3599.png';
+        if (powerNum >= 3000) return '/images/party/300-4199/3000-3299.png';
+        if (powerNum >= 2700) return '/images/party/300-4199/2700-2999.png';
+        if (powerNum >= 2400) return '/images/party/300-4199/2400-2699.png';
+        if (powerNum >= 2100) return '/images/party/300-4199/2100-2399.png';
+        if (powerNum >= 1800) return '/images/party/300-4199/1800-2099.png';
+        if (powerNum >= 1500) return '/images/party/300-4199/1500-1799.png';
+        if (powerNum >= 1200) return '/images/party/300-4199/1200-1499.png';
+        if (powerNum >= 900) return '/images/party/300-4199/900-1199.png';
+        if (powerNum >= 600) return '/images/party/300-4199/600-899.png';
+        if (powerNum >= 300) return '/images/party/300-4199/300-599.png';
+        return '/images/party/party-placeholder.png'; // 預設圖片
+    };
+    
+    const partyImagePath = getPartyImagePath(effectivePower);
+
     return (
         <div className={`card-bg p-3 sm:p-4 rounded-2xl flex flex-col h-full border-2 transition-all ${isAnyTxPendingForThisParty ? 'border-purple-500/50' : isOnCooldown ? 'border-yellow-500/50' : 'border-transparent'}`}>
+            {/* 隊伍圖片區域 */}
+            <div className="relative mb-3 group">
+                <div className="aspect-square w-full overflow-hidden rounded-lg bg-gray-900/50">
+                    {displayMode === 'svg' ? (
+                        <div 
+                            className="w-full h-full"
+                            dangerouslySetInnerHTML={{ __html: partySvg }}
+                        />
+                    ) : (
+                        <img 
+                            src={partyImagePath}
+                            alt={party.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                                // 如果 PNG 載入失敗，顯示 SVG
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const svgContainer = document.createElement('div');
+                                svgContainer.innerHTML = partySvg;
+                                svgContainer.className = 'w-full h-full';
+                                target.parentElement?.appendChild(svgContainer);
+                            }}
+                        />
+                    )}
+                </div>
+                
+                {/* 切換按鈕 - 懸停時顯示 */}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        toggleDisplayMode();
+                    }}
+                    className="absolute top-2 right-2 px-3 py-1.5 bg-black/70 hover:bg-black/90 rounded-lg transition-all opacity-0 group-hover:opacity-100 backdrop-blur-sm border border-white/20"
+                    title={`切換到 ${displayMode === 'svg' ? 'PNG' : 'SVG'} 顯示`}
+                >
+                    <span className="text-xs font-medium text-white">
+                        {displayMode === 'svg' ? '📸 PNG' : '🎨 SVG'}
+                    </span>
+                </button>
+                
+                {/* 隊伍戰力標籤 */}
+                <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 rounded-lg backdrop-blur-sm">
+                    <span className="text-xs text-white font-medium">⚔️ {effectivePower.toString()}</span>
+                </div>
+            </div>
+
             <div className="flex justify-between items-start mb-2 sm:mb-3">
                 <h4 className="font-bold text-base sm:text-lg text-white truncate pr-2">{party.name}</h4>
                 {renderStatus()}
@@ -830,7 +903,7 @@ const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => 
             logger.debug('[DungeonPage] Not on BSC chain');
             return [];
         }
-        return Array.from({ length: 10 }, (_, i) => ({
+        return Array.from({ length: 12 }, (_, i) => ({
             address: dungeonStorageContract.address as `0x${string}`,
             abi: dungeonStorageContract.abi as any,
             functionName: 'getDungeon',

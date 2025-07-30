@@ -5,7 +5,7 @@ import { formatEther } from 'viem';
 import { ActionButton } from './ui/ActionButton';
 import { useRewardManager } from '../hooks/useRewardManager';
 import { LoadingSpinner } from './ui/LoadingSpinner';
-import { useRealtimePartyStatus } from '../hooks/useRealtimePartyStatus';
+// import { useRealtimePartyStatus } from '../hooks/useRealtimePartyStatus'; // 移除 Apollo 依賴
 import { logger } from '../utils/logger';
 import { formatSoul } from '../utils/formatters';
 
@@ -28,10 +28,10 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
         console.error('[RewardClaimSection] partyId is missing');
         return null;
     }
-    // 使用即時更新的隊伍狀態
-    const { party, isRealtime } = useRealtimePartyStatus({ 
-        partyId: partyId.toString() 
-    });
+    // 移除 Apollo 即時訂閱，直接使用合約數據
+    // const { party, isRealtime } = useRealtimePartyStatus({ 
+    //     partyId: partyId.toString() 
+    // });
     
     const {
         unclaimedRewards: contractRewards,
@@ -48,10 +48,9 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
     const actuallyHasRewards = unclaimedRewards > 0n || hasRewards;
     
     // Debug log
-    logger.info('[RewardClaimSection] 獎勵數據比較:', {
+    logger.info('[RewardClaimSection] 獎勵數據:', {
         partyId: partyId.toString(),
         contractRewards: contractRewards.toString(),
-        graphRewards: party?.unclaimedRewards,
         使用數據: '合約數據',
         原因: '合約數據更準確即時'
     });

@@ -320,9 +320,7 @@ const UpgradeInfoCard: React.FC<{
               </div>
               {displayRule.partialFailChance > 0 && (
                 <div className="flex justify-between items-center text-xs sm:text-sm">
-                  <span className="text-yellow-400">
-                    <span className="hidden sm:inline">⚡ </span>部分返還
-                  </span>
+                  <span className="text-yellow-400">部分返還</span>
                   <span className="font-bold">{displayRule.partialFailChance}%</span>
                 </div>
               )}
@@ -706,7 +704,7 @@ const AltarPage = memo(() => {
                 <Modal 
                     isOpen={showConfirmModal} 
                     onClose={() => setShowConfirmModal(false)}
-                    title="🔮 確認神秘儀式"
+                    title="確認神秘儀式"
                     onConfirm={isApprovedForAll ? () => {
                         setShowConfirmModal(false);
                         handleUpgrade();
@@ -718,7 +716,6 @@ const AltarPage = memo(() => {
                 >
                     <div className="space-y-6">
                         <div className="text-center">
-                            <div className="text-4xl mb-3">⚡</div>
                             <p className="text-xl font-semibold text-white mb-2">
                                 升級 {rarity}★ {nftType === 'hero' ? '英雄' : '聖物'}
                             </p>
@@ -749,7 +746,7 @@ const AltarPage = memo(() => {
                                     </div>
                                     {rarity <= 4 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-yellow-400">⚡ 部分返還</span>
+                                            <span className="text-yellow-400">部分返還</span>
                                             <span className="font-bold text-yellow-300">{
                                                 rarity === 1 ? 13 : 
                                                 rarity === 2 ? 20 :
@@ -858,8 +855,8 @@ const AltarPage = memo(() => {
                     <div className="xl:col-span-1 space-y-4 sm:space-y-5 md:space-y-6">
                         {/* 目標選擇 - 手機版優化 */}
                         <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-md border border-gray-600/30 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6">
-                            <h3 className="text-sm sm:text-base md:text-lg font-semibold text-white mb-2 sm:mb-3 flex items-center gap-1 sm:gap-2">
-                                <span className="hidden sm:inline">🎯 </span>升級目標
+                            <h3 className="text-sm sm:text-base md:text-lg font-semibold text-white mb-2 sm:mb-3">
+                                升級目標
                             </h3>
                             <div className="space-y-3 sm:space-y-4">
                                 <div>
@@ -957,9 +954,9 @@ const AltarPage = memo(() => {
                             onClick={() => setShowConfirmModal(true)} 
                             isLoading={isTxPending} 
                             disabled={isTxPending || !currentRule || selectedNfts.length !== currentRule.materialsRequired || !isApprovedForAll || remainingCooldown > 0} 
-                            className="w-full h-16 text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:from-gray-600 disabled:to-gray-700 shadow-xl"
+                            className="w-full h-12 text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:from-gray-600 disabled:to-gray-700 shadow-xl"
                         >
-                            {remainingCooldown > 0 ? '⏱️ 冷卻中...' : isTxPending ? '⚡ 神秘儀式進行中...' : '🔮 開始升星儀式'}
+                            {remainingCooldown > 0 ? '冷卻中...' : isTxPending ? '神秘儀式進行中...' : '開始升星儀式'}
                         </ActionButton>
                     </div>
 

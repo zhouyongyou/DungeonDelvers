@@ -26,6 +26,7 @@ import { useVipStatus } from '../hooks/useVipStatus';
 import { WithdrawalHistoryButton } from '../components/ui/WithdrawalHistory';
 import { useTransactionHistory, createTransactionRecord } from '../stores/useTransactionPersistence';
 import { TaxRateModal } from '../components/ui/TaxRateModal';
+import { useUnassignedAssets } from '../hooks/useUnassignedAssets';
 
 // =================================================================
 // Section: Components
@@ -152,10 +153,14 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     // Parse data
     const player = data?.player;
     const playerVaults = data?.playerVaults?.[0];
-    // 使用 stats 中的總數而非數組長度，因為子圖可能限制返回數量
-    const heroCount = player?.stats?.totalHeroes || player?.heros?.length || 0;
-    const relicCount = player?.stats?.totalRelics || player?.relics?.length || 0;
-    const partyCount = player?.stats?.totalParties || player?.parties?.length || 0;
+    
+    // 獲取未分配資產數據
+    const { data: assetData } = useUnassignedAssets(address);
+    
+    // 使用未分配的英雄/聖物數量，而非總數
+    const heroCount = assetData?.unassignedHeroes || 0;
+    const relicCount = assetData?.unassignedRelics || 0;
+    const partyCount = assetData?.totalParties || player?.stats?.totalParties || player?.parties?.length || 0;
     const level = levelData ? Number(levelData) : (player?.profile?.level || 0);
     const pendingVaultRewards = vaultBalance ? formatEther(vaultBalance as bigint) : '0';
     // 使用合約讀取的 VIP 等級，而非子圖的 tier

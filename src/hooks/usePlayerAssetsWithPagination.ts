@@ -8,7 +8,7 @@ import { graphQLRateLimiter } from '../utils/rateLimiter';
 import { logger } from '../utils/logger';
 import { request } from 'graphql-request';
 
-const PAGE_SIZE = 1000; // The Graph 最大支援的每頁大小，減少請求次數
+const PAGE_SIZE = 500; // 平衡性能和請求大小的最佳選擇
 
 // 查詢所有英雄（支援分頁）
 const GET_ALL_HEROES_QUERY = `
