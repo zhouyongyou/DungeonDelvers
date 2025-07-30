@@ -163,58 +163,48 @@ export const AltarNftAuthManager: React.FC<AltarNftAuthManagerProps> = ({
     }
   }, [address, needsHeroAuth, needsRelicAuth, approveHero, approveRelic, heroContract, relicContract, altarContract, onAuthComplete, showToast]);
 
-  // 一鍵授權兩種NFT
-  const handleBatchAuth = useCallback(async () => {
-    if (!address || !altarContract || !heroContract || !relicContract) return;
-
-    try {
-      updateOptimisticAuth('both', true);
-      showToast('正在批量授權英雄和聖物合約...', 'info');
-
-      // 依序執行兩個授權交易
-      if (!isHeroAuthorized) {
-        await writeContract({
-          address: heroContract.address as `0x${string}`,
-          abi: heroContract.abi,
-          functionName: 'setApprovalForAll',
-          args: [altarContract.address, true],
-        });
-        
-        // 等待第一個交易確認
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-
-      if (!isRelicAuthorized) {
-        await writeContract({
-          address: relicContract.address as `0x${string}`,
-          abi: relicContract.abi,
-          functionName: 'setApprovalForAll',
-          args: [altarContract.address, true],
-        });
-      }
-
-      showToast('✅ 批量授權交易已發送！', 'success');
-      
-      // 等待確認後刷新狀態
-      setTimeout(() => {
-        refetchAuth();
-        onAuthStatusChange?.();
-      }, 5000);
-
-    } catch (error) {
-      logger.error('批量授權失敗:', error);
-      showToast('批量授權失敗，請重試', 'error');
-    } finally {
-      updateOptimisticAuth('both', false);
+  // 授權狀態顯示
+  const authStatus = useMemo(() => {
+    const items = [];
+    
+    if (selectedSacrifices.length > 0) {
+      items.push({
+        name: '英雄 NFT',
+        approved: effectiveHeroApproved,
+        pending: isHeroTxPending,
+        needed: true
+      });
     }
-  }, [
-    address, altarContract, heroContract, relicContract,
-    isHeroAuthorized, isRelicAuthorized,
-    writeContract, showToast, refetchAuth, onAuthStatusChange, updateOptimisticAuth
-  ]);
+    
+    if (selectedRelics.length > 0) {
+      items.push({
+        name: '聖物 NFT',
+        approved: effectiveRelicApproved,
+        pending: isRelicTxPending,
+        needed: true
+      });
+    }
 
-  if (!address || allAuthorized) {
-    return null; // 已全部授權則不顯示
+    return items;
+  }, [selectedSacrifices.length, selectedRelics.length, effectiveHeroApproved, effectiveRelicApproved, isHeroTxPending, isRelicTxPending]);
+
+  // 自定義渲染觸發器
+  if (renderTrigger) {
+    return (
+      <>
+        {renderTrigger({
+          isLoading: isProcessing,
+          needsAuth: needsAnyAuth,
+          handleAuth,
+          authStatus
+        })}
+      </>
+    );
+  }
+  
+  // 如果不需要授權則不顯示預設UI
+  if (!address || !needsAnyAuth) {
+    return null;
   }
 
   return (
@@ -228,59 +218,40 @@ export const AltarNftAuthManager: React.FC<AltarNftAuthManagerProps> = ({
       </div>
 
       {/* 授權狀態顯示 */}
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        <div className="flex items-center justify-between p-2 bg-gray-800/50 rounded-lg">
-          <span className="text-gray-300">🦸 英雄 NFT</span>
-          <span className={`font-medium ${isHeroAuthorized ? 'text-green-400' : 'text-red-400'}`}>
-            {isHeroAuthorized ? '✅ 已授權' : '❌ 未授權'}
-          </span>
-        </div>
-        <div className="flex items-center justify-between p-2 bg-gray-800/50 rounded-lg">
-          <span className="text-gray-300">🏺 聖物 NFT</span>
-          <span className={`font-medium ${isRelicAuthorized ? 'text-green-400' : 'text-red-400'}`}>
-            {isRelicAuthorized ? '✅ 已授權' : '❌ 未授權'}
-          </span>
-        </div>
+      <div className="space-y-2">
+        {authStatus.map((item, index) => (
+          <div key={index} className="flex items-center justify-between p-2 bg-gray-800/50 rounded-lg text-sm">
+            <span className="text-gray-300">{item.name}</span>
+            <span className={`flex items-center gap-1 font-medium ${
+              item.approved ? 'text-green-400' : 
+              item.pending ? 'text-yellow-400' : 'text-red-400'
+            }`}>
+              {item.approved ? '✅ 已授權' : 
+               item.pending ? '⏳ 處理中...' : '❌ 未授權'}
+            </span>
+          </div>
+        ))}
       </div>
 
       {/* 授權按鈕 */}
-      <div className="space-y-3">
-        {/* 一鍵授權按鈕 - 當兩個都未授權時顯示 */}
-        {!isHeroAuthorized && !isRelicAuthorized && (
-          <ActionButton
-            onClick={handleBatchAuth}
-            isLoading={authStates.isAuthingBoth}
-            className="w-full h-12 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500"
-          >
-            🚀 一鍵授權兩種 NFT
-          </ActionButton>
-        )}
-        
-        {/* 單獨授權按鈕 */}
-        <div className="grid grid-cols-2 gap-3">
-          {!isHeroAuthorized && (
-            <ActionButton
-              onClick={() => handleSingleAuth('hero')}
-              isLoading={authStates.isAuthingHero}
-              disabled={authStates.isAuthingBoth}
-              className="h-10 bg-gradient-to-r from-blue-600 to-blue-500"
-            >
-              🔓 授權英雄
-            </ActionButton>
-          )}
-          
-          {!isRelicAuthorized && (
-            <ActionButton
-              onClick={() => handleSingleAuth('relic')}
-              isLoading={authStates.isAuthingRelic}
-              disabled={authStates.isAuthingBoth}
-              className="h-10 bg-gradient-to-r from-green-600 to-green-500"
-            >
-              🔓 授權聖物
-            </ActionButton>
-          )}
+      {needsAnyAuth && (
+        <ActionButton
+          onClick={handleAuth}
+          disabled={isProcessing}
+          loading={isProcessing}
+          size="md"
+          className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500"
+        >
+          {isProcessing ? '授權中...' : 
+           authStatus.length === 2 ? '🚀 一鍵授權所有NFT' : '🔓 授權NFT'}
+        </ActionButton>
+      )}
+      
+      {!needsAnyAuth && authStatus.length > 0 && (
+        <div className="text-center text-green-400 text-sm">
+          ✓ 所有必要的授權已完成
         </div>
-      </div>
+      )}
 
       {/* 提示信息 */}
       <div className="p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">

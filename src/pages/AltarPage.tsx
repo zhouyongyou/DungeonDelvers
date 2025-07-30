@@ -31,6 +31,7 @@ import { AltarRitualAnimation } from '../components/altar/AltarRitualAnimation';
 import { AltarTutorial } from '../components/altar/AltarTutorial';
 import { AltarHistoryStats } from '../components/altar/AltarHistoryStats';
 import { AltarVipBonus } from '../components/altar/AltarVipBonus';
+import { AltarNftAuthManager } from '../components/altar/AltarNftAuthManager';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取 Hooks
@@ -682,10 +683,10 @@ const AltarPage = memo(() => {
                     isOpen={showConfirmModal} 
                     onClose={() => setShowConfirmModal(false)}
                     title="🔮 確認神秘儀式"
-                    onConfirm={() => {
+                    onConfirm={isApprovedForAll ? () => {
                         setShowConfirmModal(false);
                         handleUpgrade();
-                    }}
+                    } : undefined}
                     confirmText="開始儀式"
                     cancelText="取消"
                     confirmButtonClass="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500"
@@ -753,6 +754,42 @@ const AltarPage = memo(() => {
                                 </div>
                             </div>
                         )}
+                        
+                        {/* 授權管理 - 在確認對話框中 */}
+                        <AltarNftAuthManager
+                            selectedSacrifices={nftType === 'hero' ? selectedNfts.map(id => ({ tokenId: id } as any)) : []}
+                            selectedRelics={nftType === 'relic' ? selectedNfts.map(id => ({ tokenId: id } as any)) : []}
+                            onAuthStatusChange={() => refetchApproval()}
+                            renderTrigger={({ isLoading, needsAuth, handleAuth, authStatus }) => 
+                                needsAuth ? (
+                                    <div className="bg-gradient-to-br from-red-900/40 to-orange-900/40 backdrop-blur-md 
+                                                    border border-red-600/50 rounded-lg p-4 space-y-3">
+                                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                                            🔓 需要授權NFT
+                                        </h3>
+                                        <div className="space-y-2">
+                                            {authStatus.map((item, idx) => (
+                                                <div key={idx} className="flex items-center justify-between text-xs">
+                                                    <span className="text-gray-300">{item.name}</span>
+                                                    <span className={`${item.pending ? 'text-yellow-400' : 'text-red-400'}`}>
+                                                        {item.pending ? '⏳ 處理中...' : '❌ 未授權'}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <ActionButton
+                                            onClick={handleAuth}
+                                            disabled={isLoading}
+                                            loading={isLoading}
+                                            size="sm"
+                                            className="w-full"
+                                        >
+                                            {isLoading ? '授權中...' : '🔓 立即授權'}
+                                        </ActionButton>
+                                    </div>
+                                ) : null
+                            }
+                        />
 
                         <div className="text-center">
                             <p className="text-xs text-gray-500 italic">
