@@ -25,6 +25,7 @@ import { usePlayerOverview } from '../hooks/usePlayerOverview';
 import { useVipStatus } from '../hooks/useVipStatus';
 import { WithdrawalHistoryButton } from '../components/ui/WithdrawalHistory';
 import { useTransactionHistory, createTransactionRecord } from '../stores/useTransactionPersistence';
+import { TaxRateModal } from '../components/ui/TaxRateModal';
 
 // =================================================================
 // Section: Components
@@ -61,6 +62,7 @@ interface OverviewPageProps {
 const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     const { address, isConnected } = useAccount();
     const [showProfileSVG, setShowProfileSVG] = useState(false);
+    const [showTaxModal, setShowTaxModal] = useState(false);
     const { showToast } = useAppToast();
     const { data, isLoading, isError, refetch } = usePlayerOverview(address);
     const { addTransaction, updateTransaction } = useTransactionHistory(address);
@@ -150,9 +152,10 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     // Parse data
     const player = data?.player;
     const playerVaults = data?.playerVaults?.[0];
-    const heroCount = player?.heros?.length || 0;
-    const relicCount = player?.relics?.length || 0;
-    const partyCount = player?.parties?.length || 0;
+    // 使用 stats 中的總數而非數組長度，因為子圖可能限制返回數量
+    const heroCount = player?.stats?.totalHeroes || player?.heros?.length || 0;
+    const relicCount = player?.stats?.totalRelics || player?.relics?.length || 0;
+    const partyCount = player?.stats?.totalParties || player?.parties?.length || 0;
     const level = levelData ? Number(levelData) : (player?.profile?.level || 0);
     const pendingVaultRewards = vaultBalance ? formatEther(vaultBalance as bigint) : '0';
     // 使用合約讀取的 VIP 等級，而非子圖的 tier
@@ -163,13 +166,9 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     const vipDiscount = taxReduction ? Number(taxReduction) / 100 : 0; // 轉換為百分比
     const actualTaxRate = Math.max(0, baseTaxRate - vipDiscount);
     
-    // 稅率說明彈窗
+    // 顯示稅率說明模態框
     const showTaxInfo = () => {
-        const message = vipTier > 0 
-            ? `💰 當前提款稅率：${actualTaxRate.toFixed(1)}%\n\n📊 稅率組成：\n• 基礎稅率：25%\n• VIP ${vipTier} 減免：-${vipDiscount.toFixed(1)}%\n• 實際稅率：${actualTaxRate.toFixed(1)}%\n\n🚀 質押更多 SoulShard 可獲得更高 VIP 等級，享受更多稅率減免！\n\n💡 提示：稅率隨著 VIP 等級提升而降低，最高可減免至 20%！`
-            : `💰 當前提款稅率：25%\n\n🎯 成為 VIP 會員享受稅率減免：\n• VIP 1：-0.5% → 24.5%\n• VIP 2：-1.0% → 24.0%\n• VIP 5：-2.5% → 22.5%\n• VIP 10：-5.0% → 20.0%\n\n💎 立即質押 SoulShard 成為 VIP！\n\n📚 稅率減免公式：基礎稅率 25% - VIP 等級 × 0.5%`;
-        
-        showToast(message, 'info');
+        setShowTaxModal(true);
     };
     
     // 處理提取按鈕點擊
@@ -193,7 +192,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
             player,
             heroCount,
             relicCount,
-            vipTier,
+            stats: player?.stats,
             rawVipData: player?.vip,
             rawHeroData: player?.heros,
             rawRelicData: player?.relics
@@ -581,6 +580,15 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                 error={claimVaultTx.error}
                 txHash={claimVaultTx.txHash}
                 actionName={claimVaultTx.actionName}
+            />
+
+            {/* Tax Rate Modal */}
+            <TaxRateModal
+                isOpen={showTaxModal}
+                onClose={() => setShowTaxModal(false)}
+                vipTier={vipTier}
+                actualTaxRate={actualTaxRate}
+                vipDiscount={vipDiscount}
             />
         </LocalErrorBoundary>
     );
