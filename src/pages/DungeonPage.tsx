@@ -35,6 +35,7 @@ import { ExpeditionTracker } from '../components/ExpeditionTracker';
 import { useRealtimeExpeditions } from '../hooks/useRealtimeExpeditions';
 import { usePartyValidation } from '../hooks/usePartyValidation';
 import { useBatchOperations } from '../hooks/useBatchOperations';
+import { Icons } from '../components/ui/icons';
 
 // RewardClaimButton 已移至統一的 RewardClaimSection 組件
 

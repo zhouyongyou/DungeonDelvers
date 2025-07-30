@@ -2,7 +2,7 @@
 // 混合數據源獲取 VIP 信息：子圖 + 合約
 
 import { useReadContract } from 'wagmi';
-import { Address } from 'viem';
+import type { Address } from 'viem';
 import { getContractWithABI } from '../config/contractsWithABI';
 import type { VipNft } from '../types/nft';
 
