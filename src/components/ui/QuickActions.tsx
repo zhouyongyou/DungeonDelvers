@@ -12,6 +12,7 @@ interface QuickAction {
   onClick: () => void;
   condition?: () => boolean;
   badge?: string | number;
+  variant?: 'primary' | 'secondary' | 'modal' | 'navigation';
 }
 
 interface QuickActionsProps {
@@ -43,13 +44,31 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     grid: 'grid grid-cols-2 md:grid-cols-3 gap-2'
   };
 
+  // 根據按鈕 ID 決定樣式
+  const getButtonClassName = (actionId: string) => {
+    const baseClasses = `${sizeClasses[size]} flex items-center gap-2 relative`;
+    
+    switch (actionId) {
+      case 'createParty':
+        return `${baseClasses} bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-500/20 border border-emerald-400/30`;
+      case 'dungeon':
+        return `${baseClasses} bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400`;
+      case 'altar':
+        return `${baseClasses} bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400`;
+      case 'marketplace':
+        return `${baseClasses} bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400`;
+      default:
+        return baseClasses;
+    }
+  };
+
   return (
     <div className={layoutClasses[layout]}>
       {visibleActions.map(action => (
         <ActionButton
           key={action.id}
           onClick={action.onClick}
-          className={`${sizeClasses[size]} flex items-center gap-2 relative`}
+          className={getButtonClassName(action.id)}
         >
           {action.icon && <action.icon className="h-4 w-4" />}
           <span>{action.label}</span>
@@ -243,7 +262,8 @@ export const PageActionBar: React.FC<PageActionBarProps> = ({
         {showRefresh && onRefresh && (
           <ActionButton
             onClick={onRefresh}
-            className="px-3 py-2"
+            className="px-3 py-2 bg-gray-700 hover:bg-gray-600"
+            variant="secondary"
             title="刷新數據"
           >
             <Icons.RefreshCw className="h-4 w-4" />

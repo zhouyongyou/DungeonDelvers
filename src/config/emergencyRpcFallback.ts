@@ -14,7 +14,7 @@ const RPC_ISSUES = {
   FETCH_FAILED: 'Failed to fetch'
 };
 
-// 公共 BSC RPC 節點（高可用性）- 已移除有 CORS 問題的節點
+// 公共 BSC RPC 節點（高可用性）- 已移除有問題的節點
 const EMERGENCY_BSC_RPCS = [
   'https://bsc-dataseed1.binance.org/',
   'https://bsc-dataseed2.binance.org/',
@@ -23,7 +23,7 @@ const EMERGENCY_BSC_RPCS = [
   // 'https://bsc.publicnode.com', // 移除：ERR_CONNECTION_CLOSED
   'https://1rpc.io/bnb',
   'https://binance.nodereal.io',
-  'https://bsc-rpc.gateway.pokt.network',
+  // 'https://bsc-rpc.gateway.pokt.network', // 移除：ERR_NAME_NOT_RESOLVED
   // 'https://bsc.meowrpc.com', // 移除：CORS 配置錯誤
 ];
 

@@ -536,7 +536,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
                             ) : (
                                 <ActionButton
                                     onClick={() => setShowTeamBuilder(true)}
-                                    className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-6 py-3 font-semibold shadow-lg shadow-emerald-500/20 border border-emerald-400/30"
+                                    className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-6 py-3 font-semibold shadow-lg shadow-emerald-500/20 border border-emerald-400/30 transition-all duration-200 hover:shadow-emerald-500/30 hover:scale-105"
                                 >
                                     ⚔️ 立即組建隊伍
                                 </ActionButton>
@@ -620,59 +620,60 @@ const MyAssetsPageEnhanced: React.FC = () => {
                     ))}
                 </div>
                 
-                {/* Team Builder Fixed Bottom Modal */}
+                {/* Team Builder Expanded Section */}
                 {showTeamBuilder && nftsData && (
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50">
-                        {/* 可點擊背景關閉 */}
-                        <div 
-                            className="absolute inset-0" 
-                            onClick={() => setShowTeamBuilder(false)}
-                        />
+                    <div className="mt-8 bg-gray-800/50 backdrop-blur-md rounded-xl border-2 border-emerald-500/30 overflow-hidden transition-all duration-500 ease-out transform animate-in slide-in-from-top-4">
+                        {/* 可收合標題列 */}
+                        <div className="bg-gradient-to-r from-emerald-900/50 to-teal-900/50 border-b border-emerald-500/30 p-4 cursor-pointer hover:from-emerald-900/60 hover:to-teal-900/60 transition-all duration-200">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-2xl">⚔️</span>
+                                        <h2 className="text-xl font-bold text-emerald-400">
+                                            組建隊伍
+                                        </h2>
+                                    </div>
+                                    <div className="hidden sm:block w-px h-6 bg-emerald-500/30"></div>
+                                    <p className="hidden sm:block text-emerald-200/70 text-sm">
+                                        選擇您的英雄和聖物，組建強大的冒險隊伍
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setShowTeamBuilder(false)}
+                                    className="flex items-center gap-2 text-gray-400 hover:text-emerald-300 transition-colors p-2 rounded-lg hover:bg-gray-700/50 group"
+                                >
+                                    <span className="text-sm hidden sm:inline group-hover:text-emerald-300">收合</span>
+                                    <Icons.ChevronUp className="h-5 w-5 transition-transform group-hover:-translate-y-0.5" />
+                                </button>
+                            </div>
+                            {/* 手機版描述 */}
+                            <p className="sm:hidden text-emerald-200/70 text-sm mt-2">
+                                選擇您的英雄和聖物，組建強大的冒險隊伍
+                            </p>
+                        </div>
                         
-                        {/* 固定底部模態視窗 */}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gray-900 rounded-t-2xl shadow-2xl border-t-2 border-emerald-500/30 max-h-[85vh] overflow-hidden">
-                            {/* 粘性頭部 */}
-                            <div className="sticky top-0 bg-gray-900 border-b border-gray-700 p-4 z-10">
-                                <div className="flex items-center justify-between">
-                                    <h2 className="text-xl font-bold text-emerald-400 flex items-center gap-2">
-                                        ⚔️ 組建隊伍
-                                    </h2>
-                                    <button
-                                        onClick={() => setShowTeamBuilder(false)}
-                                        className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-700"
-                                    >
-                                        <Icons.X className="h-5 w-5" />
-                                    </button>
-                                </div>
-                                {/* 拖拉提示 */}
-                                <div className="flex justify-center mt-2">
-                                    <div className="w-12 h-1 bg-gray-600 rounded-full"></div>
-                                </div>
-                            </div>
-                            
-                            {/* 可滾動內容 */}
-                            <div className="overflow-y-auto max-h-[calc(85vh-80px)] p-6">
-                                <TeamBuilder
-                                    heroes={nftsData.heros}
-                                    relics={nftsData.relics}
-                                    onCreateParty={handleCreateParty}
-                                    isCreating={createPartyTx.isLoading}
-                                    platformFee={platformFeeData ? (platformFeeData as bigint) : BigInt(0)}
-                                    isLoadingFee={isLoadingFee}
-                                    isHeroAuthorized={!!isHeroAuthorized}
-                                    isRelicAuthorized={!!isRelicAuthorized}
-                                    onAuthorizeHero={handleAuthorizeHero}
-                                    onAuthorizeRelic={handleAuthorizeRelic}
-                                    onBatchAuthorize={handleBatchAuthorize}
-                                    isAuthorizing={authorizeHeroTx.isLoading || authorizeRelicTx.isLoading}
-                                />
-                            </div>
+                        {/* TeamBuilder 內容區 */}
+                        <div className="p-6 bg-gray-900/30">
+                            <TeamBuilder
+                                heroes={nftsData.heros}
+                                relics={nftsData.relics}
+                                onCreateParty={handleCreateParty}
+                                isCreating={createPartyTx.isLoading}
+                                platformFee={platformFeeData ? (platformFeeData as bigint) : BigInt(0)}
+                                isLoadingFee={isLoadingFee}
+                                isHeroAuthorized={!!isHeroAuthorized}
+                                isRelicAuthorized={!!isRelicAuthorized}
+                                onAuthorizeHero={handleAuthorizeHero}
+                                onAuthorizeRelic={handleAuthorizeRelic}
+                                onBatchAuthorize={handleBatchAuthorize}
+                                isAuthorizing={authorizeHeroTx.isLoading || authorizeRelicTx.isLoading}
+                            />
                         </div>
                     </div>
                 )}
                 
                 {/* Content */}
-                <div className="min-h-[400px]">
+                <div className="min-h-[400px] space-y-6">
                     {renderTabContent()}
                 </div>
                 
