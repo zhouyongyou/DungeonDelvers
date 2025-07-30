@@ -36,7 +36,6 @@ const GET_PLAYER_OVERVIEW_QUERY = `
       }
       vip {
         id
-        tier
         stakedAmount
         stakedAt
         unlockTime

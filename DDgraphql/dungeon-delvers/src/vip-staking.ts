@@ -4,49 +4,8 @@ import { VIP } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { BigInt, log } from "@graphprotocol/graph-ts"
 
-// 安全的 BigInt 平方根計算
-function sqrtBigInt(value: BigInt): BigInt {
-    if (value.isZero()) return BigInt.fromI32(0)
-    if (value.equals(BigInt.fromI32(1))) return BigInt.fromI32(1)
-    
-    // 使用牛頓法計算平方根
-    let x = value
-    let y = value.plus(BigInt.fromI32(1)).div(BigInt.fromI32(2))
-    
-    // 限制迭代次數防止無限循環
-    let iterations = 0
-    const maxIterations = 100
-    
-    while (y.lt(x) && iterations < maxIterations) {
-        x = y
-        y = x.plus(value.div(x)).div(BigInt.fromI32(2))
-        iterations++
-    }
-    
-    return x
-}
-
-// 根據質押金額計算VIP等級（安全版本）
-function calculateVipTier(stakedAmount: BigInt): i32 {
-    // 假設每100 SoulShard = 1 USD，需要100 USD才有VIP 1
-    const usdValue = stakedAmount.div(BigInt.fromI32(100))
-    if (usdValue.lt(BigInt.fromI32(100))) return 0
-    
-    // 使用平方根計算等級（與合約邏輯一致）
-    // level = sqrt(usdValue / 100)
-    const valueFor100 = usdValue.div(BigInt.fromI32(100))
-    
-    if (valueFor100.isZero()) return 0
-    
-    // 使用安全的BigInt平方根
-    const sqrtResult = sqrtBigInt(valueFor100)
-    
-    // 安全轉換為 i32，設定合理上限
-    const maxTier = BigInt.fromI32(255)
-    const tier = sqrtResult.gt(maxTier) ? maxTier : sqrtResult
-    
-    return tier.toI32()
-}
+// 注意：不再在子圖中計算 VIP 等級
+// VIP 等級由前端直接從合約讀取，確保使用動態價格計算
 
 export function handleStaked(event: Staked): void {
     const player = getOrCreatePlayer(event.params.user)
@@ -56,7 +15,7 @@ export function handleStaked(event: Staked): void {
     if (!vip) {
         vip = new VIP(vipId)
         vip.owner = player.id
-        vip.tier = calculateVipTier(BigInt.fromI32(0)) // 根據質押金額計算
+        // 移除 tier 計算 - 由前端從合約讀取
         vip.stakedAmount = BigInt.fromI32(0)
         vip.stakedAt = event.block.timestamp
         vip.isUnlocking = false
@@ -64,7 +23,7 @@ export function handleStaked(event: Staked): void {
     }
 
     vip.stakedAmount = vip.stakedAmount.plus(event.params.amount)
-    vip.tier = calculateVipTier(vip.stakedAmount) // 更新tier
+    vip.lastUpdatedAt = event.block.timestamp
     vip.save()
   
     player.vip = vip.id
@@ -88,9 +47,10 @@ export function handleUnstakeClaimed(event: UnstakeClaimed): void {
     const vip = VIP.load(vipId)
     if (vip) {
         vip.stakedAmount = vip.stakedAmount.minus(event.params.amount)
-        vip.tier = calculateVipTier(vip.stakedAmount) // 更新tier
+        // 移除 tier 計算 - 由前端從合約讀取
         vip.isUnlocking = false
         vip.unlockRequestedAt = null
+        vip.lastUpdatedAt = event.block.timestamp
         if (vip.stakedAmount.isZero()) {
             const player = getOrCreatePlayer(event.params.user)
             player.vip = null
@@ -114,7 +74,7 @@ export function handleTransfer(event: Transfer): void {
     if (!vip) {
         vip = new VIP(vipId)
         vip.owner = player.id
-        vip.tier = calculateVipTier(BigInt.fromI32(0)) // 根據質押金額計算
+        // 移除 tier 計算 - 由前端從合約讀取
         vip.stakedAmount = BigInt.fromI32(0)
         vip.stakedAt = event.block.timestamp
         vip.isUnlocking = false

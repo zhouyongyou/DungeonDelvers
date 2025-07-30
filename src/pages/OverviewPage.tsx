@@ -22,6 +22,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { generateProfileSVG, type ProfileData } from '../utils/svgGenerators';
 import { logger } from '../utils/logger';
 import { usePlayerOverview } from '../hooks/usePlayerOverview';
+import { useVipStatus } from '../hooks/useVipStatus';
 import { WithdrawalHistoryButton } from '../components/ui/WithdrawalHistory';
 import { useTransactionHistory, createTransactionRecord } from '../stores/useTransactionPersistence';
 
@@ -63,6 +64,9 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     const { showToast } = useAppToast();
     const { data, isLoading, isError, refetch } = usePlayerOverview(address);
     const { addTransaction, updateTransaction } = useTransactionHistory(address);
+    
+    // 使用合約直接讀取 VIP 等級和稅率資訊
+    const { vipLevel, taxReduction } = useVipStatus();
     
     // Contract reads
     const playerProfileContract = getContractWithABI('PLAYERPROFILE');
@@ -151,7 +155,22 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     const partyCount = player?.parties?.length || 0;
     const level = levelData ? Number(levelData) : (player?.profile?.level || 0);
     const pendingVaultRewards = vaultBalance ? formatEther(vaultBalance as bigint) : '0';
-    const vipTier = player?.vip?.tier || 0;
+    // 使用合約讀取的 VIP 等級，而非子圖的 tier
+    const vipTier = vipLevel || 0;
+    
+    // 計算實際稅率
+    const baseTaxRate = 25; // 基礎 25%
+    const vipDiscount = taxReduction ? Number(taxReduction) / 100 : 0; // 轉換為百分比
+    const actualTaxRate = Math.max(0, baseTaxRate - vipDiscount);
+    
+    // 稅率說明彈窗
+    const showTaxInfo = () => {
+        const message = vipTier > 0 
+            ? `當前提款稅率：${actualTaxRate.toFixed(1)}%\n\n基礎稅率：25%\nVIP ${vipTier} 減免：-${vipDiscount.toFixed(1)}%\n\n質押更多 SoulShard 可獲得更高 VIP 等級，享受更多稅率減免！`
+            : `當前提款稅率：25%\n\n成為 VIP 會員可享受稅率減免：\n• VIP 1：-0.5%\n• VIP 2：-1.0%\n• VIP 5：-2.5%\n• VIP 10：-5.0%\n\n立即質押 SoulShard 成為 VIP！`;
+        
+        showToast(message, 'info');
+    };
     
     // Debug log
     if (import.meta.env.DEV) {
@@ -241,7 +260,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         title="等級"
                         value={`LV ${level}`}
                         icon={<Icons.TrendingUp className="h-5 w-5" />}
-                        description={`經驗值：${player?.profile?.experience || 0}`}
+                        description="透過挑戰地城獲得經驗值提升等級"
                     />
                     
                     <StatCard
@@ -290,16 +309,16 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         title="金庫餘額"
                         value={`${formatSoul(pendingVaultRewards)} SOUL`}
                         icon={<Icons.DollarSign className="h-5 w-5" />}
+                        description={`提款稅率：${actualTaxRate.toFixed(1)}% ${vipTier > 0 ? `(VIP 減免 ${vipDiscount.toFixed(1)}%)` : ''}`}
                         action={
                             <div className="flex gap-1">
                                 <ActionButton
-                                    onClick={() => claimVaultTx.execute()}
+                                    onClick={() => Number(pendingVaultRewards) > 0 ? claimVaultTx.execute() : showTaxInfo()}
                                     isLoading={claimVaultTx.isLoading}
-                                    disabled={Number(pendingVaultRewards) <= 0}
                                     className="text-xs px-2 py-1"
-                                    title={Number(pendingVaultRewards) <= 0 ? '目前沒有可提取的餘額' : '提取金庫餘額'}
+                                    title={Number(pendingVaultRewards) > 0 ? '提取金庫餘額' : '查看稅率資訊'}
                                 >
-                                    提取
+                                    {Number(pendingVaultRewards) > 0 ? '提取' : '稅率'}
                                 </ActionButton>
                                 <WithdrawalHistoryButton userAddress={address} />
                             </div>
@@ -310,15 +329,18 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         title="VIP 等級"
                         value={vipTier > 0 ? `VIP ${vipTier}` : '未加入'}
                         icon={<Icons.Crown className="h-5 w-5" />}
+                        description={
+                            vipTier > 0 
+                                ? "質押獲得：祭壇加成、稅率減免、地城加成"
+                                : "質押 SoulShard 獲得多重收益加成"
+                        }
                         action={
-                            vipTier === 0 && (
-                                <ActionButton
-                                    onClick={() => setActivePage('vip')}
-                                    className="text-xs px-2 py-1"
-                                >
-                                    成為 VIP
-                                </ActionButton>
-                            )
+                            <ActionButton
+                                onClick={() => setActivePage('vip')}
+                                className="text-xs px-2 py-1"
+                            >
+                                {vipTier > 0 ? '管理 VIP' : '成為 VIP'}
+                            </ActionButton>
                         }
                     />
                 </div>

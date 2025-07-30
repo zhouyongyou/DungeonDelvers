@@ -85,4 +85,36 @@ export function isValidRarity(input: string | number | bigint): boolean {
   const inputStr = String(input).toLowerCase().trim();
   return RARITY_MAP[inputStr] !== undefined || 
          (Number(input) >= 1 && Number(input) <= 6);
+}
+
+/**
+ * 獲取稀有度縮寫（用於名稱前綴）
+ */
+export function getRarityAbbreviation(input: string | number | bigint): string {
+  // 如果是無效值或預設值，返回空字符串
+  if (!input || input === 0 || input === '0' || input === '') {
+    return '';
+  }
+  
+  const rarity = convertRarity(input);
+  
+  switch (rarity.number) {
+    case 1: return 'N';    // Normal (Common)
+    case 2: return 'R';    // Rare (Uncommon) 
+    case 3: return 'SR';   // Super Rare (Rare)
+    case 4: return 'SSR';  // Super Super Rare (Epic)
+    case 5: return 'UR';   // Ultra Rare (Legendary)
+    case 6: return 'UR+';  // Ultra Rare Plus (Mythic)
+    default: return '';    // 預設值不顯示前綴
+  }
+}
+
+/**
+ * 獲取隊伍戰力範圍前綴
+ */
+export function getPartyPowerRangePrefix(totalPower: number): string {
+  // 使用300為單位劃分等級
+  const lowerBound = Math.floor(totalPower / 300) * 300;
+  const upperBound = lowerBound + 299;
+  return `${lowerBound}-${upperBound}`;
 } 

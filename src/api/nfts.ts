@@ -23,6 +23,7 @@ import type {
 } from '../types/nft';
 import { logger } from '../utils/logger';
 import { getPartyImagePath, getPartyTier } from '../utils/partyTiers';
+import { getRarityAbbreviation, getPartyPowerRangePrefix } from '../utils/rarityConverter';
 
 // =================================================================
 // Section 1: The Graph API 設定 (保持不變)
@@ -76,6 +77,7 @@ const GET_PLAYER_ASSETS_QUERY = `
 `;
 
 // 單獨的 VIP 查詢（因為 VIP 是一對一關係）
+// 注意：tier 欄位已從子圖移除，VIP 等級需要從合約讀取
 const GET_PLAYER_VIP_QUERY = `
   query GetPlayerVIP($owner: ID!) {
     player(id: $owner) {
@@ -269,9 +271,10 @@ function generateFallbackMetadata(nftType: string, tokenId: string, rarity?: num
     
     switch (nftType) {
         case 'relic':
+            const relicRarityPrefix = getRarityAbbreviation(rarity);
             return {
                 ...baseData,
-                name: `聖物 #${tokenId}`,
+                name: relicRarityPrefix ? `${relicRarityPrefix} Relic #${tokenId}` : `Relic #${tokenId}`,
                 image: getImageByRarity('relic', rarity),
                 attributes: [
                     { trait_type: 'Capacity', value: '載入中...' },
@@ -279,9 +282,10 @@ function generateFallbackMetadata(nftType: string, tokenId: string, rarity?: num
                 ]
             };
         case 'hero':
+            const heroRarityPrefix = getRarityAbbreviation(rarity);
             return {
                 ...baseData,
-                name: `英雄 #${tokenId}`,
+                name: heroRarityPrefix ? `${heroRarityPrefix} Hero #${tokenId}` : `Hero #${tokenId}`,
                 image: getImageByRarity('hero', rarity),
                 attributes: [
                     { trait_type: 'Power', value: '載入中...' },
@@ -289,10 +293,10 @@ function generateFallbackMetadata(nftType: string, tokenId: string, rarity?: num
                 ]
             };
         case 'party':
-            // 如果沒有提供戰力數據，使用默認圖片
+            // fallback時不顯示戰力範圍，避免誤導用戶
             return {
                 ...baseData,
-                name: `隊伍 #${tokenId}`,
+                name: `Party #${tokenId}`,
                 image: '/images/party/party.png', // fallback 時使用默認圖片
                 attributes: [
                     { trait_type: 'Total Power', value: '載入中...' },
@@ -302,9 +306,10 @@ function generateFallbackMetadata(nftType: string, tokenId: string, rarity?: num
                 ]
             };
         case 'vip':
+            // fallback時不顯示VIP等級，避免誤導
             return {
                 ...baseData,
-                name: `VIP 卡 #${tokenId}`,
+                name: `VIP Card #${tokenId}`,
                 image: '/images/vip/vip.png',
                 attributes: [
                     { trait_type: 'Level', value: '載入中...' },
@@ -542,9 +547,9 @@ interface PartyAsset extends AssetWithTokenId {
 }
 
 interface VipAsset extends AssetWithTokenId {
-    level?: string | number | bigint;
     stakedAmount?: string | number | bigint;
     stakedValueUSD?: string | number | bigint;
+    // 注意：tier 已從子圖移除，level 將通過合約調用獲取
 }
 
 // 🔥 新版本：純子圖數據流，無需合約調用和 metadata 獲取
@@ -601,6 +606,7 @@ async function parseNfts<T extends AssetWithTokenId>(
                 const heroAsset = asset as unknown as HeroAsset;
                 const power = Number(heroAsset.power);
                 const rarity = Number(heroAsset.rarity);
+                const rarityPrefix = getRarityAbbreviation(rarity);
                 
                 logger.debug(`Hero #${asset.tokenId} 純子圖數據:`, {
                     tokenId: asset.tokenId,
@@ -615,6 +621,7 @@ async function parseNfts<T extends AssetWithTokenId>(
                     type, 
                     power, 
                     rarity,
+                    name: rarityPrefix ? `${rarityPrefix} Hero #${tokenId}` : `Hero #${tokenId}`,
                     image: `/images/hero/hero-${Math.max(1, Math.min(5, rarity))}.png`,
                     attributes: [
                         { trait_type: 'Power', value: power },
@@ -626,6 +633,7 @@ async function parseNfts<T extends AssetWithTokenId>(
                 const relicAsset = asset as unknown as RelicAsset;
                 const capacity = Number(relicAsset.capacity);
                 const rarity = Number(relicAsset.rarity);
+                const rarityPrefix = getRarityAbbreviation(rarity);
                 
                 logger.debug(`Relic #${asset.tokenId} 純子圖數據:`, {
                     tokenId: asset.tokenId,
@@ -640,6 +648,7 @@ async function parseNfts<T extends AssetWithTokenId>(
                     type, 
                     capacity, 
                     rarity,
+                    name: rarityPrefix ? `${rarityPrefix} Relic #${tokenId}` : `Relic #${tokenId}`,
                     image: `/images/relic/relic-${Math.max(1, Math.min(5, rarity))}.png`,
                     attributes: [
                         { trait_type: 'Capacity', value: capacity },
@@ -651,6 +660,7 @@ async function parseNfts<T extends AssetWithTokenId>(
                 const partyAsset = asset as unknown as PartyAsset;
                 const totalPower = Number(partyAsset.totalPower);
                 const partyTier = getPartyTier(totalPower);
+                const powerRangePrefix = getPartyPowerRangePrefix(totalPower);
                 
                 return { 
                     ...baseNft, 
@@ -660,6 +670,7 @@ async function parseNfts<T extends AssetWithTokenId>(
                     heroIds: partyAsset.heroIds ? partyAsset.heroIds.map((id) => BigInt(id)) : [], 
                     relicIds: [], // 暫時設為空陣列，等待子圖修復後恢復 
                     partyRarity: Number(partyAsset.partyRarity),
+                    name: `${powerRangePrefix} Party #${tokenId}`,
                     // 根據戰力動態設置圖片
                     image: getPartyImagePath(totalPower),
                     attributes: [
@@ -672,15 +683,19 @@ async function parseNfts<T extends AssetWithTokenId>(
             }
             case 'vip': {
                 const vipAsset = asset as unknown as VipAsset;
+                // VIP 等級需要從合約單獨讀取，這裡只設置基本信息
+                // TODO: 需要在上層組件中整合合約讀取的 VIP 等級
+                
                 return { 
                     ...baseNft, 
                     type, 
-                    level: Number(vipAsset.level || 0),
+                    level: 0, // 預設值，實際等級由合約提供
                     stakedAmount: BigInt(vipAsset.stakedAmount || 0),
                     stakedValueUSD: vipAsset.stakedValueUSD ? BigInt(vipAsset.stakedValueUSD) : undefined,
+                    name: `VIP Card #${tokenId}`, // 不顯示等級，避免誤導
                     image: '/images/vip/vip.png',
                     attributes: [
-                        { trait_type: 'Level', value: Number(vipAsset.level || 0) },
+                        { trait_type: 'Level', value: '需要合約讀取' },
                         { trait_type: 'Staked Amount', value: Number(vipAsset.stakedAmount || 0) }
                     ]
                 };

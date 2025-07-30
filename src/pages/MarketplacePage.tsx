@@ -18,7 +18,7 @@ import { logger } from '../utils/logger';
 import { CreateListingModal } from '../components/marketplace/CreateListingModal';
 import { PurchaseModalV2 } from '../components/marketplace/PurchaseModalV2';
 import { TokenBalanceDisplay } from '../components/marketplace/TokenBalanceDisplay';
-import { fetchAllOwnedNfts } from '../api/nfts';
+import { useEnhancedNfts } from '../hooks/useEnhancedNfts';
 import { getLocalListings, type MarketListing as MarketListingType } from '../hooks/useMarketplace';
 import { useHeroPower, usePartyPower, useHeroDetails, useRelicDetails, usePartyDetails, getElementName, getClassName, getRelicCategoryName } from '../hooks/useNftPower';
 import { useAppToast } from '../contexts/SimpleToastContext';
@@ -592,13 +592,10 @@ const MarketplacePage: React.FC = () => {
         searchTerm: ''
     });
     
-    // 獲取用戶的 NFT
-    const { data: userNfts, isLoading: isLoadingNfts, refetch: refetchNfts } = useQuery({
-        queryKey: ['ownedNfts', address, chain?.id],
-        queryFn: () => fetchAllOwnedNfts(address!, chain?.id || 56),
-        enabled: !!address,
-        gcTime: 5 * 60 * 1000,
-        staleTime: 30 * 1000,
+    // 獲取用戶的 NFT（包含 VIP 等級）
+    const { data: userNfts, isLoading: isLoadingNfts, refetch: refetchNfts } = useEnhancedNfts({
+        owner: address,
+        chainId: chain?.id || 56
     });
     
     // 增強市場列表数据，添加完整的 NFT 信息
