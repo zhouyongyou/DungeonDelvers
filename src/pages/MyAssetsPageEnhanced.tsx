@@ -30,100 +30,9 @@ import { NftDisplayToggleMini } from '../components/ui/NftDisplayToggle';
 import { TeamBuilder } from '../components/TeamBuilder';
 
 // =================================================================
-// Section: GraphQL Queries
+// Section: 移除了市場瀏覽相關的 GraphQL 查詢和 Hooks
+// 用戶現在可以直接從主導航訪問獨立的市場頁面
 // =================================================================
-
-const GET_MARKET_HEROES_QUERY = `
-  query GetMarketHeroes($skip: Int, $first: Int) {
-    heros(
-      first: $first
-      skip: $skip
-      orderBy: tokenId
-      orderDirection: desc
-    ) {
-      id
-      tokenId
-      owner
-      power
-    }
-  }
-`;
-
-const GET_MARKET_RELICS_QUERY = `
-  query GetMarketRelics($skip: Int, $first: Int) {
-    relics(
-      first: $first
-      skip: $skip
-      orderBy: tokenId
-      orderDirection: desc
-    ) {
-      id
-      tokenId
-      owner
-      capacity
-    }
-  }
-`;
-
-// =================================================================
-// Section: Market Browser Hook
-// =================================================================
-
-const useMarketBrowser = (type: 'hero' | 'relic') => {
-    const [page, setPage] = useState(0);
-    const pageSize = 50;
-    
-    const { data, isLoading, isError, refetch } = useQuery({
-        queryKey: ['marketBrowser', type, page],
-        queryFn: async () => {
-            if (!THE_GRAPH_API_URL) return { [type === 'hero' ? 'heros' : 'relics']: [] };
-            
-            const query = type === 'hero' ? GET_MARKET_HEROES_QUERY : GET_MARKET_RELICS_QUERY;
-            
-            try {
-                const response = await graphQLRateLimiter.execute(async () => {
-                    return fetch(THE_GRAPH_API_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            query,
-                            variables: { 
-                                skip: page * pageSize,
-                                first: pageSize 
-                            },
-                        }),
-                    });
-                });
-                
-                if (!response.ok) throw new Error('Network response was not ok');
-                const { data, errors } = await response.json();
-                
-                if (errors) {
-                    logger.error('GraphQL errors:', errors);
-                    throw new Error(errors[0]?.message || 'GraphQL error');
-                }
-                
-                return data;
-            } catch (error) {
-                logger.error(`Error fetching market ${type}s:`, error);
-                throw error;
-            }
-        },
-        enabled: !!THE_GRAPH_API_URL,
-        staleTime: 60 * 1000,
-        gcTime: 5 * 60 * 1000,
-    });
-
-    return { 
-        data: data?.[type === 'hero' ? 'heros' : 'relics'] || [], 
-        isLoading, 
-        isError, 
-        refetch,
-        page,
-        setPage,
-        pageSize
-    };
-};
 
 // =================================================================
 // Section: Main Component
@@ -159,7 +68,7 @@ const sortOptions: Record<string, SortOption[]> = {
 
 const MyAssetsPageEnhanced: React.FC = () => {
     const { address, chainId } = useAccount();
-    const [activeTab, setActiveTab] = useState<'myHeroes' | 'myRelics' | 'myParties' | 'marketHeroes' | 'marketRelics'>('myHeroes');
+    const [activeTab, setActiveTab] = useState<'myHeroes' | 'myRelics' | 'myParties'>('myHeroes');
     const [showTeamBuilder, setShowTeamBuilder] = useState(false);
     const { showToast } = useAppToast();
     const queryClient = useQueryClient();
@@ -168,8 +77,6 @@ const MyAssetsPageEnhanced: React.FC = () => {
     const [heroSort, setHeroSort] = useState('power-desc');
     const [relicSort, setRelicSort] = useState('capacity-desc');
     const [partySort, setPartySort] = useState('power-desc');
-    const [marketHeroSort, setMarketHeroSort] = useState('power-desc');
-    const [marketRelicSort, setMarketRelicSort] = useState('capacity-desc');
     
     // 獲取頁面級快速操作
     const quickActions = usePageQuickActions();
@@ -177,23 +84,36 @@ const MyAssetsPageEnhanced: React.FC = () => {
     // Fetch owned NFTs - use global store
     const { nfts: nftsData, isLoading: isLoadingNfts, refetch: refetchNfts } = useNfts(address, chainId || 56);
     
-    // Market browser hooks
-    const marketHeroes = useMarketBrowser('hero');
-    const marketRelics = useMarketBrowser('relic');
+    // 市場功能已移至獨立頁面，可從主導航訪問
     
     // Party contract
     const partyContract = getContractWithABI('PARTY');
     const heroContract = getContractWithABI('HERO');
     const relicContract = getContractWithABI('RELIC');
     
-    // Platform fee
-    const { data: platformFeeData, isLoading: isLoadingFee } = useReadContract({
+    // Platform fee with error handling
+    const { data: platformFeeData, isLoading: isLoadingFee, error: platformFeeError } = useReadContract({
         address: partyContract?.address,
         abi: partyContract?.abi,
-        functionName: 'getPlatformFee',
+        functionName: 'platformFee',
         chainId: bsc.id,
-        query: { enabled: !!partyContract }
+        query: { 
+            enabled: !!partyContract?.address && !!partyContract?.abi,
+            retry: 3,
+            retryDelay: 1000
+        }
     });
+    
+    // Log platform fee issues for debugging
+    React.useEffect(() => {
+        if (platformFeeError) {
+            logger.error('Platform fee fetch error:', platformFeeError);
+            logger.info('Party contract info:', {
+                address: partyContract?.address,
+                hasAbi: !!partyContract?.abi
+            });
+        }
+    }, [platformFeeError, partyContract]);
     
     // Authorization checks
     const { data: isHeroAuthorized } = useReadContract({
@@ -276,22 +196,31 @@ const MyAssetsPageEnhanced: React.FC = () => {
     };
     
     const handleCreateParty = (heroIds: bigint[], relicIds: bigint[]) => {
-        if (!platformFeeData) {
-            showToast('無法獲取平台費用', 'error');
-            return;
-        }
-        
         if (!partyContract) {
             showToast('無法取得合約配置', 'error');
             return;
         }
+        
+        // 即使無法獲取費用也允許創建（使用 0 作為預設）
+        const fee = platformFeeData ? (platformFeeData as bigint) : BigInt(0);
+        
+        if (platformFeeError) {
+            showToast('無法獲取平台費用，使用預設值嘗試創建', 'warning');
+        }
+        
+        logger.info('創建隊伍參數:', {
+            heroIds: heroIds.map(id => id.toString()),
+            relicIds: relicIds.map(id => id.toString()),
+            fee: fee.toString(),
+            contract: partyContract.address
+        });
         
         createPartyTx.execute({
             address: partyContract.address,
             abi: partyContract.abi,
             functionName: 'createParty',
             args: [heroIds, relicIds],
-            value: platformFeeData ? (platformFeeData as bigint) : BigInt(0)
+            value: fee
         }, '創建隊伍');
     };
     
@@ -362,68 +291,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
     
     // Tab content renderer
     const renderTabContent = () => {
-        if (activeTab.startsWith('market')) {
-            const isHero = activeTab === 'marketHeroes';
-            const marketData = isHero ? marketHeroes : marketRelics;
-            
-            if (marketData.isLoading) return <LoadingSpinner />;
-            if (marketData.isError) return <EmptyState message="無法載入市場數據" />;
-            if (marketData.data.length === 0) return <EmptyState message="市場上暫無物品" />;
-            
-            return (
-                <div className="space-y-4">
-                    <div className="flex justify-between items-center mb-2">
-                        <p className="text-gray-400">
-                            顯示 {marketData.page * marketData.pageSize + 1} - {Math.min((marketData.page + 1) * marketData.pageSize, marketData.data.length)} 項
-                        </p>
-                        <div className="flex gap-2">
-                            <ActionButton
-                                onClick={() => marketData.setPage(Math.max(0, marketData.page - 1))}
-                                disabled={marketData.page === 0}
-                                className="px-3 py-1"
-                            >
-                                上一頁
-                            </ActionButton>
-                            <ActionButton
-                                onClick={() => marketData.setPage(marketData.page + 1)}
-                                disabled={marketData.data.length < marketData.pageSize}
-                                className="px-3 py-1"
-                            >
-                                下一頁
-                            </ActionButton>
-                        </div>
-                    </div>
-                    <SortSelector
-                        options={sortOptions[isHero ? 'hero' : 'relic']}
-                        value={isHero ? marketHeroSort : marketRelicSort}
-                        onChange={isHero ? setMarketHeroSort : setMarketRelicSort}
-                    />
-                    <OptimizedNftGrid
-                        nfts={sortNfts(
-                            marketData.data.map((item: any) => ({
-                                ...item,
-                                type: (isHero ? 'hero' : 'relic') as NftType,
-                                tokenId: item.tokenId,
-                                metadata: {
-                                    name: `${isHero ? 'Hero' : 'Relic'} #${item.tokenId}`,
-                                    description: '',
-                                    image: '',
-                                    attributes: []
-                                }
-                            })),
-                            isHero ? marketHeroSort : marketRelicSort,
-                            isHero ? 'hero' : 'relic'
-                        )}
-                        onViewDetails={(nft) => {
-                            // TODO: Implement view details modal
-                            showToast(`查看 ${nft.type} #${nft.tokenId} 詳情`, 'info');
-                        }}
-                    />
-                </div>
-            );
-        }
-        
-        // My assets tabs
+        // My assets content
         if (isLoadingNfts) return <LoadingSpinner />;
         if (!nftsData) return <EmptyState message="無法載入資產" />;
         
@@ -446,11 +314,11 @@ const MyAssetsPageEnhanced: React.FC = () => {
                                 🏺 立即鑄造英雄
                             </ActionButton>
                             <ActionButton
-                                onClick={() => setActiveTab('marketHeroes')}
+                                onClick={() => window.location.hash = '/marketplace'}
                                 variant="secondary"
                                 className="px-6 py-3 border-2 border-gray-600 hover:border-gray-500"
                             >
-                                🛒 瀏覽英雄市場
+                                🛒 前往市場
                             </ActionButton>
                         </div>
                     </div>
@@ -486,11 +354,11 @@ const MyAssetsPageEnhanced: React.FC = () => {
                                 ⚡ 立即鑄造聖物
                             </ActionButton>
                             <ActionButton
-                                onClick={() => setActiveTab('marketRelics')}
+                                onClick={() => window.location.hash = '/marketplace'}
                                 variant="secondary"
                                 className="px-6 py-3 border-2 border-gray-600 hover:border-gray-500"
                             >
-                                🛒 瀏覽聖物市場
+                                🛒 前往市場
                             </ActionButton>
                         </div>
                     </div>
@@ -568,8 +436,6 @@ const MyAssetsPageEnhanced: React.FC = () => {
         { key: 'myHeroes' as const, label: '我的英雄', icon: Icons.Users, count: nftsData?.heros?.length || 0 },
         { key: 'myRelics' as const, label: '我的聖物', icon: Icons.Shield, count: nftsData?.relics?.length || 0 },
         { key: 'myParties' as const, label: '我的隊伍', icon: Icons.Users, count: nftsData?.parties?.length || 0 },
-        { key: 'marketHeroes' as const, label: '英雄市場', icon: Icons.ShoppingCart },
-        { key: 'marketRelics' as const, label: '聖物市場', icon: Icons.ShoppingCart },
     ];
     
     return (

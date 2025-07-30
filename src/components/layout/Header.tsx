@@ -109,21 +109,12 @@ export const Header: React.FC<HeaderProps> = ({
   const isDeveloper = isConnected && address?.toLowerCase() === DEVELOPER_ADDRESS.toLowerCase();
 
   const navItems: { key: Page; label: string; icon: JSX.Element }[] = useMemo(() => {
+      // 按照用戶体験流程排序：总览 → 铸造 → 升星 → 资产管理(组队) → 地城冒险 → 交易市场 → 高级功能
       const items = [
           { 
               key: 'dashboard' as Page, 
               label: '總覽', 
               icon: <Icons.Home className="w-6 h-6" />
-          },
-          { 
-              key: 'myAssets' as Page, 
-              label: '我的資產', 
-              icon: <Icons.Package className="w-6 h-6" />
-          },
-          { 
-              key: 'marketplace' as Page, 
-              label: '市場', 
-              icon: <Icons.ShoppingCart className="w-6 h-6" />
           },
           { 
               key: 'mint' as Page, 
@@ -136,9 +127,19 @@ export const Header: React.FC<HeaderProps> = ({
               icon: <Icons.Star className="w-6 h-6" />
           },
           { 
+              key: 'myAssets' as Page, 
+              label: '我的資產', 
+              icon: <Icons.Package className="w-6 h-6" />
+          },
+          { 
               key: 'dungeon' as Page, 
               label: '地城', 
               icon: <Icons.Castle className="w-6 h-6" />
+          },
+          { 
+              key: 'marketplace' as Page, 
+              label: '市場', 
+              icon: <Icons.ShoppingCart className="w-6 h-6" />
           },
           { 
               key: 'gameData' as Page, 

@@ -1,5 +1,5 @@
-// AltarVipBonus.tsx - VIP 加成顯示組件（隱藏管理員敏感資訊）
-import React from 'react';
+// AltarVipBonus.tsx - VIP 加成顯示組件（增強型摺疊面板）
+import React, { useState } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import { getContractWithABI } from '../../config/contractsWithABI';
 import { useVipStatus } from '../../hooks/useVipStatus';
@@ -14,6 +14,9 @@ export const AltarVipBonus: React.FC<AltarVipBonusProps> = ({ className = '' }) 
   const { address } = useAccount();
   const { vipLevel, taxReduction, isLoading: isVipLoading } = useVipStatus();
   const { isAdmin } = useAdminAccess();
+  
+  // 摺疊狀態管理
+  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   
   const altarContract = getContractWithABI('ALTAROFASCENSION');
   
@@ -105,72 +108,89 @@ export const AltarVipBonus: React.FC<AltarVipBonusProps> = ({ className = '' }) 
         </div>
         <div className="bg-pink-900/20 rounded-lg p-2 text-center">
           <div className="text-sm font-semibold text-pink-300">稅率減免</div>
-          <div className="text-lg font-bold text-white">{Number(taxReduction) / 100}%</div>
+          <div className="text-lg font-bold text-white">{(Number(taxReduction) / 10000 * 100).toFixed(1)}%</div>
         </div>
       </div>
 
-      {/* 祭壇 VIP 加成狀況說明 */}
+      {/* 祭壇 VIP 加成狀況說明 - 增強型摺疊面板 */}
       <div className="bg-gradient-to-r from-green-800/20 to-emerald-800/20 rounded-lg p-3 mb-3">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-green-400">✨</span>
-          <span className="font-semibold text-green-200">祭壇 VIP 加成</span>
+        {/* 標題和摺疊按鈕 */}
+        <div 
+          className="flex items-center justify-between cursor-pointer hover:bg-green-800/20 rounded-lg p-2 -m-2 transition-colors"
+          onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-green-400">✨</span>
+            <span className="font-semibold text-green-200">祭壇 VIP 加成</span>
+            <span className="font-bold text-yellow-300">+{effectiveVipBonus}%</span>
+          </div>
+          <button className="text-green-300 hover:text-green-200 transition-transform">
+            <span className={`transform transition-transform ${isDetailsExpanded ? 'rotate-180' : ''}`}>
+              ▼
+            </span>
+          </button>
         </div>
         
-        {/* 普通用戶：簡化顯示 */}
-        {!isAdmin ? (
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between items-center">
-              <span className="text-green-300">當前 VIP 等級</span>
-              <span className="font-bold text-white">等級 {currentVipLevel}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-green-300">升星成功率加成</span>
-              <span className="font-bold text-yellow-300">+{effectiveVipBonus}%</span>
-            </div>
-            <div className="mt-2 pt-2 border-t border-green-500/20">
-              <p className="text-xs text-green-200 text-center">
-                {effectiveVipBonus > 0 
-                  ? '🎉 VIP 加成自動生效中！'
-                  : '👤 質押 SoulShard 成為 VIP 以獲得加成'
-                }
-              </p>
-            </div>
-          </div>
-        ) : (
-          /* 管理員：詳細顯示 */
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between items-center">
-              <span className="text-orange-300">地下城加成</span>
-              <span className="font-bold text-green-300">自動生效 +{autoVipBonus}%</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-orange-300">VIP 等級加成</span>
-              <span className="font-bold text-green-300">+{currentVipLevel}%</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-orange-300">神秘額外加成</span>
-              <span className={`font-bold ${
-                additionalBonus > 0 ? 'text-green-300' : 'text-gray-400'
-              }`}>
-                +{additionalBonus}%
-              </span>
-            </div>
-            <div className="flex justify-between items-center border-t border-orange-500/20 pt-1 mt-2">
-              <span className="text-orange-200 font-semibold">總加成</span>
-              <span className="font-bold text-yellow-300">+{effectiveVipBonus}%</span>
-            </div>
-            <div className="mt-2 pt-2 border-t border-orange-500/20">
-              <p className="text-xs text-orange-200 text-center">
-                {effectiveVipBonus > currentVipLevel 
-                  ? `🎉 您獲得了 +${additionalBonus}% 神秘額外加成！`
-                  : effectiveVipBonus === currentVipLevel && currentVipLevel > 0
-                    ? '✅ VIP 等級加成自動生效中'
+        {/* 摺疊內容 */}
+        <div className={`overflow-hidden transition-all duration-300 ${
+          isDetailsExpanded ? 'max-h-screen opacity-100 mt-3' : 'max-h-0 opacity-0'
+        }`}>
+          {!isAdmin ? (
+            /* 普通用戶：簡化顯示 */
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-green-300">當前 VIP 等級</span>
+                <span className="font-bold text-white">等級 {currentVipLevel}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-green-300">升星成功率加成</span>
+                <span className="font-bold text-yellow-300">+{effectiveVipBonus}%</span>
+              </div>
+              <div className="mt-2 pt-2 border-t border-green-500/20">
+                <p className="text-xs text-green-200 text-center">
+                  {effectiveVipBonus > 0 
+                    ? '🎉 VIP 加成自動生效中！'
                     : '👤 質押 SoulShard 成為 VIP 以獲得加成'
-                }
-              </p>
+                  }
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          ) : (
+            /* 管理員：詳細顯示 */
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-orange-300">地下城加成</span>
+                <span className="font-bold text-green-300">自動生效 +{autoVipBonus}%</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-orange-300">VIP 等級加成</span>
+                <span className="font-bold text-green-300">+{currentVipLevel}%</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-orange-300">神秘額外加成</span>
+                <span className={`font-bold ${
+                  additionalBonus > 0 ? 'text-green-300' : 'text-gray-400'
+                }`}>
+                  +{additionalBonus}%
+                </span>
+              </div>
+              <div className="flex justify-between items-center border-t border-orange-500/20 pt-1 mt-2">
+                <span className="text-orange-200 font-semibold">總加成</span>
+                <span className="font-bold text-yellow-300">+{effectiveVipBonus}%</span>
+              </div>
+              <div className="mt-2 pt-2 border-t border-orange-500/20">
+                <p className="text-xs text-orange-200 text-center">
+                  {effectiveVipBonus > currentVipLevel 
+                    ? `🎉 您獲得了 +${additionalBonus}% 神秘額外加成！`
+                    : effectiveVipBonus === currentVipLevel && currentVipLevel > 0
+                      ? '✅ VIP 等級加成自動生效中'
+                      : '👤 質押 SoulShard 成為 VIP 以獲得加成'
+                  }
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 技術說明 - 根據權限顯示不同內容 */}

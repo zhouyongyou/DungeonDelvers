@@ -25,6 +25,7 @@ import { isValidPitchPath } from './utils/pitchAccess';
 import { PageTransition, usePagePreload } from './components/ui/PageTransition';
 import { useSmartPreloader } from './hooks/useSmartPreloader';
 import { NftDisplayProvider } from './hooks/useNftDisplayPreference';
+import { getDomainBasedRoute, isPitchDomain, redirectToDomainRoute } from './utils/domainRouter';
 // import { WebSocketIndicator } from './components/WebSocketIndicator'; // 移除，因為不再使用 Apollo
 
 // 動態導入所有頁面
@@ -62,6 +63,11 @@ const PageLoader: React.FC = () => {
 };
 
 const getPageFromHash = (): Page => {
+    // 檢查是否為 PITCH 專用域名
+    if (isPitchDomain()) {
+        return 'pitch';
+    }
+    
     const hash = window.location.hash.replace('#/', '');
     const page = hash.split('?')[0];
     
@@ -88,9 +94,9 @@ const getPageFromHash = (): Page => {
     if (routeMapping[page]) {
         return routeMapping[page];
     }
-    // ★ 核心優化：將預設首頁從 'dashboard' 改為 'mint'
-    // 這將極大地改善首次載入的體驗和 RPC 負載。
-    return 'mint'; 
+    // ★ 首頁優化：導向總覽頁面提供完整遊戲概況
+    // Dashboard 提供更好的用戶引導和整體狀況展示
+    return 'dashboard'; 
 };
 
 function App() {

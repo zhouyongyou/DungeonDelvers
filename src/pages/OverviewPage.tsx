@@ -351,34 +351,130 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                 <div className="bg-gray-800 rounded-lg p-6">
                     <h2 className="text-xl font-bold text-white mb-4">快速行動</h2>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <ActionButton
+                        <button
                             onClick={() => setActivePage('mint')}
-                            className="py-3"
+                            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 transform hover:scale-105 hover:shadow-lg"
                         >
-                            <Icons.Plus className="h-5 w-5 mr-2" />
-                            鑄造英雄、聖物
-                        </ActionButton>
-                        <ActionButton
+                            <span className="text-2xl">🎯</span>
+                            <span className="font-medium">鑄造NFT</span>
+                        </button>
+                        <button
                             onClick={() => setActivePage('altar')}
-                            className="py-3"
+                            className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 transform hover:scale-105 hover:shadow-lg"
                         >
-                            <Icons.Star className="h-5 w-5 mr-2" />
-                            升級英雄、聖物
-                        </ActionButton>
-                        <ActionButton
+                            <span className="text-2xl">⭐</span>
+                            <span className="font-medium">升級NFT</span>
+                        </button>
+                        <button
                             onClick={() => setActivePage('myAssets')}
-                            className="py-3"
+                            className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 transform hover:scale-105 hover:shadow-lg"
                         >
-                            <Icons.Package className="h-5 w-5 mr-2" />
-                            查看資產
-                        </ActionButton>
-                        <ActionButton
+                            <span className="text-2xl">📊</span>
+                            <span className="font-medium">查看資產</span>
+                        </button>
+                        <button
                             onClick={() => setActivePage('dungeon')}
-                            className="py-3"
+                            className="bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 transform hover:scale-105 hover:shadow-lg"
                         >
-                            <Icons.Map className="h-5 w-5 mr-2" />
-                            探索地城
-                        </ActionButton>
+                            <span className="text-2xl">🏰</span>
+                            <span className="font-medium">探索地城</span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Project Introduction Section */}
+                <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                    <div className="text-center mb-6">
+                        <h2 className="text-2xl font-bold text-white mb-2">🎮 歡迎來到 DungeonDelvers</h2>
+                        <p className="text-gray-400">一個結合策略、收集與冒險的 Web3 遊戲世界</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                        <div className="text-center">
+                            <div className="bg-gradient-to-br from-blue-500 to-purple-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <span className="text-2xl">⚔️</span>
+                            </div>
+                            <h3 className="text-lg font-semibold text-white mb-2">收集英雄</h3>
+                            <p className="text-sm text-gray-400">鑄造獨特的英雄 NFT，每個都有不同的屬性和能力</p>
+                        </div>
+
+                        <div className="text-center">
+                            <div className="bg-gradient-to-br from-purple-500 to-pink-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <span className="text-2xl">🛡️</span>
+                            </div>
+                            <h3 className="text-lg font-semibold text-white mb-2">強化裝備</h3>
+                            <p className="text-sm text-gray-400">收集聖物，升級您的英雄和裝備以提升戰力</p>
+                        </div>
+
+                        <div className="text-center">
+                            <div className="bg-gradient-to-br from-green-500 to-teal-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <span className="text-2xl">🏰</span>
+                            </div>
+                            <h3 className="text-lg font-semibold text-white mb-2">探索地城</h3>
+                            <p className="text-sm text-gray-400">組建隊伍探索危險的地城，獲得豐厚的獎勵</p>
+                        </div>
+
+                        <div className="text-center">
+                            <div className="bg-gradient-to-br from-orange-500 to-red-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <span className="text-2xl">💰</span>
+                            </div>
+                            <h3 className="text-lg font-semibold text-white mb-2">賺取收益</h3>
+                            <p className="text-sm text-gray-400">通過遊戲活動賺取 SOUL 代幣和其他獎勵</p>
+                        </div>
+                    </div>
+
+                    <div className="border-t border-gray-700 pt-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="bg-gray-700/50 rounded-lg p-4">
+                                <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
+                                    <span className="text-blue-400">🎲</span>
+                                    遊戲機制
+                                </h4>
+                                <ul className="text-sm text-gray-400 space-y-1">
+                                    <li>• NFT 英雄和聖物系統</li>
+                                    <li>• 隊伍組建和戰力計算</li>
+                                    <li>• 隨機探索和獎勵機制</li>
+                                    <li>• 升級和進化系統</li>
+                                </ul>
+                            </div>
+
+                            <div className="bg-gray-700/50 rounded-lg p-4">
+                                <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
+                                    <span className="text-green-400">💎</span>
+                                    經濟系統
+                                </h4>
+                                <ul className="text-sm text-gray-400 space-y-1">
+                                    <li>• SOUL 代幣獎勵</li>
+                                    <li>• VIP 會員制度</li>
+                                    <li>• 推薦獎勵系統</li>
+                                    <li>• 質押收益機制</li>
+                                </ul>
+                            </div>
+
+                            <div className="bg-gray-700/50 rounded-lg p-4">
+                                <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
+                                    <span className="text-purple-400">🌐</span>
+                                    社群連結
+                                </h4>
+                                <div className="space-y-2">
+                                    <a href="https://t.me/Soulbound_Saga" target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300 text-sm block transition-colors">
+                                        📱 Telegram 社群
+                                    </a>
+                                    <a href="https://x.com/Soulbound_Saga" target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300 text-sm block transition-colors">
+                                        🐦 Twitter 官方
+                                    </a>
+                                    <a href="https://soulshard.gitbook.io/dungeon-delvers/" target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300 text-sm block transition-colors">
+                                        📘 遊戲文檔
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="text-center mt-6 pt-4 border-t border-gray-700">
+                        <p className="text-gray-400 text-sm">
+                            ⚡ 現在就開始您的冒險之旅！連接錢包並鑄造您的第一個英雄
+                        </p>
                     </div>
                 </div>
             </div>

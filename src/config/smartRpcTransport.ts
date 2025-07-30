@@ -38,6 +38,21 @@ const LOG_THROTTLE_MS = 30000; // 30 秒內不重複記錄相同 key
 async function makeEmergencyRpcRequest(method: string, params: any[]): Promise<any> {
   logger.info('🆘 使用緊急 RPC 執行請求:', method);
   
+  // 檢查方法是否被公共節點支援
+  const unsupportedMethods = [
+    'eth_newFilter',
+    'eth_newBlockFilter', 
+    'eth_newPendingTransactionFilter',
+    'eth_uninstallFilter',
+    'eth_getFilterChanges',
+    'eth_getFilterLogs'
+  ];
+  
+  if (unsupportedMethods.includes(method)) {
+    logger.warn(`⚠️ 方法 ${method} 不被公共 RPC 節點支援，跳過緊急請求`);
+    throw new Error(`Method ${method} not supported by public RPC nodes`);
+  }
+  
   // 嘗試最多 3 個緊急節點
   for (let i = 0; i < 3; i++) {
     const emergencyRpc = getEmergencyRpcUrl();
@@ -63,6 +78,11 @@ async function makeEmergencyRpcRequest(method: string, params: any[]): Promise<a
       const data = await response.json();
       
       if (data.error) {
+        // 特殊處理方法不支援的錯誤
+        if (data.error.message && data.error.message.includes('not allowed')) {
+          logger.warn(`⚠️ 方法 ${method} 被 RPC 節點拒絕: ${data.error.message}`);
+          throw new Error(`Method ${method} not allowed by RPC node`);
+        }
         throw new Error(data.error.message || 'RPC error');
       }
       
@@ -71,6 +91,11 @@ async function makeEmergencyRpcRequest(method: string, params: any[]): Promise<a
       
     } catch (error) {
       logger.warn(`緊急 RPC 嘗試 ${i + 1}/3 失敗:`, error);
+      
+      // 如果是方法不支援錯誤，直接拋出不再重試
+      if (error.message.includes('not allowed') || error.message.includes('not supported')) {
+        throw error;
+      }
       
       if (i === 2) {
         throw new Error(`所有緊急 RPC 嘗試都失敗: ${error.message}`);
@@ -197,6 +222,56 @@ export function createSmartRpcTransport(): Transport {
   return custom({
     async request({ method, params }) {
       let lastError: any;
+      
+      // 檢查是否為事件監聽相關方法
+      const eventMethods = [
+        'eth_newFilter',
+        'eth_newBlockFilter', 
+        'eth_newPendingTransactionFilter',
+        'eth_uninstallFilter',
+        'eth_getFilterChanges',
+        'eth_getFilterLogs'
+      ];
+      
+      const isEventMethod = eventMethods.includes(method);
+      
+      // 事件監聽方法優先使用 Alchemy（如果有公開 key）
+      if (isEventMethod && import.meta.env.VITE_ALCHEMY_KEY_PUBLIC) {
+        try {
+          const publicKey = import.meta.env.VITE_ALCHEMY_KEY_PUBLIC;
+          const alchemyUrl = `https://bnb-mainnet.g.alchemy.com/v2/${publicKey}`;
+          
+          logger.info(`🔑 事件監聽使用公開 Alchemy key: ${method}`);
+          
+          const response = await fetch(alchemyUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              method,
+              params,
+              id: Date.now(),
+            }),
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          
+          if (data.error) {
+            throw new Error(data.error.message || 'RPC error');
+          }
+          
+          return data.result;
+        } catch (error) {
+          logger.warn(`公開 Alchemy key 處理事件方法失敗，降級到一般流程:`, error);
+          // 繼續執行下面的一般流程
+        }
+      }
       
       // 檢查是否應該使用 RPC 代理
       const globalUseProxy = import.meta.env.VITE_USE_RPC_PROXY === 'true';

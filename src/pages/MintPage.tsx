@@ -433,7 +433,7 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
     // 定義 title 變數，避免 TDZ 錯誤 - 必須在所有使用它的 hooks 之前
     const title = type === 'hero' ? '英雄' : '聖物';
     
-    const [quantity, setQuantity] = useState(1); // 默認從1個開始
+    const [quantity, setQuantity] = useState(50); // 默認 50 個，符合大多数用户的批量铸造需求
     const [paymentSource, setPaymentSource] = useState<PaymentSource>('wallet');
     const [mintingResult, setMintingResult] = useState<BatchMintResult | AnyNft | null>(null);
     const [showProgressModal, setShowProgressModal] = useState(false);
@@ -926,8 +926,8 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
 MintCard.displayName = 'MintCard';
 
 const MintingInterface = memo<{ chainId: typeof bsc.id }>(({ chainId }) => {
-    const heroMintOptions = [1, 5, 10, 20, 50]; // 恢復單個鑄造選項
-    const relicMintOptions = [1, 5, 10, 20, 50]; // 恢復單個鑄造選項
+    const heroMintOptions = [50, 20, 10, 5, 1]; // 批量鑄造優先，鼓勵更好的用戶體驗
+    const relicMintOptions = [50, 20, 10, 5, 1]; // 批量鑄造優先，鼓勵更好的用戶體驗
     return (
         <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-8">

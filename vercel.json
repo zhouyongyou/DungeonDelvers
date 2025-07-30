@@ -114,6 +114,14 @@
     {
       "source": "/metadata/:params*",
       "destination": "/api/metadata/:params*"
+    },
+    {
+      "source": "/pitch",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/invest", 
+      "destination": "/index.html"
     }
   ]
 }

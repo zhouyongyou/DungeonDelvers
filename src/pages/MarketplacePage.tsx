@@ -417,12 +417,21 @@ const ListingCard: React.FC<{
                         nft={listing.nft} 
                         className="w-full h-full"
                         interactive={false}
+                        showFallback={true}
                     />
                 ) : (
-                    <span className="text-4xl">
-                        {listing.nftType === 'hero' ? '⚔️' :
-                         listing.nftType === 'relic' ? '🛡️' : '👥'}
-                    </span>
+                    <div className="text-center">
+                        <div className="text-4xl mb-2">
+                            {listing.nftType === 'hero' ? '⚔️' :
+                             listing.nftType === 'relic' ? '🛡️' : '👥'}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                            {listing.nftType.toUpperCase()}
+                        </div>
+                        <div className="text-xs text-yellow-400 mt-1">
+                            加載中...
+                        </div>
+                    </div>
                 )}
                 {/* 戰力角標 */}
                 {powerValue && (
@@ -438,10 +447,17 @@ const ListingCard: React.FC<{
             </div>
             
             <div className="space-y-2">
-                <h3 className="font-bold text-white">
-                    {listing.nftType === 'hero' ? '英雄' :
-                     listing.nftType === 'relic' ? '聖物' : '隊伍'} #{listing.tokenId.toString()}
-                </h3>
+                <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-white">
+                        {listing.nftType === 'hero' ? '英雄' :
+                         listing.nftType === 'relic' ? '聖物' : '隊伍'} #{listing.tokenId.toString()}
+                    </h3>
+                    {!listing.nft && (
+                        <div className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded">
+                            數據加載中
+                        </div>
+                    )}
+                </div>
                 
                 {/* NFT 詳細資訊 */}
                 {listing.nftType === 'hero' && heroDetails.details && (
@@ -585,6 +601,62 @@ const MarketplacePage: React.FC = () => {
         staleTime: 30 * 1000,
     });
     
+    // 增強市場列表数据，添加完整的 NFT 信息
+    const enhancedListings = useMemo(() => {
+        if (!localListings || !userNfts) return localListings;
+        
+        return localListings.map(listing => {
+            if (listing.nft) return listing; // 已经有数据
+            
+            // 尝试从用户 NFT 中找到对应的数据
+            let nftData = null;
+            const tokenId = BigInt(listing.tokenId);
+            
+            switch (listing.nftType) {
+                case 'hero':
+                    nftData = userNfts.heros?.find(nft => nft.id === tokenId);
+                    break;
+                case 'relic':
+                    nftData = userNfts.relics?.find(nft => nft.id === tokenId);
+                    break;
+                case 'party':
+                    nftData = userNfts.parties?.find(nft => nft.id === tokenId);
+                    break;
+            }
+            
+            if (nftData) {
+                return { ...listing, nft: nftData };
+            }
+            
+            // 如果找不到，则生成一个基本的 NFT 对象
+            const basicNft = {
+                id: tokenId,
+                type: listing.nftType,
+                contractAddress: '', // 将由 SVG 生成器处理
+                name: `${listing.nftType.charAt(0).toUpperCase() + listing.nftType.slice(1)} #${listing.tokenId}`,
+                description: 'Market listing',
+                image: `/images/${listing.nftType}/${listing.nftType}-placeholder.png`,
+                attributes: [],
+                source: 'marketplace-fallback'
+            };
+            
+            // 根据类型添加默认属性
+            switch (listing.nftType) {
+                case 'hero':
+                    Object.assign(basicNft, { power: 100, rarity: 1 });
+                    break;
+                case 'relic':
+                    Object.assign(basicNft, { capacity: 1, rarity: 1 });
+                    break;
+                case 'party':
+                    Object.assign(basicNft, { totalPower: BigInt(500), totalCapacity: BigInt(5), heroIds: [], relicIds: [], partyRarity: 1 });
+                    break;
+            }
+            
+            return { ...listing, nft: basicNft };
+        });
+    }, [localListings, userNfts]);
+    
     // 監聽本地存儲變化
     React.useEffect(() => {
         const loadListings = () => {
@@ -605,7 +677,7 @@ const MarketplacePage: React.FC = () => {
     
     // 處理和篩選掛單數據
     const filteredListings = useMemo(() => {
-        let filtered = localListings.filter(listing => listing.status === 'active');
+        let filtered = enhancedListings.filter(listing => listing.status === 'active');
         
         // 如果顯示「我的掛單」，只顯示當前用戶的掛單
         if (showMyListings && address) {
@@ -668,7 +740,7 @@ const MarketplacePage: React.FC = () => {
         });
         
         return filtered;
-    }, [localListings, filters, showMyListings, address]);
+    }, [enhancedListings, filters, showMyListings, address]);
     
     const handleBuy = (listing: MarketListingType) => {
         setSelectedListing(listing);
@@ -858,26 +930,72 @@ const MarketplacePage: React.FC = () => {
                 </div>
                 
                 {/* Listings Grid */}
-                {filteredListings.length === 0 ? (
-                    <EmptyState 
-                        message={showMyListings ? "您還沒有任何掛單" : "目前沒有符合條件的掛單"} 
-                    />
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {filteredListings.slice(page * pageSize, (page + 1) * pageSize).map(listing => {
-                            const isOwner = address && listing.seller.toLowerCase() === address.toLowerCase();
-                            return (
-                                <ListingCard
-                                    key={listing.id}
-                                    listing={listing}
-                                    onBuy={() => handleBuy(listing)}
-                                    isOwner={isOwner}
-                                    onCancel={() => handleCancelListing(listing.id)}
-                                    onMakeOffer={() => handleMakeOffer(listing)}
-                                />
-                            );
-                        })}
+                {isLoadingNfts ? (
+                    <div className="text-center py-12">
+                        <LoadingSpinner size="lg" />
+                        <p className="text-gray-400 mt-4">加載市場數據中...</p>
                     </div>
+                ) : filteredListings.length === 0 ? (
+                    <div className="text-center py-12 space-y-6">
+                        <div className="text-6xl mb-4">💰</div>
+                        <h3 className="text-xl font-semibold text-gray-300">
+                            {showMyListings ? '您還沒有任何掛單' : '市場上暂無物品'}
+                        </h3>
+                        <p className="text-gray-400 max-w-md mx-auto">
+                            {showMyListings 
+                                ? '在「我的資產」頁面中選擇 NFT 並創建掛單開始交易'
+                                : '目前沒有符合您篩選條件的物品，試試調整篩選器或稍後再試'
+                            }
+                        </p>
+                        <div className="flex gap-3 justify-center">
+                            {showMyListings ? (
+                                <ActionButton
+                                    onClick={() => window.location.hash = '/myAssets'}
+                                    className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-6 py-3 font-semibold"
+                                >
+                                    🏠 去我的資產
+                                </ActionButton>
+                            ) : (
+                                <ActionButton
+                                    onClick={() => setFilters(prev => ({ ...prev, nftType: 'all', searchTerm: '', priceRange: { min: 0, max: 1000000 } }))}
+                                    variant="secondary"
+                                    className="px-6 py-3 border-2 border-gray-600 hover:border-gray-500"
+                                >
+                                    🔄 清除篩選
+                                </ActionButton>
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {filteredListings.slice(page * pageSize, (page + 1) * pageSize).map(listing => {
+                                const isOwner = address && listing.seller.toLowerCase() === address.toLowerCase();
+                                return (
+                                    <ListingCard
+                                        key={listing.id}
+                                        listing={listing}
+                                        onBuy={() => handleBuy(listing)}
+                                        isOwner={isOwner}
+                                        onCancel={() => handleCancelListing(listing.id)}
+                                        onMakeOffer={() => handleMakeOffer(listing)}
+                                    />
+                                );
+                            })}
+                        </div>
+                        
+                        {/* 數據加載狀態提示 */}
+                        <div className="text-center py-4">
+                            <p className="text-sm text-gray-400">
+                                顯示 {Math.min(filteredListings.length, pageSize)} / {filteredListings.length} 個掛單
+                                {enhancedListings.some(l => !l.nft) && (
+                                    <span className="ml-2 text-yellow-400">
+                                        • 部分數據仍在加載中
+                                    </span>
+                                )}
+                            </p>
+                        </div>
+                    </>
                 )}
                 
                 {/* Pagination */}
@@ -930,7 +1048,7 @@ const MarketplacePage: React.FC = () => {
                         isOpen={showBatchOperations}
                         onClose={() => setShowBatchOperations(false)}
                         userNfts={userNfts}
-                        userListings={localListings.filter(l => 
+                        userListings={enhancedListings.filter(l => 
                             address && l.seller.toLowerCase() === address.toLowerCase()
                         )}
                         onBatchComplete={() => {

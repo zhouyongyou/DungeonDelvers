@@ -14,6 +14,7 @@ import { APP_CONSTANTS, getVipTier } from '../config/constants';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { useAdminAccess } from '../hooks/useAdminAccess';
 import { VipBenefitsGuide } from '../components/vip/VipBenefitsGuide';
+import { WithdrawalTaxCalculator } from '../components/vip/WithdrawalTaxCalculator';
 
 // VIP 福利摺疊組件
 const VipBenefitsCollapsible: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
@@ -549,25 +550,28 @@ const VipPageContent: React.FC = () => {
                         </div>
                     </div>
                     
-                    {/* 提現稅率說明 */}
+                    {/* 提現稅率簡要說明 */}
                     <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
                         <div className="flex items-start gap-2">
                             <span className="text-yellow-400">💡</span>
                             <div className="text-xs space-y-1">
-                                <p className="text-yellow-300 font-medium">什麼是提現稅率？</p>
+                                <p className="text-yellow-300 font-medium">提現稅率減免福利</p>
                                 <p className="text-gray-400">
-                                    當您從<strong className="text-yellow-300">玩家金庫</strong>提取代幣時，系統會收取基礎手續費。
-                                    <strong className="text-green-400">VIP 等級越高，手續費減免越多！</strong>
+                                    從<strong className="text-yellow-300">玩家金庫</strong>提取代幣時享受VIP減免。
+                                    <strong className="text-green-400">每級減免 0.5%，最高減免 10%！</strong>
                                 </p>
-                                <div className="mt-2 space-y-1 text-xs">
-                                    <p>• 基礎稅率：由合約決定（通常為 10%）</p>
-                                    <p>• VIP 減免：每級減免 0.5%</p>
-                                    <p>• 範例：VIP 10 = 減免 5%，實際稅率 5%</p>
-                                </div>
+                                <p className="text-xs text-blue-300">
+                                    ✨ 使用下方的智能計算器查看具體稅率和優化建議
+                                </p>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
+            
+            {/* 智能稅率計算器 */}
+            <div className="bg-gradient-to-br from-purple-900/20 to-indigo-900/20 p-4 sm:p-6 rounded-xl border border-purple-500/20">
+                <WithdrawalTaxCalculator />
             </div>
             
             {/* 錢包授權說明 */}

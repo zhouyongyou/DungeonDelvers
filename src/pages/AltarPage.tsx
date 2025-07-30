@@ -371,7 +371,6 @@ const AltarPage = memo(() => {
     const [showHistoryStats, setShowHistoryStats] = useState(false);
     const [ritualStage, setRitualStage] = useState<'idle' | 'preparing' | 'ritual' | 'success' | 'great_success' | 'failed'>('idle');
     const [showSuccessDetails, setShowSuccessDetails] = useState(false);
-    const [showVipBonus, setShowVipBonus] = useState(true);
     const [showTypeMenu, setShowTypeMenu] = useState(false);
 
     // Always call hooks unconditionally - move early returns after all hooks
@@ -852,25 +851,8 @@ const AltarPage = memo(() => {
                             onToggleDetails={() => setShowSuccessDetails(!showSuccessDetails)}
                         />
 
-                        {/* VIP 加成顯示 - 手機版可收縮 */}
-                        <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-md border border-gray-600/30 rounded-xl p-3 sm:p-4">
-                            <button 
-                                onClick={() => setShowVipBonus(!showVipBonus)}
-                                className="w-full flex items-center justify-between text-sm sm:text-base font-medium text-white"
-                            >
-                                <span>
-                                    <span className="hidden sm:inline">🎆 </span>VIP 加成
-                                </span>
-                                <span className={`transform transition-transform ${
-                                    showVipBonus ? 'rotate-180' : ''
-                                }`}>▼</span>
-                            </button>
-                            {(showVipBonus || window.innerWidth >= 768) && (
-                                <div className="mt-3">
-                                    <AltarVipBonus />
-                                </div>
-                            )}
-                        </div>
+                        {/* VIP 加成顯示 - 使用組件內建的折疊功能 */}
+                        <AltarVipBonus />
 
                         {/* 授權檢查 */}
                         {!isApprovedForAll && currentRule && (

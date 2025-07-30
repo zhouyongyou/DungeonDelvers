@@ -56,7 +56,7 @@ export const TeamBuilder = memo<TeamBuilderProps>(({
         }
     }, [isHeroAuthorized, isRelicAuthorized, hasJustAuthorized]);
 
-    const { totalPower, totalCapacity } = useMemo(() => {
+    const { totalPower, totalCapacity, powerAnalysis } = useMemo(() => {
         const power = selectedHeroes.reduce((acc: number, id: bigint) => {
             const hero = heroes.find(h => h.id === id);
             return acc + (hero ? Number(hero.power) : 0);
@@ -65,7 +65,46 @@ export const TeamBuilder = memo<TeamBuilderProps>(({
             const relic = relics.find(r => r.id === id);
             return acc + (relic ? Number(relic.capacity) : 0);
         }, 0);
-        return { totalPower: power, totalCapacity: capacity };
+        
+        // 戰力分析和建議
+        const currentTier = Math.floor(power / 300);
+        const nextThreshold = (currentTier + 1) * 300;
+        const needed = nextThreshold - power;
+        const currentThresholdBase = currentTier * 300;
+        
+        let suggestion = null;
+        if (power > 0 && selectedHeroes.length < capacity) {
+            // 尋找可以提升戰力的英雄
+            const availableHeroes = heroes.filter(h => 
+                !selectedHeroes.includes(h.id) && 
+                (!h.party || h.party === '0x0000000000000000000000000000000000000000')
+            ).sort((a, b) => b.power - a.power);
+            
+            if (availableHeroes.length > 0 && needed <= 50 && needed > 0) {
+                // 尋找可以剛好超過門檻的英雄
+                const suitableHero = availableHeroes.find(h => h.power >= needed && h.power <= needed + 100);
+                if (suitableHero) {
+                    suggestion = {
+                        type: 'threshold',
+                        message: `還差 ${needed} 戰力達到 ${nextThreshold} 門檻`,
+                        action: `建議選擇戰力 ${suitableHero.power} 的英雄 #${suitableHero.id}`,
+                        heroId: suitableHero.id
+                    };
+                }
+            }
+        }
+        
+        return { 
+            totalPower: power, 
+            totalCapacity: capacity,
+            powerAnalysis: {
+                currentTier,
+                nextThreshold,
+                needed,
+                currentThresholdBase,
+                suggestion
+            }
+        };
     }, [selectedHeroes, selectedRelics, heroes, relics]);
 
     const toggleSelection = (id: bigint, type: 'hero' | 'relic') => {
@@ -190,49 +229,86 @@ export const TeamBuilder = memo<TeamBuilderProps>(({
     }, [heroes, showAllHeroes]);
 
     return (
-        <div className="space-y-6">
-            {/* 步驟指示器 */}
-            <div className="flex items-center justify-center space-x-4 mb-6">
-                <div className={`flex items-center space-x-2 ${currentStep === 'select-relic' ? 'text-purple-400' : 'text-gray-500'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'select-relic' ? 'bg-purple-500' : 'bg-gray-700'}`}>
-                        1
-                    </div>
-                    <span>選擇聖物</span>
-                </div>
-                <div className="w-8 h-px bg-gray-600" />
-                <div className={`flex items-center space-x-2 ${currentStep === 'select-hero' ? 'text-purple-400' : 'text-gray-500'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'select-hero' ? 'bg-purple-500' : 'bg-gray-700'}`}>
-                        2
-                    </div>
-                    <span>選擇英雄</span>
-                </div>
-                <div className="w-8 h-px bg-gray-600" />
-                <div className={`flex items-center space-x-2 ${currentStep === 'ready' ? 'text-green-400' : 'text-gray-500'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'ready' ? 'bg-green-500' : 'bg-gray-700'}`}>
-                        3
-                    </div>
-                    <span>創建隊伍</span>
-                </div>
-            </div>
+        <div className="space-y-6 relative">
 
-            {/* 選擇統計 */}
-            <div className="bg-gray-800/50 backdrop-blur-md rounded-lg p-4 border border-gray-700">
+            {/* 選擇統計 - 主要顯示 */}
+            <div className="bg-gray-800/50 backdrop-blur-md rounded-lg p-4 border border-gray-700 sticky top-0 z-10">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
+                    <div className="text-center">
                         <p className="text-gray-400 text-sm">已選英雄</p>
-                        <p className="text-xl font-bold">{selectedHeroes.length}/{totalCapacity || '?'}</p>
+                        <p className="text-xl font-bold text-emerald-400">{selectedHeroes.length}/{totalCapacity || '?'}</p>
                     </div>
-                    <div>
+                    <div className="text-center">
                         <p className="text-gray-400 text-sm">已選聖物</p>
-                        <p className="text-xl font-bold">{selectedRelics.length}/5</p>
+                        <p className="text-xl font-bold text-teal-400">{selectedRelics.length}/5</p>
                     </div>
-                    <div>
+                    <div className="text-center">
                         <p className="text-gray-400 text-sm">總戰力</p>
-                        <p className="text-xl font-bold text-yellow-400">{totalPower}</p>
+                        <p className="text-xl font-bold text-yellow-400">{totalPower.toLocaleString()}</p>
+                        {/* 頂部也顯示戰力門檻提示 */}
+                        {totalPower > 0 && (
+                            <div className="text-xs mt-1">
+                                {(() => {
+                                    const currentTier = Math.floor(totalPower / 300);
+                                    const nextThreshold = (currentTier + 1) * 300;
+                                    const needed = nextThreshold - totalPower;
+                                    
+                                    if (needed <= 50 && needed > 0) {
+                                        return (
+                                            <span className="text-orange-400">
+                                                還差 {needed} 達到 {nextThreshold}
+                                            </span>
+                                        );
+                                    } else if (totalPower % 300 === 0) {
+                                        return (
+                                            <span className="text-green-400">
+                                                ✓ 已達門檻
+                                            </span>
+                                        );
+                                    } else {
+                                        return (
+                                            <span className="text-gray-400">
+                                                門檻 {Math.floor(totalPower / 300) * 300}~{nextThreshold}
+                                            </span>
+                                        );
+                                    }
+                                })()}
+                            </div>
+                        )}
                     </div>
-                    <div>
+                    <div className="text-center">
                         <p className="text-gray-400 text-sm">隊伍容量</p>
                         <p className="text-xl font-bold text-blue-400">{totalCapacity}</p>
+                    </div>
+                </div>
+                
+                {/* 進度指示器 */}
+                <div className="mt-3 flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-1">
+                        <div className={`w-2 h-2 rounded-full ${
+                            selectedRelics.length > 0 ? 'bg-emerald-500' : 'bg-gray-600'
+                        }`} />
+                        <span className={selectedRelics.length > 0 ? 'text-emerald-400' : 'text-gray-500'}>
+                            聖物選擇
+                        </span>
+                    </div>
+                    <div className="w-4 h-px bg-gray-600" />
+                    <div className="flex items-center gap-1">
+                        <div className={`w-2 h-2 rounded-full ${
+                            selectedHeroes.length > 0 ? 'bg-emerald-500' : 'bg-gray-600'
+                        }`} />
+                        <span className={selectedHeroes.length > 0 ? 'text-emerald-400' : 'text-gray-500'}>
+                            英雄選擇
+                        </span>
+                    </div>
+                    <div className="w-4 h-px bg-gray-600" />
+                    <div className="flex items-center gap-1">
+                        <div className={`w-2 h-2 rounded-full ${
+                            canCreateParty ? 'bg-emerald-500 animate-pulse' : 'bg-gray-600'
+                        }`} />
+                        <span className={canCreateParty ? 'text-emerald-400' : 'text-gray-500'}>
+                            準備完成
+                        </span>
                     </div>
                 </div>
             </div>
@@ -326,9 +402,80 @@ export const TeamBuilder = memo<TeamBuilderProps>(({
                 )}
             </div>
 
-            {/* 操作按鈕區 */}
-            <div className="bg-gray-800/50 backdrop-blur-md rounded-lg p-6 border border-gray-700">
+            {/* 操作按鈕區 - 固定在底部，包含重複的統計信息 */}
+            <div className="bg-gray-800/50 backdrop-blur-md rounded-lg p-6 border border-gray-700 sticky bottom-0 z-10 shadow-lg shadow-black/20">
                 <div className="space-y-4">
+                    {/* 底部統計信息 - 重複顯示便於查看 */}
+                    <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-600">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+                            <div>
+                                <p className="text-gray-400 text-xs">已選英雄</p>
+                                <p className="text-lg font-bold text-emerald-400">{selectedHeroes.length}/{totalCapacity || '?'}</p>
+                            </div>
+                            <div>
+                                <p className="text-gray-400 text-xs">已選聖物</p>
+                                <p className="text-lg font-bold text-teal-400">{selectedRelics.length}/5</p>
+                            </div>
+                            <div>
+                                <p className="text-gray-400 text-xs">總戰力</p>
+                                <div className="space-y-1">
+                                    <p className="text-lg font-bold text-yellow-400">{totalPower.toLocaleString()}</p>
+                                    {/* 戰力門檻提示 */}
+                                    {totalPower > 0 && (
+                                        <div className="text-xs">
+                                            {(() => {
+                                                const currentTier = Math.floor(totalPower / 300);
+                                                const nextThreshold = (currentTier + 1) * 300;
+                                                const needed = nextThreshold - totalPower;
+                                                
+                                                if (needed <= 50 && needed > 0) {
+                                                    return (
+                                                        <span className="text-orange-400">
+                                                            還差 {needed} 達到 {nextThreshold}
+                                                        </span>
+                                                    );
+                                                } else if (totalPower % 300 === 0) {
+                                                    return (
+                                                        <span className="text-green-400">
+                                                            ✓ 已達門檻 {totalPower}
+                                                        </span>
+                                                    );
+                                                } else {
+                                                    return (
+                                                        <span className="text-gray-400">
+                                                            門檻 {Math.floor(totalPower / 300) * 300}~{nextThreshold}
+                                                        </span>
+                                                    );
+                                                }
+                                            })()}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div>
+                                <p className="text-gray-400 text-xs">隊伍容量</p>
+                                <p className="text-lg font-bold text-blue-400">{totalCapacity}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* 戰力建議 */}
+                    {powerAnalysis.suggestion && (
+                        <div className="bg-orange-900/20 border border-orange-500/30 rounded-lg p-3">
+                            <div className="flex items-start gap-2">
+                                <span className="text-orange-400 text-sm">💡</span>
+                                <div className="flex-1">
+                                    <p className="text-orange-300 text-sm font-medium">
+                                        {powerAnalysis.suggestion.message}
+                                    </p>
+                                    <p className="text-orange-200 text-xs mt-1">
+                                        {powerAnalysis.suggestion.action}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
                     {/* 費用顯示 */}
                     <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-400">創建費用</span>

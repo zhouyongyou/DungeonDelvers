@@ -51,12 +51,6 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     switch (actionId) {
       case 'createParty':
         return `${baseClasses} bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-500/20 border border-emerald-400/30`;
-      case 'dungeon':
-        return `${baseClasses} bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400`;
-      case 'altar':
-        return `${baseClasses} bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400`;
-      case 'marketplace':
-        return `${baseClasses} bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400`;
       default:
         return baseClasses;
     }
@@ -85,36 +79,9 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 
 // 頁面級別的快速操作
 export const usePageQuickActions = () => {
-  // 通用的導航操作
-  const navigationActions: QuickAction[] = [
-    {
-      id: 'dungeon',
-      label: '地下城',
-      icon: Icons.MapPin,
-      onClick: () => {
-        window.location.hash = '/dungeon';
-      },
-      condition: () => window.location.hash !== '#/dungeon'
-    },
-    {
-      id: 'altar',
-      label: '升級',
-      icon: Icons.Star,
-      onClick: () => {
-        window.location.hash = '/altar';
-      },
-      condition: () => window.location.hash !== '#/altar'
-    },
-    {
-      id: 'marketplace',
-      label: '市場',
-      icon: Icons.ShoppingCart,
-      onClick: () => {
-        window.location.hash = '/marketplace';
-      },
-      condition: () => window.location.hash !== '#/marketplace'
-    }
-  ];
+  // 簡化的導航操作，移除重複的導航項面按鈕
+  // 用戶可以直接從主導航訪問這些頁面
+  const navigationActions: QuickAction[] = [];
 
   return navigationActions;
 };
