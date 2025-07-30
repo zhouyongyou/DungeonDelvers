@@ -40,6 +40,12 @@ export function getValidPitchRoute(): string | null {
 
 // Check if a given path matches the valid pitch route
 export function isValidPitchPath(path: string): boolean {
+  // Allow direct access to /pitch path
+  if (path === 'pitch') {
+    return true;
+  }
+  
+  // Check for special pitch routes
   const validRoute = getValidPitchRoute();
   return validRoute !== null && path === validRoute;
 }

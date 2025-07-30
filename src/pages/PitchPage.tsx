@@ -93,17 +93,8 @@ const PitchPage: React.FC = memo(() => {
     const { address, isConnected } = useAccount();
     const isDeveloper = isConnected && address?.toLowerCase() === DEVELOPER_ADDRESS.toLowerCase();
 
-    // 僅開發者或開發環境可訪問
-    if (process.env.NODE_ENV === 'production' && !isDeveloper) {
-        return (
-            <div className="min-h-screen bg-[#121212] flex items-center justify-center">
-                <div className="text-center">
-                    <h1 className="text-2xl font-bold text-red-400 mb-4">Access Denied</h1>
-                    <p className="text-gray-400">This page is not publicly accessible.</p>
-                </div>
-            </div>
-        );
-    }
+    // PITCH 頁面現在公開可訪問
+    // 之前的訪問限制已移除
 
     const [activeTab, setActiveTab] = useState<'overview' | 'tokenomics' | 'roadmap' | 'team'>('overview');
 
