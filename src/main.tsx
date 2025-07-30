@@ -21,6 +21,12 @@ initializeAppConfig().catch(console.error);
 // 設置緊急 RPC 處理器
 setupEmergencyRpcHandler();
 
+// 開發環境下檢查 RPC 配置和提供工具
+if (import.meta.env.DEV) {
+  import('./utils/checkRpcConfig');
+  import('./utils/clearEmergencyMode');
+}
+
 // 第一步：測試基本的 React Query
 const queryClient = new QueryClient({
   defaultOptions: {
