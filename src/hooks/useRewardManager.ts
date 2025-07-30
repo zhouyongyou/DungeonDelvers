@@ -113,7 +113,7 @@ export const useRewardManager = ({ partyId, chainId }: UseRewardManagerProps) =>
         const unsubscribeExpedition = useSmartEventListener(
             `ExpeditionFulfilled-RewardManager-${partyId}`,
             dungeonMasterContract.address,
-            'event ExpeditionFulfilled(indexed address player, indexed uint256 partyId, bool success, uint256 reward, uint256 expGained)',
+            'event ExpeditionFulfilled(address indexed player, uint256 indexed partyId, bool success, uint256 reward, uint256 expGained)',
             handleExpeditionLogs,
             true
         );
@@ -121,7 +121,7 @@ export const useRewardManager = ({ partyId, chainId }: UseRewardManagerProps) =>
         const unsubscribeRewards = useSmartEventListener(
             `RewardsBanked-RewardManager-${partyId}`,
             dungeonMasterContract.address,
-            'event RewardsBanked(indexed address player, indexed uint256 partyId, uint256 amount)',
+            'event RewardsBanked(address indexed player, uint256 indexed partyId, uint256 amount)',
             handleRewardsBankedLogs,
             true
         );

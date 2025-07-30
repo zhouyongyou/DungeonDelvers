@@ -151,10 +151,19 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
                 const result: ExpeditionResult = {
                     partyId: args.partyId,
                     success: args.success,
-                    reward: args.reward || 0n,
+                    reward: args.reward ? BigInt(args.reward.toString()) : 0n,
                     expGained: Number(args.expGained || 0),
                     timestamp: Date.now(),
                 };
+                
+                // Debug log for reward parsing
+                logger.info('💰 Expedition reward parsing:', {
+                    rawReward: args.reward?.toString(),
+                    parsedReward: result.reward.toString(),
+                    rewardInEther: formatEther(result.reward),
+                    success: result.success,
+                    expGained: result.expGained
+                });
 
                 logger.info('New expedition result:', {
                     partyId: result.partyId.toString(),

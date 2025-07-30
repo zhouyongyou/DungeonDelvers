@@ -443,17 +443,9 @@ const MyAssetsPageEnhanced: React.FC = () => {
             <div className="space-y-6">
                 {/* Header with Quick Actions */}
                 <PageActionBar
-                    title="我的資產"
+                    title="組隊"
                     subtitle="管理您的英雄、聖物和隊伍"
-                    actions={[
-                        {
-                            id: 'createParty',
-                            label: '創建隊伍',
-                            icon: Icons.Plus,
-                            onClick: () => setShowTeamBuilder(!showTeamBuilder)
-                        },
-                        ...quickActions
-                    ]}
+                    actions={quickActions}
                     showRefresh={true}
                     onRefresh={() => refetchNfts()}
                 />
@@ -464,26 +456,40 @@ const MyAssetsPageEnhanced: React.FC = () => {
                 </div>
                 
                 {/* Tabs */}
-                <div className="flex flex-wrap gap-2 border-b border-gray-700">
-                    {tabs.map(tab => (
-                        <button
-                            key={tab.key}
-                            onClick={() => setActiveTab(tab.key)}
-                            className={`flex items-center gap-2 px-4 py-2 font-medium transition-colors ${
-                                activeTab === tab.key
-                                    ? 'text-[#C0A573] border-b-2 border-[#C0A573]'
-                                    : 'text-gray-400 hover:text-white'
-                            }`}
+                <div className="flex justify-between items-end border-b border-gray-700">
+                    <div className="flex flex-wrap gap-2">
+                        {tabs.map(tab => (
+                            <button
+                                key={tab.key}
+                                onClick={() => setActiveTab(tab.key)}
+                                className={`flex items-center gap-2 px-4 py-2 font-medium transition-colors ${
+                                    activeTab === tab.key
+                                        ? 'text-[#C0A573] border-b-2 border-[#C0A573]'
+                                        : 'text-gray-400 hover:text-white'
+                                }`}
+                            >
+                                {tab.icon && <tab.icon className="h-4 w-4" />}
+                                {tab.label}
+                                {tab.count !== undefined && (
+                                    <span className="ml-1 text-xs bg-gray-700 px-2 py-0.5 rounded-full">
+                                        {tab.count}
+                                    </span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                    
+                    {/* 創建隊伍按鈕 - 移到右邊 */}
+                    <div className="pb-2">
+                        <ActionButton
+                            onClick={() => setShowTeamBuilder(!showTeamBuilder)}
+                            className={`text-sm px-3 py-1.5 ${showTeamBuilder ? 'bg-emerald-600 hover:bg-emerald-500' : ''}`}
+                            size="sm"
                         >
-                            {tab.icon && <tab.icon className="h-4 w-4" />}
-                            {tab.label}
-                            {tab.count !== undefined && (
-                                <span className="ml-1 text-xs bg-gray-700 px-2 py-0.5 rounded-full">
-                                    {tab.count}
-                                </span>
-                            )}
-                        </button>
-                    ))}
+                            <Icons.Plus className="h-4 w-4 mr-1" />
+                            創建隊伍
+                        </ActionButton>
+                    </div>
                 </div>
                 
                 {/* Team Builder Expanded Section */}

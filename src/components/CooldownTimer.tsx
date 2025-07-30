@@ -48,11 +48,16 @@ export const CooldownTimer: React.FC<CooldownTimerProps> = ({
     
     if (timeLeft === 0) return null;
     
-    // 格式化時間顯示
+    // 格式化時間顯示 - 更直觀的格式
     const formatTime = (seconds: number): string => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
+        
+        if (mins > 0) {
+            return `${mins} 分 ${secs} 秒`;
+        } else {
+            return `${secs} 秒`;
+        }
     };
     
     // 計算進度百分比（基於5分鐘總冷卻時間）

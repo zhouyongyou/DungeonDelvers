@@ -4,7 +4,8 @@ import React, { useState, useMemo, useEffect, memo } from 'react';
 import { useAccount, useReadContracts, useWriteContract, usePublicClient, useReadContract } from 'wagmi';
 import { useContractBatchRead, usePriceSettingsBatchRead } from '../hooks/useContractBatchRead';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { formatEther, decodeEventLog, type Abi } from 'viem';
+import { formatEther, decodeEventLog } from 'viem';
+import type { Abi } from 'viem';
 import { fetchMetadata } from '../api/nfts';
 import { getContractWithABI } from '../config/contractsWithABI';
 import altarOfAscensionABI from '../abis/AltarOfAscension.json';
@@ -776,41 +777,35 @@ const AltarPage = memo(() => {
                             </div>
                         )}
                         
-                        {/* 授權管理 - 在確認對話框中 */}
-                        <AltarNftAuthManager
-                            selectedSacrifices={nftType === 'hero' ? selectedNfts.map(id => ({ tokenId: id } as any)) : []}
-                            selectedRelics={nftType === 'relic' ? selectedNfts.map(id => ({ tokenId: id } as any)) : []}
-                            onAuthStatusChange={() => refetchApproval()}
-                            renderTrigger={({ isLoading, needsAuth, handleAuth, authStatus }) => 
-                                needsAuth ? (
-                                    <div className="bg-gradient-to-br from-red-900/40 to-orange-900/40 backdrop-blur-md 
-                                                    border border-red-600/50 rounded-lg p-4 space-y-3">
-                                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                                            🔓 需要授權NFT
-                                        </h3>
-                                        <div className="space-y-2">
-                                            {authStatus.map((item, idx) => (
-                                                <div key={idx} className="flex items-center justify-between text-xs">
-                                                    <span className="text-gray-300">{item.name}</span>
-                                                    <span className={`${item.pending ? 'text-yellow-400' : 'text-red-400'}`}>
-                                                        {item.pending ? '⏳ 處理中...' : '❌ 未授權'}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <ActionButton
-                                            onClick={handleAuth}
-                                            disabled={isLoading}
-                                            loading={isLoading}
-                                            size="sm"
-                                            className="w-full"
-                                        >
-                                            {isLoading ? '授權中...' : '🔓 立即授權'}
-                                        </ActionButton>
-                                    </div>
-                                ) : null
-                            }
-                        />
+                        {/* 授權狀態提示 */}
+                        {!isApprovedForAll && (
+                            <div className="bg-gradient-to-br from-yellow-900/40 to-orange-900/40 backdrop-blur-md 
+                                            border border-yellow-600/50 rounded-lg p-4 space-y-3">
+                                <h3 className="text-sm font-bold text-yellow-300 flex items-center gap-2">
+                                    🔓 尚未授權祭壇合約
+                                </h3>
+                                <p className="text-xs text-gray-300">
+                                    需要先授權祭壇合約才能進行升級儀式
+                                </p>
+                                <div className="flex gap-2">
+                                    <ActionButton
+                                        onClick={handleApproval}
+                                        className="flex-1 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500"
+                                        size="sm"
+                                    >
+                                        🔓 立即授權
+                                    </ActionButton>
+                                    <ActionButton
+                                        onClick={() => setShowConfirmModal(false)}
+                                        className="px-4"
+                                        size="sm"
+                                        variant="secondary"
+                                    >
+                                        稍後
+                                    </ActionButton>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="text-center">
                             <p className="text-xs text-gray-500 italic">
@@ -988,6 +983,11 @@ const AltarPage = memo(() => {
                                 <div className="flex justify-between items-center mb-3 sm:mb-4 md:mb-6">
                                     <h3 className="text-sm sm:text-base md:text-lg font-semibold text-white flex items-center gap-1 sm:gap-2">
                                         <span className="hidden sm:inline">🎴 </span>選擇祭品
+                                        {!isApprovedForAll && (
+                                            <span className="ml-2 px-2 py-1 bg-yellow-600/20 border border-yellow-500/30 rounded-lg text-xs text-yellow-400">
+                                                需要授權
+                                            </span>
+                                        )}
                                     </h3>
                                     {currentRule && selectedNfts.length === currentRule.materialsRequired - 1 && (
                                         <span className="text-sm text-yellow-400 animate-pulse flex items-center gap-1">
@@ -995,6 +995,29 @@ const AltarPage = memo(() => {
                                         </span>
                                     )}
                                 </div>
+                                
+                                {/* 授權狀態提示區域 */}
+                                {!isApprovedForAll && (
+                                    <div className="mb-4 p-3 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border border-yellow-600/40 rounded-lg">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="flex-1">
+                                                <h4 className="text-sm font-medium text-yellow-300 mb-1">
+                                                    🔓 需要授權 NFT 合約
+                                                </h4>
+                                                <p className="text-xs text-yellow-200/80">
+                                                    在開始儀式之前，請先授權祭壇合約訪問您的 NFT
+                                                </p>
+                                            </div>
+                                            <ActionButton
+                                                onClick={handleApproval}
+                                                size="sm"
+                                                className="bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 whitespace-nowrap"
+                                            >
+                                                🔓 授權
+                                            </ActionButton>
+                                        </div>
+                                    </div>
+                                )}
                                 
                                 <AltarNftSelector
                                     nfts={availableNfts || []}

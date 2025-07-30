@@ -14,17 +14,17 @@ const GET_UNASSIGNED_ASSETS_QUERY = `
     player(id: $owner) {
       id
       # 所有英雄（未被燒毀）
-      heros(where: { isBurned: false }) {
+      heros(first: 500, where: { isBurned: false }) {
         id
         tokenId
       }
       # 所有聖物（未被燒毀）
-      relics(where: { isBurned: false }) {
+      relics(first: 500, where: { isBurned: false }) {
         id
         tokenId
       }
       # 所有隊伍（未被燒毀）
-      parties(where: { isBurned: false }) {
+      parties(first: 500, where: { isBurned: false }) {
         id
         tokenId
         heroIds
@@ -59,7 +59,7 @@ export const useUnassignedAssets = (address?: Address) => {
       }
       
       try {
-        const data = await graphQLRateLimiter(() =>
+        const data = await graphQLRateLimiter.execute(() =>
           request(THE_GRAPH_API_URL, GET_UNASSIGNED_ASSETS_QUERY, {
             owner: address.toLowerCase()
           })

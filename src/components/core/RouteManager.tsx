@@ -39,7 +39,8 @@ const PageLoader: React.FC<{ page: Page }> = ({ page }) => {
       case 'mint': return '載入鑄造頁面...';
       case 'dungeon': return '載入地下城...';
       case 'altar': return '載入祭壇...';
-      case 'party': return '載入我的資產...';
+      case 'party': return '載入組隊頁面...';
+      case 'myAssets': return '載入組隊頁面...';
       case 'profile': return '載入個人資料...';
       case 'vip': return '載入VIP頁面...';
       case 'referral': return '載入推薦頁面...';

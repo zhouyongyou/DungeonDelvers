@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './assets/index.css';
-import { wagmiConfig } from './wagmi';
+import { wagmiSimpleConfig as wagmiConfig } from './wagmi-simple';
 import { ToastProvider } from './contexts/SimpleToastContext';
 import { ExpeditionProvider } from './contexts/ExpeditionContext';
 import App from './App';

@@ -1,7 +1,8 @@
 // src/utils/smartEventSystem.ts - 智能事件監聽系統
 // 根據 RPC 節點能力自動選擇 Filter 或輪詢模式
 
-import { createPublicClient, http, type Log, type Address, parseAbiItem } from 'viem';
+import { createPublicClient, http, parseAbiItem } from 'viem';
+import type { Log, Address } from 'viem';
 import { bsc } from 'viem/chains';
 import { logger } from './logger';
 import { getRpcEndpoint } from './rpcOptimizedMigration';

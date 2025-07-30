@@ -128,7 +128,7 @@ export const Header: React.FC<HeaderProps> = ({
           },
           { 
               key: 'myAssets' as Page, 
-              label: '我的資產', 
+              label: '組隊', 
               icon: <Icons.Package className="w-6 h-6" />
           },
           { 
@@ -195,14 +195,14 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="container mx-auto px-4 py-3">
             <div className="flex justify-between items-center">
                 <div className="flex items-center space-x-2 md:space-x-4">
-                    <img src={logoUrl} alt="Dungeon Delvers Logo" className="h-10 w-10 md:h-12 md:w-12 rounded-full border-2 border-[#C0A573]"/>
+                    <img src={logoUrl} alt="Soulbound Saga Logo" className="h-10 w-10 md:h-12 md:w-12 rounded-full border-2 border-[#C0A573]"/>
                     <div>
-                        <h1 className="text-xl md:text-3xl font-bold text-white text-shadow-gold">Dungeon Delvers</h1>
+                        <h1 className="text-xl md:text-3xl font-bold text-white text-shadow-gold">Soulbound Saga</h1>
                         <div className="hidden md:flex text-xs text-gray-400 items-center gap-2">
                            {isConnected && level && (
                                 <span className="font-bold text-yellow-400 bg-black/20 px-2 py-0.5 rounded">LV {level}</span>
                            )}
-                           <span>地下城冒險者</span>
+                           <span>靈魂傳奇：魂之探索者</span>
                         </div>
                     </div>
                 </div>

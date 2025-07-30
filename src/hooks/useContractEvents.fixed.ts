@@ -4,7 +4,8 @@
 import { useAccount, useWatchContractEvent, usePublicClient } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState, useEffect, useRef } from 'react';
-import { decodeEventLog, type Log, type Abi } from 'viem';
+import { decodeEventLog } from 'viem';
+import type { Log, Abi } from 'viem';
 import { getContractWithABI } from '../config/contractsWithABI';
 import { useAppToast } from './useAppToast';
 import { useExpeditionResult } from '../contexts/ExpeditionContext';

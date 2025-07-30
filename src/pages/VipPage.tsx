@@ -15,6 +15,7 @@ import { useAppToast } from '../contexts/SimpleToastContext';
 import { useAdminAccess } from '../hooks/useAdminAccess';
 import { VipBenefitsGuide } from '../components/vip/VipBenefitsGuide';
 import { WithdrawalTaxCalculator } from '../components/vip/WithdrawalTaxCalculator';
+import { VipLevelConverter } from '../components/vip/VipLevelConverter';
 
 // VIP 福利摺疊組件
 const VipBenefitsCollapsible: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
@@ -505,53 +506,47 @@ const VipPageContent: React.FC = () => {
                         </div>
                     </div>
                 </div>
-                {/* VIP 等級表格 - 改進版 */}
-                <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-gray-400 mb-2">質押門檻與提現稅率減免</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs sm:text-sm">
-                        <div className="space-y-2">
-                            <div className="flex justify-between items-center py-2.5 px-3 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors">
-                                <span className="text-gray-300 font-medium">VIP 1</span>
-                                <span className="text-yellow-400">$100+</span>
-                                <span className="text-green-400 font-medium">-0.5%</span>
+                {/* VIP 等級表格 - 簡化版 */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium text-gray-400">質押門檻與稅率減免</h4>
+                        <button
+                            onClick={() => setShowBenefitsGuide(true)}
+                            className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                        >
+                            查看完整表格
+                        </button>
+                    </div>
+                    
+                    {/* 簡化的 VIP 等級顯示 */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                        {[
+                            { level: 1, usd: 100, reduction: 0.5 },
+                            { level: 2, usd: 400, reduction: 1 },
+                            { level: 5, usd: 2500, reduction: 2.5 },
+                            { level: 10, usd: 10000, reduction: 5 }
+                        ].map(({ level, usd, reduction }) => (
+                            <div key={level} className="flex flex-col items-center py-2 px-2 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors">
+                                <span className="text-gray-300 font-medium">VIP {level}</span>
+                                <span className="text-yellow-400">${usd.toLocaleString()}+</span>
+                                <span className="text-green-400 font-medium">-{reduction}%</span>
                             </div>
-                            <div className="flex justify-between items-center py-2.5 px-3 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors">
-                                <span className="text-gray-300 font-medium">VIP 2</span>
-                                <span className="text-yellow-400">$400+</span>
-                                <span className="text-green-400 font-medium">-1%</span>
-                            </div>
-                            <div className="flex justify-between items-center py-2.5 px-3 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors">
-                                <span className="text-gray-300 font-medium">VIP 3</span>
-                                <span className="text-yellow-400">$900+</span>
-                                <span className="text-green-400 font-medium">-1.5%</span>
-                            </div>
-                            <div className="flex justify-between items-center py-2.5 px-3 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors">
-                                <span className="text-gray-300 font-medium">VIP 4</span>
-                                <span className="text-yellow-400">$1,600+</span>
-                                <span className="text-green-400 font-medium">-2%</span>
-                            </div>
-                            <div className="flex justify-between items-center py-2.5 px-3 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors">
-                                <span className="text-gray-300 font-medium">VIP 5</span>
-                                <span className="text-yellow-400">$2,500+</span>
-                                <span className="text-green-400 font-medium">-2.5%</span>
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <div className="flex justify-between items-center py-2.5 px-3 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors">
-                                <span className="text-gray-300 font-medium">VIP 10</span>
-                                <span className="text-yellow-400">$10,000+</span>
-                                <span className="text-green-400 font-medium">-5%</span>
-                            </div>
-                            <div className="flex justify-between items-center py-2.5 px-3 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors">
-                                <span className="text-gray-300 font-medium">VIP 20</span>
-                                <span className="text-yellow-400">$40,000+</span>
-                                <span className="text-green-400 font-medium">-10%</span>
-                            </div>
-                        </div>
+                        ))}
+                    </div>
+                    <div className="text-center text-xs text-gray-500">
+                        ...依此類推至 VIP 20 ($40,000, -10%)
+                    </div>
+                    
+                    {/* VIP 等級轉換工具 */}
+                    <div className="p-4 bg-indigo-900/20 border border-indigo-500/30 rounded-lg">
+                        <h5 className="text-sm font-medium text-indigo-300 mb-3 flex items-center gap-2">
+                            <span>🧮</span> VIP 等級轉換器
+                        </h5>
+                        <VipLevelConverter />
                     </div>
                     
                     {/* 提現稅率簡要說明 */}
-                    <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                    <div className="p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
                         <div className="flex items-start gap-2">
                             <span className="text-yellow-400">💡</span>
                             <div className="text-xs space-y-1">

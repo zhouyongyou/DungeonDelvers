@@ -3,7 +3,8 @@
 
 import React, { useMemo } from 'react';
 import { useAccount } from 'wagmi';
-import { isAddress, type Address } from 'viem';
+import { isAddress } from 'viem';
+import type { Address } from 'viem';
 import { formatSoul } from '../utils/formatters';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';

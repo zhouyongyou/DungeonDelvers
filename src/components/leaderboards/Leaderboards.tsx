@@ -6,7 +6,7 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { formatEther } from 'viem';
 import { THE_GRAPH_API_URL, isGraphConfigured } from '../../config/graphConfig';
 
-// GraphQL 查詢
+// 簡化的 GraphQL 查詢 - 只查詢基本排行榜
 const LEADERBOARDS_QUERY = `
   query GetLeaderboards {
     # 戰力排行榜 - 前 10 名
@@ -19,16 +19,13 @@ const LEADERBOARDS_QUERY = `
       id
       player {
         id
-        profile {
-          name
-        }
       }
       highestPartyPower
       totalExpeditions
       successfulExpeditions
     }
     
-    # 獎勵排行榜 - 前 10 名
+    # 獎勵排行榜 - 前 10 名  
     rewardLeaders: playerStats(
       first: 10
       orderBy: totalRewardsEarned
@@ -38,32 +35,18 @@ const LEADERBOARDS_QUERY = `
       id
       player {
         id
-        profile {
-          name
-        }
       }
       totalRewardsEarned
       totalExpeditions
       successfulExpeditions
     }
     
-    # 遠征次數排行榜 - 前 10 名
-    expeditionLeaders: playerStats(
-      first: 10
-      orderBy: totalExpeditions
-      orderDirection: desc
-      where: { totalExpeditions_gt: 0 }
-    ) {
-      id
-      player {
-        id
-        profile {
-          name
-        }
-      }
+    # 全域統計
+    globalStats(id: "global") {
+      totalPlayers
       totalExpeditions
       successfulExpeditions
-      totalRewardsEarned
+      totalRewardsDistributed
     }
     
     # VIP 質押排行榜 - 前 10 名
@@ -79,9 +62,6 @@ const LEADERBOARDS_QUERY = `
       id
       owner {
         id
-        profile {
-          name
-        }
       }
       stakedAmount
       stakedAt
@@ -96,9 +76,6 @@ const LEADERBOARDS_QUERY = `
       id
       player {
         id
-        profile {
-          name
-        }
       }
       party {
         name
@@ -151,9 +128,6 @@ const LEADERBOARDS_QUERY = `
       id
       player {
         id
-        profile {
-          name
-        }
       }
       totalExpeditions
       successfulExpeditions
@@ -173,9 +147,6 @@ const LEADERBOARDS_QUERY = `
       id
       player {
         id
-        profile {
-          name
-        }
       }
       success
       reward
@@ -428,31 +399,130 @@ export const Leaderboards: React.FC = React.memo(() => {
     return (
       <div className="bg-gray-800 p-6 rounded-lg">
         <h2 className="text-xl font-bold text-white mb-4">🏆 排行榜</h2>
-        <div className="flex justify-center py-8">
-          <LoadingSpinner />
+        
+        {/* 標籤切換骨架 */}
+        <div className="mb-6">
+          <div className="grid grid-cols-3 md:grid-cols-9 gap-1 bg-gray-700 p-1 rounded-lg">
+            {Array.from({ length: 9 }).map((_, index) => (
+              <div key={index} className="px-2 py-2 rounded-md animate-pulse">
+                <div className="flex flex-col items-center">
+                  <div className="w-6 h-6 bg-gray-600 rounded mb-1"></div>
+                  <div className="w-12 h-3 bg-gray-600 rounded"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* 排行榜內容骨架 */}
+        <div className="min-h-[400px]">
+          <LeaderboardSkeleton />
         </div>
       </div>
     );
   }
 
-  if (error || !leaderboardData) {
+  if (error) {
     return (
       <div className="bg-gray-800 p-6 rounded-lg">
         <h2 className="text-xl font-bold text-white mb-4">🏆 排行榜</h2>
         <div className="text-center py-8">
-          <p className="text-red-400 mb-4">載入排行榜數據失敗</p>
+          <div className="text-6xl mb-4">⚠️</div>
+          <p className="text-red-400 mb-2">載入排行榜數據失敗</p>
+          <p className="text-gray-500 text-sm mb-4">可能是子圖正在同步或網路問題</p>
           <button
             onClick={() => refetch()}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
           >
-            重試
+            🔄 重新載入
           </button>
         </div>
       </div>
     );
   }
+  
+  // 如果沒有數據但沒有錯誤，顯示完整的骨架框架
+  if (!leaderboardData) {
+    return (
+      <div className="bg-gray-800 p-6 rounded-lg">
+        <h2 className="text-xl font-bold text-white mb-4">🏆 排行榜</h2>
+        
+        {/* 標籤切換 - 正常顯示 */}
+        <div className="mb-6">
+          <div className="grid grid-cols-3 md:grid-cols-9 gap-1 bg-gray-700 p-1 rounded-lg">
+            {LEADERBOARD_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-2 py-2 rounded-md text-xs font-medium transition-colors text-center ${
+                  activeTab === tab.id
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-300 hover:text-white hover:bg-gray-600'
+                }`}
+              >
+                <div className="flex flex-col items-center">
+                  <span className="text-lg mb-1">{tab.icon}</span>
+                  <span className="leading-tight">{tab.label}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        {/* 內容區域顯示空狀態 */}
+        <div className="min-h-[400px]">
+          <EmptyLeaderboard message="正在載入排行榜數據，請稍候..." />
+        </div>
+        
+        {/* 刷新提示 */}
+        <div className="mt-4 text-center text-xs text-gray-500">
+          每 30 秒自動刷新 · 數據來源: The Graph
+        </div>
+      </div>
+    );
+  }
 
-  const renderPowerLeaderboard = () => (
+  // 排行榜骨架屏組件
+  const LeaderboardSkeleton = ({ count = 10 }: { count?: number }) => (
+    <div className="space-y-3">
+      {Array.from({ length: count }).map((_, index) => (
+        <div key={index} className="flex items-center justify-between bg-gray-700/50 p-3 rounded animate-pulse">
+          <div className="flex items-center space-x-3">
+            <div className="w-6 h-6 bg-gray-600 rounded"></div>
+            <div>
+              <div className="w-32 h-4 bg-gray-600 rounded mb-2"></div>
+              <div className="w-24 h-3 bg-gray-600 rounded"></div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="w-16 h-4 bg-gray-600 rounded mb-2"></div>
+            <div className="w-12 h-3 bg-gray-600 rounded"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+    );
+  };
+
+  // 空狀態組件
+  const EmptyLeaderboard = ({ message }: { message: string }) => (
+    <div className="text-center py-12">
+      <div className="text-6xl mb-4">🏆</div>
+      <p className="text-gray-400 text-lg mb-2">暫無排行榜數據</p>
+      <p className="text-gray-500 text-sm">{message}</p>
+    </div>
+  );
+
+  const renderPowerLeaderboard = () => {
+    if (!leaderboardData?.powerLeaders) {
+      return <EmptyLeaderboard message="戰力排行榜數據載入中或暫無數據" />;
+    }
+    
+    if (leaderboardData.powerLeaders.length === 0) {
+      return <EmptyLeaderboard message="還沒有玩家戰力數據，快來成為第一名！" />;
+    }
+    
+    return (
     <div className="space-y-3">
       {leaderboardData.powerLeaders.map((player, index) => (
         <div key={player.id} className="flex items-center justify-between bg-gray-700 p-3 rounded">
@@ -472,9 +542,19 @@ export const Leaderboards: React.FC = React.memo(() => {
         </div>
       ))}
     </div>
-  );
+    );
+  };
 
-  const renderRewardsLeaderboard = () => (
+  const renderRewardsLeaderboard = () => {
+    if (!leaderboardData?.rewardLeaders) {
+      return <EmptyLeaderboard message="獎勵排行榜數據載入中或暫無數據" />;
+    }
+    
+    if (leaderboardData.rewardLeaders.length === 0) {
+      return <EmptyLeaderboard message="還沒有玩家獲得獎勵，快來探索地城！" />;
+    }
+    
+    return (
     <div className="space-y-3">
       {leaderboardData.rewardLeaders.map((player, index) => (
         <div key={player.id} className="flex items-center justify-between bg-gray-700 p-3 rounded">
@@ -494,9 +574,20 @@ export const Leaderboards: React.FC = React.memo(() => {
         </div>
       ))}
     </div>
-  );
+    );
+  };
 
-  const renderExpeditionsLeaderboard = () => (
+  const renderExpeditionsLeaderboard = () => {
+    // 注意：expeditionLeaders 在查詢中不存在，這裡作為示例
+    if (!leaderboardData?.expeditionLeaders) {
+      return <EmptyLeaderboard message="遠征排行榜功能開發中..." />;
+    }
+    
+    if (leaderboardData.expeditionLeaders.length === 0) {
+      return <EmptyLeaderboard message="還沒有遠征數據，快來開始冒險！" />;
+    }
+    
+    return (
     <div className="space-y-3">
       {leaderboardData.expeditionLeaders.map((player, index) => (
         <div key={player.id} className="flex items-center justify-between bg-gray-700 p-3 rounded">
@@ -517,9 +608,19 @@ export const Leaderboards: React.FC = React.memo(() => {
         </div>
       ))}
     </div>
-  );
+    );
+  };
 
-  const renderVIPLeaderboard = () => (
+  const renderVIPLeaderboard = () => {
+    if (!leaderboardData?.vipLeaders) {
+      return <EmptyLeaderboard message="VIP 排行榜數據載入中或暫無數據" />;
+    }
+    
+    if (leaderboardData.vipLeaders.length === 0) {
+      return <EmptyLeaderboard message="還沒有 VIP 質押數據，快來成為 VIP！" />;
+    }
+    
+    return (
     <div className="space-y-3">
       {leaderboardData.vipLeaders.map((vip, index) => (
         <div key={vip.id} className="flex items-center justify-between bg-gray-700 p-3 rounded">
@@ -539,7 +640,8 @@ export const Leaderboards: React.FC = React.memo(() => {
         </div>
       ))}
     </div>
-  );
+    );
+  };
 
   const renderRecentActivityLeaderboard = () => (
     <div className="space-y-3">
@@ -572,7 +674,8 @@ export const Leaderboards: React.FC = React.memo(() => {
         </div>
       ))}
     </div>
-  );
+    );
+  };
 
   const renderUpgradeLeaderboard = () => (
     <div className="space-y-3">

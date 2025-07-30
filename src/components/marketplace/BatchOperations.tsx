@@ -60,13 +60,18 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
                 ...(userNfts?.heros || []),
                 ...(userNfts?.relics || []),
                 ...(userNfts?.parties || [])
+                // Note: VIP cards are typically not tradeable on marketplace, so we exclude them
             ];
             
             // Filter out NFTs that are already listed
-            const listedTokenIds = new Set(userListings.map(l => l.tokenId.toString()));
-            const availableNfts = allNfts.filter(nft => 
-                !listedTokenIds.has(nft.tokenId.toString())
-            );
+            const listedTokenIds = new Set(userListings.map(l => l.tokenId?.toString()).filter(Boolean));
+            const availableNfts = allNfts.filter(nft => {
+                // Use id from BaseNft instead of tokenId
+                // Make sure the NFT has a valid id and is a tradeable type
+                if (!nft || !nft.id) return false;
+                const nftId = nft.id.toString();
+                return nftId && !listedTokenIds.has(nftId);
+            });
             
             setBatchItems(availableNfts.map(nft => ({
                 nft,
@@ -148,7 +153,7 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
             // Simulate batch creation
             for (const item of selectedCreateItems) {
                 // In a real implementation, this would call the actual listing API
-                console.log(`Creating listing for ${item.nft.type} #${item.nft.tokenId} at ${item.price} SOUL`);
+                console.log(`Creating listing for ${item.nft.type} #${item.nft.id} at ${item.price} SOUL`);
                 
                 // Simulate API delay
                 await new Promise(resolve => setTimeout(resolve, 500));
@@ -275,7 +280,7 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
                             <div className="max-h-60 overflow-y-auto space-y-2">
                                 {batchItems.map((item, index) => (
                                     <div
-                                        key={`${item.nft.type}-${item.nft.tokenId}`}
+                                        key={`${item.nft.type}-${item.nft.id}`}
                                         className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-colors ${
                                             item.selected
                                                 ? 'border-[#C0A573] bg-gray-700'
@@ -297,7 +302,7 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
                                         <div className="flex-1">
                                             <div className="font-medium text-white">
                                                 {item.nft.type === 'hero' ? '英雄' :
-                                                 item.nft.type === 'relic' ? '聖物' : '隊伍'} #{item.nft.tokenId.toString()}
+                                                 item.nft.type === 'relic' ? '聖物' : '隊伍'} #{item.nft.id?.toString() || 'N/A'}
                                             </div>
                                             {'power' in item.nft && (
                                                 <div className="text-sm text-gray-400">

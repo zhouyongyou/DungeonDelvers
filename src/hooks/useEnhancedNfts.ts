@@ -2,7 +2,7 @@
 // 增強版 NFT 數據獲取，整合子圖和合約數據
 
 import { useMemo } from 'react';
-import { Address } from 'viem';
+import type { Address } from 'viem';
 import { useReadContract } from 'wagmi';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { useVipWithLevel } from './useVipWithLevel';

@@ -9,6 +9,7 @@ import { formatEther, isAddress } from 'viem';
 import { LeaderboardsFixed } from '../components/leaderboards/LeaderboardsFixed';
 import { THE_GRAPH_API_URL, isGraphConfigured } from '../config/graphConfig';
 import { getContractWithABI } from '../config/contractsWithABI';
+import { convertRarity } from '../utils/rarityConverter';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取
@@ -195,13 +196,13 @@ const HeroQuery: React.FC = () => {
         if (isError) return <p className="text-red-500">查詢失敗: {(error as Error).message}</p>;
         if (!data) return <p className="text-yellow-500">查無此英雄，請確認 ID 是否正確。</p>;
         
-        const rarityNames = ["", "Common", "Uncommon", "Rare", "Epic", "Legendary"];
+        const rarityInfo = convertRarity(data.rarity);
         
         return (
             <div className="space-y-2">
                 <p><span className="text-gray-400">Token ID:</span> <span className="text-white">{data.tokenId}</span></p>
                 <p><span className="text-gray-400">擁有者:</span> <span className="text-blue-400 font-mono text-xs">{data.owner.id}</span></p>
-                <p><span className="text-gray-400">稀有度:</span> <span className="text-purple-400">{rarityNames[data.rarity] || data.rarity}</span></p>
+                <p><span className="text-gray-400">稀有度:</span> <span className="text-purple-400">{rarityInfo.name} ({rarityInfo.number})</span></p>
                 <p><span className="text-gray-400">戰力:</span> <span className="text-green-400">{data.power}</span></p>
             </div>
         );
@@ -240,13 +241,13 @@ const RelicQuery: React.FC = () => {
         if (isError) return <p className="text-red-500">查詢失敗: {(error as Error).message}</p>;
         if (!data) return <p className="text-yellow-500">查無此聖物，請確認 ID 是否正確。</p>;
         
-        const rarityNames = ["", "Common", "Uncommon", "Rare", "Epic", "Legendary"];
+        const rarityInfo = convertRarity(data.rarity);
         
         return (
             <div className="space-y-2">
                 <p><span className="text-gray-400">Token ID:</span> <span className="text-white">{data.tokenId}</span></p>
                 <p><span className="text-gray-400">擁有者:</span> <span className="text-blue-400 font-mono text-xs">{data.owner.id}</span></p>
-                <p><span className="text-gray-400">稀有度:</span> <span className="text-purple-400">{rarityNames[data.rarity] || data.rarity}</span></p>
+                <p><span className="text-gray-400">稀有度:</span> <span className="text-purple-400">{rarityInfo.name} ({rarityInfo.number})</span></p>
                 <p><span className="text-gray-400">容量:</span> <span className="text-orange-400">{data.capacity}</span></p>
             </div>
         );
@@ -285,13 +286,13 @@ const PartyQuery: React.FC = () => {
         if (isError) return <p className="text-red-500">查詢失敗: {(error as Error).message}</p>;
         if (!data) return <p className="text-yellow-500">查無此隊伍，請確認 ID 是否正確。</p>;
         
-        const rarityNames = ["", "Common", "Uncommon", "Rare", "Epic", "Legendary"];
+        const rarityInfo = convertRarity(data.partyRarity);
         
         return (
             <div className="space-y-2">
                 <p><span className="text-gray-400">Token ID:</span> <span className="text-white">{data.tokenId}</span></p>
                 <p><span className="text-gray-400">擁有者:</span> <span className="text-blue-400 font-mono text-xs">{data.owner.id}</span></p>
-                <p><span className="text-gray-400">隊伍稀有度:</span> <span className="text-purple-400">{rarityNames[data.partyRarity] || data.partyRarity}</span></p>
+                <p><span className="text-gray-400">隊伍稀有度:</span> <span className="text-purple-400">{rarityInfo.name} ({rarityInfo.number})</span></p>
                 <p><span className="text-gray-400">總戰力:</span> <span className="text-green-400">{data.totalPower}</span></p>
                 <p><span className="text-gray-400">總容量:</span> <span className="text-orange-400">{data.totalCapacity}</span></p>
             </div>

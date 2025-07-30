@@ -1,6 +1,7 @@
 // src/utils/eventPolling.ts - 替代 Filter 的事件輪詢系統
 
-import { createPublicClient, http, type Log, type Address, parseAbiItem } from 'viem';
+import { createPublicClient, http, parseAbiItem } from 'viem';
+import type { Log, Address } from 'viem';
 import { bsc } from 'viem/chains';
 import { logger } from './logger';
 import { getRpcEndpoint } from './rpcOptimizedMigration';

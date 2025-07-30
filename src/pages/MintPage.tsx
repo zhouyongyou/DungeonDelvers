@@ -2,7 +2,8 @@
 
 import React, { useState, useMemo, useEffect, memo, useCallback } from 'react';
 import { useAccount, useWriteContract, useBalance, usePublicClient, useReadContract } from 'wagmi';
-import { formatEther, maxUint256, type Abi, decodeEventLog } from 'viem';
+import { formatEther, maxUint256, decodeEventLog } from 'viem';
+import type { Abi } from 'viem';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';

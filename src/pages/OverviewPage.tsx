@@ -27,6 +27,7 @@ import { WithdrawalHistoryButton } from '../components/ui/WithdrawalHistory';
 import { useTransactionHistory, createTransactionRecord } from '../stores/useTransactionPersistence';
 import { TaxRateModal } from '../components/ui/TaxRateModal';
 import { useUnassignedAssets } from '../hooks/useUnassignedAssets';
+import { useSoulPrice } from '../hooks/useSoulPrice';
 
 // =================================================================
 // Section: Components
@@ -70,6 +71,9 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     
     // 使用合約直接讀取 VIP 等級和稅率資訊
     const { vipLevel, taxReduction, stakedAmount, isLoading: isLoadingVip, error: vipError } = useVipStatus();
+    
+    // SOUL 價格數據
+    const { priceInUsd, formatSoulToUsd } = useSoulPrice();
     
     // Contract reads
     const playerProfileContract = getContractWithABI('PLAYERPROFILE');
@@ -155,12 +159,21 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     const playerVaults = data?.playerVaults?.[0];
     
     // 獲取未分配資產數據
-    const { data: assetData } = useUnassignedAssets(address);
+    const { data: assetData, isLoading: isLoadingAssets } = useUnassignedAssets(address);
     
-    // 使用未分配的英雄/聖物數量，而非總數
-    const heroCount = assetData?.unassignedHeroes || 0;
-    const relicCount = assetData?.unassignedRelics || 0;
+    // 使用未分配的英雄/聖物數量，如果還在載入則顯示子圖數據
+    const heroCount = isLoadingAssets 
+        ? (player?.stats?.totalHeroes || player?.heros?.length || 0)
+        : (assetData?.unassignedHeroes || 0);
+    const relicCount = isLoadingAssets
+        ? (player?.stats?.totalRelics || player?.relics?.length || 0)
+        : (assetData?.unassignedRelics || 0);
     const partyCount = assetData?.totalParties || player?.stats?.totalParties || player?.parties?.length || 0;
+    
+    // 處理 500+ 的情況
+    const displayHeroCount = player?.heros?.length >= 500 ? '500+' : heroCount.toString();
+    const displayRelicCount = player?.relics?.length >= 500 ? '500+' : relicCount.toString();
+    const displayPartyCount = player?.parties?.length >= 500 ? '500+' : partyCount.toString();
     const level = levelData ? Number(levelData) : (player?.profile?.level || 0);
     const pendingVaultRewards = vaultBalance ? formatEther(vaultBalance as bigint) : '0';
     // 使用合約讀取的 VIP 等級，而非子圖的 tier
@@ -284,8 +297,9 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                     
                     <StatCard
                         title="英雄數量"
-                        value={heroCount.toString()}
+                        value={displayHeroCount}
                         icon={<Icons.Users className="h-5 w-5" />}
+                        description={isLoadingAssets ? "載入中..." : `未分配到隊伍的英雄`}
                         action={
                             <ActionButton
                                 onClick={() => setActivePage('mint')}
@@ -298,8 +312,9 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                     
                     <StatCard
                         title="聖物數量"
-                        value={relicCount.toString()}
+                        value={displayRelicCount}
                         icon={<Icons.Shield className="h-5 w-5" />}
+                        description={isLoadingAssets ? "載入中..." : `可用聖物`}
                         action={
                             <ActionButton
                                 onClick={() => setActivePage('mint')}
@@ -312,14 +327,14 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                     
                     <StatCard
                         title="隊伍數量"
-                        value={partyCount.toString()}
+                        value={displayPartyCount}
                         icon={<Icons.Users className="h-5 w-5" />}
                         action={
                             <ActionButton
                                 onClick={() => setActivePage('myAssets')}
                                 className="text-xs px-2 py-1"
                             >
-                                管理隊伍
+                                組隊
                             </ActionButton>
                         }
                     />
@@ -328,7 +343,12 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         title="金庫餘額"
                         value={`${formatSoul(pendingVaultRewards)} SOUL`}
                         icon={<Icons.DollarSign className="h-5 w-5" />}
-                        description={`提款稅率：${actualTaxRate.toFixed(1)}% ${vipTier > 0 ? `(VIP 減免 ${vipDiscount.toFixed(1)}%)` : ''}`}
+                        description={
+                            <div className="space-y-1">
+                                <p className="text-xs text-gray-500">≈ ${formatSoulToUsd(pendingVaultRewards)} USD</p>
+                                <p className="text-xs text-gray-500">提款稅率：{actualTaxRate.toFixed(1)}% {vipTier > 0 ? `(VIP ${vipTier})` : ''}</p>
+                            </div>
+                        }
                         action={
                             <div className="flex gap-1">
                                 <ActionButton
@@ -483,8 +503,8 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                 {/* Project Introduction Section */}
                 <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
                     <div className="text-center mb-6">
-                        <h2 className="text-2xl font-bold text-white mb-2">🎮 歡迎來到 DungeonDelvers</h2>
-                        <p className="text-gray-400">一個結合策略、收集與冒險的 Web3 遊戲世界</p>
+                        <h2 className="text-2xl font-bold text-white mb-2">🌟 踏入 Soulbound Saga，譜寫您的數位傳奇</h2>
+                        <p className="text-gray-400">完全上鏈的 Roguelike 傳奇，每個決策都被永恆記錄，每個成就都無法被奪走</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
@@ -492,32 +512,32 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                             <div className="bg-gradient-to-br from-blue-500 to-purple-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
                                 <span className="text-2xl">⚔️</span>
                             </div>
-                            <h3 className="text-lg font-semibold text-white mb-2">收集英雄</h3>
-                            <p className="text-sm text-gray-400">鑄造獨特的英雄 NFT，每個都有不同的屬性和能力</p>
+                            <h3 className="text-lg font-semibold text-white mb-2">召喚英雄</h3>
+                            <p className="text-sm text-gray-400">召喚靈魂綁定的英雄 NFT，每個都擁有獨特的靈魂契約和能力</p>
                         </div>
 
                         <div className="text-center">
                             <div className="bg-gradient-to-br from-purple-500 to-pink-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
                                 <span className="text-2xl">🛡️</span>
                             </div>
-                            <h3 className="text-lg font-semibold text-white mb-2">強化裝備</h3>
-                            <p className="text-sm text-gray-400">收集聖物，升級您的英雄和裝備以提升戰力</p>
+                            <h3 className="text-lg font-semibold text-white mb-2">鍛造魂器</h3>
+                            <p className="text-sm text-gray-400">鍛造神秘的魂器聖物，提升英雄力量並解鎖新的靈魂能力</p>
                         </div>
 
                         <div className="text-center">
                             <div className="bg-gradient-to-br from-green-500 to-teal-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
                                 <span className="text-2xl">🏰</span>
                             </div>
-                            <h3 className="text-lg font-semibold text-white mb-2">探索地城</h3>
-                            <p className="text-sm text-gray-400">組建隊伍探索危險的地城，獲得豐厚的獎勵</p>
+                            <h3 className="text-lg font-semibold text-white mb-2">探索靈境</h3>
+                            <p className="text-sm text-gray-400">組建隊伍進入程序生成的靈境地城，挑戰靈魂守護者</p>
                         </div>
 
                         <div className="text-center">
                             <div className="bg-gradient-to-br from-orange-500 to-red-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
                                 <span className="text-2xl">💰</span>
                             </div>
-                            <h3 className="text-lg font-semibold text-white mb-2">賺取收益</h3>
-                            <p className="text-sm text-gray-400">通過遊戲活動賺取 SOUL 代幣和其他獎勵</p>
+                            <h3 className="text-lg font-semibold text-white mb-2">收集 $SOUL</h3>
+                            <p className="text-sm text-gray-400">通過靈境探索和戰鬥收集珍貴的 $SOUL 代幣，築建您的數位財富</p>
                         </div>
                     </div>
 
@@ -525,27 +545,27 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div className="bg-gray-700/50 rounded-lg p-4">
                                 <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
-                                    <span className="text-blue-400">🎲</span>
-                                    遊戲機制
+                                    <span className="text-blue-400">⛓️</span>
+                                    上鏈機制
                                 </h4>
                                 <ul className="text-sm text-gray-400 space-y-1">
-                                    <li>• NFT 英雄和聖物系統</li>
-                                    <li>• 隊伍組建和戰力計算</li>
-                                    <li>• 隨機探索和獎勵機制</li>
-                                    <li>• 升級和進化系統</li>
+                                    <li>• 完全上鏈的 Roguelike 機制</li>
+                                    <li>• 可驗證的隨機性和透明度</li>
+                                    <li>• 靈魂綁定的 NFT 資產</li>
+                                    <li>• 不可篡改的遊戲成就</li>
                                 </ul>
                             </div>
 
                             <div className="bg-gray-700/50 rounded-lg p-4">
                                 <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
                                     <span className="text-green-400">💎</span>
-                                    經濟系統
+                                    $SOUL 經濟
                                 </h4>
                                 <ul className="text-sm text-gray-400 space-y-1">
-                                    <li>• SOUL 代幣獎勵</li>
-                                    <li>• VIP 會員制度</li>
-                                    <li>• 推薦獎勵系統</li>
-                                    <li>• 質押收益機制</li>
+                                    <li>• 通縮性 $SOUL 代幣經濟</li>
+                                    <li>• 靈魂質押 VIP 系統</li>
+                                    <li>• 可持續的遊戲即收益</li>
+                                    <li>• 社群驅動的 DAO 治理</li>
                                 </ul>
                             </div>
 
@@ -571,7 +591,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
 
                     <div className="text-center mt-6 pt-4 border-t border-gray-700">
                         <p className="text-gray-400 text-sm">
-                            ⚡ 現在就開始您的冒險之旅！連接錢包並鑄造您的第一個英雄
+                            🌟 現在就踏入 Soulbound Saga！連接錢包並召喚您的第一個靈魂英雄
                         </p>
                     </div>
                 </div>

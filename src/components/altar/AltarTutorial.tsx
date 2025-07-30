@@ -102,24 +102,22 @@ const tutorialSteps = [
     title: "執行神秘儀式",
     content: (
       <div className="space-y-4">
-        <div className="space-y-3">
+        {/* 桌面版兩欄布局，手機版單欄 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3">
-            <h4 className="font-semibold text-yellow-300 mb-1">儀式流程</h4>
+            <h4 className="font-semibold text-yellow-300 mb-2">儀式流程</h4>
             <ol className="text-sm text-yellow-200 space-y-1 list-decimal list-inside">
               <li>確認選擇的祭品和規則</li>
               <li>點擊「開始升星」按鈕</li>
               <li>簽署區塊鏈交易</li>
               <li>等待交易確認</li>
-              <li>觀看儀式動畫效果</li>
-              <li>查看升星結果</li>
             </ol>
           </div>
           <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
-            <h4 className="font-semibold text-red-300 mb-1">風險提醒</h4>
+            <h4 className="font-semibold text-red-300 mb-2">風險提醒</h4>
             <ul className="text-sm text-red-200 space-y-1">
               <li>• 升星有失敗風險，祭品可能完全消失</li>
               <li>• 高星級升星失敗率較高，請謹慎考慮</li>
-              <li>• 交易一旦發送就無法撤回</li>
             </ul>
           </div>
         </div>
@@ -159,6 +157,20 @@ const tutorialSteps = [
 export const AltarTutorial: React.FC<AltarTutorialProps> = ({ isOpen, onClose }) => {
   const [currentStep, setCurrentStep] = useState(0);
 
+  // 監聽 ESC 鍵退出教學
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, onClose]);
+
   const handleNext = () => {
     if (currentStep < tutorialSteps.length - 1) {
       setCurrentStep(currentStep + 1);
@@ -197,12 +209,17 @@ export const AltarTutorial: React.FC<AltarTutorialProps> = ({ isOpen, onClose })
             <span className="text-sm text-gray-400">
               教學進度 {currentStep + 1} / {tutorialSteps.length}
             </span>
-            <button
-              onClick={handleSkip}
-              className="text-sm text-gray-400 hover:text-white transition-colors"
-            >
-              跳過教學
-            </button>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-500 hidden sm:block">
+                按 ESC 退出
+              </span>
+              <button
+                onClick={handleSkip}
+                className="text-sm text-gray-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-gray-700"
+              >
+                跳過教學
+              </button>
+            </div>
           </div>
           <div className="w-full bg-gray-700 rounded-full h-2">
             <div

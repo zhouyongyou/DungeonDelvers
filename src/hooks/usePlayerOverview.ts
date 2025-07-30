@@ -24,15 +24,16 @@ const GET_PLAYER_OVERVIEW_QUERY = `
         createdAt
         lastUpdatedAt
       }
-      heros(first: 100) {
+      heros(first: 500, where: { isBurned: false }) {
         id
       }
-      relics(first: 100) {
+      relics(first: 500, where: { isBurned: false }) {
         id
       }
-      parties(first: 100) {
+      parties(first: 500, where: { isBurned: false }) {
         id
         unclaimedRewards
+        heroIds
       }
       vip {
         id
