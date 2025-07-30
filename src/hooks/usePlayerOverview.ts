@@ -24,13 +24,13 @@ const GET_PLAYER_OVERVIEW_QUERY = `
         createdAt
         lastUpdatedAt
       }
-      heros {
+      heros(first: 100) {
         id
       }
-      relics {
+      relics(first: 100) {
         id
       }
-      parties {
+      parties(first: 100) {
         id
         unclaimedRewards
       }
