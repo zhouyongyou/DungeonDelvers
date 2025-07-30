@@ -1,0 +1,11 @@
+root: ./dungeon-delvers-whitepaper/gitbook-zh/
+
+structure:
+  readme: README.md
+  summary: SUMMARY.md
+
+redirects:
+  - from: /
+    to: /README.md
+  - from: /index
+    to: /README.md
