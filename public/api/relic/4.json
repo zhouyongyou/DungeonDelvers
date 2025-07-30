@@ -1,11 +1,17 @@
 {
-  "name": "Crown of Wisdom",
-  "description": "An ancient crown adorned with mystical gems that enhance the wearer's magical abilities and strategic thinking.",
+  "name": "Snowfeather Scepter",
+  "description": "A frost staff with glowing ice feathers and a snow crystal core, floating on a frozen pedestal in a glacial vault, emanating cold mist. It's said that a mere touch can turn enemies into ice sculptures.",
   "image": "https://www.dungeondelvers.xyz/images/relic/relic-4.png",
   "attributes": [
     {
       "trait_type": "Rarity",
-      "value": "Epic"
+      "value": 4,
+      "display_type": "number",
+      "max_value": 5
+    },
+    {
+      "trait_type": "Star",
+      "value": "SSR"
     },
     {
       "display_type": "number",

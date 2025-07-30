@@ -1,11 +1,17 @@
 {
-  "name": "Enchanted Amulet",
-  "description": "A silver amulet with a blue gemstone that pulses with magical energy, providing protection to its bearer.",
+  "name": "Explorer's Fold",
+  "description": "An old folded map with ink scribbles and magical markers, spread on a worn stone table, surrounded by rope, compass, and a dagger. An old companion patched countless times yet never fails.",
   "image": "https://www.dungeondelvers.xyz/images/relic/relic-2.png",
   "attributes": [
     {
       "trait_type": "Rarity",
-      "value": "Uncommon"
+      "value": 2,
+      "display_type": "number",
+      "max_value": 5
+    },
+    {
+      "trait_type": "Star",
+      "value": "R"
     },
     {
       "display_type": "number",

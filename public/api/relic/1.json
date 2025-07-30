@@ -1,11 +1,17 @@
 {
-  "name": "Shattered Runestone",
-  "description": "A broken stone found on an ancient battlefield. It's inscribed with forgotten words and emanates a faint, dim light.",
+  "name": "Wand of Oops",
+  "description": "A broken wooden wand haphazardly taped together, with its tip still smoking. It lies abandoned on a dusty desk, surrounded by crumpled notes and spilled ink. The spell wasn't even finished before it exploded.",
   "image": "https://www.dungeondelvers.xyz/images/relic/relic-1.png",
   "attributes": [
     {
       "trait_type": "Rarity",
-      "value": "Common"
+      "value": 1,
+      "display_type": "number",
+      "max_value": 5
+    },
+    {
+      "trait_type": "Star",
+      "value": "N"
     },
     {
       "display_type": "number",

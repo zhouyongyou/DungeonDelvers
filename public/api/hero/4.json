@@ -1,11 +1,17 @@
 {
-  "name": "Legendary Paladin",
-  "description": "A full body portrait of a Legendary Paladin. They wear radiant golden armor with divine engravings, wielding a blessed two-handed sword that emanates holy light, with a divine aura surrounding them.",
+  "name": "Marienne, Frostbound Vicar",
+  "description": "An elegant female frost knight with silver-blue long hair, wielding a crystal rapier. She wears ice crystal armor, standing still in a snow-covered ruined cathedral, snowflakes quietly falling around her. Guardian of the extreme cold seal, once froze an army of the dead with a single strike.",
   "image": "https://www.dungeondelvers.xyz/images/hero/hero-4.png",
   "attributes": [
     {
       "trait_type": "Rarity",
-      "value": "Epic"
+      "value": 4,
+      "display_type": "number",
+      "max_value": 5
+    },
+    {
+      "trait_type": "Star",
+      "value": "SSR"
     },
     {
       "display_type": "number",

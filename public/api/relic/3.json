@@ -1,11 +1,17 @@
 {
-  "name": "Orb of Power",
-  "description": "A flawless crystal orb that contains restless magical lightning, ready to empower the party with greater energy.",
+  "name": "Echofang",
+  "description": "A streamlined curved dagger with glowing blue edges, displayed on a cracked altar, surrounded by shadow effects and soft ethereal glow. Forged for dual-wielding assassins, each strike hides another voice.",
   "image": "https://www.dungeondelvers.xyz/images/relic/relic-3.png",
   "attributes": [
     {
       "trait_type": "Rarity",
-      "value": "Rare"
+      "value": 3,
+      "display_type": "number",
+      "max_value": 5
+    },
+    {
+      "trait_type": "Star",
+      "value": "SR"
     },
     {
       "display_type": "number",

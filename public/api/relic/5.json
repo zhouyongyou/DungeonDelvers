@@ -1,11 +1,17 @@
 {
-  "name": "Eternal Flame Artifact",
-  "description": "A legendary artifact that burns with eternal fire, granting maximum power to any party brave enough to wield it.",
+  "name": "Abyssal Loop",
+  "description": "A burning chain blade inscribed with lava runes, suspended above a molten altar, surrounded by raging hellfire and glowing ground fissures. Forged from molten lava, it requires life as fuel.",
   "image": "https://www.dungeondelvers.xyz/images/relic/relic-5.png",
   "attributes": [
     {
       "trait_type": "Rarity",
-      "value": "Legendary"
+      "value": 5,
+      "display_type": "number",
+      "max_value": 5
+    },
+    {
+      "trait_type": "Star",
+      "value": "UR"
     },
     {
       "display_type": "number",
