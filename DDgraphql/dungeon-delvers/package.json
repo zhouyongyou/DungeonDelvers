@@ -12,7 +12,8 @@
     "test": "jest",
     "deploy:v15": "./deploy-v15-auto.sh",
     "deploy:v22": "./deploy-v22.sh",
-    "deploy:current": "./deploy-v22.sh",
+    "deploy:v25": "./deploy-v25.sh",
+    "deploy:current": "./deploy-v25.sh",
     "sync:v22": "node scripts/generate-subgraph-from-v22.js"
   },
   "devDependencies": {
