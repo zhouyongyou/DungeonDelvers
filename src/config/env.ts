@@ -121,7 +121,7 @@ export const ENV = {
   // =================================================================
   THIRD_PARTY: {
     WALLET_CONNECT_PROJECT_ID: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 
-                               'd02f4199d4862ab0a12a3d0424fb567b',
+                               '2f05a7c9c4e8f5b1a6d4c8e9f2b5c3a1', // 更新測試用 Project ID
   },
 
   // =================================================================
