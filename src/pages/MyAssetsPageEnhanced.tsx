@@ -422,7 +422,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
                             <ActionButton
                                 onClick={() => setActiveTab('marketHeroes')}
                                 variant="secondary"
-                                className="px-6 py-3"
+                                className="px-6 py-3 border-2 border-gray-600 hover:border-gray-500"
                             >
                                 🛒 瀏覽英雄市場
                             </ActionButton>
@@ -462,7 +462,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
                             <ActionButton
                                 onClick={() => setActiveTab('marketRelics')}
                                 variant="secondary"
-                                className="px-6 py-3"
+                                className="px-6 py-3 border-2 border-gray-600 hover:border-gray-500"
                             >
                                 🛒 瀏覽聖物市場
                             </ActionButton>
@@ -510,7 +510,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
                             ) : (
                                 <ActionButton
                                     onClick={() => setShowTeamBuilder(true)}
-                                    className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 px-6 py-3 font-semibold"
+                                    className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-6 py-3 font-semibold shadow-lg shadow-emerald-500/20 border border-emerald-400/30"
                                 >
                                     ⚔️ 立即組建隊伍
                                 </ActionButton>
@@ -594,22 +594,37 @@ const MyAssetsPageEnhanced: React.FC = () => {
                     ))}
                 </div>
                 
-                {/* Team Builder */}
+                {/* Team Builder Modal-like Container */}
                 {showTeamBuilder && nftsData && (
-                    <div className="bg-gray-800 rounded-lg p-4">
-                        <TeamBuilder
-                            heroes={nftsData.heros}
-                            relics={nftsData.relics}
-                            onCreateParty={handleCreateParty}
-                            isCreating={createPartyTx.isLoading}
-                            platformFee={platformFeeData ? (platformFeeData as bigint) : BigInt(0)}
-                            isLoadingFee={isLoadingFee}
-                            isHeroAuthorized={!!isHeroAuthorized}
-                            isRelicAuthorized={!!isRelicAuthorized}
-                            onAuthorizeHero={() => authorizeHeroTx.execute()}
-                            onAuthorizeRelic={() => authorizeRelicTx.execute()}
-                            isAuthorizing={authorizeHeroTx.isLoading || authorizeRelicTx.isLoading}
-                        />
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+                        <div className="bg-gray-900 rounded-xl shadow-2xl w-full max-w-6xl my-8 border-2 border-emerald-500/30">
+                            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+                                <h2 className="text-xl font-bold text-emerald-400 flex items-center gap-2">
+                                    ⚔️ 組建隊伍
+                                </h2>
+                                <button
+                                    onClick={() => setShowTeamBuilder(false)}
+                                    className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-700"
+                                >
+                                    <Icons.X className="h-5 w-5" />
+                                </button>
+                            </div>
+                            <div className="p-6">
+                                <TeamBuilder
+                                    heroes={nftsData.heros}
+                                    relics={nftsData.relics}
+                                    onCreateParty={handleCreateParty}
+                                    isCreating={createPartyTx.isLoading}
+                                    platformFee={platformFeeData ? (platformFeeData as bigint) : BigInt(0)}
+                                    isLoadingFee={isLoadingFee}
+                                    isHeroAuthorized={!!isHeroAuthorized}
+                                    isRelicAuthorized={!!isRelicAuthorized}
+                                    onAuthorizeHero={() => authorizeHeroTx.execute()}
+                                    onAuthorizeRelic={() => authorizeRelicTx.execute()}
+                                    isAuthorizing={authorizeHeroTx.isLoading || authorizeRelicTx.isLoading}
+                                />
+                            </div>
+                        </div>
                     </div>
                 )}
                 

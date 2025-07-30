@@ -167,9 +167,18 @@ export const TeamBuilder = memo<TeamBuilderProps>(({
     const needsAuthorization = !isHeroAuthorized || !isRelicAuthorized;
     const canCreateParty = selectedHeroes.length > 0 && selectedRelics.length > 0 && isHeroAuthorized && isRelicAuthorized;
 
-    // 根據篩選狀態過濾NFT
-    const filteredRelics = showAllRelics ? relics : relics.filter(r => !r.party || r.party === '0x0000000000000000000000000000000000000000');
-    const filteredHeroes = showAllHeroes ? heroes : heroes.filter(h => !h.party || h.party === '0x0000000000000000000000000000000000000000');
+    // 根據篩選狀態過濾NFT，並按戰力/容量排序
+    const filteredRelics = useMemo(() => {
+        const filtered = showAllRelics ? relics : relics.filter(r => !r.party || r.party === '0x0000000000000000000000000000000000000000');
+        // 按容量從高到低排序
+        return [...filtered].sort((a, b) => b.capacity - a.capacity);
+    }, [relics, showAllRelics]);
+    
+    const filteredHeroes = useMemo(() => {
+        const filtered = showAllHeroes ? heroes : heroes.filter(h => !h.party || h.party === '0x0000000000000000000000000000000000000000');
+        // 按戰力從高到低排序
+        return [...filtered].sort((a, b) => b.power - a.power);
+    }, [heroes, showAllHeroes]);
 
     return (
         <div className="space-y-6">
