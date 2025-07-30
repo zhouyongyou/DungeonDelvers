@@ -1,5 +1,3 @@
-// src/main.jsx - 正確的整合版本
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { WagmiProvider } from 'wagmi';
