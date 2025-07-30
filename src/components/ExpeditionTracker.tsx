@@ -190,7 +190,7 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
         const unsubscribe = useSmartEventListener(
             'ExpeditionFulfilled-Tracker',
             dungeonMasterContract.address,
-            'event ExpeditionFulfilled(indexed address player, indexed uint256 partyId, bool success, uint256 reward, uint256 expGained)',
+            'event ExpeditionFulfilled(indexed address,indexed uint256,bool,uint256,uint256)',
             handleExpeditionLogs,
             true
         );

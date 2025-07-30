@@ -166,10 +166,19 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     // 稅率說明彈窗
     const showTaxInfo = () => {
         const message = vipTier > 0 
-            ? `當前提款稅率：${actualTaxRate.toFixed(1)}%\n\n基礎稅率：25%\nVIP ${vipTier} 減免：-${vipDiscount.toFixed(1)}%\n\n質押更多 SoulShard 可獲得更高 VIP 等級，享受更多稅率減免！`
-            : `當前提款稅率：25%\n\n成為 VIP 會員可享受稅率減免：\n• VIP 1：-0.5%\n• VIP 2：-1.0%\n• VIP 5：-2.5%\n• VIP 10：-5.0%\n\n立即質押 SoulShard 成為 VIP！`;
+            ? `💰 當前提款稅率：${actualTaxRate.toFixed(1)}%\n\n📊 稅率組成：\n• 基礎稅率：25%\n• VIP ${vipTier} 減免：-${vipDiscount.toFixed(1)}%\n• 實際稅率：${actualTaxRate.toFixed(1)}%\n\n🚀 質押更多 SoulShard 可獲得更高 VIP 等級，享受更多稅率減免！\n\n💡 提示：稅率隨著 VIP 等級提升而降低，最高可減免至 20%！`
+            : `💰 當前提款稅率：25%\n\n🎯 成為 VIP 會員享受稅率減免：\n• VIP 1：-0.5% → 24.5%\n• VIP 2：-1.0% → 24.0%\n• VIP 5：-2.5% → 22.5%\n• VIP 10：-5.0% → 20.0%\n\n💎 立即質押 SoulShard 成為 VIP！\n\n📚 稅率減免公式：基礎稅率 25% - VIP 等級 × 0.5%`;
         
         showToast(message, 'info');
+    };
+    
+    // 處理提取按鈕點擊
+    const handleWithdrawClick = () => {
+        if (Number(pendingVaultRewards) > 0) {
+            claimVaultTx.execute();
+        } else {
+            showToast('金庫餘額為 0 SOUL，無法提取。\n\n💡 完成地城探險可獲得獎勵！', 'warning');
+        }
     };
     
     // Debug log
@@ -313,12 +322,20 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         action={
                             <div className="flex gap-1">
                                 <ActionButton
-                                    onClick={() => Number(pendingVaultRewards) > 0 ? claimVaultTx.execute() : showTaxInfo()}
+                                    onClick={handleWithdrawClick}
                                     isLoading={claimVaultTx.isLoading}
                                     className="text-xs px-2 py-1"
-                                    title={Number(pendingVaultRewards) > 0 ? '提取金庫餘額' : '查看稅率資訊'}
+                                    disabled={Number(pendingVaultRewards) === 0}
+                                    title={Number(pendingVaultRewards) > 0 ? '提取金庫餘額' : '金庫餘額為空'}
                                 >
-                                    {Number(pendingVaultRewards) > 0 ? '提取' : '稅率'}
+                                    提取
+                                </ActionButton>
+                                <ActionButton
+                                    onClick={showTaxInfo}
+                                    className="text-xs px-2 py-1"
+                                    title="查看稅率資訊和減免說明"
+                                >
+                                    稅率
                                 </ActionButton>
                                 <WithdrawalHistoryButton userAddress={address} />
                             </div>
