@@ -1,13 +1,14 @@
 // useRewardManager.ts - 統一的獎勵管理 Hook
 
-import { useWriteContract, useReadContract, useWatchContractEvent } from 'wagmi';
+import { useWriteContract, useReadContract } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { getContractWithABI } from '../config/contractsWithABI';
 import { formatEther } from 'viem';
-import { createEventWatchConfig } from '../utils/rpcErrorHandler';
 import { bsc } from 'wagmi/chains';
 import { logger } from '../utils/logger';
+import { useEventPolling } from '../utils/eventPolling';
+import { useEffect } from 'react';
 
 interface UseRewardManagerProps {
     partyId: bigint;
@@ -58,18 +59,17 @@ export const useRewardManager = ({ partyId, chainId }: UseRewardManagerProps) =>
         }
     });
     
-    // 監聽出征完成事件
-    useWatchContractEvent({
-        address: dungeonMasterContract?.address,
-        abi: dungeonMasterContract?.abi,
-        eventName: 'ExpeditionFulfilled',
-        ...createEventWatchConfig('ExpeditionFulfilled-RewardManager', 'high', {
-            enabled: chainId === bsc.id && !!dungeonMasterContract?.address && !!partyId,
-        }),
-        onLogs(logs) {
+    // 使用事件輪詢替代 useWatchContractEvent
+    useEffect(() => {
+        if (!dungeonMasterContract?.address || chainId !== bsc.id || !partyId) return;
+
+        // 監聽出征完成事件
+        const handleExpeditionLogs = (logs: any[]) => {
             logs.forEach((log) => {
-                const { args } = log as any;
-                if (args?.partyId === partyId) {
+                const { args } = log;
+                if (!args) return;
+                
+                if (args.partyId === partyId) {
                     const success = args.success;
                     const reward = args.reward;
                     const expGained = args.expGained;
@@ -88,21 +88,15 @@ export const useRewardManager = ({ partyId, chainId }: UseRewardManagerProps) =>
                     }, 2000);
                 }
             });
-        },
-    });
-    
-    // 監聽獎勵領取事件
-    useWatchContractEvent({
-        address: dungeonMasterContract?.address,
-        abi: dungeonMasterContract?.abi,
-        eventName: 'RewardsBanked',
-        ...createEventWatchConfig('RewardsBanked-RewardManager', 'high', {
-            enabled: chainId === bsc.id && !!dungeonMasterContract?.address && !!partyId,
-        }),
-        onLogs(logs) {
+        };
+
+        // 監聽獎勵領取事件
+        const handleRewardsBankedLogs = (logs: any[]) => {
             logs.forEach((log) => {
-                const { args } = log as any;
-                if (args?.partyId === partyId) {
+                const { args } = log;
+                if (!args) return;
+                
+                if (args.partyId === partyId) {
                     logger.info('Rewards banked for party:', {
                         partyId: partyId.toString(),
                         amount: formatEther(args.amount)
@@ -113,8 +107,30 @@ export const useRewardManager = ({ partyId, chainId }: UseRewardManagerProps) =>
                     queryClient.invalidateQueries({ queryKey: ['playerVault'] });
                 }
             });
-        },
-    });
+        };
+
+        // 註冊事件監聽
+        const unsubscribeExpedition = useEventPolling(
+            `ExpeditionFulfilled-RewardManager-${partyId}`,
+            dungeonMasterContract.address,
+            'event ExpeditionFulfilled(indexed address player, indexed uint256 partyId, bool success, uint256 reward, uint256 expGained)',
+            handleExpeditionLogs,
+            true
+        );
+
+        const unsubscribeRewards = useEventPolling(
+            `RewardsBanked-RewardManager-${partyId}`,
+            dungeonMasterContract.address,
+            'event RewardsBanked(indexed address player, indexed uint256 partyId, uint256 amount)',
+            handleRewardsBankedLogs,
+            true
+        );
+
+        return () => {
+            unsubscribeExpedition();
+            unsubscribeRewards();
+        };
+    }, [dungeonMasterContract?.address, chainId, partyId, refetchStatus, queryClient]);
     
     
     // Debug log

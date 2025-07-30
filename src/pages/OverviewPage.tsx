@@ -359,12 +359,33 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                 <p className="text-sm text-gray-400">成功遠征</p>
                             </div>
                             <div className="text-center">
-                                <p className="text-2xl font-bold text-blue-500">{player.stats.highestPartyPower || 0}</p>
+                                <p className="text-2xl font-bold text-blue-500">{formatLargeNumber(player.stats.highestPartyPower || 0)}</p>
                                 <p className="text-sm text-gray-400">最高隊伍戰力</p>
                             </div>
                             <div className="text-center">
                                 <p className="text-2xl font-bold text-purple-500">{player.stats.totalUpgradeAttempts || 0}</p>
                                 <p className="text-sm text-gray-400">升級嘗試次數</p>
+                            </div>
+                        </div>
+                        
+                        {/* 額外統計行 */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                            <div className="text-center">
+                                <p className="text-2xl font-bold text-orange-500">{player.stats.successfulUpgrades || 0}</p>
+                                <p className="text-sm text-gray-400">成功升級次數</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-2xl font-bold text-yellow-500">{formatSoul(player.stats.totalRewardsEarned || 0)} SOUL</p>
+                                <p className="text-sm text-gray-400">總獲得獎勵</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-2xl font-bold text-cyan-500">
+                                    {player.stats.totalExpeditions > 0 
+                                        ? `${Math.round((player.stats.successfulExpeditions / player.stats.totalExpeditions) * 100)}%`
+                                        : '0%'
+                                    }
+                                </p>
+                                <p className="text-sm text-gray-400">遠征成功率</p>
                             </div>
                         </div>
                         {player.profile?.inviter && (

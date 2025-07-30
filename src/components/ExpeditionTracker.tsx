@@ -2,15 +2,15 @@
 // Component to track and display recent expedition results prominently
 
 import React, { useEffect, useState } from 'react';
-import { useWatchContractEvent, useAccount } from 'wagmi';
+import { useAccount } from 'wagmi';
 import { formatEther } from 'viem';
+import { bsc } from 'viem/chains';
 import { getContractWithABI } from '../config/contractsWithABI';
 import { logger } from '../utils/logger';
-import { createEventWatchConfig } from '../utils/rpcErrorHandler';
-import { bsc } from 'wagmi/chains';
 import { useQuery } from '@tanstack/react-query';
 import { request, gql } from 'graphql-request';
 import { useExpeditionResult } from '../contexts/ExpeditionContext';
+import { useEventPolling } from '../utils/eventPolling';
 
 interface ExpeditionResult {
     partyId: bigint;
@@ -139,17 +139,13 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
 
     const recentResults = graphResults || [];
 
-    // Watch for expedition results with optimized error handling
-    useWatchContractEvent({
-        address: dungeonMasterContract?.address,
-        abi: dungeonMasterContract?.abi,
-        eventName: 'ExpeditionFulfilled',
-        ...createEventWatchConfig('ExpeditionFulfilled-Tracker', 'high', {
-            enabled: chainId === bsc.id && !!address && !!dungeonMasterContract?.address,
-        }),
-        onLogs(logs) {
+    // 使用事件輪詢替代 useWatchContractEvent
+    useEffect(() => {
+        if (!address || !dungeonMasterContract?.address) return;
+
+        const handleExpeditionLogs = (logs: any[]) => {
             logs.forEach((log) => {
-                const { args } = log as any;
+                const { args } = log;
                 if (!args) return;
 
                 const result: ExpeditionResult = {
@@ -188,9 +184,19 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
                     onNewResult(result);
                 }
             });
-        },
-        enabled: !!dungeonMasterContract && !!address,
-    });
+        };
+
+        // 註冊事件監聽
+        const unsubscribe = useEventPolling(
+            'ExpeditionFulfilled-Tracker',
+            dungeonMasterContract.address,
+            'event ExpeditionFulfilled(indexed address player, indexed uint256 partyId, bool success, uint256 reward, uint256 expGained)',
+            handleExpeditionLogs,
+            true
+        );
+
+        return unsubscribe;
+    }, [address, dungeonMasterContract?.address, showExpeditionResult, onNewResult, refetch]);
 
     const formatTimeAgo = (timestamp: number) => {
         const seconds = Math.floor((Date.now() - timestamp) / 1000);
