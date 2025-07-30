@@ -214,50 +214,34 @@ const MyAssetsPageEnhanced: React.FC = () => {
     
     // Authorization transactions
     const authorizeHeroTx = useTransactionWithProgress({
-        contractCall: heroContract && partyContract ? {
-            address: heroContract.address,
-            abi: heroContract.abi,
-            functionName: 'setApprovalForAll',
-            args: [partyContract.address, true]
-        } : undefined,
-        actionName: '授權英雄合約',
         onSuccess: () => {
             showToast('成功授權英雄合約', 'success');
             queryClient.invalidateQueries({ queryKey: ['readContract'] });
         },
         onError: (error) => {
-            showToast(`授權失敗: ${error}`, 'error');
+            showToast(`授權失敗: ${error.message}`, 'error');
         }
     });
     
     const authorizeRelicTx = useTransactionWithProgress({
-        contractCall: relicContract && partyContract ? {
-            address: relicContract.address,
-            abi: relicContract.abi,
-            functionName: 'setApprovalForAll',
-            args: [partyContract.address, true]
-        } : undefined,
-        actionName: '授權聖物合約',
         onSuccess: () => {
             showToast('成功授權聖物合約', 'success');
             queryClient.invalidateQueries({ queryKey: ['readContract'] });
         },
         onError: (error) => {
-            showToast(`授權失敗: ${error}`, 'error');
+            showToast(`授權失敗: ${error.message}`, 'error');
         }
     });
     
     // Create party transaction
     const createPartyTx = useTransactionWithProgress({
-        contractCall: undefined,
-        actionName: '創建隊伍',
         onSuccess: () => {
             showToast('成功創建隊伍！', 'success');
             refetchNfts();
             setShowTeamBuilder(false);
         },
         onError: (error) => {
-            showToast(`創建隊伍失敗: ${error}`, 'error');
+            showToast(`創建隊伍失敗: ${error.message}`, 'error');
         }
     });
     
@@ -302,14 +286,56 @@ const MyAssetsPageEnhanced: React.FC = () => {
             return;
         }
         
-        createPartyTx.setContractCall({
+        createPartyTx.execute({
             address: partyContract.address,
             abi: partyContract.abi,
             functionName: 'createParty',
             args: [heroIds, relicIds],
             value: platformFeeData ? (platformFeeData as bigint) : BigInt(0)
-        });
-        createPartyTx.execute();
+        }, '創建隊伍');
+    };
+    
+    // 授權函數
+    const handleAuthorizeHero = async () => {
+        if (!heroContract || !partyContract) {
+            showToast('無法取得合約配置', 'error');
+            return;
+        }
+        
+        await authorizeHeroTx.execute({
+            address: heroContract.address,
+            abi: heroContract.abi,
+            functionName: 'setApprovalForAll',
+            args: [partyContract.address, true]
+        }, '授權英雄合約');
+    };
+    
+    const handleAuthorizeRelic = async () => {
+        if (!relicContract || !partyContract) {
+            showToast('無法取得合約配置', 'error');
+            return;
+        }
+        
+        await authorizeRelicTx.execute({
+            address: relicContract.address,
+            abi: relicContract.abi,
+            functionName: 'setApprovalForAll',
+            args: [partyContract.address, true]
+        }, '授權聖物合約');
+    };
+    
+    // 一鍵授權功能
+    const handleBatchAuthorize = async () => {
+        try {
+            if (!isHeroAuthorized) {
+                await handleAuthorizeHero();
+            }
+            if (!isRelicAuthorized) {
+                await handleAuthorizeRelic();
+            }
+        } catch (error) {
+            logger.error('批量授權失敗:', error);
+        }
     };
     
     // 排序選擇器組件
@@ -594,22 +620,38 @@ const MyAssetsPageEnhanced: React.FC = () => {
                     ))}
                 </div>
                 
-                {/* Team Builder Modal-like Container */}
+                {/* Team Builder Fixed Bottom Modal */}
                 {showTeamBuilder && nftsData && (
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-                        <div className="bg-gray-900 rounded-xl shadow-2xl w-full max-w-6xl my-8 border-2 border-emerald-500/30">
-                            <div className="flex items-center justify-between p-4 border-b border-gray-700">
-                                <h2 className="text-xl font-bold text-emerald-400 flex items-center gap-2">
-                                    ⚔️ 組建隊伍
-                                </h2>
-                                <button
-                                    onClick={() => setShowTeamBuilder(false)}
-                                    className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-700"
-                                >
-                                    <Icons.X className="h-5 w-5" />
-                                </button>
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50">
+                        {/* 可點擊背景關閉 */}
+                        <div 
+                            className="absolute inset-0" 
+                            onClick={() => setShowTeamBuilder(false)}
+                        />
+                        
+                        {/* 固定底部模態視窗 */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gray-900 rounded-t-2xl shadow-2xl border-t-2 border-emerald-500/30 max-h-[85vh] overflow-hidden">
+                            {/* 粘性頭部 */}
+                            <div className="sticky top-0 bg-gray-900 border-b border-gray-700 p-4 z-10">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-xl font-bold text-emerald-400 flex items-center gap-2">
+                                        ⚔️ 組建隊伍
+                                    </h2>
+                                    <button
+                                        onClick={() => setShowTeamBuilder(false)}
+                                        className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-700"
+                                    >
+                                        <Icons.X className="h-5 w-5" />
+                                    </button>
+                                </div>
+                                {/* 拖拉提示 */}
+                                <div className="flex justify-center mt-2">
+                                    <div className="w-12 h-1 bg-gray-600 rounded-full"></div>
+                                </div>
                             </div>
-                            <div className="p-6">
+                            
+                            {/* 可滾動內容 */}
+                            <div className="overflow-y-auto max-h-[calc(85vh-80px)] p-6">
                                 <TeamBuilder
                                     heroes={nftsData.heros}
                                     relics={nftsData.relics}
@@ -619,8 +661,9 @@ const MyAssetsPageEnhanced: React.FC = () => {
                                     isLoadingFee={isLoadingFee}
                                     isHeroAuthorized={!!isHeroAuthorized}
                                     isRelicAuthorized={!!isRelicAuthorized}
-                                    onAuthorizeHero={() => authorizeHeroTx.execute()}
-                                    onAuthorizeRelic={() => authorizeRelicTx.execute()}
+                                    onAuthorizeHero={handleAuthorizeHero}
+                                    onAuthorizeRelic={handleAuthorizeRelic}
+                                    onBatchAuthorize={handleBatchAuthorize}
                                     isAuthorizing={authorizeHeroTx.isLoading || authorizeRelicTx.isLoading}
                                 />
                             </div>

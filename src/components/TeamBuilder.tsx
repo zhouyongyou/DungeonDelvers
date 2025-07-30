@@ -7,7 +7,7 @@ import { formatEther } from 'viem';
 import { LoadingSpinner } from './ui/LoadingSpinner';
 import { ActionButton } from './ui/ActionButton';
 import { EmptyState } from './ui/EmptyState';
-import { OptimizedNftGrid } from './ui/OptimizedNftGrid';
+import { SelectableNftGrid } from './ui/SelectableNftGrid';
 
 interface TeamBuilderProps {
   heroes: HeroNft[];
@@ -20,6 +20,7 @@ interface TeamBuilderProps {
   isRelicAuthorized: boolean;
   onAuthorizeHero: () => void;
   onAuthorizeRelic: () => void;
+  onBatchAuthorize?: () => void;
   isAuthorizing: boolean;
 }
 
@@ -34,6 +35,7 @@ export const TeamBuilder = memo<TeamBuilderProps>(({
   isRelicAuthorized,
   onAuthorizeHero,
   onAuthorizeRelic,
+  onBatchAuthorize,
   isAuthorizing
 }: TeamBuilderProps) => {
     const [selectedHeroes, setSelectedHeroes] = useState<bigint[]>([]);
@@ -163,6 +165,13 @@ export const TeamBuilder = memo<TeamBuilderProps>(({
         }
         setHasJustAuthorized(true);
     };
+    
+    const handleBatchAuthorize = async () => {
+        if (onBatchAuthorize) {
+            await onBatchAuthorize();
+        }
+        setHasJustAuthorized(true);
+    };
 
     const needsAuthorization = !isHeroAuthorized || !isRelicAuthorized;
     const canCreateParty = selectedHeroes.length > 0 && selectedRelics.length > 0 && isHeroAuthorized && isRelicAuthorized;
@@ -259,12 +268,14 @@ export const TeamBuilder = memo<TeamBuilderProps>(({
                 {filteredRelics.length === 0 ? (
                     <EmptyState message="沒有可用的聖物" />
                 ) : (
-                    <OptimizedNftGrid
+                    <SelectableNftGrid
                         nfts={filteredRelics}
                         nftType="relic"
                         onSelect={(id) => toggleSelection(id, 'relic')}
                         selectedIds={selectedRelics}
                         gridClassName="grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+                        pageSize={10}
+                        showSelectedCount={true}
                     />
                 )}
             </div>
@@ -303,12 +314,14 @@ export const TeamBuilder = memo<TeamBuilderProps>(({
                 ) : filteredHeroes.length === 0 ? (
                     <EmptyState message="沒有可用的英雄" />
                 ) : (
-                    <OptimizedNftGrid
+                    <SelectableNftGrid
                         nfts={filteredHeroes}
                         nftType="hero"
                         onSelect={(id) => toggleSelection(id, 'hero')}
                         selectedIds={selectedHeroes}
                         gridClassName="grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+                        pageSize={25}
+                        showSelectedCount={true}
                     />
                 )}
             </div>
@@ -354,16 +367,45 @@ export const TeamBuilder = memo<TeamBuilderProps>(({
                     {/* 操作按鈕 */}
                     <div className="flex gap-3">
                         {needsAuthorization ? (
-                            <ActionButton
-                                onClick={handleAuthorize}
-                                variant="primary"
-                                className="flex-1"
-                                disabled={isAuthorizing}
-                                isLoading={isAuthorizing}
-                            >
-                                {isAuthorizing ? '授權中...' : 
-                                 !isHeroAuthorized ? '授權英雄 NFT' : '授權聖物 NFT'}
-                            </ActionButton>
+                            <>
+                                {/* 一鍵授權按鈕 */}
+                                {onBatchAuthorize && (!isHeroAuthorized && !isRelicAuthorized) && (
+                                    <ActionButton
+                                        onClick={handleBatchAuthorize}
+                                        variant="primary"
+                                        className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500"
+                                        disabled={isAuthorizing}
+                                        isLoading={isAuthorizing}
+                                    >
+                                        {isAuthorizing ? '授權中...' : '一鍵授權所有'}
+                                    </ActionButton>
+                                )}
+                                
+                                {/* 分別授權按鈕 */}
+                                {!isHeroAuthorized && (
+                                    <ActionButton
+                                        onClick={onAuthorizeHero}
+                                        variant="secondary"
+                                        className="flex-1"
+                                        disabled={isAuthorizing}
+                                        isLoading={isAuthorizing}
+                                    >
+                                        授權英雄 NFT
+                                    </ActionButton>
+                                )}
+                                
+                                {!isRelicAuthorized && (
+                                    <ActionButton
+                                        onClick={onAuthorizeRelic}
+                                        variant="secondary"
+                                        className="flex-1"
+                                        disabled={isAuthorizing}
+                                        isLoading={isAuthorizing}
+                                    >
+                                        授權聖物 NFT
+                                    </ActionButton>
+                                )}
+                            </>
                         ) : (
                             <ActionButton
                                 onClick={handleCreateParty}
