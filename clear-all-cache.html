@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>清除所有緩存 - DungeonDelvers</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .container {
+            background: #2a2a2a;
+            padding: 30px;
+            border-radius: 10px;
+            border: 2px solid #444;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .danger {
+            background: #dc3545;
+        }
+        .danger:hover {
+            background: #c82333;
+        }
+        .success {
+            background: #28a745;
+        }
+        .log {
+            background: #000;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            min-height: 100px;
+            font-family: monospace;
+            overflow-y: auto;
+            max-height: 400px;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗑️ DungeonDelvers 緩存清除工具</h1>
+        
+        <div class="warning">
+            <strong>⚠️ 警告：</strong> 這將清除所有前端緩存，包括：
+            <ul>
+                <li>LocalStorage 中的 Apollo GraphQL 緩存</li>
+                <li>SessionStorage 中的臨時數據</li>
+                <li>IndexedDB 中的持久化緩存</li>
+                <li>瀏覽器 HTTP 緩存</li>
+                <li>Service Worker 緩存</li>
+            </ul>
+        </div>
+
+        <div>
+            <button onclick="clearApolloCache()">清除 Apollo GraphQL 緩存</button>
+            <button onclick="clearBrowserStorage()">清除本地存儲</button>
+            <button onclick="clearIndexedDB()">清除 IndexedDB</button>
+            <button onclick="clearServiceWorker()">清除 Service Worker</button>
+            <button class="danger" onclick="clearAllCaches()">🚨 清除所有緩存</button>
+            <button class="success" onclick="reloadPage()">重新載入頁面</button>
+        </div>
+
+        <div id="log" class="log">
+            <div id="logContent">緩存清除日誌：<br></div>
+        </div>
+    </div>
+
+    <script>
+        function log(message) {
+            const logContent = document.getElementById('logContent');
+            const timestamp = new Date().toLocaleTimeString();
+            logContent.innerHTML += `[${timestamp}] ${message}<br>`;
+            const logDiv = document.getElementById('log');
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearApolloCache() {
+            try {
+                // 清除 Apollo 相關的 localStorage
+                const apolloKeys = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && (key.includes('apollo') || key.includes('graphql') || key.includes('cache'))) {
+                        apolloKeys.push(key);
+                    }
+                }
+                
+                apolloKeys.forEach(key => {
+                    localStorage.removeItem(key);
+                    log(`清除 localStorage: ${key}`);
+                });
+
+                // 清除 Apollo 相關的 sessionStorage
+                const sessionKeys = [];
+                for (let i = 0; i < sessionStorage.length; i++) {
+                    const key = sessionStorage.key(i);
+                    if (key && (key.includes('apollo') || key.includes('graphql') || key.includes('cache'))) {
+                        sessionKeys.push(key);
+                    }
+                }
+                
+                sessionKeys.forEach(key => {
+                    sessionStorage.removeItem(key);
+                    log(`清除 sessionStorage: ${key}`);
+                });
+
+                log('✅ Apollo GraphQL 緩存已清除');
+            } catch (error) {
+                log(`❌ 清除 Apollo 緩存失敗: ${error.message}`);
+            }
+        }
+
+        function clearBrowserStorage() {
+            try {
+                const localStorageCount = localStorage.length;
+                const sessionStorageCount = sessionStorage.length;
+                
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                log(`✅ LocalStorage 已清除 (${localStorageCount} 項)`);
+                log(`✅ SessionStorage 已清除 (${sessionStorageCount} 項)`);
+            } catch (error) {
+                log(`❌ 清除瀏覽器存儲失敗: ${error.message}`);
+            }
+        }
+
+        async function clearIndexedDB() {
+            try {
+                if ('indexedDB' in window) {
+                    // 獲取所有數據庫
+                    if (indexedDB.databases) {
+                        const databases = await indexedDB.databases();
+                        for (const db of databases) {
+                            if (db.name) {
+                                const deleteReq = indexedDB.deleteDatabase(db.name);
+                                deleteReq.onsuccess = () => log(`✅ 刪除 IndexedDB: ${db.name}`);
+                                deleteReq.onerror = () => log(`❌ 刪除 IndexedDB 失敗: ${db.name}`);
+                            }
+                        }
+                    }
+                    
+                    // 嘗試刪除常見的數據庫名稱
+                    const commonDBNames = ['apollo', 'cache', 'dungeon-delvers', 'graphql'];
+                    for (const dbName of commonDBNames) {
+                        const deleteReq = indexedDB.deleteDatabase(dbName);
+                        deleteReq.onsuccess = () => log(`✅ 嘗試刪除 IndexedDB: ${dbName}`);
+                    }
+                    
+                    log('✅ IndexedDB 清除請求已發送');
+                } else {
+                    log('⚠️ 瀏覽器不支持 IndexedDB');
+                }
+            } catch (error) {
+                log(`❌ 清除 IndexedDB 失敗: ${error.message}`);
+            }
+        }
+
+        async function clearServiceWorker() {
+            try {
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for (const registration of registrations) {
+                        await registration.unregister();
+                        log('✅ Service Worker 已卸載');
+                    }
+                    
+                    if ('caches' in window) {
+                        const cacheNames = await caches.keys();
+                        for (const cacheName of cacheNames) {
+                            await caches.delete(cacheName);
+                            log(`✅ 清除緩存: ${cacheName}`);
+                        }
+                    }
+                } else {
+                    log('⚠️ 瀏覽器不支持 Service Worker');
+                }
+            } catch (error) {
+                log(`❌ 清除 Service Worker 失敗: ${error.message}`);
+            }
+        }
+
+        async function clearAllCaches() {
+            log('🚨 開始清除所有緩存...');
+            
+            clearApolloCache();
+            clearBrowserStorage();
+            await clearIndexedDB();
+            await clearServiceWorker();
+            
+            log('✅ 所有緩存清除完成！');
+            log('💡 建議重新載入頁面以確保更改生效');
+        }
+
+        function reloadPage() {
+            log('🔄 重新載入頁面...');
+            setTimeout(() => {
+                window.location.reload(true);
+            }, 1000);
+        }
+
+        // 頁面載入時顯示歡迎信息
+        window.onload = function() {
+            log('🚀 緩存清除工具已載入');
+            log('💡 點擊相應按鈕來清除不同類型的緩存');
+        };
+    </script>
+</body>
+</html>

@@ -14,6 +14,34 @@ interface EventConfig {
   enabled: boolean;
 }
 
+// 手動解析事件簽名，避免 parseAbiItem 的 bug
+function parseEventSignature(eventString: string) {
+  // 解析 "event ExpeditionFulfilled(indexed address, indexed uint256, bool, uint256, uint256)"
+  const match = eventString.match(/event\s+(\w+)\(([^)]+)\)/);
+  if (!match) {
+    throw new Error(`Invalid event signature: ${eventString}`);
+  }
+  
+  const [, name, paramsString] = match;
+  const params = paramsString.split(',').map(param => {
+    const trimmed = param.trim();
+    const isIndexed = trimmed.startsWith('indexed ');
+    const type = isIndexed ? trimmed.substring(8).trim() : trimmed;
+    
+    return {
+      type,
+      indexed: isIndexed,
+      name: '' // viem 不需要參數名稱
+    };
+  });
+  
+  return {
+    name,
+    type: 'event' as const,
+    inputs: params
+  };
+}
+
 type EventMode = 'filter' | 'polling' | 'unknown';
 
 class SmartEventSystem {
@@ -54,7 +82,7 @@ class SmartEventSystem {
       // 嘗試創建一個測試 filter
       const testFilter = await this.client.createEventFilter({
         address: '0x0000000000000000000000000000000000000000', // 假地址
-        event: parseAbiItem('event Transfer(indexed address from, indexed address to, uint256 value)'),
+        event: parseEventSignature('event Transfer(indexed address, indexed address, uint256)'),
         fromBlock: 'latest'
       });
       
@@ -159,7 +187,7 @@ class SmartEventSystem {
       try {
         const filter = await this.client.createEventFilter({
           address: config.address,
-          event: parseAbiItem(config.event),
+          event: parseEventSignature(config.event),
           fromBlock: 'latest'
         });
         
@@ -212,7 +240,7 @@ class SmartEventSystem {
           try {
             const newFilter = await this.client.createEventFilter({
               address: config.address,
-              event: parseAbiItem(config.event),
+              event: parseEventSignature(config.event),
               fromBlock: 'latest'
             });
             this.filterIds.set(eventId, newFilter);
@@ -321,7 +349,7 @@ class SmartEventSystem {
       try {
         const logs = await this.client.getLogs({
           address: config.address,
-          event: parseAbiItem(config.event),
+          event: parseEventSignature(config.event),
           fromBlock,
           toBlock,
         });
@@ -341,7 +369,7 @@ class SmartEventSystem {
           try {
             const logs = await this.client.getLogs({
               address: config.address,
-              event: parseAbiItem(config.event),
+              event: parseEventSignature(config.event),
               fromBlock,
               toBlock,
             });

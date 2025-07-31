@@ -6,6 +6,34 @@ import { bsc } from 'viem/chains';
 import { logger } from './logger';
 import { getRpcEndpoint } from './rpcOptimizedMigration';
 
+// 手動解析事件簽名，避免 parseAbiItem 的 bug
+function parseEventSignature(eventString: string) {
+  // 解析 "event ExpeditionFulfilled(indexed address, indexed uint256, bool, uint256, uint256)"
+  const match = eventString.match(/event\s+(\w+)\(([^)]+)\)/);
+  if (!match) {
+    throw new Error(`Invalid event signature: ${eventString}`);
+  }
+  
+  const [, name, paramsString] = match;
+  const params = paramsString.split(',').map(param => {
+    const trimmed = param.trim();
+    const isIndexed = trimmed.startsWith('indexed ');
+    const type = isIndexed ? trimmed.substring(8).trim() : trimmed;
+    
+    return {
+      type,
+      indexed: isIndexed,
+      name: '' // viem 不需要參數名稱
+    };
+  });
+  
+  return {
+    name,
+    type: 'event' as const,
+    inputs: params
+  };
+}
+
 // 事件監聽配置
 interface EventConfig {
   address: Address;
@@ -138,7 +166,7 @@ class EventPollingService {
         try {
           const logs = await this.client.getLogs({
             address: config.address,
-            event: parseAbiItem(config.event),
+            event: parseEventSignature(config.event),
             fromBlock,
             toBlock,
           });

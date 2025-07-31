@@ -196,11 +196,11 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
         };
 
         // 註冊智能事件監聽（自動選擇 Filter 或輪詢模式）
-        // 修復事件簽名格式 - 移除 'indexed' 關鍵字，因為 parseAbiItem 不支持這種格式
+        // 修復事件簽名格式 - parseAbiItem 不支持參數名稱，只能使用類型
         const unsubscribe = useSmartEventListener(
             'ExpeditionFulfilled-Tracker',
             dungeonMasterContract.address,
-            'event ExpeditionFulfilled(address player, uint256 partyId, bool success, uint256 reward, uint256 expGained)',
+            'event ExpeditionFulfilled(indexed address, indexed uint256, bool, uint256, uint256)',
             handleExpeditionLogs,
             true
         );

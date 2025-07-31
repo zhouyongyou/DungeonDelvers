@@ -1,24 +1,26 @@
 // useSoulPrice.ts
 // 獲取 SOUL 代幣的 USD 價格
 
-import { useCachedReadContract } from './useCachedReadContract';
+import { useReadContract } from 'wagmi';
 import { getContractWithABI } from '../config/contractsWithABI';
 import { formatUnits } from 'viem';
 
 export const useSoulPrice = () => {
     // 改用與 MintPage 相同的方法：通過 DungeonCore 獲取準確價格
-    const dungeonCoreContract = getContractWithABI(56, 'dungeonCore');
+    const dungeonCoreContract = getContractWithABI('DUNGEONCORE');
     
     // 使用 1 USD 作為基準計算 SOUL 價格
     const oneUsdInWei = BigInt(10) ** BigInt(18); // 1 USD with 18 decimals
     
-    const { data: soulAmountFor1USD, isLoading, error } = useCachedReadContract({
-        address: dungeonCoreContract?.address,
-        abi: dungeonCoreContract?.abi,
+    const { data: soulAmountFor1USD, isLoading, error } = useReadContract({
+        ...dungeonCoreContract,
         functionName: 'getSoulShardAmountForUSD',
         args: [oneUsdInWei],
-        cacheKey: 'soulPriceViaUSD',
-        cacheTime: 120000 // 2 分鐘緩存（與 MintPage 一致）
+        query: {
+            enabled: !!dungeonCoreContract?.address && !!dungeonCoreContract?.abi,
+            staleTime: 2 * 60 * 1000, // 2 分鐘
+            retry: 3
+        }
     });
     
     let priceInUsd: number | null = null;

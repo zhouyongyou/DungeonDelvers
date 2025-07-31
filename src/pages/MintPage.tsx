@@ -69,7 +69,7 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     // ★★★【核心修復】★★★
     // 改用與管理頁面相同的 Oracle 直接查詢方式，避免 Hero 合約的問題
     // 每個 NFT 價格為 2 USD，需要轉換為 SoulShard
-    const dungeonCoreContract = getContractWithABI(chainId, 'dungeonCore');
+    const dungeonCoreContract = getContractWithABI('DUNGEONCORE');
     
     // 計算總 USD 金額（每個 NFT 2 USD）
     const totalUSDAmount = useMemo(() => {

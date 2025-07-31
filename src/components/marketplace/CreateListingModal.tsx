@@ -16,6 +16,7 @@ import { useHeroPower, usePartyPower, useHeroDetails, useRelicDetails, usePartyD
 import { StablecoinSelector } from './StablecoinSelector';
 import type { StablecoinSymbol } from '../../hooks/useMarketplaceV2Contract';
 import { emitListingCreated } from '../../utils/marketplaceEvents';
+import { CONTRACT_ADDRESSES } from '../../config/contracts';
 
 interface CreateListingModalProps {
     isOpen: boolean;
@@ -49,7 +50,7 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
     const [needsNftApproval, setNeedsNftApproval] = useState(false);
     
     // 模擬市場地址（實際應該從配置獲取）
-    const MARKETPLACE_ADDRESS = '0x1234567890123456789012345678901234567890' as Address;
+    // Note: Marketplace address should be fetched from config when available
     
     // 獲取當前類型的 NFT 列表
     const availableNfts = useMemo(() => {
@@ -109,11 +110,11 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
         setSelectedNft(nft);
         
         try {
-            // Get NFT contract address based on type
+            // Get NFT contract address based on type from unified config
             const nftContractAddresses = {
-                hero: '0x162b0b673f38C11732b0bc0B4B026304e563e8e2',
-                relic: '0x15c2454A31Abc0063ef4a71d0640057d71847a22',
-                party: '0xab07E90d44c34FB62313C74F3C7b4b343E52a253'
+                hero: CONTRACT_ADDRESSES.HERO,
+                relic: CONTRACT_ADDRESSES.RELIC,
+                party: CONTRACT_ADDRESSES.PARTY
             };
             const contractAddress = nftContractAddresses[nft.type as keyof typeof nftContractAddresses];
             const approved = await checkNFTApproval(contractAddress as `0x${string}`, address as `0x${string}`);

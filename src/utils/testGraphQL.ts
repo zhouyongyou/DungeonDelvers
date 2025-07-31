@@ -6,9 +6,10 @@ const TEST_PLAYER_QUERY = `
   query TestPlayer($address: String!) {
     player(id: $address) {
       id
-      totalRewardsEarned
-      totalExpeditions
-      successfulExpeditions
+      profile {
+        totalRewardsEarned
+        successfulExpeditions
+      }
     }
   }
 `;
@@ -19,14 +20,11 @@ const TEST_EXPEDITIONS_QUERY = `
     expeditions(first: $first, orderBy: timestamp, orderDirection: desc) {
       id
       success
-      rewardAmount
+      reward
       timestamp
+      dungeonName
       player {
         id
-      }
-      dungeon {
-        id
-        name
       }
       party {
         id
@@ -44,7 +42,8 @@ const TEST_PARTIES_QUERY = `
       tokenId
       name
       totalPower
-      totalRewardsEarned
+      totalCapacity
+      partyRarity
       owner {
         id
       }

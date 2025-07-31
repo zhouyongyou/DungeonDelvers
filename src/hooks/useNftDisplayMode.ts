@@ -15,7 +15,7 @@ interface NftDisplayModeState {
 export const useNftDisplayMode = create<NftDisplayModeState>()(
     persist(
         (set, get) => ({
-            displayMode: 'auto',
+            displayMode: 'png',
             
             setDisplayMode: (mode) => set({ displayMode: mode }),
             
