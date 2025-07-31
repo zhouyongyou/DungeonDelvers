@@ -8,6 +8,7 @@ import { parseEther, type Address } from 'viem';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { marketplaceApi, type ApiMarketListing, type CreateListingRequest } from '../services/marketplaceApi';
 import type { HeroNft, RelicNft, PartyNft, NftType } from '../types/nft';
+import { getContractWithABI } from '../config/contractsWithABI';
 
 // Convert API listing to internal format
 export interface MarketListing {
@@ -196,16 +197,13 @@ export const useMarketStats = () => {
 
 // Utility function to get contract address based on NFT type
 function getContractAddress(nftType: NftType): string {
-    // Import from updated contracts config
-    const { HERO, RELIC, PARTY } = require('../config/contracts');
-    
     switch (nftType) {
         case 'hero':
-            return HERO;
+            return getContractWithABI('HERO')?.address || '';
         case 'relic':
-            return RELIC;
+            return getContractWithABI('RELIC')?.address || '';
         case 'party':
-            return PARTY;
+            return getContractWithABI('PARTY')?.address || '';
         default:
             throw new Error(`Unknown NFT type: ${nftType}`);
     }

@@ -23,9 +23,9 @@ export const ENV = {
   THE_GRAPH: {
     // 主要 API URL（根據配置自動選擇）
     get API_URL() {
-      return useDecentralized
-        ? (cachedNetworkUrl || import.meta.env.VITE_THE_GRAPH_NETWORK_URL)
-        : (cachedStudioUrl || import.meta.env.VITE_THE_GRAPH_API_URL);
+      // 強制使用去中心化端點，因為 Studio 端點已失效
+      return cachedNetworkUrl || import.meta.env.VITE_THE_GRAPH_NETWORK_URL || 
+             'https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs';
     },
     
     // 各版本 URL（從 configLoader 載入，保留環境變數作為備份）

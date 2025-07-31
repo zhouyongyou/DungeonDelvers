@@ -16,6 +16,7 @@ import { useAdminAccess } from '../hooks/useAdminAccess';
 import { VipBenefitsGuide } from '../components/vip/VipBenefitsGuide';
 import { WithdrawalTaxCalculator } from '../components/vip/WithdrawalTaxCalculator';
 import { VipLevelConverter } from '../components/vip/VipLevelConverter';
+import { LazyImage } from '../components/ui/LazyImage';
 
 // VIP 福利摺疊組件
 const VipBenefitsCollapsible: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
@@ -147,7 +148,7 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
         <div className="w-full space-y-4">
             <div className="w-full aspect-square rounded-xl overflow-hidden shadow-lg border border-white/20 bg-gray-900">
                 {!imageError && (nftImage || tokenId) ? (
-                    <img
+                    <LazyImage
                         src={nftImage || getVipImageByLevel(vipLevel)}
                         alt={`VIP Card #${tokenId?.toString() || 'VIP'}`}
                         className="w-full h-full object-cover"

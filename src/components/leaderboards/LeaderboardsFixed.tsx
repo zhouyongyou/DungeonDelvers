@@ -7,10 +7,10 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { formatEther } from 'viem';
 import { THE_GRAPH_API_URL, isGraphConfigured } from '../../config/graphConfig';
 
-// 重新設計的 GraphQL 查詢 - 更有意義的排行榜
+// 簡化的 GraphQL 查詢 - 只使用確定存在的字段
 const LEADERBOARDS_QUERY = `
   query GetLeaderboards {
-    # 隊伍戰力排行榜 - 前 10 名（保留，這個有意義）
+    # 隊伍戰力排行榜 - 前 10 名
     partyPowerLeaders: parties(
       first: 10
       orderBy: totalPower
@@ -23,80 +23,23 @@ const LEADERBOARDS_QUERY = `
       partyRarity
       owner {
         id
-        profile {
-          name
-        }
       }
     }
     
-    # 遠征次數排行榜 - 最活躍的冒險者
-    expeditionLeaders: players(
+    # 英雄戰力排行榜 - 前 10 名（保留為對比）
+    heroPowerLeaders: heros(
       first: 10
-      orderBy: totalExpeditions
+      orderBy: power
       orderDirection: desc
-      where: { totalExpeditions_gt: 0 }
+      where: { power_gt: "0" }
     ) {
       id
-      profile {
-        name
+      tokenId
+      power
+      rarity
+      owner {
+        id
       }
-      totalExpeditions
-      successfulExpeditions
-      totalRewardsEarned
-      lastExpeditionAt
-    }
-    
-    # 獎勵獲得排行榜 - 最富有的冒險者
-    rewardLeaders: players(
-      first: 10
-      orderBy: totalRewardsEarned
-      orderDirection: desc
-      where: { totalRewardsEarned_gt: "0" }
-    ) {
-      id
-      profile {
-        name
-      }
-      totalRewardsEarned
-      totalExpeditions
-      successfulExpeditions
-    }
-    
-    # 勝率排行榜 - 最技巧高超的冒險者（至少5次遠征）
-    winRateLeaders: players(
-      first: 10
-      orderBy: winRate
-      orderDirection: desc
-      where: { 
-        totalExpeditions_gte: 5
-        winRate_gt: "0"
-      }
-    ) {
-      id
-      profile {
-        name
-      }
-      totalExpeditions
-      successfulExpeditions
-      winRate
-      totalRewardsEarned
-    }
-    
-    # 升星大師排行榜 - 升星最多的玩家
-    upgradeLeaders: players(
-      first: 10
-      orderBy: totalUpgrades
-      orderDirection: desc
-      where: { totalUpgrades_gt: 0 }
-    ) {
-      id
-      profile {
-        name
-      }
-      totalUpgrades
-      successfulUpgrades
-      upgradeSuccessRate
-      totalUpgradeCost
     }
     
     # VIP 質押排行榜
@@ -111,43 +54,37 @@ const LEADERBOARDS_QUERY = `
       id
       owner {
         id
-        profile {
-          name
-        }
       }
       stakedAmount
-      vipLevel
       stakedAt
     }
     
-    # 最近活躍玩家
-    recentActiveLeaders: expeditions(
-      first: 50
+    # 最近遠征活動
+    recentExpeditions: expeditions(
+      first: 20
       orderBy: timestamp
       orderDirection: desc
-      where: {
-        timestamp_gte: "${Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000)}"
-      }
     ) {
       id
       player {
         id
-        profile {
-          name
-        }
+      }
+      party {
+        tokenId
+        totalPower
       }
       success
       reward
       timestamp
+      dungeonName
     }
     
-    # 全局統計
+    # 全局統計（如果有的話）
     globalStats(id: "global") {
       totalPlayers
       totalExpeditions
       successfulExpeditions
       totalRewardsDistributed
-      totalUpgrades
     }
   }
 `;
@@ -160,66 +97,44 @@ interface LeaderboardData {
     partyRarity: number;
     owner: {
       id: string;
-      profile?: { name: string };
     };
   }>;
-  expeditionLeaders: Array<{
+  heroPowerLeaders: Array<{
     id: string;
-    profile?: { name: string };
-    totalExpeditions: number;
-    successfulExpeditions: number;
-    totalRewardsEarned: string;
-    lastExpeditionAt?: string;
-  }>;
-  rewardLeaders: Array<{
-    id: string;
-    profile?: { name: string };
-    totalRewardsEarned: string;
-    totalExpeditions: number;
-    successfulExpeditions: number;
-  }>;
-  winRateLeaders: Array<{
-    id: string;
-    profile?: { name: string };
-    totalExpeditions: number;
-    successfulExpeditions: number;
-    winRate: string;
-    totalRewardsEarned: string;
-  }>;
-  upgradeLeaders: Array<{
-    id: string;
-    profile?: { name: string };
-    totalUpgrades: number;
-    successfulUpgrades: number;
-    upgradeSuccessRate: string;
-    totalUpgradeCost: string;
+    tokenId: string;
+    power: string;
+    rarity: number;
+    owner: {
+      id: string;
+    };
   }>;
   vipLeaders: Array<{
     id: string;
     owner: {
       id: string;
-      profile?: { name: string };
     };
     stakedAmount: string;
-    vipLevel: number;
     stakedAt: string;
   }>;
-  recentActiveLeaders: Array<{
+  recentExpeditions: Array<{
     id: string;
     player: {
       id: string;
-      profile?: { name: string };
+    };
+    party: {
+      tokenId: string;
+      totalPower: string;
     };
     success: boolean;
     reward: string;
     timestamp: string;
+    dungeonName: string;
   }>;
   globalStats?: {
     totalPlayers: number;
     totalExpeditions: number;
     successfulExpeditions: number;
     totalRewardsDistributed: string;
-    totalUpgrades: number;
   };
 }
 
@@ -298,17 +213,14 @@ function processActiveLeaders(expeditions: LeaderboardData['recentActiveLeaders'
     .slice(0, 10);
 }
 
-// 排行榜標籤 - 重新設計更有趣的類別
-type LeaderboardTab = 'partypower' | 'expeditions' | 'rewards' | 'winrate' | 'upgrades' | 'vip' | 'active';
+// 排行榜標籤 - 回退到可用的基本排行榜
+type LeaderboardTab = 'partypower' | 'heropower' | 'vip' | 'expeditions';
 
 const LEADERBOARD_TABS: Array<{ id: LeaderboardTab; label: string; icon: string; description: string }> = [
   { id: 'partypower', label: '隊伍戰力', icon: '⚔️', description: '最強大的冒險隊伍' },
-  { id: 'expeditions', label: '遠征次數', icon: '🗺️', description: '最活躍的冒險者' },
-  { id: 'rewards', label: '財富排行', icon: '💰', description: '獲得最多獎勵的玩家' },
-  { id: 'winrate', label: '勝率大師', icon: '🏆', description: '技巧最高超的冒險者' },
-  { id: 'upgrades', label: '升星大師', icon: '⭐', description: '升星最成功的玩家' },
+  { id: 'heropower', label: '英雄戰力', icon: '🦸‍♂️', description: '最強的個體英雄' },
   { id: 'vip', label: 'VIP 質押', icon: '👑', description: '質押最多的尊貴玩家' },
-  { id: 'active', label: '近期活躍', icon: '🔥', description: '最近7天最活躍的玩家' },
+  { id: 'expeditions', label: '最近遠征', icon: '🗺️', description: '最近的遠征活動' },
 ];
 
 export const LeaderboardsFixed: React.FC = React.memo(() => {
@@ -375,7 +287,7 @@ export const LeaderboardsFixed: React.FC = React.memo(() => {
               <span className="text-lg font-bold text-yellow-400">#{index + 1}</span>
               <div>
                 <p className="text-white font-medium">
-                  隊伍 #{party.tokenId} - {formatPlayerName(party.owner)}
+                  隊伍 #{party.tokenId}
                 </p>
                 <p className="text-gray-400 text-sm">
                   稀有度 {party.partyRarity} · 擁有者: {party.owner.id.slice(0, 8)}...
@@ -392,29 +304,30 @@ export const LeaderboardsFixed: React.FC = React.memo(() => {
     </div>
   );
 
-  const renderExpeditionLeaderboard = () => (
+  const renderHeroPowerLeaderboard = () => (
     <div className="space-y-3">
-      <p className="text-gray-400 text-sm mb-4">基於遠征次數排名，展現最活躍的冒險者</p>
-      {leaderboardData.expeditionLeaders?.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">暫無遠征數據</p>
+      <p className="text-gray-400 text-sm mb-4">基於英雄個體戰力排名</p>
+      {leaderboardData.heroPowerLeaders?.length === 0 ? (
+        <p className="text-gray-500 text-center py-8">暫無英雄數據</p>
       ) : (
-        leaderboardData.expeditionLeaders?.map((player, index) => {
-          const winRate = player.totalExpeditions > 0 ? (player.successfulExpeditions / player.totalExpeditions * 100) : 0;
+        leaderboardData.heroPowerLeaders?.map((hero, index) => {
+          const rarityNames = ["", "N", "R", "SR", "SSR", "UR", "UR+"];
           return (
-            <div key={player.id} className="flex items-center justify-between bg-gray-700 p-3 rounded">
+            <div key={hero.id} className="flex items-center justify-between bg-gray-700 p-3 rounded">
               <div className="flex items-center space-x-3">
                 <span className="text-lg font-bold text-yellow-400">#{index + 1}</span>
                 <div>
-                  <p className="text-white font-medium">{formatPlayerName(player)}</p>
+                  <p className="text-white font-medium">
+                    英雄 #{hero.tokenId}
+                  </p>
                   <p className="text-gray-400 text-sm">
-                    勝率 {winRate.toFixed(1)}% · 獲得 {parseFloat(formatEther(BigInt(player.totalRewardsEarned))).toFixed(1)} SoulShard
+                    {rarityNames[hero.rarity] || `${hero.rarity}★`} · 擁有者: {hero.owner.id.slice(0, 8)}...
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-blue-400 font-bold">{player.totalExpeditions}</p>
-                <p className="text-gray-400 text-sm">遠征次數</p>
-                <p className="text-green-400 text-xs">{player.successfulExpeditions} 勝</p>
+                <p className="text-blue-400 font-bold">{hero.power}</p>
+                <p className="text-gray-400 text-sm">戰力</p>
               </div>
             </div>
           );
@@ -423,28 +336,38 @@ export const LeaderboardsFixed: React.FC = React.memo(() => {
     </div>
   );
 
-  const renderRewardLeaderboard = () => (
+  const renderExpeditionLeaderboard = () => (
     <div className="space-y-3">
-      <p className="text-gray-400 text-sm mb-4">基於總獎勵獲得量排名</p>
-      {leaderboardData.rewardLeaders?.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">暫無獎勵數據</p>
+      <p className="text-gray-400 text-sm mb-4">最近的遠征活動記錄</p>
+      {leaderboardData.recentExpeditions?.length === 0 ? (
+        <p className="text-gray-500 text-center py-8">暫無遠征數據</p>
       ) : (
-        leaderboardData.rewardLeaders?.map((player, index) => {
-          const winRate = player.totalExpeditions > 0 ? (player.successfulExpeditions / player.totalExpeditions * 100) : 0;
+        leaderboardData.recentExpeditions?.map((expedition, index) => {
           return (
-            <div key={player.id} className="flex items-center justify-between bg-gray-700 p-3 rounded">
-              <div className="flex items-center space-x-3">
-                <span className="text-lg font-bold text-yellow-400">#{index + 1}</span>
-                <div>
-                  <p className="text-white font-medium">{formatPlayerName(player)}</p>
-                  <p className="text-gray-400 text-sm">
-                    {player.totalExpeditions} 次遠征 · 勝率 {winRate.toFixed(1)}%
-                  </p>
+            <div key={expedition.id} className="bg-gray-700 p-3 rounded">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <span className={`w-2 h-2 rounded-full ${expedition.success ? 'bg-green-400' : 'bg-red-400'}`}></span>
+                  <p className="text-white font-medium">玩家 {expedition.player.id.slice(0, 8)}...</p>
+                  <span className={`text-xs px-2 py-1 rounded ${expedition.success ? 'bg-green-900 text-green-200' : 'bg-red-900 text-red-200'}`}>
+                    {expedition.success ? '成功' : '失敗'}
+                  </span>
                 </div>
+                <span className="text-gray-400 text-xs">
+                  {new Date(parseInt(expedition.timestamp) * 1000).toLocaleString()}
+                </span>
               </div>
-              <div className="text-right">
-                <p className="text-green-400 font-bold">{parseFloat(formatEther(BigInt(player.totalRewardsEarned))).toFixed(1)}</p>
-                <p className="text-gray-400 text-sm">SoulShard</p>
+              <div className="flex justify-between items-center text-sm">
+                <div>
+                  <p className="text-gray-300">地城: <span className="text-blue-400">{expedition.dungeonName}</span></p>
+                  <p className="text-gray-300">隊伍: <span className="text-purple-400">#{expedition.party.tokenId}</span> (戰力: {parseInt(expedition.party.totalPower).toLocaleString()})</p>
+                </div>
+                {expedition.success && (
+                  <div className="text-right">
+                    <p className="text-green-400 font-bold">+{parseFloat(formatEther(BigInt(expedition.reward))).toFixed(2)}</p>
+                    <p className="text-gray-400 text-xs">SoulShard</p>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -527,9 +450,9 @@ export const LeaderboardsFixed: React.FC = React.memo(() => {
             <div className="flex items-center space-x-3">
               <span className="text-lg font-bold text-yellow-400">#{index + 1}</span>
               <div>
-                <p className="text-white font-medium">{formatPlayerName(vip.owner)}</p>
+                <p className="text-white font-medium">玩家 {vip.owner.id.slice(0, 8)}...</p>
                 <p className="text-gray-400 text-sm">
-                  VIP {vip.vipLevel} · 質押於 {new Date(parseInt(vip.stakedAt) * 1000).toLocaleDateString()}
+                  質押於 {new Date(parseInt(vip.stakedAt) * 1000).toLocaleDateString()}
                 </p>
               </div>
             </div>
@@ -584,18 +507,12 @@ export const LeaderboardsFixed: React.FC = React.memo(() => {
     switch (activeTab) {
       case 'partypower':
         return renderPartyPowerLeaderboard();
-      case 'expeditions':
-        return renderExpeditionLeaderboard();
-      case 'rewards':
-        return renderRewardLeaderboard();
-      case 'winrate':
-        return renderWinRateLeaderboard();
-      case 'upgrades':
-        return renderUpgradeLeaderboard();
+      case 'heropower':
+        return renderHeroPowerLeaderboard();
       case 'vip':
         return renderVIPLeaderboard();
-      case 'active':
-        return renderActiveLeaderboard();
+      case 'expeditions':
+        return renderExpeditionLeaderboard();
       default:
         return null;
     }
@@ -617,7 +534,7 @@ export const LeaderboardsFixed: React.FC = React.memo(() => {
 
       {/* 標籤切換 */}
       <div className="mb-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 bg-gray-700 p-1 rounded-lg">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-gray-700 p-1 rounded-lg">
           {LEADERBOARD_TABS.map((tab) => (
             <button
               key={tab.id}

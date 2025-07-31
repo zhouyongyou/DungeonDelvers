@@ -48,13 +48,19 @@ export const CooldownTimer: React.FC<CooldownTimerProps> = ({
     
     if (timeLeft === 0) return null;
     
-    // 格式化時間顯示 - 更直觀的格式
+    // 格式化時間顯示 - 支援天、小時、分鐘、秒
     const formatTime = (seconds: number): string => {
-        const mins = Math.floor(seconds / 60);
+        const days = Math.floor(seconds / (24 * 60 * 60));
+        const hours = Math.floor((seconds % (24 * 60 * 60)) / (60 * 60));
+        const mins = Math.floor((seconds % (60 * 60)) / 60);
         const secs = seconds % 60;
         
-        if (mins > 0) {
-            return `${mins} 分 ${secs} 秒`;
+        if (days > 0) {
+            return hours > 0 ? `${days} 天 ${hours} 小時` : `${days} 天`;
+        } else if (hours > 0) {
+            return mins > 0 ? `${hours} 小時 ${mins} 分鐘` : `${hours} 小時`;
+        } else if (mins > 0) {
+            return secs > 0 ? `${mins} 分鐘 ${secs} 秒` : `${mins} 分鐘`;
         } else {
             return `${secs} 秒`;
         }

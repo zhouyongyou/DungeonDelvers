@@ -15,13 +15,26 @@ const queryConfigs: Record<QueryCategory, Partial<UseQueryOptions>> = {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   },
   CONTRACT: {
-    staleTime: 1000 * 10,              // 10 秒內視為新鮮
-    gcTime: 1000 * 60 * 5,             // 5 分鐘垃圾回收
-    refetchOnWindowFocus: true,        // 視窗聚焦時重新獲取
-    refetchOnMount: true,              // 組件掛載時重新獲取
+    staleTime: 1000 * 30,              // 30 秒內視為新鮮（增加以減少請求）
+    gcTime: 1000 * 60 * 10,            // 10 分鐘垃圾回收（延長緩存）
+    refetchOnWindowFocus: false,       // 視窗聚焦時不重新獲取（減少請求）
+    refetchOnMount: 'always',          // 組件掛載時檢查是否需要
     refetchOnReconnect: true,          // 重新連接時重新獲取
-    retry: 2,                          // 重試 2 次
-    retryDelay: 1000,                  // 固定 1 秒延遲
+    retry: (failureCount, error) => {
+      // 429 錯誤只重試一次
+      if (error?.code === -32005 || error?.code === 429 || error?.message?.includes('rate limit')) {
+        return failureCount < 1;
+      }
+      // 其他錯誤重試 2 次
+      return failureCount < 2;
+    },
+    retryDelay: (attemptIndex, error) => {
+      // 429 錯誤使用更長延遲
+      if (error?.code === -32005 || error?.code === 429) {
+        return Math.min(3000 * 2 ** attemptIndex, 10000);
+      }
+      return 1000;
+    },
   },
   GRAPHQL: {
     staleTime: 1000 * 60 * 5,          // 5 分鐘內視為新鮮

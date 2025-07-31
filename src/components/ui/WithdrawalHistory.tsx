@@ -6,6 +6,7 @@ import { Icons } from './icons';
 import { ActionButton } from './ActionButton';
 import { LoadingSpinner } from './LoadingSpinner';
 import { EmptyState } from './EmptyState';
+import { Modal } from './Modal';
 import { formatSoul } from '../../utils/formatters';
 import { useTransactionPersistence } from '../../stores/useTransactionPersistence';
 import { formatEther } from 'viem';
@@ -79,8 +80,6 @@ export const WithdrawalHistory: React.FC<WithdrawalHistoryProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   // 分頁邏輯
   const startIndex = page * pageSize;
   const endIndex = startIndex + pageSize;
@@ -88,24 +87,16 @@ export const WithdrawalHistory: React.FC<WithdrawalHistoryProps> = ({
   const hasNextPage = endIndex < withdrawalRecords.length;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
-      <div className="bg-gray-800 rounded-lg max-w-4xl w-full max-h-[85vh] overflow-hidden shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Icons.History className="h-5 w-5" />
-            提取歷史
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-          >
-            <Icons.X className="h-5 w-5 text-gray-400" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[60vh]">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="📋 提取歷史"
+      onConfirm={onClose}
+      confirmText="關閉"
+      maxWidth="4xl"
+      showCloseButton={false}
+    >
+      <div className="space-y-6">
           {paginatedRecords.length === 0 ? (
             <EmptyState 
               message="尚無提取記錄" 
@@ -201,9 +192,8 @@ export const WithdrawalHistory: React.FC<WithdrawalHistoryProps> = ({
               )}
             </>
           )}
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 

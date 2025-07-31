@@ -104,7 +104,7 @@ export function getRarityAbbreviation(input: string | number | bigint): string {
     case 3: return 'SR';   // Super Rare (Rare)
     case 4: return 'SSR';  // Super Super Rare (Epic)
     case 5: return 'UR';   // Ultra Rare (Legendary)
-    case 6: return 'UR+';  // Ultra Rare Plus (Mythic)
+    case 6: return 'UR+';  // Ultra Rare Plus (Mythic) - 如果有第6級的話
     default: return '';    // 預設值不顯示前綴
   }
 }

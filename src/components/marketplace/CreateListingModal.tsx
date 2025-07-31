@@ -7,6 +7,7 @@ import { parseUnits, type Address } from 'viem';
 import { ActionButton } from '../ui/ActionButton';
 import { Icons } from '../ui/icons';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
+import { Modal } from '../ui/Modal';
 import type { HeroNft, RelicNft, PartyNft, NftType } from '../../types/nft';
 import { formatSoul } from '../../utils/formatters';
 import { useAppToast } from '../../contexts/SimpleToastContext';
@@ -14,6 +15,7 @@ import { useMarketplaceV2 } from '../../hooks/useMarketplaceV2Contract';
 import { useHeroPower, usePartyPower, useHeroDetails, useRelicDetails, usePartyDetails, getElementName, getClassName, getRelicCategoryName } from '../../hooks/useNftPower';
 import { StablecoinSelector } from './StablecoinSelector';
 import type { StablecoinSymbol } from '../../hooks/useMarketplaceV2Contract';
+import { emitListingCreated } from '../../utils/marketplaceEvents';
 
 interface CreateListingModalProps {
     isOpen: boolean;
@@ -80,6 +82,15 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
             }
             
             showToast('成功創建掛單！', 'success');
+            
+            // 觸發通知事件
+            emitListingCreated({
+                nftType: selectedType,
+                tokenId: selectedNft.id?.toString() || 'Unknown',
+                price: priceInput,
+                seller: address
+            });
+            
             onClose();
             onListingCreated?.();
             
@@ -210,20 +221,19 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
         );
     };
 
-    if (!isOpen) return null;
-    
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-white">創建掛單</h2>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-white"
-                    >
-                        <Icons.X className="h-6 w-6" />
-                    </button>
-                </div>
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="🏪 創建掛單"
+            onConfirm={handleCreateListing}
+            confirmText={isProcessing ? '處理中...' : 
+                        needsNftApproval ? '授權並創建' : '確認創建'}
+            maxWidth="2xl"
+            disabled={!selectedNft || !priceInput || acceptedTokens.length === 0 || isProcessing}
+            isLoading={isProcessing}
+        >
+            <div className="space-y-6">
                 
                 {/* NFT 類型選擇 */}
                 <div className="mb-4">
@@ -385,26 +395,7 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
                     </div>
                 )}
                 
-                {/* 操作按鈕 */}
-                <div className="flex gap-2">
-                    <ActionButton
-                        onClick={handleCreateListing}
-                        disabled={!selectedNft || !priceInput || acceptedTokens.length === 0 || isProcessing}
-                        isLoading={isProcessing}
-                        className="flex-1 py-2"
-                    >
-                        {isProcessing ? '處理中...' : 
-                         needsNftApproval ? '授權並創建' : '確認創建'}
-                    </ActionButton>
-                    <ActionButton
-                        onClick={onClose}
-                        disabled={isProcessing}
-                        className="px-6 py-2 bg-gray-700 hover:bg-gray-600"
-                    >
-                        取消
-                    </ActionButton>
-                </div>
             </div>
-        </div>
+        </Modal>
     );
 };

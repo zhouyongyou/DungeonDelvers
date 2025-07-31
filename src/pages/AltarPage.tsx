@@ -31,9 +31,10 @@ import { AltarRulesVisualization } from '../components/altar/AltarRulesVisualiza
 import { AltarRitualAnimation } from '../components/altar/AltarRitualAnimation';
 import { AltarTutorial } from '../components/altar/AltarTutorial';
 import { AltarHistoryStats } from '../components/altar/AltarHistoryStats';
-import { AltarVipBonus } from '../components/altar/AltarVipBonus';
+import { AltarFloatingStatsButton } from '../components/altar/AltarFloatingStatsButton';
 import { AltarNftAuthManager } from '../components/altar/AltarNftAuthManager';
 import { AltarNftSelector } from '../components/altar/AltarNftSelector';
+import { useVipStatus } from '../hooks/useVipStatus';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取 Hooks
@@ -451,6 +452,9 @@ const AltarPage = memo(() => {
                 const statusMap: UpgradeOutcomeStatus[] = ['total_fail', 'partial_fail', 'success', 'great_success'];
                 const resultStatus = statusMap[outcome] || 'total_fail';
                 
+                // 立即關閉進度模態框並顯示結果
+                setShowProgressModal(false);
+                
                 // 延遲顯示結果，讓動畫播放完整
                 setTimeout(() => {
                     if (resultStatus === 'great_success') {
@@ -462,36 +466,41 @@ const AltarPage = memo(() => {
                     }
                     
                     const outcomeMessages: Record<number, string> = { 
-                        3: `大成功！您獲得了 ${newNfts.length} 個更高星級的 NFT！`, 
-                        2: `恭喜！您成功獲得了 1 個更高星級的 NFT！`, 
-                        1: `可惜，升星失敗了，但我們為您保留了 ${newNfts.length} 個材料。`, 
-                        0: '升星失敗，所有材料已銷毀。再接再厲！' 
+                        3: `🎉 大成功！您獲得了 ${newNfts.length} 個更高星級的 NFT！`, 
+                        2: `✨ 恭喜！您成功獲得了 1 個更高星級的 NFT！`, 
+                        1: `💔 可惜，升星失敗了，但我們為您保留了 ${newNfts.length} 個材料。`, 
+                        0: '💀 升星失敗，所有材料已銷毀。再接再厲！' 
                     };
                     
                     setUpgradeResult({ status: resultStatus, nfts: newNfts, message: outcomeMessages[outcome] || "發生未知錯誤" });
                     
-                    // 重置狀態
+                    // 重置狀態和刷新數據
                     setTimeout(() => {
                         setRitualStage('idle');
                         resetSelections();
                         queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
                         queryClient.invalidateQueries({ queryKey: ['altarMaterials'] });
-                        setShowProgressModal(false);
-                    }, 2000);
-                }, 3000);
+                        queryClient.invalidateQueries({ queryKey: ['altarHistory'] }); // 刷新升星歷史統計
+                    }, 1000);
+                }, 1000);
                 
                 // 確認樂觀更新
                 confirmUpdate();
             } catch (error) {
                 logger.error('處理升級結果時出錯', error);
                 showToast('處理升級結果時出錯', 'error');
+                setShowProgressModal(false);
                 setRitualStage('failed');
                 setTimeout(() => setRitualStage('idle'), 2000);
             }
         },
-        onError: () => {
-            // 回滾樂觀更新
+        onError: (error) => {
+            // 回滾樂觀更新並關閉進度模態框
             rollback();
+            setShowProgressModal(false);
+            setRitualStage('failed');
+            setTimeout(() => setRitualStage('idle'), 2000);
+            logger.error('升星交易失敗', error);
         },
         successMessage: `升星 ${rarity}★ ${nftType === 'hero' ? '英雄' : '聖物'} 成功！`,
         errorMessage: '升星失敗',
@@ -527,6 +536,22 @@ const AltarPage = memo(() => {
             refetchInterval: 10000, // 每10秒更新一次
         },
     });
+
+    // 讀取 VIP 相關信息用於底部顯示
+    const { vipLevel, taxReduction } = useVipStatus();
+    
+    // 讀取祭壇 VIP 加成信息
+    const { data: playerVipInfo } = useReadContract({
+        ...altarContract,
+        functionName: 'getPlayerVipInfo',
+        args: address ? [address] : undefined,
+        query: {
+            enabled: !!address && !!altarContract,
+            staleTime: 1000 * 60 * 5, // 5分鐘緩存
+        }
+    });
+    
+    const effectiveVipBonus = playerVipInfo ? Number(playerVipInfo[3]) : 0;
     
     const currentRule = useMemo(() => {
         if (!upgradeRulesData || rarity < 1 || rarity > 4) return null;
@@ -904,8 +929,6 @@ const AltarPage = memo(() => {
                             onToggleDetails={() => setShowSuccessDetails(!showSuccessDetails)}
                         />
 
-                        {/* VIP 加成顯示 - 使用組件內建的折疊功能 */}
-                        <AltarVipBonus />
 
                         {/* 授權檢查 */}
                         {!isApprovedForAll && currentRule && (
@@ -945,13 +968,28 @@ const AltarPage = memo(() => {
                         )}
 
                         {/* 升星按鈕 */}
+                        {/* 規則狀態提示 */}
+                        {currentRule && !currentRule.isActive && (
+                            <div className="bg-gradient-to-r from-red-900/30 to-orange-900/30 border border-red-500/30 rounded-xl p-4 text-center">
+                                <div className="flex items-center justify-center gap-2 text-red-300">
+                                    <span className="text-2xl">🚫</span>
+                                    <div>
+                                        <p className="font-semibold">升星規則已停用</p>
+                                        <p className="text-sm">
+                                            此稀有度的升級功能暫時關閉，請聯繫管理員
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <ActionButton 
                             onClick={() => setShowConfirmModal(true)} 
                             isLoading={isTxPending} 
-                            disabled={isTxPending || !currentRule || selectedNfts.length !== currentRule.materialsRequired || !isApprovedForAll || remainingCooldown > 0} 
+                            disabled={isTxPending || !currentRule || !currentRule.isActive || selectedNfts.length !== currentRule.materialsRequired || !isApprovedForAll || remainingCooldown > 0} 
                             className="w-full h-12 text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:from-gray-600 disabled:to-gray-700 shadow-xl"
                         >
-                            {remainingCooldown > 0 ? '冷卻中...' : isTxPending ? '神秘儀式進行中...' : '開始升星儀式'}
+                            {!currentRule?.isActive ? '升星功能已停用' : remainingCooldown > 0 ? '冷卻中...' : isTxPending ? '神秘儀式進行中...' : '開始升星儀式'}
                         </ActionButton>
                     </div>
 
@@ -1043,7 +1081,69 @@ const AltarPage = memo(() => {
                         祭壇已見證無數冒險者的夢想與希望，願星辰指引您獲得傳說級的寶物！
                     </p>
                 </div>
+
+                {/* VIP 技術實現詳情 - 放置於頁面底部 */}
+                <div className="bg-gradient-to-br from-gray-800/50 to-purple-900/20 backdrop-blur-md border border-gray-600/20 rounded-xl p-4 sm:p-5 md:p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <span className="text-2xl">👑</span>
+                        <h3 className="text-lg sm:text-xl font-bold text-white">VIP {vipLevel || 0} 會員</h3>
+                        <span className="px-2 py-1 bg-purple-500/20 border border-purple-400/30 rounded-lg text-xs text-purple-300">
+                            尊貴身份
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                        <div className="bg-purple-900/20 rounded-lg p-3 text-center">
+                            <div className="text-sm font-semibold text-purple-300 mb-1">VIP 等級</div>
+                            <div className="text-2xl font-bold text-white">{vipLevel || 0}</div>
+                        </div>
+                        <div className="bg-green-900/20 rounded-lg p-3 text-center">
+                            <div className="text-sm font-semibold text-green-300 mb-1">稅率減免</div>
+                            <div className="text-2xl font-bold text-white">{((Number(taxReduction) || 0) / 100).toFixed(1)}%</div>
+                        </div>
+                        <div className="bg-yellow-900/20 rounded-lg p-3 text-center">
+                            <div className="text-sm font-semibold text-yellow-300 mb-1">✨ 祭壇 VIP 加成</div>
+                            <div className="text-2xl font-bold text-white">+{effectiveVipBonus || 0}%</div>
+                        </div>
+                    </div>
+
+                    {/* VIP 機制說明 */}
+                    <div className="bg-gradient-to-r from-blue-900/20 to-indigo-900/20 border border-blue-500/20 rounded-lg p-4 mb-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="text-blue-400">💡</span>
+                            <h4 className="font-semibold text-blue-200">技術實現詳情</h4>
+                            <button 
+                                onClick={() => setShowSuccessDetails(!showSuccessDetails)}
+                                className="ml-auto text-xs text-blue-300 hover:text-blue-200 transition-colors flex items-center gap-1"
+                            >
+                                {showSuccessDetails ? '收起' : '展開'}
+                                <span className={`transform transition-transform ${showSuccessDetails ? 'rotate-180' : ''}`}>
+                                    ▼
+                                </span>
+                            </button>
+                        </div>
+                        <div className={`overflow-hidden transition-all duration-300 ${
+                            showSuccessDetails ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
+                        }`}>
+                            <div className="space-y-2 text-sm text-gray-300">
+                                <p>• <strong>地下城：</strong>自動讀取 VIP 等級並應用加成</p>
+                                <p>• <strong>祭壇：</strong>現在也支援自動 VIP 等級加成了！</p>
+                                <p>• <strong>上限：</strong>總加成上限 20%，神秘額外加成上限 20%</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 升級提示 */}
+                    <div className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border border-yellow-500/30 rounded-lg p-3 text-center">
+                        <p className="text-sm text-yellow-200">
+                            🚀 質押更多 SoulShard 提升 VIP 等級，地下城加成會自動增加！
+                        </p>
+                    </div>
+                </div>
             </div>
+
+            {/* 浮動統計按鈕 */}
+            <AltarFloatingStatsButton />
         </section>
     );
 });

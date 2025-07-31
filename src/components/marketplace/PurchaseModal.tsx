@@ -7,6 +7,7 @@ import { formatEther } from 'viem';
 import { ActionButton } from '../ui/ActionButton';
 import { Icons } from '../ui/icons';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
+import { Modal } from '../ui/Modal';
 import { formatSoul } from '../../utils/formatters';
 import { useAppToast } from '../../contexts/SimpleToastContext';
 import { usePurchaseItem, type MarketListing } from '../../hooks/useMarketplace';
@@ -56,40 +57,39 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
         }
     };
     
-    if (!isOpen || !listing) return null;
-    
-    const nftTypeLabel = listing.nftType === 'hero' ? '英雄' :
-                        listing.nftType === 'relic' ? '聖物' : '隊伍';
+    const nftTypeLabel = listing?.nftType === 'hero' ? '英雄' :
+                        listing?.nftType === 'relic' ? '聖物' : '隊伍';
                         
     // 獲取戰力值
     const getPowerValue = () => {
-        if (listing.nftType === 'hero' && heroPower.power) return heroPower.power;
-        if (listing.nftType === 'party' && partyPower.power) return partyPower.power;
+        if (listing?.nftType === 'hero' && heroPower.power) return heroPower.power;
+        if (listing?.nftType === 'party' && partyPower.power) return partyPower.power;
         return null;
     };
     
     const powerValue = getPowerValue();
+    const canPurchase = hasEnoughBalance && confirmPurchase && !isPurchasing;
     
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-white">確認購買</h2>
-                    <button
-                        onClick={onClose}
-                        disabled={isPurchasing}
-                        className="text-gray-400 hover:text-white"
-                    >
-                        <Icons.X className="h-6 w-6" />
-                    </button>
-                </div>
+        <Modal
+            isOpen={isOpen && !!listing}
+            onClose={onClose}
+            title="🛒 確認購買"
+            onConfirm={handlePurchase}
+            confirmText={isPurchasing ? '購買中...' : `確認購買 ${formatSoul(listing?.price?.toString() || '0')} SOUL`}
+            maxWidth="lg"
+            disabled={!canPurchase}
+            isLoading={isPurchasing}
+            showCloseButton={!isPurchasing}
+        >
+            <div className="space-y-6">
                 
                 {/* NFT 預覽 */}
-                <div className="mb-6 p-4 bg-gray-700 rounded-lg">
+                <div className="p-4 bg-gray-700 rounded-lg">
                     <div className="flex items-center gap-4">
                         <div className="w-16 h-16 bg-gray-900 rounded-lg flex items-center justify-center text-2xl relative">
-                            {listing.nftType === 'hero' ? '⚔️' :
-                             listing.nftType === 'relic' ? '🛡️' : '👥'}
+                            {listing?.nftType === 'hero' ? '⚔️' :
+                             listing?.nftType === 'relic' ? '🛡️' : '👥'}
                             {/* 戰力角標 */}
                             {powerValue && (
                                 <div className="absolute -top-1 -right-1 bg-[#C0A573] text-white text-xs px-1 py-0.5 rounded-full font-bold min-w-[20px] text-center">
@@ -99,7 +99,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                         </div>
                         <div className="flex-1">
                             <h3 className="font-bold text-white">
-                                {nftTypeLabel} #{listing.tokenId.toString()}
+                                {nftTypeLabel} #{listing?.tokenId?.toString() || 'N/A'}
                             </h3>
                             {powerValue && (
                                 <p className="text-sm text-[#C0A573] font-bold">
@@ -107,16 +107,16 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                                 </p>
                             )}
                             <p className="text-sm text-gray-400">
-                                合約: {listing.contractAddress.slice(0, 8)}...{listing.contractAddress.slice(-6)}
+                                合約: {listing?.contractAddress?.slice(0, 8)}...{listing?.contractAddress?.slice(-6)}
                             </p>
                             <p className="text-sm text-gray-400">
-                                賣家: {listing.seller.slice(0, 8)}...{listing.seller.slice(-6)}
+                                賣家: {listing?.seller?.slice(0, 8)}...{listing?.seller?.slice(-6)}
                             </p>
                         </div>
                     </div>
                     
                     {/* NFT 詳細資訊 */}
-                    {listing.nftType === 'hero' && heroDetails.details && (
+                    {listing?.nftType === 'hero' && heroDetails.details && (
                         <div className="mt-3 pt-3 border-t border-gray-600">
                             <div className="grid grid-cols-2 gap-2 text-xs">
                                 <div className="flex justify-between">
@@ -139,7 +139,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                         </div>
                     )}
                     
-                    {listing.nftType === 'relic' && relicDetails.details && (
+                    {listing?.nftType === 'relic' && relicDetails.details && (
                         <div className="mt-3 pt-3 border-t border-gray-600">
                             <div className="grid grid-cols-2 gap-2 text-xs">
                                 <div className="flex justify-between">
@@ -158,7 +158,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                         </div>
                     )}
                     
-                    {listing.nftType === 'party' && partyDetails.details && (
+                    {listing?.nftType === 'party' && partyDetails.details && (
                         <div className="mt-3 pt-3 border-t border-gray-600">
                             <div className="grid grid-cols-2 gap-2 text-xs">
                                 <div className="flex justify-between">
@@ -179,11 +179,11 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                 </div>
                 
                 {/* 價格信息 */}
-                <div className="mb-4 space-y-3">
+                <div className="space-y-3">
                     <div className="flex justify-between items-center p-3 bg-gray-700 rounded">
                         <span className="text-gray-400">購買價格</span>
                         <span className="text-[#C0A573] font-bold text-lg">
-                            {formatSoul(listing.price.toString())} SOUL
+                            {formatSoul(listing?.price?.toString() || '0')} SOUL
                         </span>
                     </div>
                     
@@ -206,17 +206,17 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                 
                 {/* 購買後信息 */}
                 {hasEnoughBalance && (
-                    <div className="mb-4 p-3 bg-gray-700 rounded">
+                    <div className="p-3 bg-gray-700 rounded">
                         <p className="text-sm text-gray-400 mb-1">購買後餘額</p>
                         <p className="text-white font-medium">
-                            {formatSoul((soulBalance! - listing.price).toString())} SOUL
+                            {formatSoul((soulBalance! - (listing?.price || 0n)).toString())} SOUL
                         </p>
                     </div>
                 )}
                 
                 {/* 確認勾選 */}
                 {hasEnoughBalance && (
-                    <div className="mb-4">
+                    <div>
                         <label className="flex items-center gap-2 cursor-pointer">
                             <input
                                 type="checkbox"
@@ -232,27 +232,8 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                     </div>
                 )}
                 
-                {/* 操作按鈕 */}
-                <div className="flex gap-2">
-                    <ActionButton
-                        onClick={handlePurchase}
-                        disabled={!hasEnoughBalance || !confirmPurchase || isPurchasing}
-                        isLoading={isPurchasing}
-                        className="flex-1 py-2"
-                    >
-                        {isPurchasing ? '購買中...' : `確認購買 ${formatSoul(listing.price.toString())} SOUL`}
-                    </ActionButton>
-                    <ActionButton
-                        onClick={onClose}
-                        disabled={isPurchasing}
-                        className="px-6 py-2 bg-gray-700 hover:bg-gray-600"
-                    >
-                        取消
-                    </ActionButton>
-                </div>
-                
                 {/* 安全提示 */}
-                <div className="mt-4 p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
+                <div className="p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
                     <div className="flex items-start gap-2 text-blue-400 text-xs">
                         <Icons.Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
                         <div>
@@ -265,7 +246,8 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                         </div>
                     </div>
                 </div>
+                
             </div>
-        </div>
+        </Modal>
     );
 };

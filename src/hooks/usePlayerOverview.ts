@@ -8,22 +8,9 @@ import { graphQLRateLimiter } from '../utils/rateLimiter';
 import { logger } from '../utils/logger';
 
 const GET_PLAYER_OVERVIEW_QUERY = `
-  query GetPlayerOverview($owner: ID!) {
+  query GetPlayerOverview($owner: Bytes!) {
     player(id: $owner) {
       id
-      profile {
-        id
-        level
-        experience
-        name
-        successfulExpeditions
-        totalRewardsEarned
-        inviter
-        invitees
-        commissionEarned
-        createdAt
-        lastUpdatedAt
-      }
       heros(first: 500, where: { isBurned: false }) {
         id
       }
@@ -45,26 +32,21 @@ const GET_PLAYER_OVERVIEW_QUERY = `
         createdAt
         lastUpdatedAt
       }
-      vault {
-        id
-        pendingRewards
-        totalProvisionSpent
-        lastClaimedAt
-        createdAt
-        lastUpdatedAt
-      }
-      stats {
-        totalHeroes
-        totalRelics
-        totalParties
-        totalExpeditions
-        successfulExpeditions
-        totalRewardsEarned
-        highestPartyPower
-        totalUpgradeAttempts
-      }
     }
-    playerVaults(where: { owner: $owner }) {
+    playerProfile(id: $owner) {
+      id
+      name
+      level
+      experience
+      successfulExpeditions
+      totalRewardsEarned
+      inviter
+      invitees
+      commissionEarned
+      createdAt
+      lastUpdatedAt
+    }
+    playerVault(id: $owner) {
       id
       pendingRewards
       claimedRewards
@@ -72,6 +54,15 @@ const GET_PLAYER_OVERVIEW_QUERY = `
       lastClaimedAt
       createdAt
       lastUpdatedAt
+    }
+    expeditions(where: { player: $owner }, first: 1000, orderBy: timestamp, orderDirection: desc) {
+      id
+      success
+      reward
+      expGained
+      timestamp
+      dungeonId
+      dungeonName
     }
   }
 `;

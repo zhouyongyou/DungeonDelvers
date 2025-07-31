@@ -7,9 +7,11 @@ import { parseEther, type Address } from 'viem';
 import { Icons } from '../ui/icons';
 import { ActionButton } from '../ui/ActionButton';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
+import { Modal } from '../ui/Modal';
 import { formatSoul } from '../../utils/formatters';
 import { useAppToast } from '../../contexts/SimpleToastContext';
 import type { HeroNft, RelicNft, PartyNft, NftType } from '../../types/nft';
+import { emitListingCreated, emitListingCancelled } from '../../utils/marketplaceEvents';
 
 interface BatchOperationsProps {
     isOpen: boolean;
@@ -155,6 +157,14 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
                 // In a real implementation, this would call the actual listing API
                 console.log(`Creating listing for ${item.nft.type} #${item.nft.id} at ${item.price} SOUL`);
                 
+                // 觸發通知事件
+                emitListingCreated({
+                    nftType: item.nft.type,
+                    tokenId: item.nft.id?.toString() || 'Unknown',
+                    price: item.price,
+                    seller: address
+                });
+                
                 // Simulate API delay
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
@@ -182,6 +192,14 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
             for (const item of selectedCancelItems) {
                 console.log(`Cancelling listing ${item.listing.id}`);
                 
+                // 觸發通知事件
+                emitListingCancelled({
+                    nftType: item.listing.nftType,
+                    tokenId: item.listing.tokenId?.toString() || 'Unknown',
+                    price: item.listing.price?.toString(),
+                    seller: address
+                });
+                
                 // Simulate API delay
                 await new Promise(resolve => setTimeout(resolve, 300));
             }
@@ -196,24 +214,31 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
         }
     };
     
-    if (!isOpen) return null;
+    const primaryAction = mode === 'create' ? handleBatchCreate : handleBatchCancel;
+    const isDisabled = isProcessing || 
+        (mode === 'create' && selectedCreateItems.length === 0) ||
+        (mode === 'cancel' && selectedCancelItems.length === 0);
     
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-800 rounded-lg p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-white">批量操作</h2>
-                    <button
-                        onClick={onClose}
-                        disabled={isProcessing}
-                        className="text-gray-400 hover:text-white"
-                    >
-                        <Icons.X className="h-6 w-6" />
-                    </button>
-                </div>
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="🔄 批量操作"
+            onConfirm={primaryAction}
+            confirmText={
+                isProcessing ? '處理中...' : 
+                mode === 'create' ? `確認創建 ${selectedCreateItems.length} 個掛單` :
+                `確認取消 ${selectedCancelItems.length} 個掛單`
+            }
+            maxWidth="4xl"
+            disabled={isDisabled}
+            isLoading={isProcessing}
+            showCloseButton={!isProcessing}
+        >
+            <div className="space-y-6">
                 
                 {/* Mode Toggle */}
-                <div className="flex gap-2 mb-6">
+                <div className="flex gap-2">
                     <ActionButton
                         onClick={() => setMode('create')}
                         className={`px-4 py-2 ${
@@ -238,7 +263,7 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
                 {mode === 'create' && (
                     <div>
                         {/* Batch Price Input */}
-                        <div className="mb-4 p-4 bg-gray-700 rounded-lg">
+                        <div className="p-4 bg-gray-700 rounded-lg">
                             <h3 className="text-lg font-semibold text-white mb-3">批量設定價格</h3>
                             <div className="flex gap-3 items-end">
                                 <div className="flex-1">
@@ -264,7 +289,7 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
                         </div>
                         
                         {/* NFT Selection */}
-                        <div className="mb-4">
+                        <div>
                             <div className="flex items-center justify-between mb-3">
                                 <h3 className="text-lg font-semibold text-white">
                                     選擇 NFT ({selectedCreateItems.length}/{batchItems.length})
@@ -329,7 +354,7 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
                         
                         {/* Create Summary */}
                         {selectedCreateItems.length > 0 && (
-                            <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700 rounded-lg">
+                            <div className="p-3 bg-blue-900/20 border border-blue-700 rounded-lg">
                                 <div className="text-blue-400 text-sm">
                                     即將創建 {selectedCreateItems.length} 個掛單，
                                     總價值約 {formatSoul(
@@ -346,7 +371,7 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
                 {/* Batch Cancel Mode */}
                 {mode === 'cancel' && (
                     <div>
-                        <div className="mb-4">
+                        <div>
                             <div className="flex items-center justify-between mb-3">
                                 <h3 className="text-lg font-semibold text-white">
                                     選擇要取消的掛單 ({selectedCancelItems.length}/{cancelItems.length})
@@ -401,7 +426,7 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
                         
                         {/* Cancel Summary */}
                         {selectedCancelItems.length > 0 && (
-                            <div className="mb-4 p-3 bg-red-900/20 border border-red-700 rounded-lg">
+                            <div className="p-3 bg-red-900/20 border border-red-700 rounded-lg">
                                 <div className="text-red-400 text-sm">
                                     即將取消 {selectedCancelItems.length} 個掛單
                                 </div>
@@ -410,38 +435,7 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
                     </div>
                 )}
                 
-                {/* Action Buttons */}
-                <div className="flex gap-3 mt-6">
-                    <ActionButton
-                        onClick={mode === 'create' ? handleBatchCreate : handleBatchCancel}
-                        disabled={
-                            isProcessing || 
-                            (mode === 'create' && selectedCreateItems.length === 0) ||
-                            (mode === 'cancel' && selectedCancelItems.length === 0)
-                        }
-                        isLoading={isProcessing}
-                        className="flex-1 py-3"
-                    >
-                        {isProcessing ? (
-                            <>
-                                <LoadingSpinner size="sm" className="mr-2" />
-                                處理中...
-                            </>
-                        ) : (
-                            mode === 'create' ? `確認創建 ${selectedCreateItems.length} 個掛單` :
-                            `確認取消 ${selectedCancelItems.length} 個掛單`
-                        )}
-                    </ActionButton>
-                    
-                    <ActionButton
-                        onClick={onClose}
-                        disabled={isProcessing}
-                        className="px-6 py-3 bg-gray-700 hover:bg-gray-600"
-                    >
-                        取消
-                    </ActionButton>
-                </div>
             </div>
-        </div>
+        </Modal>
     );
 };

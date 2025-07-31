@@ -47,6 +47,7 @@
     "@apollo/client": "^3.13.8",
     "@heroicons/react": "^2.2.0",
     "@tanstack/react-query": "^5.8.4",
+    "clsx": "^2.1.1",
     "dotenv": "^17.2.0",
     "graphql": "^16.8.1",
     "graphql-request": "^7.2.0",
@@ -55,6 +56,9 @@
     "node-fetch": "^2.7.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^7.7.1",
+    "recharts": "^3.1.0",
+    "tailwind-merge": "^3.3.1",
     "viem": "^2.7.9",
     "wagmi": "^2.5.7",
     "zustand": "^4.4.7"

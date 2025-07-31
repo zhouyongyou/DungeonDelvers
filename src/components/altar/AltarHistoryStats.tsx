@@ -9,12 +9,13 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 interface UpgradeRecord {
   id: string;
   timestamp: string;
-  nftType: 'hero' | 'relic';
-  fromRarity: number;
-  toRarity: number;
-  outcome: 'great_success' | 'success' | 'partial_fail' | 'total_fail';
-  materialsUsed: number;
-  nftsReceived: number;
+  type: 'hero' | 'relic';
+  baseRarity: number;
+  newRarity: number;
+  outcome: number; // 0: great_success, 1: success, 2: partial_fail, 3: total_fail
+  isSuccess: boolean;
+  burnedTokenIds: string[];
+  mintedTokenIds: string[];
 }
 
 interface AltarHistoryStatsProps {
@@ -22,23 +23,24 @@ interface AltarHistoryStatsProps {
   onClose: () => void;
 }
 
-// GraphQL 查詢升星歷史 (暫時使用模擬數據，實際需要子圖支持)
+// GraphQL 查詢升星歷史 (使用實際的 UpgradeAttempt 實體)
 const GET_UPGRADE_HISTORY = `
   query GetUpgradeHistory($player: String!) {
-    upgradeEvents(
+    upgradeAttempts(
       where: { player: $player }
       orderBy: timestamp
       orderDirection: desc
       first: 100
     ) {
       id
-      timestamp
-      nftType
-      fromRarity
-      toRarity
+      type
+      baseRarity
+      newRarity
       outcome
-      materialsUsed
-      nftsReceived
+      isSuccess
+      burnedTokenIds
+      mintedTokenIds
+      timestamp
     }
   }
 `;
@@ -47,17 +49,12 @@ export const AltarHistoryStats: React.FC<AltarHistoryStatsProps> = ({ isOpen, on
   const { address } = useAccount();
   const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
 
-  // TODO: 實際從子圖查詢升星歷史數據
+  // 從子圖查詢升星歷史數據
   const { data: upgradeHistory, isLoading } = useQuery({
     queryKey: ['altarHistory', address],
     queryFn: async (): Promise<UpgradeRecord[]> => {
-      if (!address) return [];
+      if (!address || !THE_GRAPH_API_URL) return [];
       
-      // 目前子圖尚未實作升星歷史查詢功能
-      // 返回空數組，等待子圖支援後再實作
-      return [];
-      
-      /* 未來實作時的參考代碼：
       try {
         const response = await fetch(THE_GRAPH_API_URL, {
           method: 'POST',
@@ -69,15 +66,22 @@ export const AltarHistoryStats: React.FC<AltarHistoryStatsProps> = ({ isOpen, on
         });
         
         const result = await response.json();
-        return result.data?.upgradeEvents || [];
+        
+        if (result.errors) {
+          console.error('查詢升星歷史出錯:', result.errors);
+          return [];
+        }
+        
+        return result.data?.upgradeAttempts || [];
       } catch (error) {
         console.error('查詢升星歷史失敗:', error);
         return [];
       }
-      */
     },
-    enabled: !!address && isOpen,
-    staleTime: 1000 * 60 * 5,
+    enabled: !!address && !!THE_GRAPH_API_URL && isOpen,
+    staleTime: 1000 * 30, // 30秒刷新一次，更頻繁更新
+    refetchInterval: 1000 * 60, // 每分鐘自動刷新
+    refetchOnWindowFocus: true, // 重新聚焦時刷新
   });
 
   // 統計數據
@@ -85,26 +89,24 @@ export const AltarHistoryStats: React.FC<AltarHistoryStatsProps> = ({ isOpen, on
     if (!upgradeHistory) return null;
 
     const totalUpgrades = upgradeHistory.length;
-    const successfulUpgrades = upgradeHistory.filter(r => 
-      r.outcome === 'success' || r.outcome === 'great_success'
-    ).length;
-    const greatSuccesses = upgradeHistory.filter(r => r.outcome === 'great_success').length;
-    const totalMaterials = upgradeHistory.reduce((sum, r) => sum + r.materialsUsed, 0);
-    const totalReceived = upgradeHistory.reduce((sum, r) => sum + r.nftsReceived, 0);
+    const successfulUpgrades = upgradeHistory.filter(r => r.isSuccess).length;
+    const greatSuccesses = upgradeHistory.filter(r => r.outcome === 3).length; // outcome 3 = great_success
+    const totalMaterials = upgradeHistory.reduce((sum, r) => sum + r.burnedTokenIds.length, 0);
+    const totalReceived = upgradeHistory.reduce((sum, r) => sum + r.mintedTokenIds.length, 0);
 
     const successRate = totalUpgrades > 0 ? (successfulUpgrades / totalUpgrades) * 100 : 0;
     const greatSuccessRate = totalUpgrades > 0 ? (greatSuccesses / totalUpgrades) * 100 : 0;
 
     const rarityStats = {
-      1: upgradeHistory.filter(r => r.fromRarity === 1).length,
-      2: upgradeHistory.filter(r => r.fromRarity === 2).length,
-      3: upgradeHistory.filter(r => r.fromRarity === 3).length,
-      4: upgradeHistory.filter(r => r.fromRarity === 4).length,
+      1: upgradeHistory.filter(r => r.baseRarity === 1).length,
+      2: upgradeHistory.filter(r => r.baseRarity === 2).length,
+      3: upgradeHistory.filter(r => r.baseRarity === 3).length,
+      4: upgradeHistory.filter(r => r.baseRarity === 4).length,
     };
 
     const typeStats = {
-      hero: upgradeHistory.filter(r => r.nftType === 'hero').length,
-      relic: upgradeHistory.filter(r => r.nftType === 'relic').length,
+      hero: upgradeHistory.filter(r => r.type === 'hero').length,
+      relic: upgradeHistory.filter(r => r.type === 'relic').length,
     };
 
     return {
@@ -120,32 +122,32 @@ export const AltarHistoryStats: React.FC<AltarHistoryStatsProps> = ({ isOpen, on
     };
   }, [upgradeHistory]);
 
-  const getOutcomeIcon = (outcome: string) => {
+  const getOutcomeIcon = (outcome: number) => {
     switch (outcome) {
-      case 'great_success': return '⚜️';
-      case 'success': return '✨';
-      case 'partial_fail': return '💔';
-      case 'total_fail': return '💀';
+      case 3: return '⚜️'; // great_success
+      case 2: return '✨'; // success
+      case 1: return '💔'; // partial_fail
+      case 0: return '💀'; // total_fail
       default: return '❓';
     }
   };
 
-  const getOutcomeText = (outcome: string) => {
+  const getOutcomeText = (outcome: number) => {
     switch (outcome) {
-      case 'great_success': return '神跡降臨';
-      case 'success': return '祝福成功';
-      case 'partial_fail': return '部分失敗';
-      case 'total_fail': return '祭品消散';
+      case 3: return '神跡降臨'; // great_success
+      case 2: return '祝福成功'; // success
+      case 1: return '部分失敗'; // partial_fail
+      case 0: return '祭品消散'; // total_fail
       default: return '未知';
     }
   };
 
-  const getOutcomeColor = (outcome: string) => {
+  const getOutcomeColor = (outcome: number) => {
     switch (outcome) {
-      case 'great_success': return 'text-purple-400';
-      case 'success': return 'text-green-400';
-      case 'partial_fail': return 'text-yellow-400';
-      case 'total_fail': return 'text-red-400';
+      case 3: return 'text-purple-400'; // great_success
+      case 2: return 'text-green-400'; // success
+      case 1: return 'text-yellow-400'; // partial_fail
+      case 0: return 'text-red-400'; // total_fail
       default: return 'text-gray-400';
     }
   };
@@ -299,10 +301,10 @@ export const AltarHistoryStats: React.FC<AltarHistoryStatsProps> = ({ isOpen, on
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className="text-white font-medium">
-                                  {record.nftType === 'hero' ? '🦸 英雄' : '🏺 聖物'}
+                                  {record.type === 'hero' ? '🦸 英雄' : '🏺 聖物'}
                                 </span>
                                 <span className="text-gray-400">
-                                  {record.fromRarity}★ → {record.toRarity}★
+                                  {record.baseRarity}★ → {record.newRarity || record.baseRarity + 1}★
                                 </span>
                               </div>
                               <div className={`text-sm ${getOutcomeColor(record.outcome)}`}>
@@ -313,13 +315,13 @@ export const AltarHistoryStats: React.FC<AltarHistoryStatsProps> = ({ isOpen, on
                           
                           <div className="text-right">
                             <div className="text-sm text-gray-300">
-                              消耗 {record.materialsUsed} 個祭品
+                              消耗 {record.burnedTokenIds.length} 個祭品
                             </div>
                             <div className="text-sm text-gray-400">
-                              {record.nftsReceived > 0 ? `獲得 ${record.nftsReceived} 個NFT` : '無收穫'}
+                              {record.mintedTokenIds.length > 0 ? `獲得 ${record.mintedTokenIds.length} 個NFT` : '無收穫'}
                             </div>
                             <div className="text-xs text-gray-500 mt-1">
-                              {new Date(record.timestamp).toLocaleDateString('zh-TW', {
+                              {new Date(parseInt(record.timestamp) * 1000).toLocaleDateString('zh-TW', {
                                 year: 'numeric',
                                 month: 'short',
                                 day: 'numeric',

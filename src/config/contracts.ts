@@ -1,5 +1,5 @@
 // V25 Contract Configuration
-// Generated on 2025-07-30T17:27:43.327Z
+// Generated on 2025-07-31T09:39:54.816Z
 // DO NOT EDIT MANUALLY - Use v25-sync-all.js to update
 
 export const CONTRACTS = {
@@ -27,7 +27,7 @@ export const CONTRACTS = {
     ALTAROFASCENSION: '0x55548065bFF30EEaBb717149bE72b17AdA8dC4f1',
     
     // External
-    DUNGEONMASTERWALLET: 'undefined',
+    DUNGEONMASTERWALLET: '0x10925A7138649C7E1794CE646182eeb5BF8ba647',
   }
 } as const;
 

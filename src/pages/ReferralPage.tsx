@@ -7,6 +7,7 @@ import { getContractWithABI } from '../config/contractsWithABI';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { ActionButton } from '../components/ui/ActionButton';
+import { Modal } from '../components/ui/Modal';
 import { isAddress, formatEther } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -642,20 +643,6 @@ ${referralLink}
                     </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                    <div className="bg-gray-800/50 p-3 rounded-lg">
-                        <p className="text-xs text-gray-400">分享方式</p>
-                        <p className="font-medium text-white">社群媒體</p>
-                    </div>
-                    <div className="bg-gray-800/50 p-3 rounded-lg">
-                        <p className="text-xs text-gray-400">分享方式</p>
-                        <p className="font-medium text-white">朋友群組</p>
-                    </div>
-                    <div className="bg-gray-800/50 p-3 rounded-lg">
-                        <p className="text-xs text-gray-400">分享方式</p>
-                        <p className="font-medium text-white">個人推薦</p>
-                    </div>
-                </div>
             </div>
 
             {/* 設定邀請人 */}
@@ -708,48 +695,37 @@ ${referralLink}
             </div>
 
             {/* 自動推薦確認彈窗 */}
-            {showConfirmModal && autoDetectedRef && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-gray-900 rounded-2xl p-6 max-w-md w-full border border-gray-700">
-                        <h3 className="text-xl font-bold text-white mb-4">確認綁定邀請人</h3>
-                        <div className="space-y-4">
-                            <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-500/30">
-                                <p className="text-sm text-blue-300 mb-2">檢測到推薦連結</p>
-                                <p className="font-mono text-xs text-gray-400 break-all">{autoDetectedRef}</p>
-                            </div>
-                            <p className="text-gray-300">
-                                您是否要將此地址設為您的邀請人？綁定後無法更改。
-                            </p>
-                            <ul className="text-xs text-gray-400 space-y-1">
-                                <li>• 邀請人將獲得您提領時 5% 的佣金</li>
-                                <li>• 不會影響您的收益</li>
-                                <li>• 綁定關係永久有效</li>
-                            </ul>
-                        </div>
-                        <div className="flex gap-3 mt-6">
-                            <ActionButton
-                                onClick={() => {
-                                    setShowConfirmModal(false);
-                                    setAutoDetectedRef(null);
-                                }}
-                                className="flex-1 bg-gray-700 hover:bg-gray-600"
-                            >
-                                取消
-                            </ActionButton>
-                            <ActionButton
-                                onClick={() => {
-                                    setShowConfirmModal(false);
-                                    handleSetReferrer();
-                                }}
-                                isLoading={isSettingReferrer}
-                                className="flex-1"
-                            >
-                                確認綁定
-                            </ActionButton>
-                        </div>
+            <Modal
+                isOpen={showConfirmModal && !!autoDetectedRef}
+                onClose={() => {
+                    setShowConfirmModal(false);
+                    setAutoDetectedRef(null);
+                }}
+                title="🎯 確認綁定邀請人"
+                onConfirm={() => {
+                    setShowConfirmModal(false);
+                    handleSetReferrer();
+                }}
+                confirmText={isSettingReferrer ? '綁定中...' : '確認綁定'}
+                maxWidth="lg"
+                disabled={isSettingReferrer}
+                isLoading={isSettingReferrer}
+            >
+                <div className="space-y-6">
+                    <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-500/30">
+                        <p className="text-sm text-blue-300 mb-2">檢測到推薦連結</p>
+                        <p className="font-mono text-xs text-gray-400 break-all">{autoDetectedRef}</p>
                     </div>
+                    <p className="text-gray-300">
+                        您是否要將此地址設為您的邀請人？綁定後無法更改。
+                    </p>
+                    <ul className="text-xs text-gray-400 space-y-1">
+                        <li>• 邀請人將獲得您提領時 5% 的佣金</li>
+                        <li>• 不會影響您的收益</li>
+                        <li>• 綁定關係永久有效</li>
+                    </ul>
                 </div>
-            )}
+            </Modal>
         </section>
     );
 };

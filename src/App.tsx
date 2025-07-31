@@ -27,6 +27,10 @@ import { useSmartPreloader } from './hooks/useSmartPreloader';
 import { NftDisplayProvider } from './hooks/useNftDisplayPreference';
 import { getDomainBasedRoute, isPitchDomain, redirectToDomainRoute } from './utils/domainRouter';
 // import { WebSocketIndicator } from './components/WebSocketIndicator'; // 移除，因為不再使用 Apollo
+import { useKeyboardShortcuts, KeyboardShortcutsHelp } from './hooks/useKeyboardShortcuts';
+import { CommandPalette } from './components/ui/CommandPalette';
+import { SystemHealthMonitor } from './components/dev/SystemHealthMonitor';
+import { SubgraphDiagnostics } from './components/dev/SubgraphDiagnostics';
 
 // 動態導入所有頁面
 const OverviewPage = lazy(() => import('./pages/OverviewPage'));
@@ -107,6 +111,9 @@ function App() {
   // 智能預載入
   useSmartPreloader(address, chainId);
   
+  // 鍵盤快捷鍵
+  const { showHelp, setShowHelp, commandMode, shortcuts } = useKeyboardShortcuts();
+  
   // 暫時禁用事件監聽以減少 RPC 請求
   // TODO: 優化事件監聽邏輯，只在需要的頁面啟用
   // useContractEvents();
@@ -148,7 +155,8 @@ function App() {
   };
 
   const renderPage = () => {
-    const pageRequiresWallet: Page[] = ['dashboard', 'mint', 'party', 'dungeon', 'admin', 'altar', 'profile', 'vip', 'myAssets' /* , 'codex' */];
+    // 移除 dashboard 從需要錢包的頁面清單，讓它可以顯示項目介紹
+    const pageRequiresWallet: Page[] = ['mint', 'party', 'dungeon', 'admin', 'altar', 'profile', 'vip', 'myAssets' /* , 'codex' */];
     
     // 如果頁面需要錢包但尚未連接，則顯示提示
     if (!isConnected && pageRequiresWallet.includes(activePage)) {
@@ -202,6 +210,26 @@ function App() {
                     </PageTransition>
                 </Suspense>
             </main>
+            
+            {/* 命令面板 (Ctrl+K) */}
+            <CommandPalette />
+            
+            {/* 鍵盤快捷鍵幫助 */}
+            <KeyboardShortcutsHelp 
+              isOpen={showHelp}
+              onClose={() => setShowHelp(false)}
+              shortcuts={shortcuts}
+            />
+            
+            {/* 導航模式指示器 */}
+            {commandMode && (
+              <div className="fixed bottom-4 left-4 bg-purple-600 text-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50">
+                <span className="text-sm font-medium">導航模式</span>
+                <kbd className="text-xs bg-purple-700 px-2 py-1 rounded">
+                  按 {commandMode.toUpperCase()} 後選擇目標
+                </kbd>
+              </div>
+            )}
             {!isMobile && <Footer />}
             {/* 移動端底部導航 */}
             {isMobile && (
@@ -217,6 +245,10 @@ function App() {
             {/* <RpcStatusMonitor /> */}
             {/* 性能監控儀表板（開發環境） - DISABLED */}
             {/* <PerformanceDashboard /> */}
+            {/* 系統健康監控（開發環境） */}
+            <SystemHealthMonitor />
+            {/* 子圖診斷工具（開發環境） */}
+            {import.meta.env.DEV && <SubgraphDiagnostics />}
             {/* 移動端底部安全區域 */}
             {isMobile && <div className="h-16" />}
           </div>

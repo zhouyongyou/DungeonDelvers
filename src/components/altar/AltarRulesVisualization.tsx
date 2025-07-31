@@ -90,7 +90,11 @@ export const AltarRulesVisualization: React.FC<AltarRulesVisualizationProps> = (
   const totalFail = displayRule.totalFailChance;
 
   return (
-    <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 backdrop-blur-md border border-purple-500/20 rounded-2xl p-6 relative overflow-hidden">
+    <div className={`backdrop-blur-md border rounded-2xl p-6 relative overflow-hidden ${
+      rule.isActive 
+        ? 'bg-gradient-to-br from-purple-900/30 to-indigo-900/30 border-purple-500/20' 
+        : 'bg-gradient-to-br from-gray-900/50 to-red-900/20 border-red-500/30'
+    }`}>
       {/* 背景粒子效果 */}
       <div className="absolute inset-0 pointer-events-none">
         {Array.from({ length: 12 }).map((_, i) => (
@@ -108,7 +112,19 @@ export const AltarRulesVisualization: React.FC<AltarRulesVisualizationProps> = (
       </div>
 
       <div className="relative z-10">
-        <h3 className="text-xl font-bold text-center mb-6 bg-gradient-to-r from-purple-300 to-indigo-300 bg-clip-text text-transparent">
+        {/* 規則停用警告 */}
+        {!rule.isActive && (
+          <div className="bg-red-900/50 border border-red-400/50 rounded-lg p-3 mb-4 text-center">
+            <div className="text-red-300 font-semibold">🚫 此升星規則已停用</div>
+            <div className="text-red-400 text-sm mt-1">升級功能暫時關閉</div>
+          </div>
+        )}
+        
+        <h3 className={`text-xl font-bold text-center mb-6 bg-gradient-to-r bg-clip-text text-transparent ${
+          rule.isActive 
+            ? 'from-purple-300 to-indigo-300' 
+            : 'from-gray-400 to-red-400'
+        }`}>
           ⚜️ 升星神諭 ⚜️
         </h3>
 
@@ -200,6 +216,12 @@ export const AltarRulesVisualization: React.FC<AltarRulesVisualizationProps> = (
                 <span className="font-bold text-blue-400">{Number(rule.cooldownTime) / 3600} 小時</span>
               </div>
             )}
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-purple-300">🔮 規則狀態</span>
+              <span className={`font-bold ${rule.isActive ? 'text-green-400' : 'text-red-400'}`}>
+                {rule.isActive ? '✅ 啟用' : '🚫 停用'}
+              </span>
+            </div>
           </div>
 
           <div className="space-y-2">

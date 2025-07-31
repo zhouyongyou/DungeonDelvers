@@ -30,75 +30,53 @@ interface MarketplaceNotificationsProps {
 
 const NOTIFICATION_STORAGE_KEY = 'marketplace_notifications';
 
-// Mock notification generator
-const generateMockNotifications = (address?: string): MarketNotification[] => {
-    const notifications: MarketNotification[] = [];
+// 真實的通知系統 - 僅在有實際事件時創建通知
+const createNotificationFromEvent = (
+    type: MarketNotification['type'],
+    eventData: {
+        nftType: NftType;
+        tokenId: string;
+        price?: string;
+        seller?: string;
+        buyer?: string;
+    }
+): MarketNotification => {
     const now = Date.now();
+    let title = '';
+    let message = '';
     
-    if (!address) return notifications;
-    
-    // Generate 5-10 notifications
-    const count = 5 + Math.floor(Math.random() * 5);
-    
-    for (let i = 0; i < count; i++) {
-        const hoursAgo = Math.floor(Math.random() * 48);
-        const timestamp = now - (hoursAgo * 60 * 60 * 1000);
-        
-        const types: MarketNotification['type'][] = [
-            'listing_created', 'listing_sold', 'listing_cancelled', 
-            'new_listing_similar', 'price_alert'
-        ];
-        const type = types[Math.floor(Math.random() * types.length)];
-        
-        const nftTypes: NftType[] = ['hero', 'relic', 'party'];
-        const nftType = nftTypes[Math.floor(Math.random() * nftTypes.length)];
-        const tokenId = Math.floor(Math.random() * 10000).toString();
-        const price = (1000 + Math.floor(Math.random() * 50000)).toString();
-        
-        let title = '';
-        let message = '';
-        
-        switch (type) {
-            case 'listing_created':
-                title = '掛單創建成功';
-                message = `您的 ${nftType === 'hero' ? '英雄' : nftType === 'relic' ? '聖物' : '隊伍'} #${tokenId} 已成功掛單，價格 ${formatSoul(price)} SOUL`;
-                break;
-            case 'listing_sold':
-                title = '恭喜！您的 NFT 已售出';
-                message = `${nftType === 'hero' ? '英雄' : nftType === 'relic' ? '聖物' : '隊伍'} #${tokenId} 以 ${formatSoul(price)} SOUL 的價格成功售出`;
-                break;
-            case 'listing_cancelled':
-                title = '掛單已取消';
-                message = `您的 ${nftType === 'hero' ? '英雄' : nftType === 'relic' ? '聖物' : '隊伍'} #${tokenId} 掛單已取消`;
-                break;
-            case 'new_listing_similar':
-                title = '發現相似 NFT';
-                message = `有新的 ${nftType === 'hero' ? '英雄' : nftType === 'relic' ? '聖物' : '隊伍'} 掛單，價格 ${formatSoul(price)} SOUL，可能符合您的需求`;
-                break;
-            case 'price_alert':
-                title = '價格提醒';
-                message = `${nftType === 'hero' ? '英雄' : nftType === 'relic' ? '聖物' : '隊伍'} #${tokenId} 價格降至 ${formatSoul(price)} SOUL，低於您的期望價格`;
-                break;
-        }
-        
-        notifications.push({
-            id: `notif-${i}-${timestamp}`,
-            type,
-            title,
-            message,
-            timestamp,
-            read: Math.random() > 0.3, // 70% chance of being read
-            data: {
-                nftType,
-                tokenId,
-                price,
-                seller: address,
-                buyer: `0x${Math.random().toString(16).slice(2, 10)}...`
-            }
-        });
+    switch (type) {
+        case 'listing_created':
+            title = '掛單創建成功';
+            message = `您的 ${eventData.nftType === 'hero' ? '英雄' : eventData.nftType === 'relic' ? '聖物' : '隊伍'} #${eventData.tokenId} 已成功掛單${eventData.price ? `，價格 ${formatSoul(eventData.price)} SOUL` : ''}`;
+            break;
+        case 'listing_sold':
+            title = '恭喜！您的 NFT 已售出';
+            message = `${eventData.nftType === 'hero' ? '英雄' : eventData.nftType === 'relic' ? '聖物' : '隊伍'} #${eventData.tokenId}${eventData.price ? ` 以 ${formatSoul(eventData.price)} SOUL 的價格` : ''}成功售出`;
+            break;
+        case 'listing_cancelled':
+            title = '掛單已取消';
+            message = `您的 ${eventData.nftType === 'hero' ? '英雄' : eventData.nftType === 'relic' ? '聖物' : '隊伍'} #${eventData.tokenId} 掛單已取消`;
+            break;
+        case 'new_listing_similar':
+            title = '發現相似 NFT';
+            message = `有新的 ${eventData.nftType === 'hero' ? '英雄' : eventData.nftType === 'relic' ? '聖物' : '隊伍'} 掛單${eventData.price ? `，價格 ${formatSoul(eventData.price)} SOUL` : ''}，可能符合您的需求`;
+            break;
+        case 'price_alert':
+            title = '價格提醒';
+            message = `${eventData.nftType === 'hero' ? '英雄' : eventData.nftType === 'relic' ? '聖物' : '隊伍'} #${eventData.tokenId}${eventData.price ? ` 價格降至 ${formatSoul(eventData.price)} SOUL，低於您的期望價格` : ' 價格已變動'}`;
+            break;
     }
     
-    return notifications.sort((a, b) => b.timestamp - a.timestamp);
+    return {
+        id: `real-notif-${type}-${eventData.tokenId}-${now}`,
+        type,
+        title,
+        message,
+        timestamp: now,
+        read: false,
+        data: eventData
+    };
 };
 
 export const MarketplaceNotifications: React.FC<MarketplaceNotificationsProps> = ({ 
@@ -115,40 +93,57 @@ export const MarketplaceNotifications: React.FC<MarketplaceNotificationsProps> =
         const stored = localStorage.getItem(`${NOTIFICATION_STORAGE_KEY}_${address}`);
         if (stored) {
             try {
-                setNotifications(JSON.parse(stored));
+                const parsedNotifications = JSON.parse(stored);
+                // 只載入真實的通知，過濾掉舊的模擬通知
+                const realNotifications = parsedNotifications.filter((n: MarketNotification) => 
+                    n.id.startsWith('real-notif-') || n.id.startsWith('event-')
+                );
+                setNotifications(realNotifications);
             } catch (error) {
                 console.error('Failed to parse notifications:', error);
-                // Generate mock notifications if parsing fails
-                const mockNotifications = generateMockNotifications(address);
-                setNotifications(mockNotifications);
-                localStorage.setItem(
-                    `${NOTIFICATION_STORAGE_KEY}_${address}`, 
-                    JSON.stringify(mockNotifications)
-                );
+                // 如果解析失敗，從空數組開始
+                setNotifications([]);
             }
         } else {
-            // Generate initial mock notifications
-            const mockNotifications = generateMockNotifications(address);
-            setNotifications(mockNotifications);
-            localStorage.setItem(
-                `${NOTIFICATION_STORAGE_KEY}_${address}`, 
-                JSON.stringify(mockNotifications)
-            );
+            // 新用戶從空通知開始
+            setNotifications([]);
         }
     }, [address]);
     
     // Listen for marketplace events
     useEffect(() => {
-        const handleMarketplaceUpdate = () => {
-            // In a real implementation, this would create notifications based on events
-            // For now, we'll just refresh the notifications
+        const handleMarketplaceEvent = (event: CustomEvent) => {
+            if (!address) return;
+            
+            const { type, data } = event.detail;
+            
+            // 創建真實通知
+            const notification = createNotificationFromEvent(type, data);
+            
+            setNotifications(prev => {
+                const updated = [notification, ...prev].slice(0, 50); // 限制最多50個通知
+                
+                // 保存到 localStorage
+                localStorage.setItem(
+                    `${NOTIFICATION_STORAGE_KEY}_${address}`, 
+                    JSON.stringify(updated)
+                );
+                
+                return updated;
+            });
         };
         
-        window.addEventListener('marketplaceUpdate', handleMarketplaceUpdate);
+        // 監聽各種市場事件
+        window.addEventListener('marketplaceListingCreated', handleMarketplaceEvent);
+        window.addEventListener('marketplaceListingSold', handleMarketplaceEvent);
+        window.addEventListener('marketplaceListingCancelled', handleMarketplaceEvent);
+        
         return () => {
-            window.removeEventListener('marketplaceUpdate', handleMarketplaceUpdate);
+            window.removeEventListener('marketplaceListingCreated', handleMarketplaceEvent);
+            window.removeEventListener('marketplaceListingSold', handleMarketplaceEvent);
+            window.removeEventListener('marketplaceListingCancelled', handleMarketplaceEvent);
         };
-    }, []);
+    }, [address]);
     
     const unreadCount = useMemo(() => {
         return notifications.filter(n => !n.read).length;

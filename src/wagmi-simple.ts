@@ -30,8 +30,12 @@ if (import.meta.env.DEV) {
   console.log('🚀 使用簡化版 wagmi 配置');
   
   // 延遲檢查以確保環境變數載入
-  setTimeout(() => {
-    const { checkCurrentRpcConfig } = require('./config/simpleRpcTransport');
-    checkCurrentRpcConfig();
+  setTimeout(async () => {
+    try {
+      const { checkCurrentRpcConfig } = await import('./config/simpleRpcTransport');
+      checkCurrentRpcConfig();
+    } catch (error) {
+      console.warn('無法載入 RPC 配置檢查:', error);
+    }
   }, 1000);
 }

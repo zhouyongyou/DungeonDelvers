@@ -1,6 +1,6 @@
 // RewardClaimSection.tsx - 統一的獎勵領取 UI 組件
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatEther } from 'viem';
 import { ActionButton } from './ui/ActionButton';
 import { useRewardManager } from '../hooks/useRewardManager';
@@ -8,6 +8,8 @@ import { LoadingSpinner } from './ui/LoadingSpinner';
 // import { useRealtimePartyStatus } from '../hooks/useRealtimePartyStatus'; // 移除 Apollo 依賴
 import { logger } from '../utils/logger';
 import { formatSoul } from '../utils/formatters';
+import { RewardAnimation } from './ui/RewardAnimation';
+import { AnimatedButton } from './ui/AnimatedButton';
 
 interface RewardClaimSectionProps {
     partyId: bigint;
@@ -22,6 +24,8 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
     variant = 'default',
     className = ''
 }) => {
+    const [showRewardAnimation, setShowRewardAnimation] = useState(false);
+    const [lastClaimedAmount, setLastClaimedAmount] = useState('0');
     try {
     // 檢查輸入參數
     if (!partyId) {
@@ -41,6 +45,18 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
         isClaimSuccess,
         isLoadingRewards,
     } = useRewardManager({ partyId, chainId });
+    
+    // 當領取成功時顯示動畫
+    useEffect(() => {
+        if (isClaimSuccess && contractRewards === 0n && lastClaimedAmount !== '0') {
+            setShowRewardAnimation(true);
+        }
+    }, [isClaimSuccess, contractRewards, lastClaimedAmount]);
+    
+    const handleClaimRewards = async () => {
+        setLastClaimedAmount(formatSoul(contractRewards));
+        await claimRewards();
+    };
     
     // 優先使用合約數據（更準確），子圖數據作為備用
     // 因為子圖可能有延遲，特別是去中心化版本
@@ -65,14 +81,17 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
                 <span className="text-yellow-400 text-sm">
                     {formatSoul(unclaimedRewards)} SOUL
                 </span>
-                <ActionButton
-                    onClick={claimRewards}
+                <AnimatedButton
+                    onClick={handleClaimRewards}
                     isLoading={isClaimPending}
                     disabled={isClaimSuccess}
                     className="text-xs px-2 py-1"
+                    animationType="ripple"
+                    variant="success"
+                    size="sm"
                 >
                     {isClaimSuccess ? '✓' : '領取'}
-                </ActionButton>
+                </AnimatedButton>
             </div>
         );
     }
@@ -95,14 +114,16 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
                                 約 ${(parseFloat(formatEther(unclaimedRewards)) * 0.1).toFixed(2)} USD
                             </p>
                         </div>
-                        <ActionButton
-                            onClick={claimRewards}
+                        <AnimatedButton
+                            onClick={handleClaimRewards}
                             isLoading={isClaimPending}
                             disabled={isClaimSuccess}
                             className="bg-yellow-600 hover:bg-yellow-500 text-black font-bold"
+                            animationType="ripple"
+                            variant="success"
                         >
                             {isClaimSuccess ? '已領取' : '領取獎勵'}
-                        </ActionButton>
+                        </AnimatedButton>
                     </div>
                 </div>
             </div>
@@ -123,16 +144,26 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
                         )}
                     </p>
                 </div>
-                <ActionButton
-                    onClick={claimRewards}
+                <AnimatedButton
+                    onClick={handleClaimRewards}
                     isLoading={isClaimPending}
                     disabled={isClaimSuccess}
                     className="bg-yellow-600 hover:bg-yellow-500 text-black font-bold px-4 py-2"
+                    animationType="ripple"
+                    variant="success"
+                    loadingText="領取中..."
                 >
-                    {isClaimPending && <LoadingSpinner className="mr-2" size="sm" />}
                     {isClaimSuccess ? '已領取' : '領取獎勵'}
-                </ActionButton>
+                </AnimatedButton>
             </div>
+            
+            {/* 獎勵動畫 */}
+            <RewardAnimation
+                amount={lastClaimedAmount}
+                currency="SOUL"
+                isVisible={showRewardAnimation}
+                onComplete={() => setShowRewardAnimation(false)}
+            />
         </div>
     );
     } catch (error) {

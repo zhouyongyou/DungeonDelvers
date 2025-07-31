@@ -25,17 +25,45 @@ setupEmergencyRpcHandler();
 if (import.meta.env.DEV) {
   import('./utils/checkRpcConfig');
   import('./utils/clearEmergencyMode');
+  import('./utils/testGraphQL'); // 測試 GraphQL 支援
 }
 
-// 第一步：測試基本的 React Query
+// 優化後的 React Query 配置
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60, // 1 分鐘
-      gcTime: 1000 * 60 * 10, // 10 分鐘
-      retry: 2,
+      // 延長快取時間以減少重複請求
+      staleTime: 1000 * 60 * 5, // 5 分鐘（之前是 1 分鐘）
+      gcTime: 1000 * 60 * 30, // 30 分鐘（之前是 10 分鐘）
+      
+      // 智能重試策略
+      retry: (failureCount, error: any) => {
+        // 用戶拒絕的交易不重試
+        if (error?.message?.includes('user rejected')) return false;
+        // 404 錯誤不重試
+        if (error?.status === 404) return false;
+        // 其他錯誤最多重試 2 次
+        return failureCount < 2;
+      },
+      
+      // 指數退避重試延遲
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      
+      // 關閉窗口聚焦刷新，減少不必要的請求
       refetchOnWindowFocus: false,
+      
+      // 連接恢復時才刷新
+      refetchOnReconnect: 'always',
+      
+      // 錯誤處理
+      onError: (error: Error) => {
+        console.error('Query error:', error);
+      },
+    },
+    mutations: {
+      // 突變的重試策略
+      retry: 1,
+      retryDelay: 1000,
     },
   },
 });

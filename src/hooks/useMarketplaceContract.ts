@@ -7,6 +7,7 @@ import { parseEther, type Address } from 'viem';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { DUNGEONMARKETPLACE, OFFERSYSTEM, SOULSHARD } from '../config/contracts';
 import type { HeroNft, RelicNft, PartyNft, NftType } from '../types/nft';
+import { getContractWithABI } from '../config/contractsWithABI';
 
 // Contract ABIs (simplified for demo - full ABIs would be imported)
 const MARKETPLACE_ABI = [
@@ -171,15 +172,13 @@ const NFT_ABI = [
 
 // Helper function to get NFT contract address
 function getNftContractAddress(nftType: NftType): Address {
-    const { HERO, RELIC, PARTY } = require('../config/contracts');
-    
     switch (nftType) {
         case 'hero':
-            return HERO as Address;
+            return (getContractWithABI('HERO')?.address || '') as Address;
         case 'relic':
-            return RELIC as Address;
+            return (getContractWithABI('RELIC')?.address || '') as Address;
         case 'party':
-            return PARTY as Address;
+            return (getContractWithABI('PARTY')?.address || '') as Address;
         default:
             throw new Error(`Unknown NFT type: ${nftType}`);
     }

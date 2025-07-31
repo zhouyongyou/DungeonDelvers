@@ -1,5 +1,5 @@
 // DDgraphql/dungeondelvers/src/dungeon-master.ts (統一配置系統版)
-import { BigInt, log } from "@graphprotocol/graph-ts"
+import { BigInt, log, Address } from "@graphprotocol/graph-ts"
 import { ExpeditionFulfilled, RewardsBanked } from "../generated/DungeonMaster/DungeonMaster"
 import { Party, PlayerProfile, Expedition } from "../generated/schema"
 import { calculateLevel } from "./utils"
@@ -21,7 +21,9 @@ function getDungeonName(dungeonId: BigInt): string {
     "奇美拉之巢",    // 7
     "惡魔前哨站",    // 8
     "巨龍之巔",      // 9
-    "混沌深淵"       // 10
+    "混沌深淵",      // 10
+    "冥界之門",      // 11
+    "虛空裂隙"       // 12
   ]
   return id >= 0 && id < dungeonNames.length ? dungeonNames[id] : "未知地城"
 }
@@ -40,22 +42,86 @@ function getDungeonPowerRequired(dungeonId: BigInt): BigInt {
     BigInt.fromI32(2100), // 7 - 奇美拉之巢
     BigInt.fromI32(2400), // 8 - 惡魔前哨站
     BigInt.fromI32(2700), // 9 - 巨龍之巔
-    BigInt.fromI32(3000)  // 10 - 混沌深淵
+    BigInt.fromI32(3000), // 10 - 混沌深淵
+    BigInt.fromI32(3300), // 11 - 冥界之門
+    BigInt.fromI32(3600)  // 12 - 虛空裂隙
   ]
   return id >= 0 && id < powerRequirements.length ? powerRequirements[id] : BigInt.fromI32(0)
 }
 
+// 新增：通過經驗值反推地城ID的函數
+function getDungeonIdFromExp(expGained: BigInt, success: boolean): i32 {
+  // 基於合約邏輯反推：
+  // 成功: expGained = requiredPower / 10  =>  requiredPower = expGained * 10
+  // 失敗: expGained = requiredPower / 20  =>  requiredPower = expGained * 20
+  const requiredPower = success ? expGained.times(BigInt.fromI32(10)) : expGained.times(BigInt.fromI32(20))
+  
+  // 根據戰力需求匹配地城ID
+  if (requiredPower.equals(BigInt.fromI32(300))) return 1    // 新手礦洞
+  if (requiredPower.equals(BigInt.fromI32(600))) return 2    // 哥布林洞穴
+  if (requiredPower.equals(BigInt.fromI32(900))) return 3    // 食人魔山谷
+  if (requiredPower.equals(BigInt.fromI32(1200))) return 4   // 蜘蛛巢穴
+  if (requiredPower.equals(BigInt.fromI32(1500))) return 5   // 石化蜥蜴沼澤
+  if (requiredPower.equals(BigInt.fromI32(1800))) return 6   // 巫妖墓穴
+  if (requiredPower.equals(BigInt.fromI32(2100))) return 7   // 奇美拉之巢
+  if (requiredPower.equals(BigInt.fromI32(2400))) return 8   // 惡魔前哨站
+  if (requiredPower.equals(BigInt.fromI32(2700))) return 9   // 巨龍之巔
+  if (requiredPower.equals(BigInt.fromI32(3000))) return 10  // 混沌深淵
+  if (requiredPower.equals(BigInt.fromI32(3300))) return 11  // 冥界之門
+  if (requiredPower.equals(BigInt.fromI32(3600))) return 12  // 虛空裂隙
+  
+  // 如果找不到匹配，記錄警告並返回默認值
+  log.warning("無法從經驗值反推地城ID: expGained={}, success={}, requiredPower={}", [
+    expGained.toString(), 
+    success.toString(), 
+    requiredPower.toString()
+  ])
+  return 1 // 默認為新手礦洞
+}
+
 export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
   const partyId = createEntityId(getPartyContractAddress(), event.params.partyId.toString())
-  const party = Party.load(partyId)
+  let party = Party.load(partyId)
 
-  if (party) {
+  // 如果隊伍不存在，創建一個基本的隊伍實體來確保遠征記錄不丟失
+  if (!party) {
+    log.warning("Party {} not found, creating basic party entity for expedition tracking", [partyId])
+    party = new Party(partyId)
+    party.owner = event.params.player
+    party.tokenId = event.params.partyId
+    party.contractAddress = Address.fromString(getPartyContractAddress())
+    party.name = "Party #" + event.params.partyId.toString()
+    party.heroIds = []
+    party.heroes = []
+    party.totalPower = BigInt.fromI32(0) // 將在後面通過遠征反推
+    party.totalCapacity = BigInt.fromI32(0)
+    party.partyRarity = 1 // 默認稀有度
+    party.provisionsRemaining = 0
+    party.unclaimedRewards = BigInt.fromI32(0)
+    party.cooldownEndsAt = event.block.timestamp
+    party.createdAt = event.block.timestamp
+    party.isBurned = false
+    party.lastUpdatedAt = event.block.timestamp
+    party.save()
+    
+    log.info("Created fallback party entity: {}", [partyId])
+  }
+
+  // 現在 party 一定存在，繼續處理遠征
+  {
     // 創建 Expedition 實體
     const expeditionId = event.transaction.hash.toHex() + "-" + event.logIndex.toString()
     const expedition = new Expedition(expeditionId)
     
-    // V25 版本沒有 dungeonId 參數，使用默認值
-    const dungeonId = BigInt.fromI32(1)
+    // ✅ 修復：通過經驗值反推地城ID (臨時解決方案)
+    const dungeonIdInt = getDungeonIdFromExp(event.params.expGained, event.params.success)
+    const dungeonId = BigInt.fromI32(dungeonIdInt)
+    
+    log.info("反推地城ID: expGained={}, success={}, dungeonId={}", [
+      event.params.expGained.toString(),
+      event.params.success.toString(),
+      dungeonIdInt.toString()
+    ])
     
     expedition.player = event.params.player
     expedition.party = partyId
@@ -76,7 +142,7 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
     //   party.fatigueLevel = party.fatigueLevel + 5  // 失敗遠征增加5疲勞度
     // }
     party.unclaimedRewards = party.unclaimedRewards.plus(event.params.reward)
-    party.cooldownEndsAt = event.block.timestamp.plus(BigInt.fromI32(3600)) // 1小時冷卻時間
+    party.cooldownEndsAt = event.block.timestamp.plus(BigInt.fromI32(86400)) // 24小時冷卻時間 (與合約一致)
     party.lastUpdatedAt = event.block.timestamp
     party.save()
 
@@ -102,9 +168,7 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
     } else {
         log.warning("ExpeditionFulfilled for a non-existent profile: {}", [playerAddress.toHexString()])
     }
-  } else {
-      log.warning("ExpeditionFulfilled for a non-existent party: {}", [partyId])
-  }
+  } // 移除了舊的 party 不存在的 else 分支，因為現在 party 總是存在
 }
 
 // 已移除疲勞度系統，不再需要 handlePartyRested

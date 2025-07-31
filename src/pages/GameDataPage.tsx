@@ -7,6 +7,7 @@ import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { formatEther, isAddress } from 'viem';
 import { LeaderboardsFixed } from '../components/leaderboards/LeaderboardsFixed';
+import { LeaderboardSystem } from '../components/leaderboard/LeaderboardSystem';
 import { THE_GRAPH_API_URL, isGraphConfigured } from '../config/graphConfig';
 import { getContractWithABI } from '../config/contractsWithABI';
 import { convertRarity } from '../utils/rarityConverter';
@@ -202,7 +203,7 @@ const HeroQuery: React.FC = () => {
             <div className="space-y-2">
                 <p><span className="text-gray-400">Token ID:</span> <span className="text-white">{data.tokenId}</span></p>
                 <p><span className="text-gray-400">擁有者:</span> <span className="text-blue-400 font-mono text-xs">{data.owner.id}</span></p>
-                <p><span className="text-gray-400">稀有度:</span> <span className="text-purple-400">{rarityInfo.name} ({rarityInfo.number})</span></p>
+                <p><span className="text-gray-400">稀有度:</span> <span className="text-purple-400">{rarityInfo.chineseName} ({rarityInfo.number} ⭐)</span></p>
                 <p><span className="text-gray-400">戰力:</span> <span className="text-green-400">{data.power}</span></p>
             </div>
         );
@@ -247,7 +248,7 @@ const RelicQuery: React.FC = () => {
             <div className="space-y-2">
                 <p><span className="text-gray-400">Token ID:</span> <span className="text-white">{data.tokenId}</span></p>
                 <p><span className="text-gray-400">擁有者:</span> <span className="text-blue-400 font-mono text-xs">{data.owner.id}</span></p>
-                <p><span className="text-gray-400">稀有度:</span> <span className="text-purple-400">{rarityInfo.name} ({rarityInfo.number})</span></p>
+                <p><span className="text-gray-400">稀有度:</span> <span className="text-purple-400">{rarityInfo.chineseName} ({rarityInfo.number} ⭐)</span></p>
                 <p><span className="text-gray-400">容量:</span> <span className="text-orange-400">{data.capacity}</span></p>
             </div>
         );
@@ -292,7 +293,7 @@ const PartyQuery: React.FC = () => {
             <div className="space-y-2">
                 <p><span className="text-gray-400">Token ID:</span> <span className="text-white">{data.tokenId}</span></p>
                 <p><span className="text-gray-400">擁有者:</span> <span className="text-blue-400 font-mono text-xs">{data.owner.id}</span></p>
-                <p><span className="text-gray-400">隊伍稀有度:</span> <span className="text-purple-400">{rarityInfo.name} ({rarityInfo.number})</span></p>
+                <p><span className="text-gray-400">隊伍稀有度:</span> <span className="text-purple-400">{rarityInfo.chineseName} ({rarityInfo.number} ⭐)</span></p>
                 <p><span className="text-gray-400">總戰力:</span> <span className="text-green-400">{data.totalPower}</span></p>
                 <p><span className="text-gray-400">總容量:</span> <span className="text-orange-400">{data.totalCapacity}</span></p>
             </div>
@@ -434,8 +435,11 @@ const GameDataPage: React.FC = () => {
             {/* 內容區域 */}
             <div className="space-y-6">
                 {activeTab === 'leaderboard' && (
-                    <div>
-                        <LeaderboardsFixed />
+                    <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                            <span>🏆</span> 排行榜系統
+                        </h2>
+                        <LeaderboardSystem type="totalEarnings" limit={10} showFilters={true} />
                     </div>
                 )}
                 

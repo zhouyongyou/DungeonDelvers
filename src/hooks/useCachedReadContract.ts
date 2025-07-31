@@ -31,34 +31,25 @@ export function useCachedReadContract<
         }
     });
     
-    // 如果提供了 cacheKey，在組件卸載後保留數據
-    useEffect(() => {
-        if (cacheKey && result.data !== undefined) {
-            // 將數據存儲到全局緩存
-            queryClient.setQueryData(['cachedContract', cacheKey], {
-                data: result.data,
-                timestamp: Date.now()
-            });
-        }
-    }, [cacheKey, result.data, queryClient]);
+    // 暫時移除緩存邏輯以避免無限循環
+    // useEffect(() => {
+    //     if (cacheKey && result.data !== undefined) {
+    //         queryClient.setQueryData(['cachedContract', cacheKey], {
+    //             data: result.data,
+    //             timestamp: Date.now()
+    //         });
+    //     }
+    // }, [cacheKey, result.data, queryClient]);
     
-    // 在組件掛載時檢查緩存
-    useEffect(() => {
-        if (cacheKey) {
-            const cached = queryClient.getQueryData(['cachedContract', cacheKey]) as {
-                data: any;
-                timestamp: number;
-            } | undefined;
-            
-            if (cached && Date.now() - cached.timestamp < cacheTime) {
-                // 如果緩存仍然有效，使用緩存數據
-                queryClient.setQueryData(
-                    result.queryKey,
-                    cached.data
-                );
-            }
-        }
-    }, [cacheKey, cacheTime, queryClient, result.queryKey]);
+    // 暫時移除組件掛載時的緩存檢查以避免無限循環
+    // useEffect(() => {
+    //     if (cacheKey) {
+    //         const cached = queryClient.getQueryData(['cachedContract', cacheKey]);
+    //         if (cached && Date.now() - cached.timestamp < cacheTime) {
+    //             queryClient.setQueryData(result.queryKey, cached.data);
+    //         }
+    //     }
+    // }, [cacheKey, cacheTime, queryClient, result.queryKey]);
     
     return result;
 }

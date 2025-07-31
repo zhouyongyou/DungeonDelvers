@@ -38,6 +38,7 @@ import { useBatchOperations } from '../hooks/useBatchOperations';
 import { Icons } from '../components/ui/icons';
 import { generatePartySVG } from '../utils/svgGenerators';
 import { useNftDisplayPreference } from '../hooks/useNftDisplayPreference';
+import { LazyImage } from '../components/ui/LazyImage';
 
 // RewardClaimButton 已移至統一的 RewardClaimSection 組件
 
@@ -532,7 +533,7 @@ const PartyStatusCard = memo<PartyStatusCardProps>(({ party, dungeons, onStartEx
                             dangerouslySetInnerHTML={{ __html: partySvg }}
                         />
                     ) : (
-                        <img 
+                        <LazyImage 
                             src={partyImagePath}
                             alt={party.name}
                             className="w-full h-full object-cover"
@@ -650,7 +651,7 @@ const DungeonInfoCard = memo<{ dungeon: Dungeon; calculateSoulReward: (usdAmount
     <div className="card-bg rounded-xl shadow-lg overflow-hidden bg-gray-800/50 hover:transform hover:scale-105 transition-transform duration-200">
         {/* 地下城圖片 */}
         <div className="relative h-32 sm:h-40 md:h-48 overflow-hidden bg-gray-900">
-            <img 
+            <LazyImage 
                 src={`/dungeon/${dungeon.id.toString().padStart(2, '0')}.png`} 
                 alt={dungeon.name}
                 className="w-full h-full object-cover"
@@ -685,7 +686,7 @@ const DungeonInfoCard = memo<{ dungeon: Dungeon; calculateSoulReward: (usdAmount
                     </span>
                 )}
             </p>
-            <p className="font-bold text-sky-400">預計經驗: +{dungeon.id * 5 + 20} EXP</p>
+            <p className="font-bold text-sky-400">預計經驗: +{Number(dungeon.requiredPower) / 10} EXP (成功)</p>
         </div>
     </div>
     );
@@ -792,19 +793,23 @@ const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => 
         if (!partiesFromGraph) return [];
         
         return partiesFromGraph.map((party, index) => {
-            const statusData = partyCooldownQueries[index]?.data;
-            let cooldownEndsAt = 0n;
+            // 優先使用子圖的冷卻時間（更可靠）
+            let cooldownEndsAt = BigInt(party.cooldownEndsAt || 0);
             
-            if (statusData) {
-                try {
-                    // partyStatus 可能是數組或物件，取決於合約返回格式
-                    if (Array.isArray(statusData)) {
-                        cooldownEndsAt = BigInt(statusData[1] || 0); // 索引1是 cooldownEndsAt
-                    } else if (typeof statusData === 'object' && statusData !== null) {
-                        cooldownEndsAt = BigInt(statusData.cooldownEndsAt || statusData.cooldown || 0);
+            // 如果子圖沒有數據，則嘗試使用合約數據作為備用
+            if (cooldownEndsAt === 0n) {
+                const statusData = partyCooldownQueries[index]?.data;
+                if (statusData) {
+                    try {
+                        // partyStatus 可能是數組或物件，取決於合約返回格式
+                        if (Array.isArray(statusData)) {
+                            cooldownEndsAt = BigInt(statusData[1] || 0); // 索引1是 cooldownEndsAt
+                        } else if (typeof statusData === 'object' && statusData !== null) {
+                            cooldownEndsAt = BigInt(statusData.cooldownEndsAt || statusData.cooldown || 0);
+                        }
+                    } catch (error) {
+                        console.error('Failed to parse cooldown from contract:', error);
                     }
-                } catch (error) {
-                    console.error('Failed to parse cooldown:', error);
                 }
             }
             

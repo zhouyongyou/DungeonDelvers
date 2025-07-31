@@ -7,6 +7,7 @@ import { formatUnits, parseUnits } from 'viem';
 import { ActionButton } from '../ui/ActionButton';
 import { Icons } from '../ui/icons';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
+import { Modal } from '../ui/Modal';
 import { useAppToast } from '../../contexts/SimpleToastContext';
 import { 
     useMarketplaceV2,
@@ -157,18 +158,20 @@ export const PurchaseModalV2: React.FC<PurchaseModalV2Props> = ({
     const selectedTokenInfo = SUPPORTED_STABLECOINS[selectedPaymentToken];
     
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-white">確認購買</h2>
-                    <button
-                        onClick={onClose}
-                        disabled={isPurchasing || isApproving}
-                        className="text-gray-400 hover:text-white"
-                    >
-                        <Icons.X className="h-6 w-6" />
-                    </button>
-                </div>
+        <Modal
+            isOpen={isOpen && !!listing}
+            onClose={onClose}
+            title="🛒 確認購買"
+            onConfirm={handlePurchase}
+            confirmText={isApproving ? '授權中...' :
+                        isPurchasing ? '購買中...' :
+                        needsApproval ? `授權並購買 $${listing.price.toFixed(2)}` :
+                        `確認購買 $${listing.price.toFixed(2)}`}
+            maxWidth="lg"
+            disabled={!confirmPurchase || isPurchasing || isApproving}
+            isLoading={isPurchasing || isApproving}
+        >
+            <div className="space-y-6">
                 
                 {/* NFT 預覽 */}
                 <div className="mb-6 p-4 bg-gray-700 rounded-lg">
@@ -333,30 +336,8 @@ export const PurchaseModalV2: React.FC<PurchaseModalV2Props> = ({
                     </label>
                 </div>
                 
-                {/* 操作按鈕 */}
-                <div className="flex gap-2">
-                    <ActionButton
-                        onClick={handlePurchase}
-                        disabled={!confirmPurchase || isPurchasing || isApproving}
-                        isLoading={isPurchasing || isApproving}
-                        className="flex-1 py-2"
-                    >
-                        {isApproving ? '授權中...' :
-                         isPurchasing ? '購買中...' :
-                         needsApproval ? `授權並購買 $${listing.price.toFixed(2)}` :
-                         `確認購買 $${listing.price.toFixed(2)}`}
-                    </ActionButton>
-                    <ActionButton
-                        onClick={onClose}
-                        disabled={isPurchasing || isApproving}
-                        className="px-6 py-2 bg-gray-700 hover:bg-gray-600"
-                    >
-                        取消
-                    </ActionButton>
-                </div>
-                
                 {/* 安全提示 */}
-                <div className="mt-4 p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
+                <div className="p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
                     <div className="flex items-start gap-2 text-blue-400 text-xs">
                         <Icons.Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
                         <div>
@@ -371,6 +352,6 @@ export const PurchaseModalV2: React.FC<PurchaseModalV2Props> = ({
                     </div>
                 </div>
             </div>
-        </div>
+        </Modal>
     );
 };

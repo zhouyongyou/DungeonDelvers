@@ -196,10 +196,11 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
         };
 
         // 註冊智能事件監聽（自動選擇 Filter 或輪詢模式）
+        // 修復事件簽名格式 - 移除 'indexed' 關鍵字，因為 parseAbiItem 不支持這種格式
         const unsubscribe = useSmartEventListener(
             'ExpeditionFulfilled-Tracker',
             dungeonMasterContract.address,
-            'event ExpeditionFulfilled(address indexed player, uint256 indexed partyId, bool success, uint256 reward, uint256 expGained)',
+            'event ExpeditionFulfilled(address player, uint256 partyId, bool success, uint256 reward, uint256 expGained)',
             handleExpeditionLogs,
             true
         );
@@ -324,6 +325,14 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
                 <p className="text-gray-600 text-xs mt-1">
                     完成遠征後，結果將顯示在這裡
                 </p>
+                <div className="mt-4 p-3 bg-blue-900/20 border border-blue-700/30 rounded-lg">
+                    <p className="text-blue-400 text-xs">
+                        💡 <strong>新手提示</strong>：前往「地城」頁面開始第一次冒險！
+                    </p>
+                    <p className="text-blue-300 text-xs mt-1">
+                        需要先在「資產管理」組建隊伍，然後到「地城」選擇適合的挑戰
+                    </p>
+                </div>
             </div>
         </div>
     );

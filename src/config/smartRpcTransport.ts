@@ -12,16 +12,20 @@ import {
 } from './emergencyRpcFallback';
 // import { rpcMonitor } from '../utils/rpcMonitor'; // Removed RPC monitoring
 
-// 公共 BSC RPC 節點列表（作為後備）- 移除有問題的節點
+// 公共 BSC RPC 節點列表（作為後備）- 優化順序，最穩定的在前
 const PUBLIC_BSC_RPCS = [
+  // Binance 官方節點（最穩定）
   'https://bsc-dataseed1.binance.org/',
   'https://bsc-dataseed2.binance.org/',
+  
+  // 高品質第三方
+  'https://binance.llamarpc.com',
+  'https://bsc-rpc.publicnode.com',
+  
+  // 其他備選
   'https://bsc-dataseed3.binance.org/',
   'https://bsc-dataseed4.binance.org/',
-  // 'https://bsc.publicnode.com', // 移除：ERR_CONNECTION_CLOSED
   'https://1rpc.io/bnb',
-  'https://binance.nodereal.io',
-  // 'https://bsc-rpc.gateway.pokt.network', // 移除：ERR_NAME_NOT_RESOLVED
 ];
 
 // 輪換索引
@@ -410,6 +414,14 @@ export function createSmartRpcTransport(): Transport {
           const data = await response.json();
           
           if (data.error) {
+            // 特殊處理 429 錯誤
+            if (data.error.code === -32005 || data.error.message?.includes('rate limit')) {
+              logger.warn(`⚠️ RPC 速率限制，切換到下一個節點`);
+              // 立即增加輪換索引，下次使用不同的 key
+              if (useAlchemyKeys) {
+                keyRotationIndex = (keyRotationIndex + 1) % alchemyKeys.length;
+              }
+            }
             throw new Error(data.error.message || 'RPC error');
           }
           

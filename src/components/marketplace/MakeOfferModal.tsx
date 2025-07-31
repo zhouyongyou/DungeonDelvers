@@ -7,6 +7,7 @@ import { parseEther } from 'viem';
 import { Icons } from '../ui/icons';
 import { ActionButton } from '../ui/ActionButton';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
+import { Modal } from '../ui/Modal';
 import { formatSoul } from '../../utils/formatters';
 import { useAppToast } from '../../contexts/SimpleToastContext';
 import { useHeroPower, usePartyPower, useHeroDetails, useRelicDetails, usePartyDetails, getElementName, getClassName, getRelicCategoryName } from '../../hooks/useNftPower';
@@ -128,21 +129,18 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({
         }
     };
 
-    if (!isOpen || !listing) return null;
-
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-white">向賣家出價</h2>
-                    <button
-                        onClick={onClose}
-                        disabled={isSubmitting}
-                        className="text-gray-400 hover:text-white"
-                    >
-                        <Icons.X className="h-6 w-6" />
-                    </button>
-                </div>
+        <Modal
+            isOpen={isOpen && !!listing}
+            onClose={onClose}
+            title="💰 向賣家出價"
+            onConfirm={handleSubmitOffer}
+            confirmText={isSubmitting ? '提交中...' : '確認出價'}
+            maxWidth="lg"
+            disabled={!offerAmount || parseFloat(offerAmount) <= 0 || !validation?.isValid || isSubmitting}
+            isLoading={isSubmitting}
+        >
+            <div className="space-y-6">
 
                 {/* NFT Information */}
                 <div className="bg-gray-700 rounded-lg p-4 mb-6">
@@ -254,33 +252,7 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({
                     </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-3">
-                    <ActionButton
-                        onClick={handleSubmitOffer}
-                        disabled={isSubmitting || !validation?.isValid || !address}
-                        isLoading={isSubmitting}
-                        className="flex-1 py-3"
-                    >
-                        {isSubmitting ? (
-                            <>
-                                <LoadingSpinner size="sm" className="mr-2" />
-                                提交中...
-                            </>
-                        ) : (
-                            '提交出價'
-                        )}
-                    </ActionButton>
-                    
-                    <ActionButton
-                        onClick={onClose}
-                        disabled={isSubmitting}
-                        className="px-6 py-3 bg-gray-700 hover:bg-gray-600"
-                    >
-                        取消
-                    </ActionButton>
-                </div>
             </div>
-        </div>
+        </Modal>
     );
 };

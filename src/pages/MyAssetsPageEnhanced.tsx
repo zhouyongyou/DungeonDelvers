@@ -68,8 +68,7 @@ const sortOptions: Record<string, SortOption[]> = {
 
 const MyAssetsPageEnhanced: React.FC = () => {
     const { address, chainId } = useAccount();
-    const [activeTab, setActiveTab] = useState<'myHeroes' | 'myRelics' | 'myParties'>('myHeroes');
-    const [showTeamBuilder, setShowTeamBuilder] = useState(false);
+    const [activeTab, setActiveTab] = useState<'myHeroes' | 'myRelics' | 'myParties' | 'teamBuilder'>('myHeroes');
     const { showToast } = useAppToast();
     const queryClient = useQueryClient();
     
@@ -77,6 +76,9 @@ const MyAssetsPageEnhanced: React.FC = () => {
     const [heroSort, setHeroSort] = useState('power-desc');
     const [relicSort, setRelicSort] = useState('capacity-desc');
     const [partySort, setPartySort] = useState('power-desc');
+    
+    // Team Builder 顯示狀態
+    const [showTeamBuilder, setShowTeamBuilder] = useState(false);
     
     // 獲取頁面級快速操作
     const quickActions = usePageQuickActions();
@@ -158,7 +160,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
         onSuccess: () => {
             showToast('成功創建隊伍！', 'success');
             refetchNfts();
-            setShowTeamBuilder(false);
+            setActiveTab('myParties');
         },
         onError: (error) => {
             showToast(`創建隊伍失敗: ${error.message}`, 'error');
@@ -331,9 +333,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
                         />
                         <OptimizedNftGrid
                             nfts={sortNfts(heroes, heroSort, 'hero')}
-                            onViewDetails={(nft) => {
-                                showToast(`查看英雄 #${nft.tokenId} 詳情`, 'info');
-                            }}
+                            pageSize={25}
                         />
                     </>
                 );
@@ -371,9 +371,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
                         />
                         <OptimizedNftGrid
                             nfts={sortNfts(relics, relicSort, 'relic')}
-                            onViewDetails={(nft) => {
-                                showToast(`查看聖物 #${nft.tokenId} 詳情`, 'info');
-                            }}
+                            pageSize={6}
                         />
                     </>
                 );
@@ -382,33 +380,17 @@ const MyAssetsPageEnhanced: React.FC = () => {
                 return !parties || parties.length === 0 ? (
                     <div className="text-center py-12 space-y-6">
                         <div className="text-6xl mb-4">👥</div>
-                        <h3 className="text-xl font-semibold text-gray-300">準備組建您的第一支隊伍</h3>
+                        <h3 className="text-xl font-semibold text-gray-300">還沒有任何隊伍</h3>
                         <p className="text-gray-400 max-w-md mx-auto">
-                            {(heroes?.length === 0 && relics?.length === 0) 
-                                ? "需要先擁有英雄和聖物才能組建隊伍"
-                                : heroes?.length === 0 
-                                ? "需要英雄來組建隊伍，快去鑄造一些英雄吧！"
-                                : relics?.length === 0
-                                ? "需要聖物來提供隊伍容量，快去鑄造一些聖物吧！"
-                                : "您已經擁有英雄和聖物，現在可以組建隊伍了！"
-                            }
+                            您可以前往「創建隊伍」分頁組建您的第一支隊伍
                         </p>
                         <div className="flex gap-3 justify-center">
-                            {(heroes?.length === 0 || relics?.length === 0) ? (
-                                <ActionButton
-                                    onClick={() => window.location.href = '/#/mint'}
-                                    className="bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 px-6 py-3 font-semibold"
-                                >
-                                    🏺 前往鑄造頁面
-                                </ActionButton>
-                            ) : (
-                                <ActionButton
-                                    onClick={() => setShowTeamBuilder(true)}
-                                    className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-6 py-3 font-semibold shadow-lg shadow-emerald-500/20 border border-emerald-400/30 transition-all duration-200 hover:shadow-emerald-500/30 hover:scale-105"
-                                >
-                                    ⚔️ 立即組建隊伍
-                                </ActionButton>
-                            )}
+                            <ActionButton
+                                onClick={() => setActiveTab('teamBuilder')}
+                                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-6 py-3 font-semibold shadow-lg shadow-emerald-500/20 border border-emerald-400/30 transition-all duration-200 hover:shadow-emerald-500/30 hover:scale-105"
+                            >
+                                ⚔️ 前往創建隊伍
+                            </ActionButton>
                         </div>
                     </div>
                 ) : (
@@ -420,11 +402,103 @@ const MyAssetsPageEnhanced: React.FC = () => {
                         />
                         <OptimizedNftGrid
                             nfts={sortNfts(parties, partySort, 'party')}
-                            onViewDetails={(nft) => {
-                                showToast(`查看隊伍 #${nft.tokenId} 詳情`, 'info');
-                            }}
+                            pageSize={12}
                         />
                     </>
+                );
+                
+            case 'teamBuilder':
+                return nftsData ? (
+                    <div className="space-y-6">
+                        {/* 檢查是否擁有英雄和聖物 */}
+                        {(!nftsData.heros || nftsData.heros.length === 0) && (!nftsData.relics || nftsData.relics.length === 0) ? (
+                            <div className="text-center py-12 space-y-6">
+                                <div className="text-6xl mb-4">🏺</div>
+                                <h3 className="text-xl font-semibold text-gray-300">需要先擁有英雄和聖物</h3>
+                                <p className="text-gray-400 max-w-md mx-auto">
+                                    組建隊伍需要英雄和聖物，請先前往鑄造頁面獲得它們
+                                </p>
+                                <ActionButton
+                                    onClick={() => window.location.href = '/#/mint'}
+                                    className="bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 px-6 py-3 font-semibold"
+                                >
+                                    🏺 前往鑄造頁面
+                                </ActionButton>
+                            </div>
+                        ) : (!nftsData.heros || nftsData.heros.length === 0) ? (
+                            <div className="text-center py-12 space-y-6">
+                                <div className="text-6xl mb-4">⚔️</div>
+                                <h3 className="text-xl font-semibold text-gray-300">需要英雄來組建隊伍</h3>
+                                <p className="text-gray-400 max-w-md mx-auto">
+                                    您有聖物但缺少英雄，快去鑄造一些英雄吧！
+                                </p>
+                                <ActionButton
+                                    onClick={() => window.location.href = '/#/mint'}
+                                    className="bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 px-6 py-3 font-semibold"
+                                >
+                                    🏺 鑄造英雄
+                                </ActionButton>
+                            </div>
+                        ) : (!nftsData.relics || nftsData.relics.length === 0) ? (
+                            <div className="text-center py-12 space-y-6">
+                                <div className="text-6xl mb-4">🛡️</div>
+                                <h3 className="text-xl font-semibold text-gray-300">需要聖物來提供隊伍容量</h3>
+                                <p className="text-gray-400 max-w-md mx-auto">
+                                    您有英雄但缺少聖物，快去鑄造一些聖物吧！
+                                </p>
+                                <ActionButton
+                                    onClick={() => window.location.href = '/#/mint'}
+                                    className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 px-6 py-3 font-semibold"
+                                >
+                                    ⚡ 鑄造聖物
+                                </ActionButton>
+                            </div>
+                        ) : (
+                            <div className="bg-gray-800/50 backdrop-blur-md rounded-xl border-2 border-emerald-500/30 overflow-hidden">
+                                {/* 標題列 */}
+                                <div className="bg-gradient-to-r from-emerald-900/50 to-teal-900/50 border-b border-emerald-500/30 p-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-2xl">⚔️</span>
+                                            <h2 className="text-xl font-bold text-emerald-400">
+                                                組建隊伍
+                                            </h2>
+                                        </div>
+                                        <div className="hidden sm:block w-px h-6 bg-emerald-500/30"></div>
+                                        <p className="hidden sm:block text-emerald-200/70 text-sm">
+                                            選擇您的英雄和聖物，組建強大的冒險隊伍
+                                        </p>
+                                    </div>
+                                    {/* 手機版描述 */}
+                                    <p className="sm:hidden text-emerald-200/70 text-sm mt-2">
+                                        選擇您的英雄和聖物，組建強大的冒險隊伍
+                                    </p>
+                                </div>
+                                
+                                {/* TeamBuilder 內容區 */}
+                                <div className="p-6 bg-gray-900/30">
+                                    <TeamBuilder
+                                        heroes={nftsData.heros}
+                                        relics={nftsData.relics}
+                                        onCreateParty={handleCreateParty}
+                                        isCreating={createPartyTx.isLoading}
+                                        platformFee={platformFeeData ? (platformFeeData as bigint) : BigInt(0)}
+                                        isLoadingFee={isLoadingFee}
+                                        isHeroAuthorized={!!isHeroAuthorized}
+                                        isRelicAuthorized={!!isRelicAuthorized}
+                                        onAuthorizeHero={handleAuthorizeHero}
+                                        onAuthorizeRelic={handleAuthorizeRelic}
+                                        onBatchAuthorize={handleBatchAuthorize}
+                                        isAuthorizing={authorizeHeroTx.isLoading || authorizeRelicTx.isLoading}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="text-center py-12">
+                        <p className="text-gray-400">無法載入資產數據</p>
+                    </div>
                 );
                 
             default:
@@ -436,6 +510,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
         { key: 'myHeroes' as const, label: '我的英雄', icon: Icons.Users, count: nftsData?.heros?.length || 0 },
         { key: 'myRelics' as const, label: '我的聖物', icon: Icons.Shield, count: nftsData?.relics?.length || 0 },
         { key: 'myParties' as const, label: '我的隊伍', icon: Icons.Users, count: nftsData?.parties?.length || 0 },
+        { key: 'teamBuilder' as const, label: '創建隊伍', icon: Icons.Plus, count: undefined },
     ];
     
     return (
@@ -450,10 +525,10 @@ const MyAssetsPageEnhanced: React.FC = () => {
                     onRefresh={() => refetchNfts()}
                 />
                 
-                {/* NFT 顯示模式切換 */}
-                <div className="flex justify-end">
+                {/* NFT 顯示模式切換 - 暫時隱藏 */}
+                {/* <div className="flex justify-end">
                     <NftDisplayToggleMini className="mb-2" />
-                </div>
+                </div> */}
                 
                 {/* Tabs */}
                 <div className="flex justify-between items-end border-b border-gray-700">
@@ -479,17 +554,19 @@ const MyAssetsPageEnhanced: React.FC = () => {
                         ))}
                     </div>
                     
-                    {/* 創建隊伍按鈕 - 移到右邊 */}
-                    <div className="pb-2">
-                        <ActionButton
-                            onClick={() => setShowTeamBuilder(!showTeamBuilder)}
-                            className={`text-sm px-3 py-1.5 ${showTeamBuilder ? 'bg-emerald-600 hover:bg-emerald-500' : ''}`}
-                            size="sm"
-                        >
-                            <Icons.Plus className="h-4 w-4 mr-1" />
-                            創建隊伍
-                        </ActionButton>
-                    </div>
+                    {/* 創建隊伍按鈕 - 只在我的隊伍 tab 顯示 */}
+                    {activeTab === 'myParties' && (
+                        <div className="pb-2">
+                            <ActionButton
+                                onClick={() => setShowTeamBuilder(!showTeamBuilder)}
+                                className={`text-sm px-3 py-1.5 ${showTeamBuilder ? 'bg-emerald-600 hover:bg-emerald-500' : ''}`}
+                                size="sm"
+                            >
+                                <Icons.Plus className="h-4 w-4 mr-1" />
+                                創建隊伍
+                            </ActionButton>
+                        </div>
+                    )}
                 </div>
                 
                 {/* Team Builder Expanded Section */}

@@ -1,6 +1,6 @@
 {
   "version": "V25",
-  "lastUpdated": "2025-07-30",
+  "lastUpdated": "2025-07-31",
   "description": "DungeonDelvers V25 Configuration",
   "contracts": {
     "SOULSHARD": "0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF",
@@ -14,13 +14,14 @@
     "HERO": "0xF6A318568CFF7704c24C1Ab81B34de26Cd473d40",
     "RELIC": "0xA9bfc01562d168644E07afA704Ca2b6764E36C66",
     "PARTY": "0xA4BA997d806FeAde847Cf82a070a694a9e51fAf2",
-    "ALTAROFASCENSION": "0x55548065bFF30EEaBb717149bE72b17AdA8dC4f1"
+    "ALTAROFASCENSION": "0x55548065bFF30EEaBb717149bE72b17AdA8dC4f1",
+    "DUNGEONMASTERWALLET": "0x10925A7138649C7E1794CE646182eeb5BF8ba647"
   },
   "subgraph": {
     "studio": {
-      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.3.1",
+      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.3.5",
       "description": "Studio version - 免費但有延遲，僅供探索功能",
-      "version": "v3.3.1"
+      "version": "v3.3.5"
     },
     "decentralized": {
       "url": "https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs",

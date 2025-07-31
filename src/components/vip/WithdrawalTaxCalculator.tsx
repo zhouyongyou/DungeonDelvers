@@ -90,6 +90,16 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
     chainId: bsc.id,
     query: { enabled: !!address }
   });
+
+  // 讀取玩家 SOUL 餘額
+  const { data: playerBalance } = useReadContract({
+    address: playerVaultContract?.address,
+    abi: playerVaultContract?.abi,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    chainId: bsc.id,
+    query: { enabled: !!address }
+  });
   
   const { data: playerLevel } = useReadContract({
     address: playerProfileContract?.address,
@@ -130,8 +140,8 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
         ? inputAmount / priceInUsd
         : inputAmount;
       
-      // 計算USD價值
-      const amountUSD = amount * (Number(soulShardPriceUSD) / 10**18);
+      // 計算USD價值 - 使用修復後的價格
+      const amountUSD = amount * priceInUsd;
       const thresholdUSD = Number(largeWithdrawThresholdUSD) / 10**18;
       const isLargeWithdraw = amountUSD > thresholdUSD;
       
@@ -309,41 +319,80 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
               )}
             </div>
             
-            {/* 快速金額選擇 */}
-            <div className="space-y-2">
-              <div className="text-xs text-gray-400">快速選擇：</div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                {inputMode === 'soul'
-                  ? [100, 500, 1000, 5000].map(amount => (
-                      <button
-                        key={amount}
-                        onClick={() => setWithdrawAmount(amount.toString())}
-                        className="py-1.5 bg-gray-700/50 hover:bg-gray-600/50 rounded-md transition flex flex-col items-center"
-                      >
-                        <span>{amount} SOUL</span>
-                        {priceInUsd > 0 && (
-                          <span className="text-gray-500">≈${(amount * priceInUsd).toFixed(0)}</span>
-                        )}
-                      </button>
-                    ))
-                  : [100, 500, 1000, 5000].map(usdAmount => {
-                      const soulAmount = priceInUsd > 0 ? usdAmount / priceInUsd : 0;
-                      return (
-                        <button
-                          key={usdAmount}
-                          onClick={() => setWithdrawAmount(usdAmount.toString())}
-                          className="py-1.5 bg-gray-700/50 hover:bg-gray-600/50 rounded-md transition flex flex-col items-center"
-                        >
-                          <span>${usdAmount}</span>
-                          {priceInUsd > 0 && (
-                            <span className="text-gray-500">≈{soulAmount.toFixed(1)} SOUL</span>
-                          )}
-                        </button>
-                      );
-                    })
-                }
+            {/* 用戶餘額顯示 */}
+            {playerBalance && (
+              <div className="p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-blue-300">您的金庫餘額</div>
+                    <div className="text-xl font-bold text-white">
+                      {parseFloat(formatEther(playerBalance)).toLocaleString()} SOUL
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-gray-400">約等於</div>
+                    <div className="text-lg font-bold text-green-400">
+                      ${(parseFloat(formatEther(playerBalance)) * priceInUsd).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
+            
+            {/* 快速百分比選擇 */}
+            {playerBalance && parseFloat(formatEther(playerBalance)) > 0 && (
+              <div className="space-y-2">
+                <div className="text-xs text-gray-400">快速選擇百分比：</div>
+                <div className="grid grid-cols-4 gap-2 text-xs">
+                  {[
+                    { percent: 10, label: '10%' },
+                    { percent: 25, label: '25%' },
+                    { percent: 50, label: '50%' },
+                    { percent: 100, label: '全部' }
+                  ].map(({ percent, label }) => {
+                    const balance = parseFloat(formatEther(playerBalance));
+                    const amount = balance * (percent / 100);
+                    return (
+                      <button
+                        key={percent}
+                        onClick={() => setWithdrawAmount(amount.toFixed(6))}
+                        className="py-2 bg-gray-700/50 hover:bg-gray-600/50 rounded-md transition flex flex-col items-center"
+                      >
+                        <span className="font-medium text-blue-400">{label}</span>
+                        <span className="text-white">{amount.toLocaleString()}</span>
+                        <span className="text-gray-500">SOUL</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            
+            {/* 提示文字或範例模式 */}
+            {address && playerBalance ? (
+              <div className="text-xs text-gray-500 text-center">
+                💡 輸入任意金額進行試算，或點擊上方百分比快速填入
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="text-xs text-gray-400">範例試算（連接錢包查看實際餘額）：</div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {[10000, 50000, 100000, 500000].map(amount => (
+                    <button
+                      key={amount}
+                      onClick={() => setWithdrawAmount(amount.toString())}
+                      className="py-1.5 bg-gray-700/50 hover:bg-gray-600/50 rounded-md transition flex flex-col items-center"
+                    >
+                      <span>{amount.toLocaleString()} SOUL</span>
+                      <span className="text-gray-500">≈${(amount * priceInUsd).toFixed(2)}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="text-xs text-yellow-500 text-center">
+                  ⚠️ 以上僅為範例，實際金額以您的錢包餘額為準
+                </div>
+              </div>
+            )}
           </div>
           
           {/* 當前用戶稅率摘要 */}

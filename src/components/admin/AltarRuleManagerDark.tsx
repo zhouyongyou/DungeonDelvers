@@ -45,6 +45,8 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
     greatSuccessChance: string;
     successChance: string;
     partialFailChance: string;
+    cooldownTime: string;
+    isActive: boolean;
   }>>({});
 
   useEffect(() => {
@@ -52,13 +54,15 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
       const initialInputs: Record<number, any> = {};
       rulesData.forEach((d, i) => {
         if (d.status === 'success' && d.result) {
-          const [materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance] = d.result as any[];
+          const [materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance, cooldownTime, isActive] = d.result as any[];
           initialInputs[i + 1] = {
             materialsRequired: materialsRequired?.toString() || '',
             nativeFee: nativeFee ? formatEther(nativeFee) : '',
             greatSuccessChance: greatSuccessChance?.toString() || '',
             successChance: successChance?.toString() || '',
-            partialFailChance: partialFailChance?.toString() || ''
+            partialFailChance: partialFailChance?.toString() || '',
+            cooldownTime: cooldownTime?.toString() || '0',
+            isActive: Boolean(isActive)
           };
         }
       });
@@ -66,10 +70,10 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
     }
   }, [rulesData]);
 
-  const updateInput = (id: number, field: string, value: string) => {
+  const updateInput = (id: number, field: string, value: string | boolean) => {
     setRuleInputs(prev => ({
       ...prev,
-      [id]: { ...(prev[id] || {}), [field]: value }
+      [id]: { ...(prev[id] || {}), [field]: field === 'isActive' ? (value === 'true' || value === true) : value }
     }));
   };
 
@@ -95,7 +99,9 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
             nativeFee: parseEther(inputs.nativeFee),
             greatSuccessChance: Number(inputs.greatSuccessChance),
             successChance: Number(inputs.successChance),
-            partialFailChance: Number(inputs.partialFailChance)
+            partialFailChance: Number(inputs.partialFailChance),
+            cooldownTime: BigInt(inputs.cooldownTime || '0'),
+            isActive: inputs.isActive
           }
         ],
       });
@@ -151,7 +157,9 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
           nativeFee: '',
           greatSuccessChance: '',
           successChance: '',
-          partialFailChance: ''
+          partialFailChance: '',
+          cooldownTime: '0',
+          isActive: true
         };
         
         // 計算失敗率
@@ -164,8 +172,8 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
             </summary>
             
             <div className="mt-4 space-y-4">
-              {/* 材料需求和費用 */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* 材料需求、費用、冷卻時間 */}
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">材料需求</label>
                   <input
@@ -185,6 +193,18 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
                     onChange={(e) => updateInput(ruleId, 'nativeFee', e.target.value)}
                     className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white focus:border-yellow-400 focus:outline-none"
                     placeholder="0.01"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">冷卻時間 (秒)</label>
+                  <input
+                    type="number"
+                    value={inputs.cooldownTime}
+                    onChange={(e) => updateInput(ruleId, 'cooldownTime', e.target.value)}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white focus:border-yellow-400 focus:outline-none"
+                    placeholder="0"
+                    min="0"
                   />
                 </div>
               </div>
@@ -252,6 +272,28 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
                   <div className="text-red-300 text-lg font-bold">
                     {failChance}%
                   </div>
+                </div>
+
+                {/* 規則啟用狀態 */}
+                <div className="flex items-center gap-3 p-3 bg-gray-700/50 rounded">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={inputs.isActive}
+                      onChange={(e) => updateInput(ruleId, 'isActive', e.target.checked.toString())}
+                      className="sr-only"
+                    />
+                    <div className={`relative w-11 h-6 rounded-full transition-colors ${
+                      inputs.isActive ? 'bg-green-600' : 'bg-gray-600'
+                    }`}>
+                      <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                        inputs.isActive ? 'translate-x-5' : 'translate-x-0'
+                      }`} />
+                    </div>
+                    <span className="ml-3 text-sm text-gray-300">
+                      規則啟用狀態 {inputs.isActive ? '(啟用)' : '(停用)'}
+                    </span>
+                  </label>
                 </div>
               </div>
 
