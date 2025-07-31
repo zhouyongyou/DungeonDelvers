@@ -21,6 +21,7 @@ const GET_PLAYER_OVERVIEW_QUERY = `
         id
         unclaimedRewards
         heroIds
+        totalPower
       }
       vip {
         id
@@ -31,6 +32,15 @@ const GET_PLAYER_OVERVIEW_QUERY = `
         unlockRequestedAt
         createdAt
         lastUpdatedAt
+      }
+      upgradeAttempts(first: 1000, orderBy: timestamp, orderDirection: desc) {
+        id
+        timestamp
+        outcome
+        type
+        baseRarity
+        newRarity
+        isSuccess
       }
     }
     playerProfile(id: $owner) {
@@ -45,6 +55,13 @@ const GET_PLAYER_OVERVIEW_QUERY = `
       commissionEarned
       createdAt
       lastUpdatedAt
+    }
+    playerStats(id: $owner) {
+      id
+      totalExpeditions
+      successfulExpeditions
+      totalRewardsEarned
+      highestPartyPower
     }
     playerVault(id: $owner) {
       id

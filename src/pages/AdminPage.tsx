@@ -28,6 +28,7 @@ import AdminSection from '../components/admin/AdminSection';
 import ReadOnlyRow from '../components/admin/ReadOnlyRow';
 import AddressSettingRow from '../components/admin/AddressSettingRowDark';
 import SettingRow from '../components/admin/SettingRowDark';
+import TaxManagement from '../components/admin/TaxManagement';
 import { ExpeditionTestComponent } from '../components/admin/ExpeditionTestComponent';
 import DungeonManager from '../components/admin/DungeonManagerDark';
 import AltarRuleManager from '../components/admin/AltarRuleManagerDark';
@@ -998,6 +999,9 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
         onExpand={() => setLoadedSections(prev => ({ ...prev, taxSystem: true }))}
         isLoading={(isLoadingParams || isLoadingVaultParams) && loadedSections.taxSystem}
       >
+        {/* 新版 PlayerVault v4.0 稅收管理 */}
+        {loadedSections.taxSystem && <TaxManagement className="mb-6" />}
+        
         {parameterConfig && Array.isArray(parameterConfig) && parameterConfig.filter(p => p && ['commissionRate'].includes(p.key)).map((p) => {
           const paramIndex = parameterConfig.findIndex(pc => pc && pc.key === p.key);
           const currentValue = params && paramIndex >= 0 ? params[paramIndex]?.result : undefined;

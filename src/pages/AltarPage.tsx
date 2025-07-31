@@ -25,6 +25,7 @@ import type { AnyNft, HeroNft, NftAttribute, RelicNft, NftType } from '../types/
 import { bsc } from 'wagmi/chains';
 import { Modal } from '../components/ui/Modal';
 import { logger } from '../utils/logger';
+import { isUpgradeEventArgs, isValidEventLog, safeBigintToString, safeNumberConversion } from '../utils/typeGuards';
 
 // 新增的祭壇專用組件
 import { AltarRulesVisualization } from '../components/altar/AltarRulesVisualization';
@@ -224,7 +225,7 @@ const UpgradeResultModal: React.FC<{ result: UpgradeOutcome | null; onClose: () 
                 
                 {result.nfts.length > 0 && (
                     <div className="grid grid-cols-2 gap-4">
-                        {result.nfts.map(nft => ( <div key={nft.id.toString()} className="w-40"><NftCard nft={nft} /></div> ))}
+                        {result.nfts.map(nft => ( <div key={safeBigintToString(nft.id)} className="w-40"><NftCard nft={nft} /></div> ))}
                     </div>
                 )}
                 
@@ -483,7 +484,13 @@ const AltarPage = memo(() => {
                 
                 if (!decodedUpgradeLog) throw new Error("找不到 UpgradeAttempted 事件");
 
-                const outcome = Number(((decodedUpgradeLog.args as unknown) as Record<string, unknown>).outcome);
+                // 安全的事件參數提取
+                if (!decodedUpgradeLog || !isValidEventLog(decodedUpgradeLog) || !isUpgradeEventArgs(decodedUpgradeLog.args)) {
+                    throw new Error("無效的 UpgradeAttempted 事件格式");
+                }
+                
+                const { outcome, tokenId, player } = decodedUpgradeLog.args;
+                const outcomeNumber = safeNumberConversion(outcome);
                 const tokenContract = nftType === 'hero' ? heroContract : relicContract;
                 const tokenContractAbi = nftType === 'hero' ? heroABI : relicABI;
                 const mintEventName = nftType === 'hero' ? 'HeroMinted' : 'RelicMinted';
@@ -494,14 +501,28 @@ const AltarPage = memo(() => {
                     .filter((log): log is NonNullable<typeof log> => log !== null && log.eventName === mintEventName);
 
                 const newNfts: AnyNft[] = await Promise.all(mintedLogs.map(async (log) => {
-                    const tokenId = ((log.args as unknown) as Record<string, unknown>).tokenId as bigint;
+                    // 安全的事件參數提取
+                    if (!isValidEventLog(log) || !log.args || typeof log.args !== 'object') {
+                        logger.error('Invalid minted event log format:', log);
+                        return null;
+                    }
+                    
+                    const args = log.args as Record<string, unknown>;
+                    const tokenIdRaw = args.tokenId;
+                    
+                    if (typeof tokenIdRaw !== 'bigint') {
+                        logger.error('Invalid tokenId type in minted event:', tokenIdRaw);
+                        return null;
+                    }
+                    
+                    const tokenId = tokenIdRaw;
                     const tokenUri = await publicClient?.readContract({ 
                         address: tokenContract!.address, 
                         abi: tokenContract!.abi as Abi, 
                         functionName: 'tokenURI', 
                         args: [tokenId] 
                     }) as string;
-                    const metadata = await fetchMetadata(tokenUri, tokenId.toString(), tokenContract!.address);
+                    const metadata = await fetchMetadata(tokenUri, safeBigintToString(tokenId), tokenContract!.address);
                     const findAttr = (trait: string, defaultValue = 0) => metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
                     if (nftType === 'hero') return { ...metadata, id: tokenId, type: 'hero', contractAddress: tokenContract!.address, power: Number(findAttr('Power')), rarity: Number(findAttr('Rarity')) };
                     return { ...metadata, id: tokenId, type: 'relic', contractAddress: tokenContract!.address, capacity: Number(findAttr('Capacity')), rarity: Number(findAttr('Rarity')) };
@@ -533,13 +554,23 @@ const AltarPage = memo(() => {
                     
                     setUpgradeResult({ status: resultStatus, nfts: newNfts, message: outcomeMessages[outcome] || "發生未知錯誤" });
                     
-                    // 重置狀態和刷新數據
+                    // 自動刷新數據並在5秒後自動關閉結果模態框
                     setTimeout(() => {
                         setRitualStage('idle');
                         resetSelections();
                         queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
                         queryClient.invalidateQueries({ queryKey: ['altarMaterials'] });
                         queryClient.invalidateQueries({ queryKey: ['altarHistory'] }); // 刷新升星歷史統計
+                        
+                        // 5秒後自動關閉結果模態框並刷新頁面
+                        setTimeout(() => {
+                            setUpgradeResult(null);
+                            showToast('升星完成！頁面將自動刷新以顯示最新狀態', 'success');
+                            // 延遲刷新，讓用戶看到提示
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 2000);
+                        }, 5000);
                     }, 1000);
                 }, 1000);
                 
@@ -616,8 +647,22 @@ const AltarPage = memo(() => {
         if (!upgradeRulesData || rarity < 1 || rarity > 4) return null;
         const ruleResult = upgradeRulesData[rarity - 1];
         if (ruleResult.status === 'success' && Array.isArray(ruleResult.result)) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            const [materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance, cooldownTime, isActive] = ruleResult.result as unknown as [number, bigint, number, number, number, bigint, boolean];
+            const result = ruleResult.result;
+            
+            // 安全的陣列元素提取和類型檢查
+            if (result.length !== 7) {
+                logger.error('Invalid upgrade rule result length:', result.length);
+                return null;
+            }
+            
+            const materialsRequired = safeNumberConversion(result[0]);
+            const nativeFee = typeof result[1] === 'bigint' ? result[1] : BigInt(0);
+            const greatSuccessChance = safeNumberConversion(result[2]);
+            const successChance = safeNumberConversion(result[3]);
+            const partialFailChance = safeNumberConversion(result[4]);
+            const cooldownTime = typeof result[5] === 'bigint' ? result[5] : BigInt(0);
+            const isActive = Boolean(result[6]);
+            
             return { materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance, cooldownTime, isActive };
         }
         return null;
@@ -718,9 +763,9 @@ const AltarPage = memo(() => {
         logger.debug('升星操作調試信息:', {
             nftType,
             targetRarity: rarity,
-            selectedNfts: selectedNfts.map(id => id.toString()),
+            selectedNfts: selectedNfts.map(id => safeBigintToString(id)),
             availableNfts: availableNfts?.map(nft => ({
-                id: nft.id.toString(),
+                id: safeBigintToString(nft.id),
                 rarity: 'rarity' in nft ? nft.rarity : 'N/A',
                 type: nft.type
             }))
@@ -1193,7 +1238,7 @@ const AltarPage = memo(() => {
                 </div>
             </div>
 
-            {/* 浮動統計按鈕 */}
+            {/* 統計浮動按鈕 - 左下角 */}
             <AltarFloatingStatsButton />
         </section>
     );

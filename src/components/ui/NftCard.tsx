@@ -8,6 +8,7 @@ import type { AnyNft, HeroNft, RelicNft, PartyNft, VipNft } from '../../types/nf
 import { getRarityChineseName, getRarityColor as getRarityColorUtil } from '../../utils/rarityConverter';
 import ImageWithFallback from './ImageWithFallback';
 import { LazyImage } from './LazyImage';
+import { safeBigintToString, getNftIdSafe, getPartyPowerSafe, getPartyCapacitySafe } from '../../utils/typeGuards';
 import { NftSvgDisplay } from './NftSvgDisplay';
 import { useNftDisplayMode } from '../../hooks/useNftDisplayMode';
 import { useImageOptimization } from '../../hooks/useImageOptimization';
@@ -50,7 +51,7 @@ const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, 
     <div className="relative w-full h-full">
       <ImageWithFallback
         src={fallbackImage} 
-        alt={nft.name || `VIP #${nft.id.toString()}`} 
+        alt={nft.name || `VIP #${getNftIdSafe(nft)}`} 
         className="w-full h-full object-cover bg-gray-700"
         nftType="vip"
         rarity={1}
@@ -171,10 +172,10 @@ const NftCard: React.FC<NftCardProps> = memo(({
               {nft.type === 'party' && (
                 <>
                   <div className="bg-black/60 text-white px-1.5 py-0.5 rounded text-xs">
-                    ⚔️ {(nft as PartyNft).totalPower?.toString() ?? '0'}
+                    ⚔️ {getPartyPowerSafe(nft)}
                   </div>
                   <div className="bg-black/60 text-white px-1.5 py-0.5 rounded text-xs">
-                    📦 {(nft as PartyNft).totalCapacity?.toString() ?? '0'}
+                    📦 {getPartyCapacitySafe(nft)}
                   </div>
                 </>
               )}

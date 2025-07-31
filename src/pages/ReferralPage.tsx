@@ -15,6 +15,7 @@ import { Icons } from '../components/ui/icons';
 import { logger } from '../utils/logger';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import { formatLargeNumber } from '../utils/formatters';
+import { CommissionManager } from '../components/referral/CommissionManager';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取 Hook
@@ -499,6 +500,9 @@ ${referralLink}
         <section className="space-y-6 sm:space-y-8 max-w-4xl mx-auto">
             <h2 className="page-title">邀請與佣金中心</h2>
             
+            {/* 佣金管理 - 新版 PlayerVault v4.0 功能 */}
+            <CommissionManager className="mb-6" />
+            
             {/* 邀請收益展示 */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                 <div className="card-bg p-4 sm:p-6 rounded-xl">
@@ -692,6 +696,119 @@ ${referralLink}
                         </div>
                     )
                 )}
+            </div>
+
+            {/* 邀請系統詳細說明 - 放在頁面最底部 */}
+            <div className="card-bg p-6 sm:p-8 rounded-xl bg-gradient-to-r from-purple-900/10 to-blue-900/10 border border-purple-500/20">
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-6 text-center">
+                    🎮 邀請系統完整說明
+                </h3>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* 邀請人收益說明 */}
+                    <div className="space-y-4">
+                        <div className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 p-5 rounded-lg border border-yellow-500/30">
+                            <h4 className="text-lg font-bold text-yellow-400 mb-3">📈 邀請人收益</h4>
+                            <ul className="space-y-2 text-sm text-gray-300">
+                                <li className="flex items-start gap-2">
+                                    <span className="text-green-400 mt-0.5">✓</span>
+                                    <span>被邀請人每次從金庫提領時，您可獲得 <span className="text-yellow-400 font-semibold">5% 佣金</span></span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <span className="text-green-400 mt-0.5">✓</span>
+                                    <span>佣金以 <span className="text-purple-400 font-semibold">$SoulShard</span> 代幣形式自動發放到您的金庫</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <span className="text-green-400 mt-0.5">✓</span>
+                                    <span>邀請關係永久有效，持續獲得收益</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <span className="text-green-400 mt-0.5">✓</span>
+                                    <span>可以邀請無限數量的玩家，累積更多佣金</span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div className="bg-gray-800/50 p-4 rounded-lg">
+                            <h5 className="text-sm font-semibold text-gray-300 mb-2">💡 收益計算範例</h5>
+                            <p className="text-xs text-gray-400">
+                                如果您邀請的玩家從金庫提領 1000 SOUL，您將獲得 50 SOUL (5%) 的佣金獎勵
+                            </p>
+                        </div>
+                    </div>
+                    
+                    {/* 被邀請人好處說明 */}
+                    <div className="space-y-4">
+                        <div className="bg-gradient-to-r from-blue-900/20 to-cyan-900/20 p-5 rounded-lg border border-blue-500/30">
+                            <h4 className="text-lg font-bold text-blue-400 mb-3">🤝 被邀請人好處</h4>
+                            <ul className="space-y-2 text-sm text-gray-300">
+                                <li className="flex items-start gap-2">
+                                    <span className="text-green-400 mt-0.5">✓</span>
+                                    <span>綁定邀請人後，享有社群支援和遊戲指導</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <span className="text-green-400 mt-0.5">✓</span>
+                                    <span><span className="text-blue-400 font-semibold">不影響您的任何收益</span>和遊戲體驗</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <span className="text-green-400 mt-0.5">✓</span>
+                                    <span>支持邀請人同時建立長期互助關係</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <span className="text-green-400 mt-0.5">✓</span>
+                                    <span>加入活躍的遊戲社群，獲得更多遊戲攻略</span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div className="bg-gray-800/50 p-4 rounded-lg">
+                            <h5 className="text-sm font-semibold text-gray-300 mb-2">⚠️ 重要提醒</h5>
+                            <p className="text-xs text-gray-400">
+                                邀請關係一旦建立無法更改，請確認邀請人地址正確
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                {/* 邀請流程說明 */}
+                <div className="mt-6 p-5 bg-gradient-to-r from-purple-800/20 to-pink-800/20 rounded-lg border border-purple-500/20">
+                    <h4 className="text-lg font-bold text-purple-400 mb-4">🚀 如何開始邀請</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="text-center">
+                            <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <span className="text-white font-bold">1</span>
+                            </div>
+                            <h5 className="text-sm font-semibold text-white mb-1">複製邀請連結</h5>
+                            <p className="text-xs text-gray-400">使用上方的「複製連結」按鈕獲取您的專屬邀請連結</p>
+                        </div>
+                        <div className="text-center">
+                            <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <span className="text-white font-bold">2</span>
+                            </div>
+                            <h5 className="text-sm font-semibold text-white mb-1">分享給朋友</h5>
+                            <p className="text-xs text-gray-400">透過社群媒體、聊天軟體分享您的邀請連結</p>
+                        </div>
+                        <div className="text-center">
+                            <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <span className="text-white font-bold">3</span>
+                            </div>
+                            <h5 className="text-sm font-semibold text-white mb-1">自動獲得佣金</h5>
+                            <p className="text-xs text-gray-400">當朋友提領獎勵時，您將自動獲得 5% 佣金</p>
+                        </div>
+                    </div>
+                </div>
+                
+                {/* 常見問題 */}
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div className="bg-gray-800/30 p-4 rounded-lg">
+                        <h5 className="font-semibold text-gray-300 mb-2">❓ 佣金何時發放？</h5>
+                        <p className="text-gray-400">當被邀請人從金庫提領時，佣金會立即自動發放到您的金庫中</p>
+                    </div>
+                    <div className="bg-gray-800/30 p-4 rounded-lg">
+                        <h5 className="font-semibold text-gray-300 mb-2">❓ 可以邀請多少人？</h5>
+                        <p className="text-gray-400">沒有限制！您可以邀請任意數量的玩家，每個都能為您帶來佣金</p>
+                    </div>
+                </div>
             </div>
 
             {/* 自動推薦確認彈窗 */}

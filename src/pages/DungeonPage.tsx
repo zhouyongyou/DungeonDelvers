@@ -27,6 +27,7 @@ import { bsc } from 'wagmi/chains';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 // import { useGlobalLoading } from '../components/core/GlobalLoadingProvider'; // 移除未使用的 Provider
 import { logger } from '../utils/logger';
+import { safeBigintToString, safeNumberConversion } from '../utils/typeGuards';
 import { PageActionBar, usePageQuickActions } from '../components/ui/QuickActions';
 import { RewardClaimSection } from '../components/RewardClaimSection';
 import { ExpeditionHistory } from '../components/ExpeditionHistory';
@@ -276,12 +277,12 @@ const usePlayerParties = () => {
                     // 轉換 BigInt 為字串以便序列化
                     const serializableParties = formattedParties.map(party => ({
                         ...party,
-                        id: party.id.toString(),
-                        totalPower: party.totalPower.toString(),
-                        totalCapacity: party.totalCapacity.toString(),
-                        heroIds: party.heroIds.map(id => id.toString()),
-                        cooldownEndsAt: party.cooldownEndsAt.toString(),
-                        unclaimedRewards: party.unclaimedRewards.toString(),
+                        id: safeBigintToString(party.id),
+                        totalPower: safeBigintToString(party.totalPower),
+                        totalCapacity: safeBigintToString(party.totalCapacity),
+                        heroIds: party.heroIds.map(id => safeBigintToString(id)),
+                        cooldownEndsAt: safeBigintToString(party.cooldownEndsAt),
+                        unclaimedRewards: safeBigintToString(party.unclaimedRewards),
                     }));
                     
                     localStorage.setItem(cacheKey, JSON.stringify({
@@ -442,10 +443,15 @@ const PartyStatusCard = memo<PartyStatusCardProps>(({ party, dungeons, onStartEx
                 }
             }
             
-            // 備用方案：嘗試數組訪問
-            if (partyStatus[1] !== undefined) {
-                const cooldownBigInt = BigInt(partyStatus[1].toString());
-                return cooldownBigInt;
+            // 備用方案：嘗試數組訪問（加強類型安全）
+            if (Array.isArray(partyStatus) && partyStatus.length > 1 && partyStatus[1] !== undefined) {
+                try {
+                    const cooldownStr = safeBigintToString(partyStatus[1]);
+                    const cooldownBigInt = BigInt(cooldownStr);
+                    return cooldownBigInt;
+                } catch (error) {
+                    logger.warn('[DungeonPage] 無法轉換 partyStatus[1] 為 BigInt:', error);
+                }
             }
         } catch (error) {
             console.error('[DungeonPage] 解析 cooldownEndsAt 失敗:', error);
@@ -599,23 +605,15 @@ const PartyStatusCard = memo<PartyStatusCardProps>(({ party, dungeons, onStartEx
                 </div>
             ) : null}
             
-            {/* 統一的獎勵領取組件 */}
-            <RewardClaimSection 
-                partyId={party.id} 
-                chainId={chainId}
-                variant="default"
+            {/* 移除獎勵領取組件 - 獎勵不記錄在隊伍身上，應該在玩家個人檔案中領取 */}
+            
+            {/* 出征歷史紀錄 - 只顯示此隊伍的記錄 */}
+            <ExpeditionHistory 
+                partyId={party.entityId} 
+                playerId={address?.toLowerCase()}
+                limit={10} 
+                title={`${party.name} 出征歷史`}
             />
-            
-            {/* 臨時調試：顯示子圖數據 */}
-            {party.unclaimedRewards > 0n && (
-                <div className="mt-2 p-2 bg-blue-900/20 rounded-lg border border-blue-600/30 text-xs">
-                    <p className="text-blue-400">子圖數據: {formatSoul(party.unclaimedRewards)} SOUL</p>
-                    <p className="text-gray-500">（此為子圖緩存數據，可能有延遲）</p>
-                </div>
-            )}
-            
-            {/* 出征歷史紀錄 - 預設顯示1筆，可展開看到3筆 */}
-            <ExpeditionHistory partyId={party.entityId} limit={3} />
         </div>
     );
 });

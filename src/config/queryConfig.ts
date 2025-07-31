@@ -1,10 +1,10 @@
-import type { UseQueryOptions } from '@tanstack/react-query';
+// 移除了 UseQueryOptions 類型導入，使用 any 作為替代
 
 // 查詢類型定義
 export type QueryCategory = 'NFT' | 'CONTRACT' | 'GRAPHQL' | 'METADATA' | 'ADMIN' | 'ADMIN_PARAMS' | 'TAX_SYSTEM' | 'PRICE' | 'PLATFORM_FEE' | 'BALANCE' | 'APPROVAL' | 'GAME_DATA';
 
 // 查詢配置映射
-const queryConfigs: Record<QueryCategory, Partial<UseQueryOptions>> = {
+const queryConfigs: Record<QueryCategory, any> = {
   NFT: {
     staleTime: 1000 * 60 * 30,        // 30 分鐘內視為新鮮
     gcTime: 1000 * 60 * 60 * 2,       // 2 小時垃圾回收
@@ -37,9 +37,9 @@ const queryConfigs: Record<QueryCategory, Partial<UseQueryOptions>> = {
     },
   },
   GRAPHQL: {
-    staleTime: 1000 * 60 * 5,          // 5 分鐘內視為新鮮
-    gcTime: 1000 * 60 * 30,            // 30 分鐘垃圾回收
-    refetchOnWindowFocus: false,       // 視窗聚焦時不重新獲取
+    staleTime: 0,                      // 立即過期，強制每次都獲取最新數據
+    gcTime: 1000 * 60 * 5,             // 5 分鐘垃圾回收
+    refetchOnWindowFocus: true,        // 視窗聚焦時重新獲取
     refetchOnMount: 'always',          // 組件掛載時總是檢查
     refetchOnReconnect: true,          // 重新連接時重新獲取
     retry: 3,                          // 重試 3 次
@@ -137,15 +137,15 @@ const queryConfigs: Record<QueryCategory, Partial<UseQueryOptions>> = {
 };
 
 // 獲取查詢配置
-export function getQueryConfig(category: QueryCategory): Partial<UseQueryOptions> {
+export function getQueryConfig(category: QueryCategory): any {
   return queryConfigs[category];
 }
 
 // 合併查詢配置
 export function mergeQueryConfig(
   category: QueryCategory,
-  customConfig: Partial<UseQueryOptions>
-): Partial<UseQueryOptions> {
+  customConfig: any
+): any {
   return {
     ...queryConfigs[category],
     ...customConfig,

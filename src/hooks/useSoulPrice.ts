@@ -5,7 +5,7 @@ import { useReadContract } from 'wagmi';
 import { getContractWithABI } from '../config/contractsWithABI';
 import { formatUnits } from 'viem';
 
-export const useSoulPrice = () => {
+export const useSoulPrice = (options?: { enabled?: boolean }) => {
     // 改用與 MintPage 相同的方法：通過 DungeonCore 獲取準確價格
     const dungeonCoreContract = getContractWithABI('DUNGEONCORE');
     
@@ -17,7 +17,7 @@ export const useSoulPrice = () => {
         functionName: 'getSoulShardAmountForUSD',
         args: [oneUsdInWei],
         query: {
-            enabled: !!dungeonCoreContract?.address && !!dungeonCoreContract?.abi,
+            enabled: (options?.enabled !== false) && !!dungeonCoreContract?.address && !!dungeonCoreContract?.abi,
             staleTime: 2 * 60 * 1000, // 2 分鐘
             retry: 3
         }
@@ -37,7 +37,10 @@ export const useSoulPrice = () => {
                 // 合理性檢查：SOUL 價格應該在 $0.00001 - $0.1 之間
                 if (calculatedPrice >= 0.00001 && calculatedPrice <= 0.1) {
                     priceInUsd = calculatedPrice;
-                    console.log(`[useSoulPrice] SOUL 價格: $${priceInUsd.toFixed(8)} (${soulFor1USD.toFixed(2)} SOUL = $1)`);
+                    // 減少日誌輸出頻率
+                    if (import.meta.env.DEV && Math.random() < 0.05) { // 5% 機率輸出
+                        console.log(`[useSoulPrice] SOUL 價格: $${priceInUsd.toFixed(8)} (${soulFor1USD.toFixed(2)} SOUL = $1)`);
+                    }
                 } else {
                     console.warn(`[useSoulPrice] 計算出的 SOUL 價格異常: $${calculatedPrice.toFixed(8)}，不使用此價格`);
                     priceInUsd = null;
@@ -51,7 +54,7 @@ export const useSoulPrice = () => {
             priceInUsd = null;
         }
     } else {
-        console.info('[useSoulPrice] 無價格數據');
+        // 移除此日誌以減少輸出
         priceInUsd = null;
     }
     

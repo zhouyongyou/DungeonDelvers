@@ -1,14 +1,13 @@
-// src/components/ui/PartyDetailsModal.tsx
+// src/components/ui/PartyDetailsModal.tsx - 修復版本
+// 使用強化的 GraphQL 查詢解決 indexer 問題和隊伍成員顯示問題
 
 import React, { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Modal } from './Modal';
 import { LoadingSpinner } from './LoadingSpinner';
 import { NftCard } from './NftCard';
 import type { PartyNft, HeroNft, RelicNft } from '../../types/nft';
 import { logger } from '../../utils/logger';
-
-import { THE_GRAPH_API_URL } from '../../config/graphConfig';
+import { usePartyDetails } from '../../hooks/useRobustGraphQLQuery';
 import { getContractWithABI } from '../../config/contractsWithABI';
 
 interface PartyDetailsModalProps {
@@ -17,95 +16,36 @@ interface PartyDetailsModalProps {
   onClose: () => void;
 }
 
-// GraphQL query to fetch party member details
-const GET_PARTY_MEMBERS_QUERY = `
-  query GetPartyMembers($heroIds: [String!]!, $relicIds: [String!]!) {
-    heros(where: { id_in: $heroIds }) {
-      id
-      tokenId
-      power
-      rarity
-      contractAddress
-    }
-    relics(where: { id_in: $relicIds }) {
-      id
-      tokenId
-      capacity
-      rarity
-      contractAddress
-    }
-  }
-`;
-
 export const PartyDetailsModal: React.FC<PartyDetailsModalProps> = ({
   party,
   isOpen,
   onClose
 }) => {
-  // Fetch party member details from subgraph
-  const { data: members, isLoading } = useQuery({
-    queryKey: ['partyMembers', party?.id.toString()],
-    queryFn: async () => {
-      if (!party || !THE_GRAPH_API_URL) return null;
+  // 使用強化的隊伍詳情查詢（自動處理 indexer 錯誤、重試和緩存）
+  // 優先使用 entityId（完整的子圖 ID），否則使用合約地址 + tokenId 構建
+  const partyEntityId = party?.entityId || (party && getContractWithABI('PARTY')?.address ? 
+    `${getContractWithABI('PARTY')!.address.toLowerCase()}-${party.id.toString()}` : 
+    party?.id.toString());
+    
+  const { data: partyData, isLoading, error } = usePartyDetails(
+    partyEntityId,
+    {
+      enabled: !!party && isOpen && !!partyEntityId,
+      maxRetries: 5, // 隊伍詳情很重要，多重試
+      cacheSeconds: 120 // 緩存 2 分鐘
+    }
+  );
 
-      // 需要轉換為 contractAddress-tokenId 格式
-      const heroContract = getContractWithABI('HERO');
-      const relicContract = getContractWithABI('RELIC');
-      
-      if (!heroContract || !relicContract) {
-        logger.error('Failed to get contract addresses');
-        return null;
-      }
-      
-      // 如果沒有成員，直接返回空數據
-      if (party.heroIds.length === 0 && party.relicIds.length === 0) {
-        return { heros: [], relics: [] };
-      }
-      
-      const heroIdStrings = party.heroIds.length > 0 
-        ? party.heroIds.map(id => `${heroContract.address.toLowerCase()}-${id.toString()}`)
-        : [];
-      const relicIdStrings = party.relicIds.length > 0
-        ? party.relicIds.map(id => `${relicContract.address.toLowerCase()}-${id.toString()}`)
-        : [];
+  // 處理數據並轉換為前端需要的格式
+  const { heroes, relics, memberCount, hasData } = useMemo(() => {
+    if (!partyData?.party) {
+      return { heroes: [], relics: [], memberCount: 0, hasData: false };
+    }
 
-      try {
-        const response = await fetch(THE_GRAPH_API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: GET_PARTY_MEMBERS_QUERY,
-            variables: {
-              heroIds: heroIdStrings.length > 0 ? heroIdStrings : ["none"],
-              relicIds: relicIdStrings.length > 0 ? relicIdStrings : ["none"]
-            }
-          })
-        });
-
-        const result = await response.json();
-        
-        if (result.errors) {
-          logger.error('GraphQL errors:', result.errors);
-          // 不要拋出錯誤，返回空數據
-          return { heros: [], relics: [] };
-        }
-
-        return result.data || { heros: [], relics: [] };
-      } catch (error) {
-        logger.error('Failed to fetch party members:', error);
-        // 返回空數據而不是拋出錯誤
-        return { heros: [], relics: [] };
-      }
-    },
-    enabled: !!party && isOpen,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
-
-  // Process members data
-  const { heroes, relics } = useMemo(() => {
-    if (!members) return { heroes: [], relics: [] };
-
-    const heroesData: HeroNft[] = (members.heros || []).map((hero: any) => ({
+    const partyInfo = partyData.party;
+    
+    // 從子圖數據創建英雄列表
+    const heroesData: HeroNft[] = (partyInfo.heroes || []).map((hero: any) => ({
       id: BigInt(hero.tokenId),
       tokenId: BigInt(hero.tokenId),
       name: `英雄 #${hero.tokenId}`,
@@ -115,13 +55,14 @@ export const PartyDetailsModal: React.FC<PartyDetailsModalProps> = ({
         { trait_type: 'Power', value: hero.power },
         { trait_type: 'Rarity', value: hero.rarity }
       ],
-      contractAddress: hero.contractAddress,
+      contractAddress: hero.owner?.id || party?.contractAddress || '',
       type: 'hero',
       power: Number(hero.power),
       rarity: Number(hero.rarity)
     }));
 
-    const relicsData: RelicNft[] = (members.relics || []).map((relic: any) => ({
+    // 從子圖數據創建聖物列表
+    const relicsData: RelicNft[] = (partyInfo.relics || []).map((relic: any) => ({
       id: BigInt(relic.tokenId),
       tokenId: BigInt(relic.tokenId),
       name: `聖物 #${relic.tokenId}`,
@@ -131,14 +72,40 @@ export const PartyDetailsModal: React.FC<PartyDetailsModalProps> = ({
         { trait_type: 'Capacity', value: relic.capacity },
         { trait_type: 'Rarity', value: relic.rarity }
       ],
-      contractAddress: relic.contractAddress,
+      contractAddress: relic.owner?.id || party?.contractAddress || '',
       type: 'relic',
       capacity: Number(relic.capacity),
       rarity: Number(relic.rarity)
     }));
 
-    return { heroes: heroesData, relics: relicsData };
-  }, [members]);
+    const memberCount = heroesData.length + relicsData.length;
+    const hasData = memberCount > 0 || (partyInfo.heroIds?.length > 0) || (partyInfo.relicIds?.length > 0);
+
+    logger.info('🎯 隊伍成員數據處理完成', {
+      partyId: party?.id.toString(),
+      heroesCount: heroesData.length,
+      relicsCount: relicsData.length,
+      heroIdsCount: partyInfo.heroIds?.length || 0,
+      relicIdsCount: partyInfo.relicIds?.length || 0,
+      hasData
+    });
+
+    return { heroes: heroesData, relics: relicsData, memberCount, hasData };
+  }, [partyData, party]);
+
+  // 計算出征統計
+  const expeditionStats = useMemo(() => {
+    if (!partyData?.party?.expeditions) {
+      return { total: 0, successful: 0, successRate: 0 };
+    }
+
+    const expeditions = partyData.party.expeditions;
+    const total = expeditions.length;
+    const successful = expeditions.filter((exp: any) => exp.success).length;
+    const successRate = total > 0 ? (successful / total) * 100 : 0;
+
+    return { total, successful, successRate };
+  }, [partyData]);
 
   if (!party) return null;
 
@@ -146,95 +113,158 @@ export const PartyDetailsModal: React.FC<PartyDetailsModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`${party.name} - 隊伍詳情`}
-      onConfirm={onClose}
-      confirmText="關閉"
+      title={`隊伍詳情 - ${party.name}`}
+      size="large"
     >
       <div className="space-y-6">
-        {/* Party Stats */}
+        {/* 隊伍基本信息 */}
         <div className="bg-gray-800 rounded-lg p-4">
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <span className="text-gray-400">隊伍編號:</span>
+              <div className="text-white font-medium">#{party.id.toString()}</div>
+            </div>
             <div>
               <span className="text-gray-400">總戰力:</span>
-              <span className="ml-2 text-white font-semibold">
-                {party.totalPower.toString()}
-              </span>
-            </div>
-            <div>
-              <span className="text-gray-400">總容量:</span>
-              <span className="ml-2 text-white font-semibold">
-                {party.totalCapacity.toString()}
-              </span>
-            </div>
-            <div>
-              <span className="text-gray-400">稀有度:</span>
-              <span className="ml-2 text-yellow-400">
-                {'★'.repeat(Math.min(5, party.partyRarity))}
-              </span>
+              <div className="text-blue-400 font-medium">{party.totalPower?.toString() || partyData?.party?.totalPower || 'N/A'}</div>
             </div>
             <div>
               <span className="text-gray-400">成員數量:</span>
-              <span className="ml-2 text-white font-semibold">
-                {party.heroIds.length} 英雄, {party.relicIds.length} 聖物
-              </span>
+              <div className="text-green-400 font-medium">
+                {isLoading ? (
+                  <LoadingSpinner size="h-4 w-4" />
+                ) : (
+                  `${heroes.length} 英雄, ${relics.length} 聖物`
+                )}
+              </div>
+            </div>
+            <div>
+              <span className="text-gray-400">出征成功率:</span>
+              <div className="text-purple-400 font-medium">
+                {expeditionStats.total > 0 ? `${expeditionStats.successRate.toFixed(1)}%` : 'N/A'}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="flex justify-center py-8">
-            <LoadingSpinner size="large" />
-          </div>
-        )}
+        {/* 成員顯示區域 */}
+        <div>
+          <h3 className="text-lg font-semibold text-white mb-4">隊伍成員</h3>
+          
+          {isLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="text-center">
+                <LoadingSpinner size="h-8 w-8" />
+                <p className="text-gray-400 mt-2">載入隊伍成員中...</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-6 text-center">
+              <p className="text-red-400 mb-2">⚠️ 載入成員資料時發生錯誤</p>
+              <p className="text-sm text-gray-400">
+                {error instanceof Error ? error.message : '未知錯誤'}
+              </p>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="mt-3 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white text-sm transition-colors"
+              >
+                重新載入
+              </button>
+            </div>
+          ) : !hasData ? (
+            <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-6 text-center">
+              <p className="text-yellow-400 mb-2">🔍 隊伍成員資料暫時無法顯示</p>
+              <p className="text-sm text-gray-400 mb-3">
+                這可能是子圖正在同步新的合約數據
+              </p>
+              <div className="text-xs text-gray-500 space-y-1">
+                <p>• 隊伍總戰力：{party.totalPower?.toString() || partyData?.party?.totalPower || 'N/A'}</p>
+                <p>• 預期成員數：{partyData?.party?.heroIds?.length || 0} 英雄 + {partyData?.party?.relicIds?.length || 0} 聖物</p>
+                <p>• 建議稍後重新查看或重新載入頁面</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* 英雄區域 */}
+              {heroes.length > 0 && (
+                <div>
+                  <h4 className="text-md font-medium text-gray-300 mb-3">
+                    英雄 ({heroes.length})
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {heroes.map((hero) => (
+                      <NftCard key={hero.id.toString()} nft={hero} />
+                    ))}
+                  </div>
+                </div>
+              )}
 
-        {/* Heroes Section */}
-        {!isLoading && heroes.length > 0 && (
+              {/* 聖物區域 */}
+              {relics.length > 0 && (
+                <div>
+                  <h4 className="text-md font-medium text-gray-300 mb-3">
+                    聖物 ({relics.length})
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {relics.map((relic) => (
+                      <NftCard key={relic.id.toString()} nft={relic} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 最近出征記錄 */}
+        {partyData?.party?.expeditions && partyData.party.expeditions.length > 0 && (
           <div>
-            <h3 className="text-lg font-semibold text-white mb-3">
-              英雄成員 ({heroes.length})
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {heroes.map((hero) => (
-                <NftCard
-                  key={hero.id.toString()}
-                  nft={hero}
-                  selected={false}
-                  onClick={() => {}}
-                  disabled={true}
-                  showDetails={true}
-                />
-              ))}
+            <h3 className="text-lg font-semibold text-white mb-4">最近出征記錄</h3>
+            <div className="bg-gray-800 rounded-lg p-4">
+              <div className="space-y-3">
+                {partyData.party.expeditions.slice(0, 5).map((expedition: any) => (
+                  <div key={expedition.id} className="flex justify-between items-center p-3 bg-gray-700 rounded-lg">
+                    <div>
+                      <span className="text-white font-medium">{expedition.dungeonName}</span>
+                      <div className="text-xs text-gray-400">
+                        {new Date(parseInt(expedition.timestamp) * 1000).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        expedition.success 
+                          ? 'bg-green-600 text-white' 
+                          : 'bg-red-600 text-white'
+                      }`}>
+                        {expedition.success ? '成功' : '失敗'}
+                      </span>
+                      {expedition.success && expedition.reward && (
+                        <div className="text-xs text-green-400 mt-1">
+                          +{expedition.reward} SOUL
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
-        {/* Relics Section */}
-        {!isLoading && relics.length > 0 && (
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-3">
-              聖物成員 ({relics.length})
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {relics.map((relic) => (
-                <NftCard
-                  key={relic.id.toString()}
-                  nft={relic}
-                  selected={false}
-                  onClick={() => {}}
-                  disabled={true}
-                  showDetails={true}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* No Members Message */}
-        {!isLoading && heroes.length === 0 && relics.length === 0 && (
-          <div className="text-center py-8 text-gray-400">
-            無法載入隊伍成員資料，請稍後再試
-          </div>
+        {/* 調試信息（僅開發環境） */}
+        {import.meta.env.DEV && partyData?.party && (
+          <details className="bg-gray-900 rounded-lg p-4">
+            <summary className="text-sm text-gray-400 cursor-pointer">🔧 調試信息</summary>
+            <pre className="text-xs text-gray-500 mt-2 overflow-auto">
+              {JSON.stringify({
+                heroIds: partyData.party.heroIds,
+                relicIds: partyData.party.relicIds,
+                heroesLength: partyData.party.heroes?.length,
+                relicsLength: partyData.party.relics?.length,
+                totalPower: partyData.party.totalPower
+              }, null, 2)}
+            </pre>
+          </details>
         )}
       </div>
     </Modal>

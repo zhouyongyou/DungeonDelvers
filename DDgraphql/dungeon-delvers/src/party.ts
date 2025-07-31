@@ -46,7 +46,7 @@ export function handlePartyCreated(event: PartyCreated): void {
     party.createdAt = event.block.timestamp
     party.isBurned = false
 
-    // 批量處理英雄關聯 - 使用配置系統
+    // 批量處理英雄關聯 - 信任合約驗證，不重複檢查所有權
     const heroIds: string[] = []
     const heroIdStrings: string[] = []
     const heroContractAddress = getHeroContractAddress()
@@ -54,19 +54,22 @@ export function handlePartyCreated(event: PartyCreated): void {
         const heroIdString = event.params.heroIds[i].toString()
         const heroId = createEntityId(heroContractAddress, heroIdString)
         
-        // 驗證英雄是否存在
+        // 只檢查英雄是否存在，不檢查所有權（因為創建隊伍時NFT已轉移到合約）
         const hero = Hero.load(heroId);
-        if (hero && hero.owner == player.id) {
+        if (hero) {
             heroIds.push(heroId);
             heroIdStrings.push(heroIdString);
+            log.info('Added hero {} to party: {}', [heroId, partyId]);
         } else {
-            log.warning('Hero not found or not owned by player: {} for party: {}', [heroId, partyId]);
+            // 如果英雄不存在，仍然記錄ID（可能是新鑄造的）
+            heroIdStrings.push(heroIdString);
+            log.warning('Hero not found in subgraph but added to party: {} for party: {}', [heroId, partyId]);
         }
     }
     party.heroIds = heroIdStrings
     party.heroes = heroIds
 
-    // 批量處理聖物關聯 - 使用配置系統
+    // 批量處理聖物關聯 - 信任合約驗證，不重複檢查所有權
     const relicIds: string[] = []
     const relicIdStrings: string[] = []
     const relicContractAddress = getRelicContractAddress()
@@ -74,13 +77,16 @@ export function handlePartyCreated(event: PartyCreated): void {
         const relicIdString = event.params.relicIds[i].toString()
         const relicId = createEntityId(relicContractAddress, relicIdString)
         
-        // 驗證聖物是否存在
+        // 只檢查聖物是否存在，不檢查所有權（因為創建隊伍時NFT已轉移到合約）
         const relic = Relic.load(relicId);
-        if (relic && relic.owner == player.id) {
+        if (relic) {
             relicIds.push(relicId);
             relicIdStrings.push(relicIdString);
+            log.info('Added relic {} to party: {}', [relicId, partyId]);
         } else {
-            log.warning('Relic not found or not owned by player: {} for party: {}', [relicId, partyId]);
+            // 如果聖物不存在，仍然記錄ID（可能是新鑄造的）
+            relicIdStrings.push(relicIdString);
+            log.warning('Relic not found in subgraph but added to party: {} for party: {}', [relicId, partyId]);
         }
     }
     party.relicIds = relicIdStrings

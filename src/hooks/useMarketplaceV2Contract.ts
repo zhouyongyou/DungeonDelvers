@@ -5,16 +5,9 @@ import { useState, useCallback } from 'react';
 import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseUnits, type Address } from 'viem';
 import { useAppToast } from '../contexts/SimpleToastContext';
-// FIXME: V25 removed marketplace contracts - temporarily disabled
-// import { DUNGEONMARKETPLACE_V2, OFFERSYSTEM_V2, USDT, BUSD, USD1, HERO, RELIC, PARTY } from '../config/contracts';
+// ✅ V25 Marketplace V2 restored with deployed contract addresses
 import { HERO, RELIC, PARTY } from '../config/contracts';
-
-// Temporarily hardcoded addresses until marketplace V2 is redeployed
-const DUNGEONMARKETPLACE_V2 = '0x0000000000000000000000000000000000000000' as const;
-const OFFERSYSTEM_V2 = '0x0000000000000000000000000000000000000000' as const;
-const USDT = '0x0000000000000000000000000000000000000000' as const;
-const BUSD = '0x0000000000000000000000000000000000000000' as const;
-const USD1 = '0x0000000000000000000000000000000000000000' as const;
+import { DUNGEONMARKETPLACE_V2, OFFERSYSTEM_V2, SUPPORTED_STABLECOINS } from '../config/marketplace';
 import marketplaceV2Abi from '../abis/DungeonMarketplaceV2.json';
 import offerSystemV2Abi from '../abis/OfferSystemV2.json';
 import erc20Abi from '../abis/ERC20.json';
@@ -48,12 +41,12 @@ export const SUPPORTED_STABLECOINS = {
 
 export type StablecoinSymbol = keyof typeof SUPPORTED_STABLECOINS;
 
-// NFT contract mapping
+// NFT contract mapping - using V25 addresses from main config
 const NFT_CONTRACTS = {
-  0: HERO,  // HERO
-  1: RELIC, // RELIC
-  2: PARTY  // PARTY
-};
+  0: HERO,  // HERO (V25)
+  1: RELIC, // RELIC (V25)
+  2: PARTY  // PARTY (V25)
+} as const;
 
 // Minimal ERC20 ABI for allowance and approval
 const ERC20_ABI = [

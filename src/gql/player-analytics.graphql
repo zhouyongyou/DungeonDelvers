@@ -1,0 +1,33 @@
+# 玩家分析查詢 - 修正版本
+query GetPlayerAnalytics($address: ID!) {
+  player(id: $address) {
+    id
+    profile {
+      id
+      name
+      level
+      experience
+      successfulExpeditions
+      totalRewardsEarned
+    }
+    parties(first: 5, orderBy: totalPower, orderDirection: desc) {
+      id
+      tokenId
+      name
+      totalPower
+    }
+    expeditions(first: 10, orderBy: timestamp, orderDirection: desc) {
+      id
+      success
+      reward
+      expGained
+      timestamp
+      dungeonId
+      dungeonName
+      party {
+        id
+        name
+      }
+    }
+  }
+}

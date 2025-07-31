@@ -22,6 +22,7 @@ import type {
     NftType
 } from '../types/nft';
 import { logger } from '../utils/logger';
+import { safeNumberConversion, safeBigintToString } from '../utils/typeGuards';
 import { getPartyImagePath, getPartyTier } from '../utils/partyTiers';
 import { getRarityAbbreviation, getPartyPowerRangePrefix } from '../utils/rarityConverter';
 
@@ -64,14 +65,13 @@ const GET_PLAYER_ASSETS_QUERY = `
       partyRarity
       contractAddress
       heroIds
+      relicIds
       provisionsRemaining
       cooldownEndsAt
       createdAt
       lastUpdatedAt
       isBurned
       burnedAt
-      # NOTE: relicIds 欄位被暫時移除，因為子圖 schema 中 Party 實體沒有此欄位
-      # TODO: 需要在子圖中添加 relicIds 欄位並重新部署
     }
   }
 `;
@@ -603,9 +603,15 @@ async function parseNfts<T extends AssetWithTokenId>(
 
         switch (type) {
             case 'hero': {
-                const heroAsset = asset as unknown as HeroAsset;
-                const power = Number(heroAsset.power);
-                const rarity = Number(heroAsset.rarity);
+                // 安全的類型檢查和轉換
+                if (!asset || typeof asset !== 'object') {
+                    logger.error('Invalid hero asset:', asset);
+                    throw new Error('Invalid hero asset data');
+                }
+                
+                const heroAsset = asset as Record<string, unknown>;
+                const power = safeNumberConversion(heroAsset.power);
+                const rarity = safeNumberConversion(heroAsset.rarity);
                 const rarityPrefix = getRarityAbbreviation(rarity);
                 
                 logger.debug(`Hero #${asset.tokenId} 純子圖數據:`, {
@@ -630,9 +636,15 @@ async function parseNfts<T extends AssetWithTokenId>(
                 };
             }
             case 'relic': {
-                const relicAsset = asset as unknown as RelicAsset;
-                const capacity = Number(relicAsset.capacity);
-                const rarity = Number(relicAsset.rarity);
+                // 安全的類型檢查和轉換
+                if (!asset || typeof asset !== 'object') {
+                    logger.error('Invalid relic asset:', asset);
+                    throw new Error('Invalid relic asset data');
+                }
+                
+                const relicAsset = asset as Record<string, unknown>;
+                const capacity = safeNumberConversion(relicAsset.capacity);
+                const rarity = safeNumberConversion(relicAsset.rarity);
                 const rarityPrefix = getRarityAbbreviation(rarity);
                 
                 logger.debug(`Relic #${asset.tokenId} 純子圖數據:`, {
@@ -657,8 +669,14 @@ async function parseNfts<T extends AssetWithTokenId>(
                 };
             }
             case 'party': {
-                const partyAsset = asset as unknown as PartyAsset;
-                const totalPower = Number(partyAsset.totalPower);
+                // 安全的類型檢查和轉換
+                if (!asset || typeof asset !== 'object') {
+                    logger.error('Invalid party asset:', asset);
+                    throw new Error('Invalid party asset data');
+                }
+                
+                const partyAsset = asset as Record<string, unknown>;
+                const totalPower = safeNumberConversion(partyAsset.totalPower);
                 const partyTier = getPartyTier(totalPower);
                 const powerRangePrefix = getPartyPowerRangePrefix(totalPower);
                 
@@ -668,21 +686,29 @@ async function parseNfts<T extends AssetWithTokenId>(
                     totalPower: BigInt(partyAsset.totalPower), 
                     totalCapacity: BigInt(partyAsset.totalCapacity), 
                     heroIds: partyAsset.heroIds ? partyAsset.heroIds.map((id) => BigInt(id)) : [], 
-                    relicIds: [], // 暫時設為空陣列，等待子圖修復後恢復 
+                    relicIds: partyAsset.relicIds ? partyAsset.relicIds.map((id) => BigInt(id)) : [],
                     partyRarity: Number(partyAsset.partyRarity),
                     name: `${powerRangePrefix} Party #${tokenId}`,
                     // 根據戰力動態設置圖片
                     image: getPartyImagePath(totalPower),
+                    // 設置完整的子圖 entityId 用於詳情查詢
+                    entityId: (asset as any).id, // 來自子圖的完整 ID
                     attributes: [
                         { trait_type: 'Total Power', value: totalPower },
-                        { trait_type: 'Total Capacity', value: Number(partyAsset.totalCapacity) },
-                        { trait_type: 'Rarity', value: Number(partyAsset.partyRarity) },
+                        { trait_type: 'Total Capacity', value: safeNumberConversion(partyAsset.totalCapacity) },
+                        { trait_type: 'Rarity', value: safeNumberConversion(partyAsset.partyRarity) },
                         { trait_type: 'Tier', value: partyTier.displayName }
                     ]
                 };
             }
             case 'vip': {
-                const vipAsset = asset as unknown as VipAsset;
+                // 安全的類型檢查和轉換
+                if (!asset || typeof asset !== 'object') {
+                    logger.error('Invalid vip asset:', asset);
+                    throw new Error('Invalid vip asset data');
+                }
+                
+                const vipAsset = asset as Record<string, unknown>;
                 // VIP 等級需要從合約單獨讀取，這裡只設置基本信息
                 // TODO: 需要在上層組件中整合合約讀取的 VIP 等級
                 

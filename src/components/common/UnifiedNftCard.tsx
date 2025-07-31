@@ -3,6 +3,7 @@ import { BaseNft } from '../../types/nft';
 import { useMobileOptimization } from '../../hooks/useMobileOptimization';
 import { useLoadingState } from '../../hooks/useLoadingState';
 import ImageWithFallback from '../ui/ImageWithFallback';
+import { safeBigintToString, isPartyNft, getNftIdSafe, getPartyPowerSafe } from '../../utils/typeGuards';
 
 interface UnifiedNftCardProps {
   nft: BaseNft;
@@ -198,7 +199,7 @@ export const UnifiedNftCard: React.FC<UnifiedNftCardProps> = ({
           )}
           {nft.type === 'party' && 'totalPower' in nft && (
             <>
-              {renderAttribute('總戰力', nft.totalPower.toString())}
+              {renderAttribute('總戰力', getPartyPowerSafe(nft))}
               {'partyRarity' in nft && renderAttribute('隊伍稀有度', nft.partyRarity)}
             </>
           )}
@@ -211,7 +212,7 @@ export const UnifiedNftCard: React.FC<UnifiedNftCardProps> = ({
         <div className="mt-2 pt-2 border-t border-gray-700">
           {renderTextLoading(loading, (
             <p className="text-xs text-gray-500">
-              Token #{nft.id.toString()}
+              Token #{getNftIdSafe(nft)}
             </p>
           ))}
         </div>

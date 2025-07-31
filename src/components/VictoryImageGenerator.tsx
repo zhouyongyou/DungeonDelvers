@@ -74,7 +74,7 @@ export const VictoryImageGenerator: React.FC<VictoryImageGeneratorProps> = ({
     ctx.strokeRect(100, rewardBoxY, canvas.width - 200, rewardBoxHeight);
 
     // 獎勵數據
-    const rewardAmount = parseFloat(formatEther(reward)).toFixed(4);
+    const rewardAmount = parseFloat(formatEther(reward)).toFixed(1);
     const expAmount = expGained.toString();
 
     // SOUL 獎勵
@@ -153,7 +153,7 @@ export const VictoryImageGenerator: React.FC<VictoryImageGeneratorProps> = ({
     try {
       await generateImage();
       
-      const rewardAmount = parseFloat(formatEther(reward)).toFixed(4);
+      const rewardAmount = parseFloat(formatEther(reward)).toFixed(1);
       const text = `我剛剛在《Dungeon Delvers》的遠征中大獲全勝！🏆\n\n💰 獲得了 ${rewardAmount} $SOUL\n⭐ 獲得了 ${expGained.toString()} 經驗值\n\n快來加入我，一起探索地下城吧！\n\n#DungeonDelvers #GameFi #BNBChain`;
       
       const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent('https://www.dungeondelvers.xyz')}`;
@@ -188,7 +188,7 @@ export const VictoryImageGenerator: React.FC<VictoryImageGeneratorProps> = ({
           <h3 className="text-xl font-bold text-yellow-400 mb-2">VICTORY!</h3>
           <div className="space-y-2">
             <p className="text-green-400">
-              💰 獲得: {parseFloat(formatEther(reward)).toFixed(4)} $SOUL
+              💰 獲得: {parseFloat(formatEther(reward)).toFixed(1)} $SOUL
             </p>
             <p className="text-blue-400">
               ⭐ 經驗: +{expGained.toString()} EXP

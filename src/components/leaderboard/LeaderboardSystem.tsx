@@ -37,9 +37,8 @@ export const LeaderboardSystem: React.FC<LeaderboardProps> = ({
     switch (type) {
       case 'totalEarnings': return '💰';
       case 'dungeonClears': return '⚔️';
-      case 'partyPower': return '💪';
-      case 'weeklyEarnings': return '📈';
-      case 'vipLevel': return '👑';
+      case 'playerLevel': return '🎯';
+      case 'upgradeAttempts': return '⚡';
     }
   };
 
@@ -47,9 +46,8 @@ export const LeaderboardSystem: React.FC<LeaderboardProps> = ({
     switch (type) {
       case 'totalEarnings': return '總收益排行';
       case 'dungeonClears': return '通關次數排行';
-      case 'partyPower': return '戰力排行';
-      case 'weeklyEarnings': return '週收益排行';
-      case 'vipLevel': return 'VIP 等級排行';
+      case 'playerLevel': return '玩家等級排行';
+      case 'upgradeAttempts': return '升級次數排行';
     }
   };
 
@@ -63,11 +61,14 @@ export const LeaderboardSystem: React.FC<LeaderboardProps> = ({
   };
 
   const formatValue = (value: string, type: LeaderboardType) => {
-    if (type === 'totalEarnings' || type === 'weeklyEarnings') {
+    if (type === 'totalEarnings') {
       return `${formatSoul(BigInt(value))} SOUL`;
     }
-    if (type === 'vipLevel') {
-      return `VIP ${value}`;
+    if (type === 'playerLevel') {
+      return `LV ${value}`;
+    }
+    if (type === 'upgradeAttempts') {
+      return `${value} 次`;
     }
     return value;
   };
@@ -79,7 +80,7 @@ export const LeaderboardSystem: React.FC<LeaderboardProps> = ({
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
           {/* 類型選擇 */}
           <div className="flex gap-2 flex-wrap">
-            {(['totalEarnings', 'dungeonClears', 'partyPower', 'weeklyEarnings', 'vipLevel'] as LeaderboardType[]).map(t => (
+            {(['totalEarnings', 'dungeonClears', 'playerLevel', 'upgradeAttempts'] as LeaderboardType[]).map(t => (
               <button
                 key={t}
                 onClick={() => setSelectedType(t)}
@@ -185,10 +186,7 @@ export const LeaderboardSystem: React.FC<LeaderboardProps> = ({
             <div className="text-4xl mb-3">📊</div>
             <h3 className="text-lg font-medium text-gray-300 mb-2">暫無排行榜數據</h3>
             <p className="text-sm text-gray-500 mb-4">
-              {selectedType === 'vipLevel' 
-                ? 'VIP 排行榜功能即將推出'
-                : '完成一些遊戲後數據將出現在這裡'
-              }
+              完成一些遊戲後數據將出現在這裡
             </p>
             <AnimatedButton
               onClick={() => refetch()}

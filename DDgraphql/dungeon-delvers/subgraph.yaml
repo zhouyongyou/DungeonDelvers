@@ -1,4 +1,4 @@
-# Generated from v25-config.js on 2025-07-31T13:14:46.072Z
+# Generated from v25-config.js on 2025-07-31T16:34:09.238Z
 # V25 Production Deployment
 specVersion: 0.0.4
 schema:
@@ -10,7 +10,7 @@ dataSources:
     source:
       address: '0x785a8b7d7b2E64c5971D8f548a45B7db3CcA5797'
       abi: Hero
-      startBlock: 55958852
+      startBlock: 55808316
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -37,7 +37,7 @@ dataSources:
     source:
       address: '0xaa7434e77343cd4AaE7dDea2f19Cb86232727D0d'
       abi: Relic
-      startBlock: 55958852
+      startBlock: 55808316
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -64,7 +64,7 @@ dataSources:
     source:
       address: '0x2890F2bFe5ff4655d3096eC5521be58Eba6fAE50'
       abi: PartyV3
-      startBlock: 55958852
+      startBlock: 55808316
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -89,7 +89,7 @@ dataSources:
     source:
       address: '0x58A16F4845BA7Fea4377399d74D50d8aeE58fde4'
       abi: VIPStaking
-      startBlock: 55958852
+      startBlock: 55808316
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -116,7 +116,7 @@ dataSources:
     source:
       address: '0xF1b836D09A30C433A2479a856c84e0d64DBBD973'
       abi: PlayerProfile
-      startBlock: 55958852
+      startBlock: 55808316
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -141,7 +141,7 @@ dataSources:
     source:
       address: '0xbaA5CC63F9d531288e4BD87De64Af05FdA481ED9'
       abi: AltarOfAscensionV2Fixed
-      startBlock: 55958852
+      startBlock: 55808316
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -161,7 +161,7 @@ dataSources:
     source:
       address: '0x2F78de7Fdc08E95616458038a7A1E2EE28e0fa85'
       abi: DungeonMaster
-      startBlock: 55958852
+      startBlock: 55808316
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -178,3 +178,34 @@ dataSources:
         - event: RewardsBanked(indexed address,indexed uint256,uint256)
           handler: handleRewardsBanked
       file: ./src/dungeon-master.ts
+  - kind: ethereum/contract
+    name: PlayerVault
+    network: bsc
+    source:
+      address: '0x2746Ce8D6Aa7A885c568530abD9846460cA602f1'
+      abi: PlayerVault
+      startBlock: 55808316
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.6
+      language: wasm/assemblyscript
+      entities:
+        - PlayerVault
+        - Player
+      abis:
+        - name: PlayerVault
+          file: ./abis/PlayerVault.json
+      eventHandlers:
+        - event: Deposited(indexed address,uint256)
+          handler: handleDeposited
+        - event: Withdrawn(indexed address,uint256,uint256)
+          handler: handleWithdrawn
+        - event: CommissionPaid(indexed address,indexed address,uint256)
+          handler: handleCommissionPaid
+        - event: VirtualGameSpending(indexed address,indexed address,uint256)
+          handler: handleVirtualGameSpending
+        - event: VirtualCommissionAdded(indexed address,uint256)
+          handler: handleVirtualCommissionAdded
+        - event: VirtualTaxCollected(uint256)
+          handler: handleVirtualTaxCollected
+      file: ./src/player-vault.ts

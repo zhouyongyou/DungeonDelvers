@@ -183,10 +183,17 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
                 setLatestResult(result);
                 setShowBanner(false); // Disable banner since we use modal
                 
+                // Immediately add to local state for instant UI update
+                const newResults = [result, ...recentResults.slice(0, MAX_RESULTS - 1)];
+                
+                // Optimistic update - add the new result to local state immediately
+                setLatestResult(result);
+                
                 // Refetch from subgraph after a short delay to ensure it's indexed
-                setTimeout(() => {
-                    refetch();
-                }, 3000);
+                // But also schedule more frequent refetches for better sync
+                setTimeout(() => refetch(), 2000);  // First check after 2s
+                setTimeout(() => refetch(), 10000); // Second check after 10s
+                setTimeout(() => refetch(), 30000); // Final check after 30s
 
                 // Call callback if provided
                 if (onNewResult) {
@@ -239,7 +246,7 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
                                 隊伍 #{latestResult.partyId.toString()}
                             </p>
                             <p className="text-sm opacity-90">
-                                獲得 {parseFloat(formatEther(latestResult.reward)).toFixed(4)} SOUL, +{latestResult.expGained} EXP
+                                獲得 {parseFloat(formatEther(latestResult.reward)).toFixed(1)} SOUL, +{latestResult.expGained} EXP
                             </p>
                         </div>
                     </div>
@@ -302,7 +309,7 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
                             </div>
                             <div className="text-right text-sm">
                                 <p className="text-white font-bold">
-                                    {parseFloat(formatEther(result.reward)).toFixed(4)} SOUL
+                                    {parseFloat(formatEther(result.reward)).toFixed(1)} SOUL
                                 </p>
                                 <p className="text-blue-400 text-xs">
                                     +{result.expGained} EXP

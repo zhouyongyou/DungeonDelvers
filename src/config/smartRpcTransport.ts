@@ -171,9 +171,16 @@ function getRpcUrl(): string {
     
     if (shouldUseProxy) {
       const rpcEndpoint = getRpcEndpoint();
-      const isExternal = rpcEndpoint.startsWith('http');
-      logger.info(`🛡️ 管理頁面：使用${isExternal ? '線上' : '本地'} Vercel 代理 ${rpcEndpoint}`);
-      return rpcEndpoint;
+      
+      // 檢查是否是 direct-alchemy 特殊標記
+      if (rpcEndpoint === 'direct-alchemy') {
+        logger.info(`🔧 管理頁面：rpc-optimized 不可用，使用直接 Alchemy 連接`);
+        // 繼續使用下面的邏輯
+      } else {
+        const isExternal = rpcEndpoint.startsWith('http');
+        logger.info(`🛡️ 管理頁面：使用${isExternal ? '線上' : '本地'} Vercel 代理 ${rpcEndpoint}`);
+        return rpcEndpoint;
+      }
     } else {
       logger.info(`🔧 管理頁面：使用直接 Alchemy 連接`);
       // 繼續使用下面的邏輯
@@ -183,9 +190,16 @@ function getRpcUrl(): string {
   // 全域 RPC 代理設定
   if (globalUseProxy) {
     const rpcEndpoint = getRpcEndpoint();
-    const isExternal = rpcEndpoint.startsWith('http');
-    logger.info(`🔒 使用${isExternal ? '線上' : '本地'} Vercel RPC 代理：${rpcEndpoint}`);
-    return rpcEndpoint;
+    
+    // 檢查是否是 direct-alchemy 特殊標記
+    if (rpcEndpoint === 'direct-alchemy') {
+      logger.info(`🔧 rpc-optimized 不可用，回退到直接 Alchemy 連接`);
+      // 繼續使用下面的直接 Alchemy 邏輯
+    } else {
+      const isExternal = rpcEndpoint.startsWith('http');
+      logger.info(`🔒 使用${isExternal ? '線上' : '本地'} Vercel RPC 代理：${rpcEndpoint}`);
+      return rpcEndpoint;
+    }
   }
   
   // 未啟用代理時的備用邏輯 - 使用直接 Alchemy 連接
@@ -347,7 +361,7 @@ export function createSmartRpcTransport(): Transport {
       // const requestId = rpcMonitor.startRequest(
       //   isUsingAlchemy ? 'alchemy' : 'public_rpc',
       //   method as string,
-      //   params as any[],
+      //   params as unknown[],
       //   'wagmi_transport',
       //   'system',
       //   method as string

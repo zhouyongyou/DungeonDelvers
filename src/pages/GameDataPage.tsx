@@ -397,7 +397,7 @@ const GameDataPage: React.FC = () => {
     
     const tabs = [
         { id: 'leaderboard', label: '🏆 排行榜', icon: '📊' },
-        { id: 'query', label: '🔍 數據查詢', icon: '🔍' }
+        { id: 'query', label: '數據查詢', icon: '🔍' }
     ];
     
     return (

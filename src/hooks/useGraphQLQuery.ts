@@ -1,4 +1,4 @@
-import { useQuery, UseQueryOptions, UseQueryResult } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useAccount } from 'wagmi';
 import { getQueryConfig, queryKeys } from '../config/queryConfig';
 import { dedupeGraphQLQuery } from '../utils/requestDeduper';
@@ -6,12 +6,15 @@ import { logger } from '../utils/logger';
 import { APP_CONSTANTS } from '../config/constants';
 import { THE_GRAPH_API_URL } from '../config/graphConfig';
 
-interface GraphQLQueryOptions<T> extends Omit<UseQueryOptions<T>, 'queryKey' | 'queryFn'> {
+interface GraphQLQueryOptions<T> {
   variables?: Record<string, any>;
   requiresAuth?: boolean;
   networkId?: number;
   skipCache?: boolean;
   cacheTTL?: number;
+  enabled?: boolean;
+  staleTime?: number;
+  [key: string]: any; // 允許其他查詢選項
 }
 
 // 通用 GraphQL 查詢 Hook
@@ -19,7 +22,7 @@ export function useGraphQLQuery<T = any>(
   queryName: string,
   query: string,
   options: GraphQLQueryOptions<T> = {}
-): UseQueryResult<T, Error> {
+) {
   const { address, chainId } = useAccount();
   const {
     variables = {},

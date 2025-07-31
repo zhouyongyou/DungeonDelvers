@@ -37,7 +37,7 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
   const { priceInUsd, formatSoulToUsd, isLoading: isPriceLoading } = useSoulPrice();
   
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [inputMode, setInputMode] = useState<'soul' | 'usd'>('soul');
+  const [inputMode, setInputMode] = useState<'soul' | 'usd'>('usd');
   const [showDetails, setShowDetails] = useState(false);
   
   // 獲取合約信息
@@ -95,7 +95,7 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
   const { data: playerBalance } = useReadContract({
     address: playerVaultContract?.address,
     abi: playerVaultContract?.abi,
-    functionName: 'balanceOf',
+    functionName: 'withdrawableBalance',
     args: address ? [address] : undefined,
     chainId: bsc.id,
     query: { enabled: !!address }
@@ -158,37 +158,35 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
       // VIP減免 (每級0.5%)
       const vipReduction = vipLevel * 0.5;
       
-      // 時間衰減計算 - 修復計算錯誤
+      // 時間衰減計算 - 修正為合約的線性累加邏輯
       const lastWithdrawTimestamp = playerInfo ? Number(playerInfo[1]) : 0;
       const currentTime = Math.floor(Date.now() / 1000);
       
-      // 防止無限時間衰減：如果從未提現，使用合理的時間基準
+      // 計算時間間隔
       let timePassed: number;
       if (lastWithdrawTimestamp === 0) {
-        // 如果從未提現，假設已經過了30天（最大減免期）
-        timePassed = 30 * 24 * 60 * 60; // 30天秒數
+        // 如果從未提現，假設0天（第一次提現無時間衰減）
+        timePassed = 0;
       } else {
         timePassed = Math.max(0, currentTime - lastWithdrawTimestamp);
       }
       
-      const periodDurationNum = Number(periodDuration);
-      const periodsPassed = periodDurationNum > 0 ? Math.floor(timePassed / periodDurationNum) : 0;
+      // 計算天數 (periodDuration = 1 days)
+      const periodsPassed = Math.floor(timePassed / (24 * 60 * 60));
       
-      // 限制最大時間衰減為基礎稅率的90%（避免負稅率或0稅率）
-      const maxTimeDecayPercent = baseRate * 0.9;
-      const rawTimeDecay = periodsPassed * (Number(decreaseRatePerPeriod) / 100);
-      const timeDecay = Math.min(rawTimeDecay, maxTimeDecayPercent);
+      // 時間衰減：線性累加，每天減少5% (decreaseRatePerPeriod = 500 basis points)
+      const timeDecay = periodsPassed * 5; // 每天 5%，線性累加
       
       // 等級減免 (每10級1%)
       const currentPlayerLevel = playerLevel ? Number(playerLevel) : 0;
       const levelReduction = Math.floor(currentPlayerLevel / 10) * 1;
       
-      // 總減免和最終稅率
+      // 總減免和最終稅率 (都以百分比形式計算)
       const totalReduction = vipReduction + timeDecay + levelReduction;
-      const finalRate = Math.max(0, baseRate - totalReduction);
+      const finalRate = Math.max(0.001, (baseRate * 100 - totalReduction) / 100); // 保留0.1%最低稅率
       
       return {
-        baseRate,
+        baseRate: baseRate * 100, // 轉為百分比顯示
         vipReduction,
         timeDecay,
         levelReduction,
@@ -202,6 +200,8 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
     }
   }, [
     withdrawAmount, 
+    inputMode,
+    priceInUsd,
     standardInitialRate, 
     largeWithdrawInitialRate, 
     largeWithdrawThresholdUSD,
@@ -228,17 +228,25 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
   const previewInfo = useMemo(() => {
     if (!taxBreakdown || !withdrawAmount) return null;
     
-    const amount = parseFloat(withdrawAmount);
-    const taxAmount = amount * taxBreakdown.finalRate;
-    const afterTaxAmount = amount - taxAmount;
-    const taxAmountUSD = taxAmount * (Number(soulShardPriceUSD || 0) / 10**18);
+    const inputAmount = parseFloat(withdrawAmount);
+    if (inputAmount <= 0) return null;
+    
+    // 根據輸入模式計算 SOUL 數量（與 taxBreakdown 中的邏輯保持一致）
+    const soulAmount = inputMode === 'usd' && priceInUsd > 0
+      ? inputAmount / priceInUsd
+      : inputAmount;
+    
+    const taxAmount = soulAmount * taxBreakdown.finalRate;
+    const afterTaxAmount = soulAmount - taxAmount;
+    const taxAmountUSD = taxAmount * priceInUsd;
     
     return {
+      soulAmount,
       taxAmount,
       afterTaxAmount,
       taxAmountUSD
     };
-  }, [taxBreakdown, withdrawAmount, soulShardPriceUSD]);
+  }, [taxBreakdown, withdrawAmount, inputMode, priceInUsd]);
   
   if (!chainId || chainId !== bsc.id) {
     return (
@@ -253,8 +261,7 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
   return (
     <div className={`space-y-4 ${className}`}>
       {showTitle && (
-        <h3 className="text-lg font-bold text-purple-300 flex items-center gap-2">
-          <span>🧮</span>
+        <h3 className="text-lg font-bold text-purple-300">
           智能稅率計算器
         </h3>
       )}
@@ -274,16 +281,6 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
                 </label>
                 <div className="flex bg-gray-700 rounded-lg p-1">
                   <button
-                    onClick={() => setInputMode('soul')}
-                    className={`px-3 py-1 text-xs rounded transition-colors ${
-                      inputMode === 'soul'
-                        ? 'bg-purple-600 text-white'
-                        : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    SOUL
-                  </button>
-                  <button
                     onClick={() => setInputMode('usd')}
                     className={`px-3 py-1 text-xs rounded transition-colors ${
                       inputMode === 'usd'
@@ -292,6 +289,16 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
                     }`}
                   >
                     USD
+                  </button>
+                  <button
+                    onClick={() => setInputMode('soul')}
+                    className={`px-3 py-1 text-xs rounded transition-colors ${
+                      inputMode === 'soul'
+                        ? 'bg-purple-600 text-white'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    SOUL
                   </button>
                 </div>
               </div>
@@ -345,22 +352,32 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
                 <div className="text-xs text-gray-400">快速選擇百分比：</div>
                 <div className="grid grid-cols-4 gap-2 text-xs">
                   {[
-                    { percent: 10, label: '10%' },
-                    { percent: 25, label: '25%' },
-                    { percent: 50, label: '50%' },
-                    { percent: 100, label: '全部' }
-                  ].map(({ percent, label }) => {
+                    { usd: 19, label: '免稅', range: '≤$20' },
+                    { usd: 500, label: '標準', range: '$20-$1000' },
+                    { usd: 999, label: '標準', range: '$20-$1000' },
+                    { usd: 1500, label: '大額', range: '>$1000' }
+                  ].map(({ usd, label, range }) => {
                     const balance = parseFloat(formatEther(playerBalance));
-                    const amount = balance * (percent / 100);
+                    const balanceUsd = balance * priceInUsd;
+                    // 如果餘額不足，顯示灰色
+                    const disabled = balanceUsd < usd;
                     return (
                       <button
-                        key={percent}
-                        onClick={() => setWithdrawAmount(amount.toFixed(6))}
-                        className="py-2 bg-gray-700/50 hover:bg-gray-600/50 rounded-md transition flex flex-col items-center"
+                        key={usd}
+                        onClick={() => {
+                          setInputMode('usd');
+                          setWithdrawAmount(usd.toString());
+                        }}
+                        disabled={disabled}
+                        className={`py-2 rounded-md transition flex flex-col items-center ${
+                          disabled 
+                            ? 'bg-gray-800/50 cursor-not-allowed opacity-50' 
+                            : 'bg-gray-700/50 hover:bg-gray-600/50'
+                        }`}
                       >
-                        <span className="font-medium text-blue-400">{label}</span>
-                        <span className="text-white">{amount.toLocaleString()}</span>
-                        <span className="text-gray-500">SOUL</span>
+                        <span className="font-medium text-green-400">{label}</span>
+                        <span className="text-white">${usd}</span>
+                        <span className="text-xs text-gray-400">{range}</span>
                       </button>
                     );
                   })}
@@ -376,15 +393,24 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
             ) : (
               <div className="space-y-2">
                 <div className="text-xs text-gray-400">範例試算（連接錢包查看實際餘額）：</div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  {[10000, 50000, 100000, 500000].map(amount => (
+                <div className="grid grid-cols-4 gap-2 text-xs">
+                  {[
+                    { usd: 19, label: '免稅', range: '≤$20' },
+                    { usd: 500, label: '標準', range: '$20-$1000' },
+                    { usd: 999, label: '標準', range: '$20-$1000' },
+                    { usd: 1500, label: '大額', range: '>$1000' }
+                  ].map(({ usd, label, range }) => (
                     <button
-                      key={amount}
-                      onClick={() => setWithdrawAmount(amount.toString())}
+                      key={usd}
+                      onClick={() => {
+                        setInputMode('usd');
+                        setWithdrawAmount(usd.toString());
+                      }}
                       className="py-1.5 bg-gray-700/50 hover:bg-gray-600/50 rounded-md transition flex flex-col items-center"
                     >
-                      <span>{amount.toLocaleString()} SOUL</span>
-                      <span className="text-gray-500">≈${(amount * priceInUsd).toFixed(2)}</span>
+                      <span className="font-medium text-green-400">{label}</span>
+                      <span className="text-white">${usd}</span>
+                      <span className="text-xs text-gray-400">{range}</span>
                     </button>
                   ))}
                 </div>
@@ -430,7 +456,14 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-400">提現金額:</span>
-                  <span className="text-white font-mono">{withdrawAmount} SOUL</span>
+                  <span className="text-white font-mono">
+                    {previewInfo.soulAmount.toFixed(2)} SOUL
+                    {inputMode === 'usd' && (
+                      <span className="text-xs text-gray-400 ml-1">
+                        (${withdrawAmount} USD)
+                      </span>
+                    )}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">適用稅率:</span>
@@ -474,7 +507,7 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
                       <span className="text-gray-400">
                         {taxBreakdown.isLargeWithdraw ? '大額提現(>$1000)' : '標準提現(≤$1000)'}:
                       </span>
-                      <span className="text-red-400 font-mono">{(taxBreakdown.baseRate * 100).toFixed(1)}%</span>
+                      <span className="text-red-400 font-mono">{taxBreakdown.baseRate.toFixed(1)}%</span>
                     </div>
                   </div>
                   
@@ -505,7 +538,7 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
                     </span>
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
-                    = {(taxBreakdown.baseRate * 100).toFixed(1)}% - {taxBreakdown.totalReduction.toFixed(1)}% = {(taxBreakdown.finalRate * 100).toFixed(1)}%
+                    = {taxBreakdown.baseRate.toFixed(1)}% - {taxBreakdown.totalReduction.toFixed(1)}% = {(taxBreakdown.finalRate * 100).toFixed(1)}%
                   </div>
                 </div>
               </div>
@@ -523,8 +556,8 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
                 {vipLevel < 20 && (
                   <p>• 提升VIP等級可獲得更多稅率減免，每級減免0.5%</p>
                 )}
-                {taxBreakdown.timeDecay < 10 && (
-                  <p>• 距離上次提現越久，時間衰減減免越多（每天5%）</p>
+                {taxBreakdown.timeDecay < 50 && (
+                  <p>• 距離上次提現越久，時間衰減減免越多（每天減少5%，線性累加）</p>
                 )}
                 {taxBreakdown.isLargeWithdraw && (
                   <p>• 考慮分批提現，單次低於$1000可享受較低基礎稅率</p>

@@ -45,13 +45,18 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({
     const [expiryDays, setExpiryDays] = useState(7);
     const [message, setMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    // Early return if no listing to prevent errors
+    if (!listing) {
+        return null;
+    }
 
     // 獲取 NFT 戰力和詳細資訊
-    const heroPower = listing?.nftType === 'hero' ? useHeroPower(BigInt(listing.tokenId)) : { power: null, isLoading: false };
-    const partyPower = listing?.nftType === 'party' ? usePartyPower(BigInt(listing.tokenId)) : { power: null, isLoading: false };
-    const heroDetails = listing?.nftType === 'hero' ? useHeroDetails(BigInt(listing.tokenId)) : { details: null };
-    const relicDetails = listing?.nftType === 'relic' ? useRelicDetails(BigInt(listing.tokenId)) : { details: null };
-    const partyDetails = listing?.nftType === 'party' ? usePartyDetails(BigInt(listing.tokenId)) : { details: null };
+    const heroPower = listing?.nftType === 'hero' && listing?.tokenId ? useHeroPower(BigInt(listing.tokenId)) : { power: null, isLoading: false };
+    const partyPower = listing?.nftType === 'party' && listing?.tokenId ? usePartyPower(BigInt(listing.tokenId)) : { power: null, isLoading: false };
+    const heroDetails = listing?.nftType === 'hero' && listing?.tokenId ? useHeroDetails(BigInt(listing.tokenId)) : { details: null };
+    const relicDetails = listing?.nftType === 'relic' && listing?.tokenId ? useRelicDetails(BigInt(listing.tokenId)) : { details: null };
+    const partyDetails = listing?.nftType === 'party' && listing?.tokenId ? usePartyDetails(BigInt(listing.tokenId)) : { details: null };
 
     // 計算出價建議
     const priceSuggestions = useMemo(() => {
@@ -113,7 +118,7 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({
             // 觸發更新事件
             window.dispatchEvent(new Event('offersUpdate'));
 
-            showToast(`成功向 ${listing.nftType === 'hero' ? '英雄' : listing.nftType === 'relic' ? '聖物' : '隊伍'} #${listing.tokenId} 出價 ${formatSoul(offerAmount)} SOUL`, 'success');
+            showToast(`成功向 ${listing?.nftType === 'hero' ? '英雄' : listing?.nftType === 'relic' ? '聖物' : '隊伍'} #${listing?.tokenId || ''} 出價 ${formatSoul(offerAmount)} SOUL`, 'success');
             
             onOfferSubmitted?.();
             onClose();
@@ -146,17 +151,17 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({
                 <div className="bg-gray-700 rounded-lg p-4 mb-6">
                     <div className="flex items-center gap-4">
                         <div className="text-4xl">
-                            {listing.nftType === 'hero' ? '⚔️' :
-                             listing.nftType === 'relic' ? '🛡️' : '👥'}
+                            {listing?.nftType === 'hero' ? '⚔️' :
+                             listing?.nftType === 'relic' ? '🛡️' : '👥'}
                         </div>
                         <div className="flex-1">
                             <h3 className="font-bold text-white">
-                                {listing.nftType === 'hero' ? '英雄' :
-                                 listing.nftType === 'relic' ? '聖物' : '隊伍'} #{listing.tokenId.toString()}
+                                {listing?.nftType === 'hero' ? '英雄' :
+                                 listing?.nftType === 'relic' ? '聖物' : '隊伍'} #{listing?.tokenId?.toString() || ''}
                             </h3>
                             
                             {/* NFT 詳細資訊 */}
-                            {listing.nftType === 'hero' && heroDetails.details && (
+                            {listing?.nftType === 'hero' && heroDetails.details && (
                                 <div className="text-xs text-gray-300 mt-1">
                                     Lv.{heroDetails.details.level} {getClassName(heroDetails.details.heroClass)} | 
                                     {getElementName(heroDetails.details.element)} | T{heroDetails.details.tier}
@@ -164,14 +169,14 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({
                                 </div>
                             )}
                             
-                            {listing.nftType === 'relic' && relicDetails.details && (
+                            {listing?.nftType === 'relic' && relicDetails.details && (
                                 <div className="text-xs text-gray-300 mt-1">
                                     {getRelicCategoryName(relicDetails.details.category)} | 
                                     T{relicDetails.details.tier} | 容量 {relicDetails.details.capacity}
                                 </div>
                             )}
                             
-                            {listing.nftType === 'party' && partyDetails.details && (
+                            {listing?.nftType === 'party' && partyDetails.details && (
                                 <div className="text-xs text-gray-300 mt-1">
                                     {partyDetails.details.heroes.length} 英雄 | {partyDetails.details.relics.length} 聖物
                                     {partyPower.power && <span className="text-[#C0A573] ml-2">⚡{partyPower.power.toLocaleString()}</span>}
@@ -179,7 +184,7 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({
                             )}
                             
                             <div className="text-sm text-gray-400 mt-1">
-                                掛單價格: <span className="text-white font-medium">{formatSoul(listing.price.toString())} SOUL</span>
+                                掛單價格: <span className="text-white font-medium">{formatSoul(listing?.price?.toString() || '0')} SOUL</span>
                             </div>
                         </div>
                     </div>
@@ -196,7 +201,7 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({
                         className="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-[#C0A573] focus:outline-none"
                         step="0.01"
                         min="0"
-                        max={Number(listing.price) - 1}
+                        max={listing?.price ? Number(listing.price) - 1 : 0}
                     />
                     
                     {/* Price Suggestions */}

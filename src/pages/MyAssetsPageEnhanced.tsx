@@ -136,9 +136,19 @@ const MyAssetsPageEnhanced: React.FC = () => {
     
     // Authorization transactions
     const authorizeHeroTx = useTransactionWithProgress({
-        onSuccess: () => {
-            showToast('成功授權英雄合約', 'success');
-            queryClient.invalidateQueries({ queryKey: ['readContract'] });
+        onSuccess: async () => {
+            showToast('成功授權英雄合約！正在更新資料...', 'success');
+            setIsRefreshingNfts(true);
+            
+            try {
+                queryClient.invalidateQueries({ queryKey: ['readContract'] });
+                await refetchNfts();
+                showToast('英雄授權狀態已更新！', 'success');
+            } catch (error) {
+                showToast('更新資料時發生錯誤', 'error');
+            } finally {
+                setIsRefreshingNfts(false);
+            }
         },
         onError: (error) => {
             showToast(`授權失敗: ${error.message}`, 'error');
@@ -146,21 +156,49 @@ const MyAssetsPageEnhanced: React.FC = () => {
     });
     
     const authorizeRelicTx = useTransactionWithProgress({
-        onSuccess: () => {
-            showToast('成功授權聖物合約', 'success');
-            queryClient.invalidateQueries({ queryKey: ['readContract'] });
+        onSuccess: async () => {
+            showToast('成功授權聖物合約！正在更新資料...', 'success');
+            setIsRefreshingNfts(true);
+            
+            try {
+                queryClient.invalidateQueries({ queryKey: ['readContract'] });
+                await refetchNfts();
+                showToast('聖物授權狀態已更新！', 'success');
+            } catch (error) {
+                showToast('更新資料時發生錯誤', 'error');
+            } finally {
+                setIsRefreshingNfts(false);
+            }
         },
         onError: (error) => {
             showToast(`授權失敗: ${error.message}`, 'error');
         }
     });
     
+    // 新增載入狀態
+    const [isRefreshingParties, setIsRefreshingParties] = useState(false);
+    const [isRefreshingNfts, setIsRefreshingNfts] = useState(false);
+
     // Create party transaction
     const createPartyTx = useTransactionWithProgress({
-        onSuccess: () => {
+        onSuccess: async () => {
             showToast('成功創建隊伍！', 'success');
-            refetchNfts();
-            setActiveTab('myParties');
+            setIsRefreshingParties(true);
+            
+            try {
+                // 立即切換到隊伍分頁並開始更新
+                setActiveTab('myParties');
+                
+                // 等待一小段時間讓UI更新
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                await refetchNfts();
+                showToast('新隊伍已出現在列表中！', 'success');
+            } catch (error) {
+                showToast('更新隊伍列表時發生錯誤', 'error');
+            } finally {
+                setIsRefreshingParties(false);
+            }
         },
         onError: (error) => {
             showToast(`創建隊伍失敗: ${error.message}`, 'error');
@@ -326,6 +364,19 @@ const MyAssetsPageEnhanced: React.FC = () => {
                     </div>
                 ) : (
                     <>
+                        {/* 載入提示 */}
+                        {isRefreshingNfts && (
+                            <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="animate-spin w-5 h-5 border-2 border-yellow-500 border-t-transparent rounded-full"></div>
+                                    <div>
+                                        <p className="text-yellow-300 font-medium">正在更新英雄列表...</p>
+                                        <p className="text-yellow-400/70 text-sm">資料更新中，請稍候</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <SortSelector
                             options={sortOptions.hero}
                             value={heroSort}
@@ -364,6 +415,19 @@ const MyAssetsPageEnhanced: React.FC = () => {
                     </div>
                 ) : (
                     <>
+                        {/* 載入提示 */}
+                        {isRefreshingNfts && (
+                            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                                    <div>
+                                        <p className="text-blue-300 font-medium">正在更新聖物列表...</p>
+                                        <p className="text-blue-400/70 text-sm">資料更新中，請稍候</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <SortSelector
                             options={sortOptions.relic}
                             value={relicSort}
@@ -371,7 +435,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
                         />
                         <OptimizedNftGrid
                             nfts={sortNfts(relics, relicSort, 'relic')}
-                            pageSize={6}
+                            pageSize={10}
                         />
                     </>
                 );
@@ -395,6 +459,19 @@ const MyAssetsPageEnhanced: React.FC = () => {
                     </div>
                 ) : (
                     <>
+                        {/* 載入提示 */}
+                        {isRefreshingParties && (
+                            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                                    <div>
+                                        <p className="text-blue-300 font-medium">正在更新隊伍列表...</p>
+                                        <p className="text-blue-400/70 text-sm">新創建的隊伍將在幾秒鐘內顯示</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        
                         <SortSelector
                             options={sortOptions.party}
                             value={partySort}
@@ -402,7 +479,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
                         />
                         <OptimizedNftGrid
                             nfts={sortNfts(parties, partySort, 'party')}
-                            pageSize={12}
+                            pageSize={50}
                         />
                     </>
                 );

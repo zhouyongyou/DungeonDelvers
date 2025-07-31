@@ -1,0 +1,113 @@
+# 隊伍詳情查詢 - 用於驗證修復效果
+query GetPartyDetails($partyId: ID!) {
+  party(id: $partyId) {
+    id
+    tokenId
+    name
+    owner {
+      id
+    }
+    # 關鍵字段：這些是修復的重點
+    heroIds
+    heroes {
+      id
+      tokenId
+      rarity
+      power
+      owner {
+        id
+      }
+    }
+    relicIds  
+    relics {
+      id
+      tokenId
+      rarity
+      capacity
+      owner {
+        id
+      }
+    }
+    # 隊伍狀態
+    totalPower
+    totalCapacity
+    partyRarity
+    provisionsRemaining
+    unclaimedRewards
+    cooldownEndsAt
+    
+    # 出征記錄
+    expeditions(first: 10, orderBy: timestamp, orderDirection: desc) {
+      id
+      dungeonId
+      dungeonName
+      success
+      reward
+      expGained
+      timestamp
+      player {
+        id
+      }
+    }
+    
+    # 元數據
+    createdAt
+    lastUpdatedAt
+    isBurned
+  }
+}
+
+# 測試查詢：獲取玩家的所有隊伍
+query GetPlayerParties($playerId: ID!) {
+  player(id: $playerId) {
+    id
+    parties(first: 10, orderBy: totalPower, orderDirection: desc) {
+      id
+      tokenId
+      name
+      totalPower
+      heroIds
+      relicIds
+      # 檢查成員數量
+      heroes {
+        id
+        tokenId
+      }
+      relics {
+        id  
+        tokenId
+      }
+      # 最近出征
+      expeditions(first: 1, orderBy: timestamp, orderDirection: desc) {
+        id
+        success
+        timestamp
+        dungeonName
+      }
+    }
+  }
+}
+
+# 出征歷史查詢
+query GetExpeditionHistory($playerId: ID!, $first: Int = 20) {
+  player(id: $playerId) {
+    id
+    expeditions(first: $first, orderBy: timestamp, orderDirection: desc) {
+      id
+      dungeonId
+      dungeonName
+      dungeonPowerRequired
+      success
+      reward
+      expGained
+      timestamp
+      party {
+        id
+        tokenId
+        name
+        totalPower
+      }
+      transactionHash
+    }
+  }
+}

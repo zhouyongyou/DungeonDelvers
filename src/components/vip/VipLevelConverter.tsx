@@ -66,11 +66,11 @@ export const VipLevelConverter: React.FC = () => {
     }, [inputValue, inputMode, priceInUsd]);
     
     const quickButtons = [
-        { label: '$100 (VIP 1)', value: '100', mode: 'usd' as const },
-        { label: '$1,000 (VIP 3)', value: '1000', mode: 'usd' as const },
-        { label: '$10,000 (VIP 10)', value: '10000', mode: 'usd' as const },
-        { label: 'VIP 5', value: '5', mode: 'level' as const },
-        { label: 'VIP 20', value: '20', mode: 'level' as const }
+        { label: 'VIP 1 ($100)', value: '1', mode: 'level' as const },
+        { label: 'VIP 3 ($900)', value: '3', mode: 'level' as const },
+        { label: 'VIP 5 ($2,500)', value: '5', mode: 'level' as const },
+        { label: 'VIP 10 ($10,000)', value: '10', mode: 'level' as const },
+        { label: 'VIP 20 ($40,000)', value: '20', mode: 'level' as const }
     ];
     
     return (

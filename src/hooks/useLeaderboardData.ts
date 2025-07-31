@@ -6,9 +6,8 @@ import { formatEther } from 'viem';
 export type LeaderboardType = 
   | 'totalEarnings'    // 總收益
   | 'dungeonClears'    // 地下城通關數
-  | 'partyPower'       // 隊伍戰力
-  | 'weeklyEarnings'   // 週收益
-  | 'vipLevel';        // VIP 等級
+  | 'playerLevel'      // 玩家等級
+  | 'upgradeAttempts'; // 升級次數
 
 export interface LeaderboardEntry {
   rank: number;
@@ -22,7 +21,7 @@ export interface LeaderboardEntry {
 // GraphQL 查詢 - 總收益排行榜
 const GET_TOTAL_EARNINGS_LEADERBOARD = `
   query GetTotalEarningsLeaderboard($first: Int!) {
-    players(
+    playerProfiles(
       first: $first
       orderBy: totalRewardsEarned
       orderDirection: desc
@@ -30,43 +29,7 @@ const GET_TOTAL_EARNINGS_LEADERBOARD = `
     ) {
       id
       totalRewardsEarned
-      totalExpeditions
       successfulExpeditions
-    }
-  }
-`;
-
-// GraphQL 查詢 - 地下城通關數排行榜
-const GET_DUNGEON_CLEARS_LEADERBOARD = `
-  query GetDungeonClearsLeaderboard($first: Int!) {
-    players(
-      first: $first
-      orderBy: successfulExpeditions
-      orderDirection: desc
-      where: { successfulExpeditions_gt: 0 }
-    ) {
-      id
-      totalRewardsEarned
-      totalExpeditions
-      successfulExpeditions
-    }
-  }
-`;
-
-// GraphQL 查詢 - 隊伍戰力排行榜
-const GET_PARTY_POWER_LEADERBOARD = `
-  query GetPartyPowerLeaderboard($first: Int!) {
-    parties(
-      first: $first
-      orderBy: totalPower
-      orderDirection: desc
-      where: { totalPower_gt: 0 }
-    ) {
-      id
-      tokenId
-      name
-      totalPower
-      totalRewardsEarned
       owner {
         id
       }
@@ -74,25 +37,59 @@ const GET_PARTY_POWER_LEADERBOARD = `
   }
 `;
 
-// GraphQL 查詢 - 週收益排行榜（最近7天）
-const GET_WEEKLY_EARNINGS_LEADERBOARD = `
-  query GetWeeklyEarningsLeaderboard($first: Int!, $weekAgo: Int!) {
-    players(
+// GraphQL 查詢 - 地下城通關數排行榜
+const GET_DUNGEON_CLEARS_LEADERBOARD = `
+  query GetDungeonClearsLeaderboard($first: Int!) {
+    playerProfiles(
       first: $first
-      orderBy: totalRewardsEarned
+      orderBy: successfulExpeditions
       orderDirection: desc
+      where: { successfulExpeditions_gt: 0 }
     ) {
       id
       totalRewardsEarned
-      expeditions(
-        first: 1000
-        where: { 
-          timestamp_gte: $weekAgo
-          success: true 
-        }
-      ) {
-        rewardAmount
-        timestamp
+      successfulExpeditions
+      owner {
+        id
+      }
+    }
+  }
+`;
+
+// GraphQL 查詢 - 玩家等級排行榜
+const GET_PLAYER_LEVEL_LEADERBOARD = `
+  query GetPlayerLevelLeaderboard($first: Int!) {
+    playerProfiles(
+      first: $first
+      orderBy: level
+      orderDirection: desc
+      where: { level_gt: 0 }
+    ) {
+      id
+      level
+      experience
+      name
+      owner {
+        id
+      }
+    }
+  }
+`;
+
+// GraphQL 查詢 - 升級次數排行榜
+const GET_UPGRADE_ATTEMPTS_LEADERBOARD = `
+  query GetUpgradeAttemptsLeaderboard($first: Int!) {
+    playerStats(
+      first: $first
+      orderBy: totalUpgradeAttempts
+      orderDirection: desc
+      where: { totalUpgradeAttempts_gt: 0 }
+    ) {
+      id
+      totalUpgradeAttempts
+      successfulUpgrades
+      player {
+        id
       }
     }
   }
@@ -119,18 +116,12 @@ const fetchLeaderboardData = async (
     case 'dungeonClears':
       query = GET_DUNGEON_CLEARS_LEADERBOARD;
       break;
-    case 'partyPower':
-      query = GET_PARTY_POWER_LEADERBOARD;
+    case 'playerLevel':
+      query = GET_PLAYER_LEVEL_LEADERBOARD;
       break;
-    case 'weeklyEarnings':
-      query = GET_WEEKLY_EARNINGS_LEADERBOARD;
-      // 計算一週前的時間戳
-      const weekAgo = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000);
-      variables.weekAgo = weekAgo;
+    case 'upgradeAttempts':
+      query = GET_UPGRADE_ATTEMPTS_LEADERBOARD;
       break;
-    case 'vipLevel':
-      // VIP 等級排行榜需要從合約查詢，暫時返回空數據
-      return [];
     default:
       throw new Error(`不支援的排行榜類型: ${type}`);
   }
@@ -164,40 +155,50 @@ const fetchLeaderboardData = async (
     // 處理不同類型的數據
     let entries: LeaderboardEntry[] = [];
 
-    if (type === 'partyPower' && data.parties) {
-      entries = data.parties.map((party: any, index: number) => ({
+    if (type === 'playerLevel' && data.playerProfiles) {
+      entries = data.playerProfiles.map((profile: any, index: number) => ({
         rank: index + 1,
-        address: party.owner.id,
-        value: party.totalPower.toString(),
-        displayName: party.name || `Party #${party.tokenId}`,
+        address: profile.owner.id,
+        value: profile.level.toString(),
+        displayName: profile.name || undefined,
         isCurrentUser: currentUserAddress ? 
-          party.owner.id.toLowerCase() === currentUserAddress.toLowerCase() : false
+          profile.owner.id.toLowerCase() === currentUserAddress.toLowerCase() : false
       }));
-    } else if (type === 'weeklyEarnings' && data.players) {
-      // 計算週收益
-      entries = data.players
-        .map((player: any) => {
-          const weeklyEarnings = player.expeditions.reduce((sum: bigint, exp: any) => {
-            return sum + BigInt(exp.rewardAmount || 0);
-          }, BigInt(0));
-          
-          return {
-            address: player.id,
-            weeklyEarnings: Number(formatEther(weeklyEarnings))
-          };
-        })
-        .filter((player: any) => player.weeklyEarnings > 0)
-        .sort((a: any, b: any) => b.weeklyEarnings - a.weeklyEarnings)
-        .slice(0, limit)
-        .map((player: any, index: number) => ({
+    } else if (type === 'upgradeAttempts' && data.playerStats) {
+      entries = data.playerStats.map((stats: any, index: number) => ({
+        rank: index + 1,
+        address: stats.player.id,
+        value: stats.totalUpgradeAttempts.toString(),
+        displayName: `成功率 ${Math.round((stats.successfulUpgrades / stats.totalUpgradeAttempts) * 100)}%`,
+        isCurrentUser: currentUserAddress ? 
+          stats.player.id.toLowerCase() === currentUserAddress.toLowerCase() : false
+      }));
+    } else if (data.playerProfiles) {
+      // 處理玩家檔案數據（總收益、地下城通關數）
+      entries = data.playerProfiles.map((profile: any, index: number) => {
+        let value: string;
+        
+        switch (type) {
+          case 'totalEarnings':
+            value = Math.floor(Number(formatEther(BigInt(profile.totalRewardsEarned || 0)))).toString();
+            break;
+          case 'dungeonClears':
+            value = profile.successfulExpeditions.toString();
+            break;
+          default:
+            value = '0';
+        }
+
+        return {
           rank: index + 1,
-          address: player.address,
-          value: Math.floor(player.weeklyEarnings).toString(),
+          address: profile.owner.id, // 使用 owner.id 而不是 profile.id
+          value,
           isCurrentUser: currentUserAddress ? 
-            player.address.toLowerCase() === currentUserAddress.toLowerCase() : false
-        }));
+            profile.owner.id.toLowerCase() === currentUserAddress.toLowerCase() : false
+        };
+      });
     } else if (data.players) {
-      // 處理玩家數據（總收益、地下城通關數）
+      // 處理玩家數據（舊版查詢兼容）
       entries = data.players.map((player: any, index: number) => {
         let value: string;
         

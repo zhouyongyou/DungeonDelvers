@@ -37,7 +37,7 @@ export const ExpeditionProvider: React.FC<{ children: ReactNode }> = ({ children
     const shareContent = useMemo(() => {
         if (!result || !result.success) return { text: '', twitterUrl: '', referralUrl: '' };
         
-        const rewardAmount = parseFloat(formatEther(result.reward)).toFixed(4);
+        const rewardAmount = parseFloat(formatEther(result.reward)).toFixed(1);
         const baseUrl = 'https://www.dungeondelvers.xyz';
         // TODO: 從用戶設定獲取邀請碼，這裡先使用預設值
         const referralCode = 'PLAYER123'; // 實際應該從用戶數據獲取
@@ -76,7 +76,7 @@ export const ExpeditionProvider: React.FC<{ children: ReactNode }> = ({ children
                             <div className="space-y-3 text-xl bg-gradient-to-r from-green-900/20 to-yellow-900/20 p-4 rounded-lg border border-green-600/30">
                                 <p className="font-bold text-green-400 flex items-center justify-center gap-2">
                                     <span>💰</span>
-                                    獲得獎勵: {parseFloat(formatEther(result.reward || 0n)).toFixed(4)} $SoulShard
+                                    獲得獎勵: {parseFloat(formatEther(result.reward || 0n)).toFixed(1)} $SoulShard
                                 </p>
                                 <p className="font-bold text-sky-400 flex items-center justify-center gap-2">
                                     <span>⭐</span>

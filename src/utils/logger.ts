@@ -37,8 +37,8 @@ export const handleError = (error: unknown): AppError => {
 // 增強的日誌函數，支援生產環境自動優化
 export const logger = {
   info: (message: string, data?: unknown) => {
-    // 生產環境中，這些日誌會被 Vite 的 terser 自動移除
-    if (import.meta.env.DEV || import.meta.env.VITE_ENABLE_PROD_LOGS === 'true') {
+    // 開發環境且啟用詳細日誌時才顯示
+    if (import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEBUG_LOGS === 'true') {
       console.log(`[INFO] ${message}`, data || '');
     }
   },

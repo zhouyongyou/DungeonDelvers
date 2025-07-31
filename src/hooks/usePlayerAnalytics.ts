@@ -18,6 +18,13 @@ const GET_PLAYER_ANALYTICS = `
         successfulExpeditions
         totalRewardsEarned
       }
+      stats {
+        id
+        totalExpeditions
+        successfulExpeditions
+        totalRewardsEarned
+        highestPartyPower
+      }
       parties(first: 20, orderBy: totalPower, orderDirection: desc) {
         id
         tokenId
@@ -170,9 +177,11 @@ export const usePlayerAnalytics = (timeRange: number = 30) => {
     // 從新的查詢結構獲取數據
     const playerData = graphData.player;
     const profileData = playerData.profile;
+    const statsData = playerData.stats;
     const expeditions = playerData.expeditions || [];
     
-    const totalEarnings = BigInt(profileData?.totalRewardsEarned || 0);
+    // 使用正確的總收益數據，優先從 stats 中取得，因為它是實際更新的欄位
+    const totalEarnings = BigInt(statsData?.totalRewardsEarned || profileData?.totalRewardsEarned || 0);
     const totalExpeditions = expeditions.length;
     const successfulExpeditions = profileData?.successfulExpeditions || 0;
     const successRate = totalExpeditions > 0 

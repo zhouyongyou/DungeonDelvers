@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { Modal } from './Modal';
 import { useSoulPrice } from '../../hooks/useSoulPrice';
+import { usePlayerVaultV4 } from '../../hooks/usePlayerVaultV4';
+import { parseEther } from 'viem';
 
 interface TaxRateModalProps {
     isOpen: boolean;
@@ -31,32 +33,20 @@ export const TaxRateModal: React.FC<TaxRateModalProps> = ({
     freeWithdrawThresholdUsd = 20,
     largeWithdrawThresholdUsd = 1000
 }) => {
-    const { priceInUsd } = useSoulPrice();
+    // 懶加載：只有當 Modal 開啟時才獲取價格和計算
+    const { priceInUsd } = useSoulPrice({ enabled: isOpen });
     
-    // 使用 useMemo 避免重複計算和無限循環
+    // 使用新的 PlayerVault v4.0 功能
+    const { createTaxRateQuery } = usePlayerVaultV4();
+    
+    // 使用 useMemo 避免重複計算，只有當 Modal 開啟且價格可用時才計算
     const withdrawalData = useMemo(() => {
-        const soulPrice = priceInUsd || 0.05; // 使用預設價格避免 0
-        
-        console.log('TaxRateModal 計算數據:', { 
-            priceInUsd, 
-            soulPrice, 
-            freeWithdrawThresholdUsd, 
-            largeWithdrawThresholdUsd,
-            actualTaxRate,
-            actualLargeTaxRate,
-            'soulPrice應該是': soulPrice,
-            '測試計算100 SOUL': `${100 * soulPrice} USD`,
-            '示例計算': {
-                '19 USD': `${19 / soulPrice} SOUL`,
-                '500 USD': `${500 / soulPrice} SOUL`, 
-                '1500 USD': `${1500 / soulPrice} SOUL`
-            }
-        });
+        if (!isOpen || !priceInUsd) return null;
+        const soulPrice = priceInUsd;
         
         // 計算不同金額的實收和稅率
         const calculateWithdrawal = (soulAmount: number) => {
             const usdValue = soulAmount * soulPrice;
-            console.log(`計算 ${soulAmount} SOUL: ${usdValue} USD`);
             
             const canUseFreeWithdraw = usdValue <= freeWithdrawThresholdUsd && 
                 (Date.now() - (lastFreeWithdrawTime || 0) * 1000) >= 24 * 60 * 60 * 1000;
@@ -71,9 +61,12 @@ export const TaxRateModal: React.FC<TaxRateModalProps> = ({
                 };
             }
             
-            const isLarge = usdValue >= largeWithdrawThresholdUsd;
-            const taxRate = isLarge ? (actualLargeTaxRate || (actualTaxRate + 15)) : actualTaxRate;
+            // 回退到原始稅率計算（合約查詢將在未來版本中實現）
+            const taxRate = usdValue >= largeWithdrawThresholdUsd ? 
+                (actualLargeTaxRate || (actualTaxRate + 15)) : actualTaxRate;
+            
             const received = Math.floor(soulAmount * (100 - taxRate) / 100);
+            const isLarge = usdValue >= largeWithdrawThresholdUsd;
             
             return {
                 received,
@@ -115,9 +108,11 @@ export const TaxRateModal: React.FC<TaxRateModalProps> = ({
         const suggestedAmounts = generateExampleAmounts();
         
         return { calculateWithdrawal, suggestedAmounts };
-    }, [priceInUsd, vaultBalance, lastFreeWithdrawTime, actualTaxRate, actualLargeTaxRate, freeWithdrawThresholdUsd, largeWithdrawThresholdUsd]);
+    }, [isOpen, priceInUsd, vaultBalance, lastFreeWithdrawTime, actualTaxRate, actualLargeTaxRate, freeWithdrawThresholdUsd, largeWithdrawThresholdUsd]);
 
-    const { calculateWithdrawal, suggestedAmounts } = withdrawalData;
+    // 安全解構，提供預設值避免錯誤
+    const calculateWithdrawal = withdrawalData?.calculateWithdrawal || null;
+    const suggestedAmounts = withdrawalData?.suggestedAmounts || [];
 
     return (
         <Modal
@@ -174,7 +169,7 @@ export const TaxRateModal: React.FC<TaxRateModalProps> = ({
                         <span>提款計算器</span>
                     </h4>
                     <div className="space-y-3">
-                        {suggestedAmounts.map((amount, index) => {
+                        {calculateWithdrawal && suggestedAmounts.length > 0 ? suggestedAmounts.map((amount, index) => {
                             const withdrawal = calculateWithdrawal(amount);
                             const userBalance = parseFloat(vaultBalance || '0');
                             const isMax = userBalance > 0 && amount === userBalance;
@@ -212,7 +207,12 @@ export const TaxRateModal: React.FC<TaxRateModalProps> = ({
                                     </div>
                                 </div>
                             );
-                        })}
+                        }) : (
+                            <div className="text-center py-4 text-gray-400">
+                                <p className="text-sm">載入中...</p>
+                                <p className="text-xs mt-1">正在計算提款稅率</p>
+                            </div>
+                        )}
                     </div>
                     <div className="mt-3 space-y-2">
                         <div className="p-3 bg-green-900/20 border border-green-600/30 rounded-lg">

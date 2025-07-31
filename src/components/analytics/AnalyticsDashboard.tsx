@@ -28,8 +28,9 @@ export const AnalyticsDashboard: React.FC<{ className?: string }> = ({ className
   const summary = useMemo(() => {
     if (!data || !hasRealData) return null;
     
-    const totalEarnings = data.earningsTrend.reduce((sum, day) => sum + day.earnings, 0);
-    const avgDailyEarnings = totalEarnings / data.earningsTrend.length;
+    // 使用實際的總收益，而不是從趨勢圖計算
+    const totalEarnings = Number(formatEther(data.totalEarnings));
+    const avgDailyEarnings = data.earningsTrend.reduce((sum, day) => sum + day.earnings, 0) / data.earningsTrend.length;
     const trend = data.earningsTrend.length > 1 && 
       data.earningsTrend[data.earningsTrend.length - 1].earnings > data.earningsTrend[0].earnings;
     
@@ -110,7 +111,7 @@ export const AnalyticsDashboard: React.FC<{ className?: string }> = ({ className
             {/* 總收益 */}
             <div className="bg-gradient-to-br from-purple-900/30 to-purple-800/20 p-4 rounded-xl border border-purple-500/30">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-400 text-sm">30天總收益</span>
+                <span className="text-gray-400 text-sm">總收益</span>
                 {summary.trend ? (
                   <TrendingUp className="w-4 h-4 text-green-400" />
                 ) : (
@@ -118,7 +119,7 @@ export const AnalyticsDashboard: React.FC<{ className?: string }> = ({ className
                 )}
               </div>
               <p className="text-2xl font-bold text-white">
-                {formatSoul(BigInt(summary.totalEarnings))}
+                {formatSoul(BigInt(Math.floor(summary.totalEarnings)))}
               </p>
               <p className="text-sm text-gray-400 mt-1">
                 日均: {formatSoul(BigInt(Math.floor(summary.avgDailyEarnings)))}
@@ -132,7 +133,7 @@ export const AnalyticsDashboard: React.FC<{ className?: string }> = ({ className
                 <Activity className="w-4 h-4 text-blue-400" />
               </div>
               <p className="text-2xl font-bold text-white">
-                {summary.successRate}%
+                {summary.successRate.toFixed(1)}%
               </p>
               <p className="text-sm text-gray-400 mt-1">
                 共 {data.dungeonStats.totalAttempts} 次嘗試

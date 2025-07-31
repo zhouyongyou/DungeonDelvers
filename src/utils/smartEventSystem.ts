@@ -5,7 +5,7 @@ import { createPublicClient, http, parseAbiItem } from 'viem';
 import type { Log, Address } from 'viem';
 import { bsc } from 'viem/chains';
 import { logger } from './logger';
-import { getRpcEndpoint } from './rpcOptimizedMigration';
+import { getRpcEndpoint, markRpcOptimizedFailed } from './rpcOptimizedMigration';
 
 interface EventConfig {
   address: Address;
@@ -204,7 +204,7 @@ class SmartEventSystem {
       }
     }
     
-    // 開始輪詢 filter 變更（每2秒）
+    // 開始輪詢 filter 變更（每10秒，避免 RPC 限流）
     this.pollingInterval = setInterval(() => {
       this.pollFilterChanges().catch(error => {
         logger.error('Filter 輪詢錯誤:', error);
@@ -214,7 +214,7 @@ class SmartEventSystem {
         this.mode = 'polling';
         this.startPollingMode();
       });
-    }, 2000); // Filter 模式可以更頻繁
+    }, 10000); // 減少輪詢頻率避免 RPC 限流
   }
   
   /**
@@ -248,8 +248,15 @@ class SmartEventSystem {
             logger.error(`重新創建 Filter ${eventId} 失敗:`, recreateError);
             throw recreateError;
           }
+        } else if (error?.message?.includes('CONNECTION_CLOSED') || error?.message?.includes('fetch failed') || error?.code === 'NETWORK_ERROR') {
+          // RPC 連接問題，標記 rpc-optimized 失敗並切換到輪詢模式
+          logger.warn(`RPC 連接問題，從 Filter 模式切換到輪詢模式: ${error.message}`);
+          markRpcOptimizedFailed(); // 標記失敗，下次會使用直接 Alchemy
+          this.switchToPollingMode();
+          return; // 不拋出錯誤，靜默切換
         } else {
-          throw error;
+          logger.error(`Filter 輪詢錯誤 (${eventId}):`, error);
+          // 不拋出錯誤，繼續執行其他 filter
         }
       }
     }
@@ -279,12 +286,12 @@ class SmartEventSystem {
       this.lastPolledBlock = 0n;
     }
     
-    // 每 3 秒輪詢一次（輪詢模式較慢）
+    // 每 15 秒輪詢一次（避免 RPC 限流）
     this.pollingInterval = setInterval(() => {
       this.pollBlocks().catch(error => {
         logger.error('區塊輪詢錯誤:', error);
       });
-    }, 3000);
+    }, 15000);
   }
   
   /**
@@ -420,6 +427,28 @@ class SmartEventSystem {
     }
     
     logger.info('⏹️ 停止智能事件監聽系統');
+  }
+  
+  /**
+   * 切換到輪詢模式（當 Filter 模式失敗時）
+   */
+  private async switchToPollingMode() {
+    if (this.mode === 'polling') return; // 已經是輪詢模式
+    
+    logger.info('🔄 由於 RPC 連接問題，切換到輪詢模式');
+    
+    // 清理 Filter 模式的資源
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+    }
+    
+    // 清理所有 filters
+    this.filterIds.clear();
+    
+    // 切換模式並重新啟動
+    this.mode = 'polling';
+    await this.startPollingMode();
   }
   
   /**

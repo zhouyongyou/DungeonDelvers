@@ -235,21 +235,55 @@ export const AltarNftAuthManager: React.FC<AltarNftAuthManagerProps> = ({
 
       {/* 授權按鈕 */}
       {needsAnyAuth && (
-        <ActionButton
-          onClick={handleAuth}
-          disabled={isProcessing}
-          loading={isProcessing}
-          size="md"
-          className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500"
-        >
-          {isProcessing ? '授權中...' : 
-           authStatus.length === 2 ? '🚀 一鍵授權所有NFT' : '🔓 授權NFT'}
-        </ActionButton>
+        <div className="space-y-3">
+          <ActionButton
+            onClick={handleAuth}
+            disabled={isProcessing}
+            loading={isProcessing}
+            size="md"
+            className={`w-full transition-all duration-300 ${
+              isProcessing 
+                ? 'bg-gradient-to-r from-yellow-600 to-orange-600 transform scale-95'
+                : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 hover:scale-105'
+            }`}
+          >
+            {isProcessing ? (
+              <div className="flex items-center gap-2">
+                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                <span>🔄 授權處理中...</span>
+              </div>
+            ) : (
+              authStatus.length === 2 ? '🚀 一鍵授權所有NFT' : '🔓 授權NFT'
+            )}
+          </ActionButton>
+          
+          {/* 處理中的動畫提示 */}
+          {isProcessing && (
+            <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3">
+              <div className="flex items-center gap-3">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                </div>
+                <div className="text-sm text-yellow-300">
+                  正在處理授權交易，請在錢包中確認...
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
       
       {!needsAnyAuth && authStatus.length > 0 && (
-        <div className="text-center text-green-400 text-sm">
-          ✓ 所有必要的授權已完成
+        <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-lg p-4">
+          <div className="flex items-center justify-center gap-2 text-green-300">
+            <div className="text-xl animate-pulse">✅</div>
+            <span className="font-medium">所有必要的授權已完成</span>
+          </div>
+          <div className="text-center text-xs text-green-400 mt-1">
+            🎉 現在可以進行升星儀式了！
+          </div>
         </div>
       )}
 

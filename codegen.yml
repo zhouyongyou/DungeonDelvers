@@ -1,43 +1,26 @@
 overwrite: true
 schema: 
-  - ./schema-helper.graphql
-  - /Users/sotadic/Documents/GitHub/DungeonDelvers/DDgraphql/dungeon-delvers/schema.graphql
+  # 使用你的去中心化端點
+  - https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs
 documents:
-  - src/**/*.{ts,tsx}
-  - src/gql/queries.graphql
-  - "!src/gql/**/*"
+  # 先只處理我們定義的查詢文件
+  - src/gql/**/*.graphql
+  # 排除生成的文件
+  - "!src/gql/generated.ts"
 generates:
+  # 第一階段：生成基本類型和查詢類型
   src/gql/generated.ts:
     plugins:
       - typescript
       - typescript-operations
-      - typescript-react-query
     config:
-      # React Query 配置
-      reactQueryVersion: 5
-      fetcher:
-        endpoint: https://api.studio.thegraph.com/query/115633/dungeon-delvers/v3.3.5
-        fetchParams:
-          headers:
-            Content-Type: "application/json"
-      # 類型配置
+      # 純量類型映射
       scalars:
         Bytes: string
         BigInt: string
         BigDecimal: string
-      # 生成配置
-      withHooks: true
-      withHOC: false
-      withComponent: false
-      # 命名配置
-      namingConvention:
-        typeNames: pascal-case#pascalCase
-        enumValues: upper-case#upperCase
-      # 避免生成不需要的類型
-      skipTypename: true
-      # 優化生成的代碼
-      preResolveTypes: true
-      # 生成更好的類型
-      enumsAsTypes: false
-      # 添加 __typename 以支持緩存
-      addTypename: false
+        Int8: number
+        Timestamp: number
+      # 基本配置
+      skipTypename: false
+      enumsAsTypes: true

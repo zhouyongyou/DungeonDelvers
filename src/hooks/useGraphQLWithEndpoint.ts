@@ -1,7 +1,7 @@
 // src/hooks/useGraphQLWithEndpoint.ts
 // 智慧選擇端點的 GraphQL Hook
 
-import { useQuery, UseQueryOptions } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { GraphQLClient } from 'graphql-request';
 import { getEndpointForFeatureSync, isUsingStudioVersion } from '../config/graphql';
 import { useCallback, useMemo } from 'react';
@@ -16,11 +16,14 @@ function getOrCreateClient(endpoint: string): GraphQLClient {
   return clientCache.get(endpoint)!;
 }
 
-interface UseGraphQLOptions<TData, TVariables> extends Omit<UseQueryOptions<TData>, 'queryKey' | 'queryFn'> {
+interface UseGraphQLOptions<TData, TVariables> {
   feature: string;
   query: string;
   variables?: TVariables;
   queryKey: any[];
+  enabled?: boolean;
+  staleTime?: number;
+  [key: string]: any; // 允許其他查詢選項
 }
 
 export function useGraphQLWithEndpoint<TData = any, TVariables = any>({

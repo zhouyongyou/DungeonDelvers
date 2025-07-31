@@ -34,6 +34,7 @@ import { AnalyticsDashboard } from '../components/analytics/AnalyticsDashboard';
 import { SkeletonLoader } from '../components/ui/SkeletonLoader';
 import { useSoulPrice } from '../hooks/useSoulPrice';
 import { SkeletonStats, SkeletonCard } from '../components/ui/SkeletonLoader';
+import { usePlayerVaultV4 } from '../hooks/usePlayerVaultV4';
 
 // =================================================================
 // Section: Components
@@ -73,6 +74,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     const [showTaxModal, setShowTaxModal] = useState(false);
     const [showProjectIntro, setShowProjectIntro] = useState(false);
     const [showFullIntro, setShowFullIntro] = useState(false);
+    const [showAnalytics, setShowAnalytics] = useState(false);
     const { showToast } = useAppToast();
     const { data, isLoading, isError, refetch } = usePlayerOverview(address);
     const { addTransaction, updateTransaction } = useTransactionHistory(address);
@@ -86,6 +88,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     // Contract reads
     const playerProfileContract = getContractWithABI('PLAYERPROFILE');
     const dungeonMasterContract = getContractWithABI('DUNGEONMASTER');
+    const playerVaultContract = getContractWithABI('PLAYERVAULT', 56);
     
     // Read player level from contract with caching
     const { data: levelData } = useCachedReadContract({
@@ -98,19 +101,14 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
         cacheTime: 300000 // 5 分鐘緩存
     });
     
-    // Read vault balance from contract with caching
-    const { data: vaultBalance } = useCachedReadContract({
-        address: dungeonMasterContract.address,
-        abi: dungeonMasterContract.abi,
-        functionName: 'getPlayerVaultBalance',
-        args: address ? [address] : undefined,
-        query: { enabled: !!address },
-        cacheKey: `vaultBalance-${address}`,
-        cacheTime: 60000 // 1 分鐘緩存（金庫餘額變化較頻繁）
-    });
-    
-    // Transaction hooks - 智能提領系統
-    const playerVaultContract = getContractWithABI('PLAYERVAULT', 56);
+    // Use new PlayerVault v4.0 hook for enhanced functionality
+    const { 
+        withdrawableBalance: vaultBalance, 
+        commissionBalance, 
+        totalCommissionPaid,
+        isLoading: isVaultLoading,
+        refetchAll: refetchVault
+    } = usePlayerVaultV4();
     // 注意：formatSoulToUsd 已經在上面的 useSoulPrice() 中定義了
     
     // 智能提領狀態
@@ -148,7 +146,10 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                 });
             }
             
-            refetch();
+            // 延遲重新獲取數據，等待區塊鏈狀態更新
+            setTimeout(() => {
+                refetch();
+            }, 3000);
         },
         onError: (error) => {
             showToast(error, 'error');
@@ -174,8 +175,10 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     // Parse data
     const player = data?.player;
     const playerProfile = data?.playerProfile;
+    const playerStats = data?.playerStats;
     const playerVault = data?.playerVault;
     const expeditions = data?.expeditions || [];
+    const upgradeAttempts = player?.upgradeAttempts || [];
     
     // 獲取未分配資產數據
     const { data: assetData, isLoading: isLoadingAssets } = useUnassignedAssets(address);
@@ -310,24 +313,8 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
         }
     };
     
-    // Debug log
-    if (import.meta.env.DEV) {
-        console.log('Overview Page Data:', {
-            vipLevel,
-            vipTier,
-            taxReduction: taxReduction?.toString(),
-            stakedAmount: stakedAmount?.toString(),
-            isLoadingVip,
-            vipError,
-            player,
-            heroCount,
-            relicCount,
-            stats: player?.stats,
-            rawVipData: player?.vip,
-            rawHeroData: player?.heros,
-            rawRelicData: player?.relics
-        });
-    }
+    // Debug log - 只在初次載入或重要數據變化時記錄
+    // Removed to reduce log spam
     
     // Calculate unclaimed party rewards
     const unclaimedPartyRewards = useMemo(() => {
@@ -523,6 +510,29 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                 )}
 
                 {/* Stats Grid */}
+                {/* 佣金提醒 */}
+                {commissionBalance > 0n && (
+                    <div className="bg-gradient-to-r from-green-900/20 to-emerald-900/20 border border-green-500/30 rounded-xl p-4 mb-6">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <Icons.Users className="h-6 w-6 text-green-400" />
+                                <div>
+                                    <h3 className="text-lg font-bold text-green-300">有佣金待提取！</h3>
+                                    <p className="text-sm text-gray-400">
+                                        您有 <span className="text-green-400 font-semibold">{formatSoul(commissionBalance)} SOUL</span> 的推薦佣金可以提取
+                                    </p>
+                                </div>
+                            </div>
+                            <ActionButton
+                                onClick={() => window.location.hash = '#/referral'}
+                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm"
+                            >
+                                提取佣金 →
+                            </ActionButton>
+                        </div>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <StatCard
                         title="等級"
@@ -705,7 +715,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                     />
                 </div>
 
-                {/* Analytics Dashboard */}
+                {/* Analytics Dashboard - Lazy Loaded */}
                 <div className="bg-gray-800 rounded-lg p-6">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -718,7 +728,20 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                             查看排行榜 →
                         </ActionButton>
                     </div>
-                    <AnalyticsDashboard />
+                    {showAnalytics ? (
+                        <AnalyticsDashboard />
+                    ) : (
+                        <div className="text-center py-8">
+                            <button
+                                onClick={() => setShowAnalytics(true)}
+                                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-all duration-200 flex items-center gap-2 mx-auto"
+                            >
+                                <Icons.BarChart className="h-5 w-5" />
+                                <span>展開數據分析</span>
+                            </button>
+                            <p className="text-sm text-gray-400 mt-2">點擊查看詳細的遊戲數據統計</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Detailed Stats Section */}
@@ -734,7 +757,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                     </div>
                     {(expeditions.length > 0 || (playerProfile?.successfulExpeditions || 0) > 0) ? (
                         <div>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-3 gap-4">
                                 <div className="text-center">
                                     <p className="text-2xl font-bold text-[#C0A573]">{expeditions.length}</p>
                                     <p className="text-sm text-gray-400">總遠征次數</p>
@@ -744,11 +767,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                     <p className="text-sm text-gray-400">成功遠征</p>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-blue-500">{formatLargeNumber(Math.max(...(player?.parties?.map(p => parseInt(p.totalPower || '0')) || [0]), 0) || '-')}</p>
-                                    <p className="text-sm text-gray-400">最高隊伍戰力</p>
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-2xl font-bold text-purple-500">{player?.upgradeAttempts?.length || '-'}</p>
+                                    <p className="text-2xl font-bold text-purple-500">{upgradeAttempts.length || '-'}</p>
                                     <p className="text-sm text-gray-400">升級嘗試次數</p>
                                 </div>
                             </div>
@@ -756,17 +775,22 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                             {/* 額外統計行 */}
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
                             <div className="text-center">
-                                <p className="text-2xl font-bold text-orange-500">{player?.upgradeAttempts?.filter(u => u.isSuccess).length || '-'}</p>
+                                <p className="text-2xl font-bold text-orange-500">{
+                                    upgradeAttempts.filter(u => {
+                                        const outcome = typeof u.outcome === 'number' ? u.outcome : Number(u.outcome);
+                                        return outcome === 2 || outcome === 3; // 2=成功, 3=大成功
+                                    }).length || '-'
+                                }</p>
                                 <p className="text-sm text-gray-400">成功升級次數</p>
                             </div>
                             <div className="text-center">
-                                <p className="text-2xl font-bold text-yellow-500">{formatSoul(playerProfile?.totalRewardsEarned || 0)} SOUL</p>
+                                <p className="text-2xl font-bold text-yellow-500">{formatSoul(playerStats?.totalRewardsEarned || playerProfile?.totalRewardsEarned || '0', 1)} SOUL</p>
                                 <p className="text-sm text-gray-400">總獲得獎勵</p>
                             </div>
                             <div className="text-center">
                                 <p className="text-2xl font-bold text-cyan-500">
                                     {expeditions.length > 0 
-                                        ? `${Math.round(((playerProfile?.successfulExpeditions || 0) / expeditions.length) * 100)}%`
+                                        ? `${((playerProfile?.successfulExpeditions || 0) / expeditions.length * 100).toFixed(1)}%`
                                         : '0%'
                                     }
                                 </p>

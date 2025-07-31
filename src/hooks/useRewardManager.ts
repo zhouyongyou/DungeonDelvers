@@ -30,7 +30,7 @@ export const useRewardManager = ({ partyId, chainId }: UseRewardManagerProps) =>
         args: [partyId],
         query: {
             enabled: !!dungeonStorageContract && !!partyId,
-            refetchInterval: 30000, // 減少到每30秒刷新
+            refetchInterval: 120000, // 改為每2分鐘刷新，避免 RPC 限流
             staleTime: 20000, // 增加快取時間
         }
     });

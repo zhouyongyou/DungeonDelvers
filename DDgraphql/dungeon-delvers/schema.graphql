@@ -175,12 +175,16 @@ type PlayerVault @entity(immutable: false) {
   id: Bytes!
   " 擁有者 "
   owner: Player!
-  " 待領取的總獎勵 "
+  " 待領取的總獎勵（包含虛擬佣金） "
   pendingRewards: BigInt!
   " 已領取的總獎勵 "
   claimedRewards: BigInt!
-  " 總儲備花費 "
+  " 總儲備花費（包含虛擬遊戲消費） "
   totalProvisionSpent: BigInt!
+  " 虛擬遊戲消費總額 "
+  totalVirtualGameSpending: BigInt!
+  " 虛擬佣金獲得總額 "
+  totalVirtualCommissionEarned: BigInt!
   " 最後領取時間戳 "
   lastClaimedAt: BigInt
   " 創建時間戳 "

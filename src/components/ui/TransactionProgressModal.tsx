@@ -62,8 +62,11 @@ export const TransactionProgressModal: React.FC<TransactionProgressModalProps> =
               </>
             ) : (
               <>
-                <div className="text-4xl mb-4">💤</div>
-                <p className="text-lg font-medium text-gray-400">等待交易...</p>
+                <div className="text-4xl mb-4">
+                  <div className="animate-spin inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                </div>
+                <p className="text-lg font-medium text-gray-400">處理交易中...</p>
+                <p className="text-sm text-gray-500 mt-2">請稍等，交易正在區塊鏈上確認</p>
               </>
             )}
           </div>

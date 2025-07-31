@@ -15,6 +15,29 @@ export const RPC_MIGRATION_CONFIG = {
   forceVersion: null as 'legacy' | 'optimized' | null,
 };
 
+// 檢查 rpc-optimized 端點是否可用
+function checkRpcOptimizedAvailability(): boolean {
+  // 檢查 localStorage 中是否有之前的失敗記錄
+  const failureKey = 'rpc-optimized-failed';
+  const lastFailure = localStorage.getItem(failureKey);
+  
+  if (lastFailure) {
+    const failureTime = parseInt(lastFailure);
+    const currentTime = Date.now();
+    // 如果在過去 5 分鐘內失敗過，就認為不可用
+    if (currentTime - failureTime < 5 * 60 * 1000) {
+      return false;
+    }
+  }
+  
+  return true; // 預設認為可用
+}
+
+// 標記 rpc-optimized 端點失敗
+export function markRpcOptimizedFailed(): void {
+  localStorage.setItem('rpc-optimized-failed', Date.now().toString());
+}
+
 // 獲取用戶應該使用的 RPC 端點
 export function getRpcEndpoint(): string {
   // 開發環境：檢查是否有外部代理 URL
@@ -24,6 +47,14 @@ export function getRpcEndpoint(): string {
       return `${externalProxyUrl}/api/rpc-optimized`;
     }
     return '/api/rpc-optimized';
+  }
+  
+  // 生產環境：檢查 rpc-optimized 端點是否可用
+  // 如果不可用，直接使用 Alchemy
+  const isOptimizedAvailable = checkRpcOptimizedAvailability();
+  if (!isOptimizedAvailable) {
+    console.warn('⚠️ rpc-optimized 端點不可用，使用直接 Alchemy 連接');
+    return 'direct-alchemy'; // 特殊標記，表示使用直接 Alchemy
   }
   
   // 如果有強制版本設定
