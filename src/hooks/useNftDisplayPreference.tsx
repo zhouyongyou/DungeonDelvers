@@ -8,33 +8,25 @@ export type NftDisplayMode = 'svg' | 'png';
 const STORAGE_KEY = 'nft-display-preference';
 
 export const useNftDisplayPreference = () => {
-  // 從 localStorage 讀取偏好設置，默認使用 SVG
-  const [displayMode, setDisplayMode] = useState<NftDisplayMode>(() => {
-    if (typeof window === 'undefined') return 'svg';
-    
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return (saved === 'png' || saved === 'svg') ? saved : 'svg';
-    } catch {
-      return 'svg';
-    }
-  });
+  // 強制使用 PNG，不再從 localStorage 讀取
+  const [displayMode, setDisplayMode] = useState<NftDisplayMode>('png');
 
-  // 保存偏好設置到 localStorage
+  // 清理舊的 localStorage 設定
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, displayMode);
+      localStorage.removeItem(STORAGE_KEY);
     } catch (error) {
-      console.warn('Failed to save NFT display preference:', error);
+      // 忽略錯誤
     }
-  }, [displayMode]);
+  }, []);
 
   const toggleDisplayMode = () => {
-    setDisplayMode(prev => prev === 'svg' ? 'png' : 'svg');
+    // 移除切換功能
+    console.log('PNG/SVG 切換已禁用，統一使用 PNG');
   };
 
-  const setToSvg = () => setDisplayMode('svg');
-  const setToPng = () => setDisplayMode('png');
+  const setToSvg = () => console.log('SVG 模式已禁用，統一使用 PNG');
+  const setToPng = () => {}; // 已經是 PNG，不做任何事
 
   return {
     displayMode,
@@ -42,8 +34,8 @@ export const useNftDisplayPreference = () => {
     toggleDisplayMode,
     setToSvg,
     setToPng,
-    isSvgMode: displayMode === 'svg',
-    isPngMode: displayMode === 'png'
+    isSvgMode: false, // 始終不是 SVG
+    isPngMode: true   // 始終是 PNG
   };
 };
 

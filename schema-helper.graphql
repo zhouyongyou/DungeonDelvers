@@ -1,0 +1,11 @@
+# The Graph 標準純量類型定義
+scalar BigInt
+scalar BigDecimal
+scalar Bytes
+scalar Int8
+scalar Timestamp
+
+# Query root type
+type Query {
+  _empty: String
+}

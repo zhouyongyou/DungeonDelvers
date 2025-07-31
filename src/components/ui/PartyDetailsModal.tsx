@@ -9,6 +9,7 @@ import type { PartyNft, HeroNft, RelicNft } from '../../types/nft';
 import { logger } from '../../utils/logger';
 
 import { THE_GRAPH_API_URL } from '../../config/graphConfig';
+import { getContractWithABI } from '../../config/contractsWithABI';
 
 interface PartyDetailsModalProps {
   party: PartyNft | null;
@@ -18,15 +19,15 @@ interface PartyDetailsModalProps {
 
 // GraphQL query to fetch party member details
 const GET_PARTY_MEMBERS_QUERY = `
-  query GetPartyMembers($heroIds: [ID!]!, $relicIds: [ID!]!) {
-    heros(where: { tokenId_in: $heroIds }) {
+  query GetPartyMembers($heroIds: [String!]!, $relicIds: [String!]!) {
+    heros(where: { id_in: $heroIds }) {
       id
       tokenId
       power
       rarity
       contractAddress
     }
-    relics(where: { tokenId_in: $relicIds }) {
+    relics(where: { id_in: $relicIds }) {
       id
       tokenId
       capacity
@@ -47,8 +48,26 @@ export const PartyDetailsModal: React.FC<PartyDetailsModalProps> = ({
     queryFn: async () => {
       if (!party || !THE_GRAPH_API_URL) return null;
 
-      const heroIdStrings = party.heroIds.map(id => id.toString());
-      const relicIdStrings = party.relicIds.map(id => id.toString());
+      // 需要轉換為 contractAddress-tokenId 格式
+      const heroContract = getContractWithABI('HERO');
+      const relicContract = getContractWithABI('RELIC');
+      
+      if (!heroContract || !relicContract) {
+        logger.error('Failed to get contract addresses');
+        return null;
+      }
+      
+      // 如果沒有成員，直接返回空數據
+      if (party.heroIds.length === 0 && party.relicIds.length === 0) {
+        return { heros: [], relics: [] };
+      }
+      
+      const heroIdStrings = party.heroIds.length > 0 
+        ? party.heroIds.map(id => `${heroContract.address.toLowerCase()}-${id.toString()}`)
+        : [];
+      const relicIdStrings = party.relicIds.length > 0
+        ? party.relicIds.map(id => `${relicContract.address.toLowerCase()}-${id.toString()}`)
+        : [];
 
       try {
         const response = await fetch(THE_GRAPH_API_URL, {
@@ -57,23 +76,25 @@ export const PartyDetailsModal: React.FC<PartyDetailsModalProps> = ({
           body: JSON.stringify({
             query: GET_PARTY_MEMBERS_QUERY,
             variables: {
-              heroIds: heroIdStrings,
-              relicIds: relicIdStrings
+              heroIds: heroIdStrings.length > 0 ? heroIdStrings : ["none"],
+              relicIds: relicIdStrings.length > 0 ? relicIdStrings : ["none"]
             }
           })
         });
 
-        const { data, errors } = await response.json();
+        const result = await response.json();
         
-        if (errors) {
-          logger.error('GraphQL errors:', errors);
-          throw new Error('Failed to fetch party members');
+        if (result.errors) {
+          logger.error('GraphQL errors:', result.errors);
+          // 不要拋出錯誤，返回空數據
+          return { heros: [], relics: [] };
         }
 
-        return data;
+        return result.data || { heros: [], relics: [] };
       } catch (error) {
         logger.error('Failed to fetch party members:', error);
-        throw error;
+        // 返回空數據而不是拋出錯誤
+        return { heros: [], relics: [] };
       }
     },
     enabled: !!party && isOpen,

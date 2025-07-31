@@ -90,6 +90,10 @@ type Party @entity(immutable: false) {
   heroIds: [String!]!
   " 目前配置的英雄實體列表 "
   heroes: [Hero!]!
+  " 目前配置的聖物 ID 列表 "
+  relicIds: [String!]!
+  " 目前配置的聖物實體列表 "
+  relics: [Relic!]!
   " 總戰力 "
   totalPower: BigInt!
   " 總容量 (基於聖物) "

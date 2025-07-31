@@ -1,6 +1,6 @@
 import { PartyMemberChanged } from "../generated/PartyV3/PartyV3"
 import { Party, PartyMemberChange } from "../generated/schema"
-import { createEntityId } from "./config"
+import { createEntityId, getHeroContractAddress, getRelicContractAddress } from "./config"
 import { log, BigInt } from "@graphprotocol/graph-ts"
 
 export function handlePartyMemberChanged(event: PartyMemberChanged): void {
@@ -15,14 +15,31 @@ export function handlePartyMemberChanged(event: PartyMemberChanged): void {
     // 更新隊伍的英雄列表
     const heroIds: string[] = []
     const heroIdStrings: string[] = []
+    const heroContractAddress = getHeroContractAddress()
     for (let i = 0; i < event.params.heroIds.length; i++) {
-        const heroId = createEntityId(event.address.toHexString(), event.params.heroIds[i].toString())
+        const heroIdString = event.params.heroIds[i].toString()
+        const heroId = createEntityId(heroContractAddress, heroIdString)
         heroIds.push(heroId)
-        heroIdStrings.push(event.params.heroIds[i].toString())
+        heroIdStrings.push(heroIdString)
     }
     
     party.heroIds = heroIdStrings
     party.heroes = heroIds
+    
+    // 更新隊伍的聖物列表
+    const relicIds: string[] = []
+    const relicIdStrings: string[] = []
+    const relicContractAddress = getRelicContractAddress()
+    for (let i = 0; i < event.params.relicIds.length; i++) {
+        const relicIdString = event.params.relicIds[i].toString()
+        const relicId = createEntityId(relicContractAddress, relicIdString)
+        relicIds.push(relicId)
+        relicIdStrings.push(relicIdString)
+    }
+    
+    party.relicIds = relicIdStrings
+    party.relics = relicIds
+    
     party.save()
 
     // 創建成員變更記錄

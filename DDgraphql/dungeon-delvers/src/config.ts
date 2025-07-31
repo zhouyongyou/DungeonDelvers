@@ -2,7 +2,7 @@
 // 🎯 單一來源配置管理 - 只依賴 subgraph.yaml
 // ⚠️ 此文件由腳本自動生成，請勿手動編輯！
 // 🔄 更新方式：修改 subgraph.yaml 後運行 npm run sync-addresses
-// 🤖 最後同步: 2025/7/31 下午5:39:54
+// 🤖 最後同步: 2025/7/31 下午6:53:27
 
 import { dataSource } from "@graphprotocol/graph-ts"
 
@@ -14,7 +14,7 @@ import { dataSource } from "@graphprotocol/graph-ts"
  * 2. 運行 v25-sync-all.js 腳本自動同步
  * 
  * 📋 地址來源：V25 配置文件
- * 🕒 最後同步時間：2025/7/31 下午5:39:54
+ * 🕒 最後同步時間：2025/7/31 下午6:53:27
  */
 
 // 合約地址常量 (自動從 V25 配置同步)

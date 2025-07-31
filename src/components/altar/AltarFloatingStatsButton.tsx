@@ -13,15 +13,18 @@ export const AltarFloatingStatsButton: React.FC = () => {
 
   return (
     <>
-      {/* 浮動按鈕 */}
-      <div className="fixed bottom-6 right-6 z-40">
+      {/* 浮動按鈕 - 固定在視窗右下角 */}
+      <div className="fixed bottom-6 right-6 z-50">
         <div className="relative">
+          {/* 脈動環效果 */}
+          <div className="absolute inset-0 rounded-full bg-purple-600 animate-ping opacity-20"></div>
           {/* 主按鈕 */}
           <button
             onClick={() => setShowStats(true)}
             onMouseEnter={() => setIsExpanded(true)}
             onMouseLeave={() => setIsExpanded(false)}
-            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 group"
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-full p-4 shadow-2xl hover:shadow-purple-500/50 transition-all duration-300 transform hover:scale-110 group ring-2 ring-purple-400/30 hover:ring-purple-400/50"
+            style={{ position: 'relative' }}
             title="查看升星統計"
           >
             <BarChart3 className="w-6 h-6 transition-transform group-hover:rotate-12" />

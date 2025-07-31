@@ -274,31 +274,30 @@ class SmartEventSystem {
       const fromBlock = this.lastPolledBlock + 1n;
       const toBlock = currentBlock;
       
-      // 為每個事件配置獲取 logs
-      for (const [eventId, config] of this.eventConfigs) {
-        if (!config.enabled) continue;
-        
-        try {
-          const logs = await this.client.getLogs({
-            address: config.address,
-            event: parseAbiItem(config.event),
-            fromBlock,
-            toBlock,
+      // 批量處理事件以減少 RPC 請求
+      const batchSize = 5; // 每批最多處理 5 個區塊
+      const blockRange = toBlock - fromBlock;
+      
+      // 如果區塊範圍太大，分批處理
+      if (blockRange > BigInt(batchSize)) {
+        const batches = [];
+        for (let i = fromBlock; i <= toBlock; i += BigInt(batchSize)) {
+          const batchEnd = i + BigInt(batchSize) - 1n;
+          batches.push({
+            from: i,
+            to: batchEnd > toBlock ? toBlock : batchEnd
           });
-          
-          if (logs.length > 0) {
-            logger.info(`📨 ${eventId} 區塊輪詢收到 ${logs.length} 個事件`);
-            config.callback(logs);
-          }
-          
-        } catch (error) {
-          logger.error(`事件 ${eventId} 區塊輪詢失敗:`, error);
-          
-          // 如果是 RPC 錯誤，重新初始化客戶端
-          if (error.message?.includes('fetch') || error.message?.includes('network')) {
-            this.initializeClient();
-          }
         }
+        
+        // 逐批處理，避免速率限制
+        for (const batch of batches) {
+          await this.processEventBatch(batch.from, batch.to);
+          // 添加延遲避免速率限制
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      } else {
+        // 區塊範圍小，直接處理
+        await this.processEventBatch(fromBlock, toBlock);
       }
       
       this.lastPolledBlock = currentBlock;
@@ -308,6 +307,61 @@ class SmartEventSystem {
       
       // 重新初始化客戶端
       this.initializeClient();
+    }
+  }
+  
+  /**
+   * 處理一批區塊的事件
+   */
+  private async processEventBatch(fromBlock: bigint, toBlock: bigint) {
+    // 為每個事件配置獲取 logs
+    for (const [eventId, config] of this.eventConfigs) {
+      if (!config.enabled) continue;
+      
+      try {
+        const logs = await this.client.getLogs({
+          address: config.address,
+          event: parseAbiItem(config.event),
+          fromBlock,
+          toBlock,
+        });
+        
+        if (logs.length > 0) {
+          logger.info(`📨 ${eventId} 區塊輪詢收到 ${logs.length} 個事件`);
+          config.callback(logs);
+        }
+        
+      } catch (error) {
+        // 處理速率限制錯誤
+        if (error.message?.includes('429') || error.message?.includes('Rate limit')) {
+          logger.warn(`${eventId} 遇到速率限制，延遲後重試...`);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // 等待 1 秒
+          
+          // 重試一次
+          try {
+            const logs = await this.client.getLogs({
+              address: config.address,
+              event: parseAbiItem(config.event),
+              fromBlock,
+              toBlock,
+            });
+            
+            if (logs.length > 0) {
+              logger.info(`📨 ${eventId} 重試成功，收到 ${logs.length} 個事件`);
+              config.callback(logs);
+            }
+          } catch (retryError) {
+            logger.error(`事件 ${eventId} 重試失敗:`, retryError);
+          }
+        } else {
+          logger.error(`事件 ${eventId} 區塊輪詢失敗:`, error);
+          
+          // 如果是 RPC 錯誤，重新初始化客戶端
+          if (error.message?.includes('fetch') || error.message?.includes('network')) {
+            this.initializeClient();
+          }
+        }
+      }
     }
   }
   

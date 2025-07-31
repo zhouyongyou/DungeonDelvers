@@ -497,8 +497,8 @@ const PartyStatusCard = memo<PartyStatusCardProps>(({ party, dungeons, onStartEx
         return <ActionButton onClick={() => onStartExpedition(party.id, selectedDungeonId, fee)} isLoading={isTxPending} className="w-full h-10">開始遠征</ActionButton>;
     };
 
-    // 使用 NFT 顯示偏好
-    const { displayMode, toggleDisplayMode } = useNftDisplayPreference();
+    // NFT 顯示偏好 - 統一使用 PNG
+    const { displayMode } = useNftDisplayPreference();
     const partySvg = generatePartySVG(party);
     
     // 根據戰力決定使用哪張圖片
@@ -527,42 +527,23 @@ const PartyStatusCard = memo<PartyStatusCardProps>(({ party, dungeons, onStartEx
             {/* 隊伍圖片區域 */}
             <div className="relative mb-3 group">
                 <div className="aspect-square w-full overflow-hidden rounded-lg bg-gray-900/50">
-                    {displayMode === 'svg' ? (
-                        <div 
-                            className="w-full h-full"
-                            dangerouslySetInnerHTML={{ __html: partySvg }}
-                        />
-                    ) : (
-                        <LazyImage 
-                            src={partyImagePath}
-                            alt={party.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                                // 如果 PNG 載入失敗，顯示 SVG
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                                const svgContainer = document.createElement('div');
-                                svgContainer.innerHTML = partySvg;
-                                svgContainer.className = 'w-full h-full';
-                                target.parentElement?.appendChild(svgContainer);
-                            }}
-                        />
-                    )}
+                    <LazyImage 
+                        src={partyImagePath}
+                        alt={party.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                            // 如果 PNG 載入失敗，顯示 SVG
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const svgContainer = document.createElement('div');
+                            svgContainer.innerHTML = partySvg;
+                            svgContainer.className = 'w-full h-full';
+                            target.parentElement?.appendChild(svgContainer);
+                        }}
+                    />
                 </div>
                 
-                {/* 切換按鈕 - 懸停時顯示 */}
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        toggleDisplayMode();
-                    }}
-                    className="absolute top-2 right-2 px-3 py-1.5 bg-black/70 hover:bg-black/90 rounded-lg transition-all opacity-0 group-hover:opacity-100 backdrop-blur-sm border border-white/20"
-                    title={`切換到 ${displayMode === 'svg' ? 'PNG' : 'SVG'} 顯示`}
-                >
-                    <span className="text-xs font-medium text-white">
-                        {displayMode === 'svg' ? '📸 PNG' : '🎨 SVG'}
-                    </span>
-                </button>
+                {/* PNG/SVG 切換已移除 - 統一使用 PNG */}
                 
                 {/* 隊伍戰力標籤 */}
                 <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 rounded-lg backdrop-blur-sm">

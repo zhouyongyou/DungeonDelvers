@@ -48,36 +48,43 @@ export function handlePartyCreated(event: PartyCreated): void {
 
     // 批量處理英雄關聯 - 使用配置系統
     const heroIds: string[] = []
+    const heroIdStrings: string[] = []
     const heroContractAddress = getHeroContractAddress()
     for (let i = 0; i < event.params.heroIds.length; i++) {
-        const heroId = createEntityId(heroContractAddress, event.params.heroIds[i].toString())
+        const heroIdString = event.params.heroIds[i].toString()
+        const heroId = createEntityId(heroContractAddress, heroIdString)
         
         // 驗證英雄是否存在
         const hero = Hero.load(heroId);
         if (hero && hero.owner == player.id) {
             heroIds.push(heroId);
+            heroIdStrings.push(heroIdString);
         } else {
             log.warning('Hero not found or not owned by player: {} for party: {}', [heroId, partyId]);
         }
     }
-    party.heroIds = heroIds
+    party.heroIds = heroIdStrings
     party.heroes = heroIds
 
     // 批量處理聖物關聯 - 使用配置系統
     const relicIds: string[] = []
+    const relicIdStrings: string[] = []
     const relicContractAddress = getRelicContractAddress()
     for (let i = 0; i < event.params.relicIds.length; i++) {
-        const relicId = createEntityId(relicContractAddress, event.params.relicIds[i].toString())
+        const relicIdString = event.params.relicIds[i].toString()
+        const relicId = createEntityId(relicContractAddress, relicIdString)
         
         // 驗證聖物是否存在
         const relic = Relic.load(relicId);
         if (relic && relic.owner == player.id) {
             relicIds.push(relicId);
+            relicIdStrings.push(relicIdString);
         } else {
             log.warning('Relic not found or not owned by player: {} for party: {}', [relicId, partyId]);
         }
     }
-    // Note: relics field doesn't exist in schema, removing this line
+    party.relicIds = relicIdStrings
+    party.relics = relicIds
     
     party.save()
     

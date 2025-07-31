@@ -194,15 +194,55 @@ const UpgradeResultModal: React.FC<{ result: UpgradeOutcome | null; onClose: () 
         great_success: '⚜️ 大成功！', success: '✨ 升星成功！',
         partial_fail: '💔 部分失敗...', total_fail: '💀 完全失敗',
     };
+    
+    const handleRefresh = () => {
+        window.location.reload();
+    };
+    
     return (
-        <Modal isOpen={!!result} onClose={onClose} title={titleMap[result.status]} confirmText="太棒了！" onConfirm={onClose}>
-            <div className="flex flex-col items-center">
-                <p className="mb-4 text-center text-gray-300">{result.message}</p>
+        <Modal 
+            isOpen={!!result} 
+            onClose={onClose} 
+            title={titleMap[result.status]} 
+            confirmText="關閉" 
+            onConfirm={onClose}
+            className="max-w-2xl"
+        >
+            <div className="flex flex-col items-center space-y-6">
+                {/* 祭壇動畫 */}
+                <div className="w-full bg-gradient-to-br from-gray-800/50 to-purple-900/30 backdrop-blur-md border border-purple-500/20 rounded-2xl p-6">
+                    <AltarRitualAnimation
+                        isActive={true}
+                        stage={result.status === 'great_success' ? 'great_success' : result.status === 'success' ? 'success' : 'failed'}
+                        selectedCount={0}
+                        requiredCount={0}
+                        onAnimationComplete={() => {}}
+                    />
+                </div>
+                
+                <p className="text-center text-gray-300 text-lg">{result.message}</p>
+                
                 {result.nfts.length > 0 && (
                     <div className="grid grid-cols-2 gap-4">
                         {result.nfts.map(nft => ( <div key={nft.id.toString()} className="w-40"><NftCard nft={nft} /></div> ))}
                     </div>
                 )}
+                
+                {/* 刷新提示 */}
+                <div className="w-full bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 text-center">
+                    <p className="text-blue-300 mb-3">
+                        💡 升星結果已記錄在區塊鏈上，刷新頁面即可查看最新的 NFT 狀態
+                    </p>
+                    <button
+                        onClick={handleRefresh}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors flex items-center gap-2 mx-auto"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        刷新頁面
+                    </button>
+                </div>
             </div>
         </Modal>
     );
@@ -418,11 +458,30 @@ const AltarPage = memo(() => {
                 // 設定儀式為成功狀態
                 setRitualStage('ritual');
                 
-                const upgradeLog = receipt.logs.find((log: any) => log.address.toLowerCase() === altarContract?.address.toLowerCase());
-                if (!upgradeLog) throw new Error("找不到升級事件");
-
-                const decodedUpgradeLog = decodeEventLog({ abi: altarOfAscensionABI, ...upgradeLog });
-                if (decodedUpgradeLog.eventName !== 'UpgradeAttempted') throw new Error("事件名稱不符");
+                // 修復：正確的事件解析邏輯
+                const altarLogs = receipt.logs.filter((log: any) => 
+                    log.address.toLowerCase() === altarContract?.address.toLowerCase()
+                );
+                
+                let decodedUpgradeLog = null;
+                for (const log of altarLogs) {
+                    try {
+                        const decoded = decodeEventLog({ 
+                            abi: altarOfAscensionABI, 
+                            data: log.data,
+                            topics: log.topics 
+                        });
+                        if (decoded.eventName === 'UpgradeAttempted') {
+                            decodedUpgradeLog = decoded;
+                            break;
+                        }
+                    } catch (e) {
+                        // 忽略解碼錯誤，繼續下一個
+                        continue;
+                    }
+                }
+                
+                if (!decodedUpgradeLog) throw new Error("找不到 UpgradeAttempted 事件");
 
                 const outcome = Number(((decodedUpgradeLog.args as unknown) as Record<string, unknown>).outcome);
                 const tokenContract = nftType === 'hero' ? heroContract : relicContract;
@@ -634,6 +693,7 @@ const AltarPage = memo(() => {
             // 等待一段時間後刷新授權狀態
             setTimeout(() => {
                 refetchApproval();
+                showToast('授權完成！如未看到變化，請手動刷新頁面', 'info');
             }, 3000);
         } catch (error) {
             logger.error('授權失敗:', error);
@@ -938,6 +998,7 @@ const AltarPage = memo(() => {
                                     <div>
                                         <h4 className="font-semibold text-yellow-300">需要授權</h4>
                                         <p className="text-sm text-yellow-200">授權祭壇合約操作您的 NFT</p>
+                                        <p className="text-xs text-yellow-100/70 mt-1">授權後如無反應請刷新頁面</p>
                                     </div>
                                 </div>
                                 <ActionButton
@@ -995,20 +1056,7 @@ const AltarPage = memo(() => {
 
                     {/* 右側內容區域 */}
                     <div className="xl:col-span-2 space-y-4 sm:space-y-5 md:space-y-6">
-                        {/* 祭壇動畫 */}
-                        <div className="bg-gradient-to-br from-gray-800/50 to-purple-900/30 backdrop-blur-md border border-purple-500/20 rounded-2xl p-4 sm:p-6 md:p-8">
-                            <AltarRitualAnimation
-                                isActive={ritualStage !== 'idle'}
-                                stage={ritualStage}
-                                selectedCount={selectedNfts.length}
-                                requiredCount={currentRule?.materialsRequired || 5}
-                                onAnimationComplete={() => {
-                                    // 動畫完成回調
-                                }}
-                            />
-                        </div>
-
-                        {/* 材料選擇區域 */}
+                        {/* 材料選擇區域 - 直接顯示，不再顯示祭壇動畫 */}
                         <LocalErrorBoundary 
                             fallback={
                                 <ErrorState 
@@ -1044,6 +1092,9 @@ const AltarPage = memo(() => {
                                                 </h4>
                                                 <p className="text-xs text-yellow-200/80">
                                                     在開始儀式之前，請先授權祭壇合約訪問您的 NFT
+                                                </p>
+                                                <p className="text-xs text-yellow-100/60 mt-1">
+                                                    💡 授權完成後如畫面無變化，請手動刷新頁面
                                                 </p>
                                             </div>
                                             <ActionButton

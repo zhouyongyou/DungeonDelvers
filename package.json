@@ -41,7 +41,9 @@
     "rpc:check-env": "node -r dotenv/config test-env-vars.cjs",
     "sync-config": "node sync-config.js",
     "check-config": "node -e \"console.log('📋 當前配置版本:', JSON.parse(require('fs').readFileSync('contract-config.json', 'utf8')).version)\"",
-    "validate-addresses": "node -e \"const config = JSON.parse(require('fs').readFileSync('contract-config.json', 'utf8')); Object.entries(config.contracts).forEach(([type, contracts]) => { Object.entries(contracts).forEach(([name, contract]) => { if (!/^0x[a-fA-F0-9]{40}$/.test(contract.address)) { console.error('❌ 無效地址:', name, contract.address); process.exit(1); } }); }); console.log('✅ 所有地址格式正確');\""
+    "validate-addresses": "node -e \"const config = JSON.parse(require('fs').readFileSync('contract-config.json', 'utf8')); Object.entries(config.contracts).forEach(([type, contracts]) => { Object.entries(contracts).forEach(([name, contract]) => { if (!/^0x[a-fA-F0-9]{40}$/.test(contract.address)) { console.error('❌ 無效地址:', name, contract.address); process.exit(1); } }); }); console.log('✅ 所有地址格式正確');\"",
+    "codegen": "graphql-codegen --config codegen.yml",
+    "codegen:watch": "graphql-codegen --config codegen.yml --watch"
   },
   "dependencies": {
     "@apollo/client": "^3.13.8",
@@ -64,6 +66,11 @@
     "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@graphql-codegen/cli": "^5.0.7",
+    "@graphql-codegen/client-preset": "^4.8.3",
+    "@graphql-codegen/typescript": "^4.1.6",
+    "@graphql-codegen/typescript-operations": "^4.6.1",
+    "@graphql-codegen/typescript-react-query": "^6.1.1",
     "@testing-library/jest-dom": "^6.0.0",
     "@testing-library/react": "^14.0.0",
     "@testing-library/user-event": "^14.0.0",

@@ -54,7 +54,9 @@ export function useGraphQLQuery<T = any>(
           logger.debug('Executing GraphQL query:', { queryName, variables: finalVariables });
 
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), APP_CONSTANTS.GRAPHQL_REQUEST_TIMEOUT);
+          const timeoutId = setTimeout(() => {
+            controller.abort(new DOMException(`GraphQL request timeout after ${APP_CONSTANTS.GRAPHQL_REQUEST_TIMEOUT}ms`, 'TimeoutError'));
+          }, APP_CONSTANTS.GRAPHQL_REQUEST_TIMEOUT);
 
           try {
             const response = await fetch(THE_GRAPH_API_URL, {
@@ -86,8 +88,9 @@ export function useGraphQLQuery<T = any>(
             return result.data;
           } catch (error) {
             clearTimeout(timeoutId);
-            if (error instanceof Error && error.name === 'AbortError') {
-              throw new Error('GraphQL request timeout');
+            if (error instanceof DOMException && error.name === 'AbortError') {
+              logger.error('GraphQL request aborted:', error.message || 'Timeout or manual abort');
+              throw new Error(error.message || 'GraphQL request timeout');
             }
             throw error;
           }

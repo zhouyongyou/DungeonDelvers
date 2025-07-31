@@ -10,6 +10,14 @@ const GET_PLAYER_ANALYTICS = `
   query GetPlayerAnalytics($address: Bytes!, $first: Int!, $skip: Int!) {
     player(id: $address) {
       id
+      profile {
+        id
+        name
+        level
+        experience
+        successfulExpeditions
+        totalRewardsEarned
+      }
       parties(first: 20, orderBy: totalPower, orderDirection: desc) {
         id
         tokenId
@@ -24,26 +32,20 @@ const GET_PLAYER_ANALYTICS = `
           dungeonName
         }
       }
-    }
-    playerProfile(id: $address) {
-      id
-      name
-      level
-      experience
-      successfulExpeditions
-      totalRewardsEarned
-    }
-    expeditions(where: {player: $address}, first: $first, skip: $skip, orderBy: timestamp, orderDirection: desc) {
-      id
-      player
-      success
-      reward
-      expGained
-      timestamp
-      dungeonId
-      dungeonName
-      dungeonPowerRequired
-      party
+      expeditions(first: $first, skip: $skip, orderBy: timestamp, orderDirection: desc) {
+        id
+        success
+        reward
+        expGained
+        timestamp
+        dungeonId
+        dungeonName
+        dungeonPowerRequired
+        party {
+          id
+          name
+        }
+      }
     }
   }
 `;
@@ -129,7 +131,7 @@ export const usePlayerAnalytics = (timeRange: number = 30) => {
           return { player: null };
         }
         
-        return result.data?.player || null;
+        return result.data || null;
       } catch (error) {
         console.error('Player analytics fetch error:', error);
         return { player: null }; // 返回一個有效的對象
@@ -164,11 +166,11 @@ export const usePlayerAnalytics = (timeRange: number = 30) => {
   });
   
   // 處理和組合數據 - 修復數據處理邏輯
-  const analytics: PlayerAnalytics | null = graphData ? (() => {
+  const analytics: PlayerAnalytics | null = graphData?.player ? (() => {
     // 從新的查詢結構獲取數據
     const playerData = graphData.player;
-    const profileData = graphData.playerProfile;
-    const expeditions = graphData.expeditions || [];
+    const profileData = playerData.profile;
+    const expeditions = playerData.expeditions || [];
     
     const totalEarnings = BigInt(profileData?.totalRewardsEarned || 0);
     const totalExpeditions = expeditions.length;
@@ -275,6 +277,6 @@ export const usePlayerAnalytics = (timeRange: number = 30) => {
   return {
     data: analytics,
     isLoading: isLoadingGraph,
-    hasRealData: !!(graphData?.playerProfile || graphData?.expeditions?.length)
+    hasRealData: !!(graphData?.player?.profile || graphData?.player?.expeditions?.length)
   };
 };

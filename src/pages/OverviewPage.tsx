@@ -744,11 +744,11 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                     <p className="text-sm text-gray-400">成功遠征</p>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-blue-500">{formatLargeNumber(Math.max(...(player?.parties?.map(p => parseInt(p.totalPower || '0')) || [0])))}</p>
+                                    <p className="text-2xl font-bold text-blue-500">{formatLargeNumber(Math.max(...(player?.parties?.map(p => parseInt(p.totalPower || '0')) || [0]), 0) || '-')}</p>
                                     <p className="text-sm text-gray-400">最高隊伍戰力</p>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-purple-500">-</p>
+                                    <p className="text-2xl font-bold text-purple-500">{player?.upgradeAttempts?.length || '-'}</p>
                                     <p className="text-sm text-gray-400">升級嘗試次數</p>
                                 </div>
                             </div>
@@ -756,7 +756,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                             {/* 額外統計行 */}
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
                             <div className="text-center">
-                                <p className="text-2xl font-bold text-orange-500">-</p>
+                                <p className="text-2xl font-bold text-orange-500">{player?.upgradeAttempts?.filter(u => u.isSuccess).length || '-'}</p>
                                 <p className="text-sm text-gray-400">成功升級次數</p>
                             </div>
                             <div className="text-center">

@@ -47,7 +47,7 @@ const GET_UPGRADE_HISTORY = `
 
 export const AltarHistoryStats: React.FC<AltarHistoryStatsProps> = ({ isOpen, onClose }) => {
   const { address } = useAccount();
-  const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'history'>('history'); // 預設顯示歷史記錄
 
   // 從子圖查詢升星歷史數據
   const { data: upgradeHistory, isLoading } = useQuery({
@@ -104,11 +104,6 @@ export const AltarHistoryStats: React.FC<AltarHistoryStatsProps> = ({ isOpen, on
       4: upgradeHistory.filter(r => r.baseRarity === 4).length,
     };
 
-    const typeStats = {
-      hero: upgradeHistory.filter(r => r.type === 'hero').length,
-      relic: upgradeHistory.filter(r => r.type === 'relic').length,
-    };
-
     return {
       totalUpgrades,
       successfulUpgrades,
@@ -117,8 +112,7 @@ export const AltarHistoryStats: React.FC<AltarHistoryStatsProps> = ({ isOpen, on
       totalReceived,
       successRate,
       greatSuccessRate,
-      rarityStats,
-      typeStats
+      rarityStats
     };
   }, [upgradeHistory]);
 
@@ -237,22 +231,6 @@ export const AltarHistoryStats: React.FC<AltarHistoryStatsProps> = ({ isOpen, on
                   </div>
                 </div>
 
-                {/* 類型分布 - 緊湊排列 */}
-                <div className="bg-gray-800/50 border border-gray-600/20 rounded-xl p-4">
-                  <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                    🎭 類型分布
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center">
-                      <div className="text-sm text-gray-400 mb-1">🦸 英雄升星</div>
-                      <div className="text-xl font-bold text-blue-300">{stats.typeStats.hero}</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-sm text-gray-400 mb-1">🏺 聖物升星</div>
-                      <div className="text-xl font-bold text-amber-300">{stats.typeStats.relic}</div>
-                    </div>
-                  </div>
-                </div>
 
                 {/* 效率分析 */}
                 <div className="bg-gradient-to-br from-indigo-900/30 to-purple-900/30 border border-indigo-500/20 rounded-xl p-6">

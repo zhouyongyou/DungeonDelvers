@@ -74,7 +74,9 @@ export const usePlayerOverview = (address?: Address) => {
             if (!address || !THE_GRAPH_API_URL) return null;
             
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            const timeoutId = setTimeout(() => {
+                controller.abort(new DOMException('Request timeout after 10 seconds', 'TimeoutError'));
+            }, 10000);
             
             try {
                 const response = await graphQLRateLimiter.execute(async () => {
@@ -101,8 +103,14 @@ export const usePlayerOverview = (address?: Address) => {
                 
                 return data;
             } catch (error) {
-                logger.error('Error fetching player overview:', error);
+                if (error instanceof DOMException && error.name === 'AbortError') {
+                    logger.error('Request aborted:', error.message || 'Timeout or manual abort');
+                } else {
+                    logger.error('Error fetching player overview:', error);
+                }
                 throw error;
+            } finally {
+                clearTimeout(timeoutId);
             }
         },
         enabled: !!address && !!THE_GRAPH_API_URL,
