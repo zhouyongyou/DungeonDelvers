@@ -170,7 +170,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ className = '' }) 
     return (
       <div className={`bg-gray-800/50 border border-gray-700 rounded-xl p-4 ${className}`}>
         <div className="text-center text-gray-400">
-          <Icons.CreditCard className="h-8 w-8 mx-auto mb-2" />
+          <Icons.Assets className="h-8 w-8 mx-auto mb-2" />
           <p>暫無稅收或遊戲收益可提取</p>
         </div>
       </div>
@@ -181,7 +181,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ className = '' }) 
     <div className={`bg-gradient-to-br from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-xl p-4 ${className}`}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Icons.CreditCard className="h-5 w-5 text-purple-400" />
+          <Icons.Assets className="h-5 w-5 text-purple-400" />
           <h3 className="text-lg font-bold text-purple-300">稅收與收益管理</h3>
         </div>
         <div className="flex gap-2">
@@ -314,7 +314,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ className = '' }) 
             
             {isRecordsLoading || isStatsLoading ? (
               <div className="text-center py-4 text-gray-400">
-                <Icons.Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+                <div className="h-4 w-4 animate-spin mx-auto mb-2 border-2 border-gray-300 border-t-blue-400 rounded-full" />
                 載入中...
               </div>
             ) : taxRecords && taxRecords.length > 0 ? (

@@ -103,8 +103,11 @@ const SettingRow: React.FC<SettingRowProps> = ({
         invalidationStrategies.onAdminParameterChanged(queryClient, parameterType);
       }
     } catch (e: unknown) {
-      const error = e as { shortMessage?: string };
-      showToast(error.shortMessage || "更新失敗", "error");
+      const error = e as { shortMessage?: string; message?: string };
+      // 不顯示用戶取消的錯誤訊息
+      if (!error.message?.includes('User rejected')) {
+        showToast(error.shortMessage || "更新失敗", "error");
+      }
     }
   };
 

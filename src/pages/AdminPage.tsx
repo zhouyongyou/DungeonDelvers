@@ -29,16 +29,16 @@ import ReadOnlyRow from '../components/admin/ReadOnlyRow';
 import AddressSettingRow from '../components/admin/AddressSettingRowDark';
 import SettingRow from '../components/admin/SettingRowDark';
 import TaxManagement from '../components/admin/TaxManagement';
-import { ExpeditionTestComponent } from '../components/admin/ExpeditionTestComponent';
+// import { ExpeditionTestComponent } from '../components/admin/ExpeditionTestComponent'; // 測試完成，暫時註釋
 import DungeonManager from '../components/admin/DungeonManagerDark';
 import AltarRuleManager from '../components/admin/AltarRuleManagerDark';
 import FundsWithdrawal from '../components/admin/FundsWithdrawalDark';
 import VipSettingsManager from '../components/admin/VipSettingsManagerDark';
 import ContractHealthPanel from '../components/admin/ContractHealthPanelDark';
-import OraclePriceTest from '../components/admin/OraclePriceTestDark';
-import GameFlowTest from '../components/admin/GameFlowTestDark';
+// import OraclePriceTest from '../components/admin/OraclePriceTestDark'; // 測試完成，暫時註釋
+// import GameFlowTest from '../components/admin/GameFlowTestDark'; // 測試完成，暫時註釋
 // RPC監控已移除以解決循環依賴問題
-import { ContractHealthCheck } from '../components/admin/ContractHealthCheck';
+// import { ContractHealthCheck } from '../components/admin/ContractHealthCheck'; // 移除重複組件
 import { PitchUrlManager } from '../components/admin/PitchUrlManager';
 import RpcMonitoringPanel from '../components/admin/RpcMonitoringPanel';
 import { validateContract, getSafeContract } from '../utils/contractValidator';
@@ -75,9 +75,9 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
     corePrice: false,
     platformFee: false,
     taxSystem: false,
-    gameParams: false,
+    // gameParams: false, // 移除 - 只有固定值，不需要懶加載
     oracle: false,
-    contractControl: false,
+    // contractControl: false, // 移除 - 純 UI 控制，無 RPC 讀取
     rpcMonitor: false, // RPC監控默認不展開
     contractHealth: false, // 合約健康檢查默認不展開
     oracleTest: false, // Oracle測試默認不展開
@@ -277,7 +277,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
   const envAddressMap: Record<string, { name: ContractName, address?: Address }> = useMemo(() => {
     if (!setupConfig || !Array.isArray(setupConfig)) return {};
     
-    // 從配置文件獲取地址（V25 配置）
+    // 從配置文件獲取地址
     const getConfigAddr = (name: ContractName) => {
       // 修復：使用正確的函數簽名和名稱映射
       let addressKey: keyof typeof CONTRACT_ADDRESSES;
@@ -771,14 +771,12 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
         onExpand={() => setLoadedSections(prev => ({ ...prev, contractHealth: true }))}
       >
         {loadedSections.contractHealth && (
-          <>
-            <ContractHealthCheck />
-            <ContractHealthPanel />
-          </>
+          <ContractHealthPanel />
         )}
       </AdminSection>
       
-      <AdminSection 
+      {/* 測試組件已經完成測試，暫時註釋 */}
+      {/* <AdminSection 
         title="💰 Oracle 價格測試" 
         defaultExpanded={false}
         onExpand={() => setLoadedSections(prev => ({ ...prev, oracleTest: true }))}
@@ -794,14 +792,13 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
         {loadedSections.gameFlowTest && <GameFlowTest />}
       </AdminSection>
       
-      {/* Expedition Test - 也改為按需加載 */}
       <AdminSection 
         title="🔍 出征交易測試" 
         defaultExpanded={false}
         onExpand={() => setLoadedSections(prev => ({ ...prev, expeditionTest: true }))}
       >
         {loadedSections.expeditionTest && <ExpeditionTestComponent />}
-      </AdminSection>
+      </AdminSection> */}
       
       <AdminSection 
         title="合約串接中心"
@@ -1055,9 +1052,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
 
       <AdminSection 
         title="遊戲機制參數"
-        defaultExpanded={loadedSections.gameParams}
-        onExpand={() => setLoadedSections(prev => ({ ...prev, gameParams: true }))}
-        isLoading={isLoadingParams && loadedSections.gameParams}
+        defaultExpanded={true}
       >
         {/* 顯示固定的冷卻時間 */}
         <ReadOnlyRow
@@ -1125,8 +1120,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
 
       <AdminSection 
         title="合約控制"
-        defaultExpanded={loadedSections.contractControl}
-        onExpand={() => setLoadedSections(prev => ({ ...prev, contractControl: true }))}
+        defaultExpanded={true}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-4">

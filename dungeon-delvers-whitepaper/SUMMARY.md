@@ -1,7 +1,7 @@
 # Table of contents
 
 ## 🌟 歡迎踏入 Soulbound Saga
-* [🏰 Soulbound Saga 白皮書 v4.0](README.md)
+* [🏰 Soulbound Saga 白皮書](README.md)
 * [🚀 快速開始指南](09-quickstart-guide.md)
 
 ## 📖 核心內容

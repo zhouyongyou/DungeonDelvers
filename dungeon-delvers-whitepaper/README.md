@@ -1,4 +1,4 @@
-# 🏰 Soulbound Saga: 靈魂契約傳奇 白皮書 v4.1
+# 🏰 Soulbound Saga: 靈魂契約傳奇 白皮書
 
 > **Fully On-Chain Roguelike on BNB Chain**  
 > **Delve Dungeons & Earn $SOUL**  
@@ -6,7 +6,7 @@
 
 <figure><img src=".gitbook/assets/logo-192x192.png" alt=""><figcaption><p>踏入靈魂契約的數位傳奇</p></figcaption></figure>
 
-_最後更新時間: 2025年7月30日_
+_最後更新時間: 2025年8月_
 
 > **⚡ 全新品牌**：Soulbound Saga 代表著我們對 Web3 遊戲未來的重新定義。完全上鏈、真正去中心化、由中國建造師為全世界打造的 Roguelike 傳奇。
 

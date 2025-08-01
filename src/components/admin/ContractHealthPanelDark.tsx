@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { contractChecker } from '../../utils/contractChecker';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
-import AdminSection from './AdminSection';
 
 interface ContractHealth {
   soulShardToken: string;
@@ -58,39 +57,34 @@ const ContractHealthPanel: React.FC = () => {
 
   if (loading) {
     return (
-      <AdminSection title="🔗 合約連接狀態" defaultExpanded={false}>
-        <div className="flex justify-center py-8">
-          <LoadingSpinner />
-        </div>
-      </AdminSection>
+      <div className="flex justify-center py-8">
+        <LoadingSpinner />
+      </div>
     );
   }
 
   if (error) {
     return (
-      <AdminSection title="🔗 合約連接狀態" defaultExpanded={false}>
-        <div className="bg-red-900/20 border border-red-600 rounded-lg p-4">
-          <div className="flex items-center text-red-400">
-            <span className="text-xl mr-2">⚠️</span>
-            <span className="font-medium">檢查失敗</span>
-          </div>
-          <p className="text-red-300 mt-2">{error}</p>
-          <button
-            onClick={checkHealth}
-            className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-          >
-            重新檢查
-          </button>
+      <div className="bg-red-900/20 border border-red-600 rounded-lg p-4">
+        <div className="flex items-center text-red-400">
+          <span className="text-xl mr-2">⚠️</span>
+          <span className="font-medium">檢查失敗</span>
         </div>
-      </AdminSection>
+        <p className="text-red-300 mt-2">{error}</p>
+        <button
+          onClick={checkHealth}
+          className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+        >
+          重新檢查
+        </button>
+      </div>
     );
   }
 
   if (!health) return null;
 
   return (
-    <AdminSection title="🔗 合約連接狀態" defaultExpanded={false}>
-      <div className="space-y-4">
+    <div className="space-y-4">
         {/* 整體狀態 */}
         <div className={`p-4 rounded-lg border ${
           health.allChecksPass 
@@ -149,7 +143,7 @@ const ContractHealthPanel: React.FC = () => {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-gray-300">
                 <span>合約地址:</span>
-                <code className="text-xs bg-gray-700 px-2 py-1 rounded text-gray-200">
+                <code className="text-xs bg-gray-700 px-2 py-1 rounded text-gray-200 break-all">
                   {formatAddress(health.dungeonMasterAddress)}
                 </code>
               </div>
@@ -170,7 +164,7 @@ const ContractHealthPanel: React.FC = () => {
                 <span>SoulShard Token:</span>
                 <div className="flex items-center">
                   <span className="mr-2">{getStatusIcon(health.soulShardTokenSet)}</span>
-                  <code className="text-xs bg-gray-700 px-2 py-1 rounded text-gray-200">
+                  <code className="text-xs bg-gray-700 px-2 py-1 rounded text-gray-200 break-all">
                     {formatAddress(health.soulShardToken)}
                   </code>
                 </div>
@@ -179,7 +173,7 @@ const ContractHealthPanel: React.FC = () => {
                 <span>DungeonCore:</span>
                 <div className="flex items-center">
                   <span className="mr-2">{getStatusIcon(health.dungeonCoreSet)}</span>
-                  <code className="text-xs bg-gray-700 px-2 py-1 rounded text-gray-200">
+                  <code className="text-xs bg-gray-700 px-2 py-1 rounded text-gray-200 break-all">
                     {formatAddress(health.dungeonCoreAddress)}
                   </code>
                 </div>
@@ -188,7 +182,7 @@ const ContractHealthPanel: React.FC = () => {
                 <span>DungeonStorage:</span>
                 <div className="flex items-center">
                   <span className="mr-2">{getStatusIcon(health.dungeonStorageSet)}</span>
-                  <code className="text-xs bg-gray-700 px-2 py-1 rounded text-gray-200">
+                  <code className="text-xs bg-gray-700 px-2 py-1 rounded text-gray-200 break-all">
                     {formatAddress(health.dungeonStorageAddress)}
                   </code>
                 </div>
@@ -217,8 +211,7 @@ const ContractHealthPanel: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
-    </AdminSection>
+    </div>
   );
 };
 

@@ -101,8 +101,11 @@ const SettingRow: React.FC<SettingRowProps> = ({
         invalidationStrategies.onAdminParameterChanged(queryClient, parameterType);
       }
     } catch (e: unknown) {
-      const error = e as { shortMessage?: string };
-      showToast(error.shortMessage || "更新失敗", "error");
+      const error = e as { shortMessage?: string; message?: string };
+      // 不顯示用戶取消的錯誤訊息
+      if (!error.message?.includes('User rejected')) {
+        showToast(error.shortMessage || "更新失敗", "error");
+      }
     }
   };
 
@@ -132,7 +135,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-      <div className="text-gray-300 md:col-span-1" title={`讀取來源: ${readSource}`}>
+      <div className="text-gray-300 md:col-span-1 truncate" title={`讀取來源: ${readSource}`}>
         {label}
       </div>
       <div className="font-mono text-sm bg-black/20 p-2 rounded md:col-span-1 break-all">
