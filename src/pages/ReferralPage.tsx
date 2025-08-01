@@ -1,7 +1,7 @@
 // src/pages/ReferralPage.tsx (The Graph 改造版)
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useAccount, useWriteContract } from 'wagmi';
+import { useAccount, useWriteContract, useReadContract } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getContractWithABI } from '../config/contractsWithABI';
 import { useAppToast } from '../contexts/SimpleToastContext';
@@ -54,11 +54,25 @@ const GET_REFERRER_INFO_QUERY = `
   }
 `;
 
-// ★ 核心改造：新的 Hook，用於從 The Graph 獲取邀請數據
+// ★ 核心改造：混合數據源 Hook - 合約直讀 + GraphQL 統計
 const useReferralData = () => {
     const { address, chainId } = useAccount();
-
-    return useQuery({
+    
+    // 1. 合約直讀 - 獲取準確的推薦人數據
+    const playerVaultContract = getContractWithABI('PLAYERVAULT');
+    const { data: contractReferrer, isLoading: isLoadingContract } = useReadContract({
+        address: playerVaultContract.address as `0x${string}`,
+        abi: playerVaultContract.abi,
+        functionName: 'referrers',
+        args: [address],
+        enabled: !!address && chainId === bsc.id,
+        // 較短的緩存時間，確保數據實時性
+        staleTime: 1000 * 30, // 30秒內認為數據是新鮮的
+        gcTime: 1000 * 60 * 2, // 2分鐘後垃圾回收
+    });
+    
+    // 2. GraphQL 查詢 - 獲取統計數據（佣金、推薦人數等）
+    const { data: graphqlProfile, isLoading: isLoadingGraphql } = useQuery({
         queryKey: ['referralData', address],
         queryFn: async () => {
             console.log('🔄 執行 referralData 查詢:', { address, chainId, THE_GRAPH_API_URL });
@@ -84,23 +98,61 @@ const useReferralData = () => {
             
             if (!response.ok) {
                 if (response.status === 429) {
-                    throw new Error('子圖 API 請求過於頻繁，請稍後再試');
+                    console.warn('⚠️ GraphQL API 請求過於頻繁，將依賴合約數據');
+                } else {
+                    console.warn(`⚠️ GraphQL 請求失敗: ${response.status}, 將依賴合約數據`);
                 }
-                throw new Error(`GraphQL 請求失敗: ${response.status} ${response.statusText}`);
+                return null; // 失敗時返回 null，不拋出錯誤
             }
             const { data } = await response.json();
             console.log('📊 GraphQL 返回數據:', { data, profile: data.player?.profile });
             
-            // ★★★ 核心修正：確保在找不到資料時回傳 null 而不是 undefined ★★★
             return data.player?.profile ?? null;
         },
         enabled: !!address && chainId === bsc.id,
-        staleTime: 1000 * 60 * 10, // 10分鐘快取
-        gcTime: 1000 * 60 * 30, // 30分鐘垃圾回收
+        staleTime: 1000 * 60 * 2, // 2分鐘緩存（縮短以便更快獲取統計數據）
+        gcTime: 1000 * 60 * 5, // 5分鐘垃圾回收
         refetchOnWindowFocus: false,
-        retry: 2, // 減少重試次數
-        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // 指數退避
+        retry: 1, // 減少重試次數，避免拖慢頁面
+        retryDelay: 1000,
     });
+    
+    // 3. 合併數據 - 合約數據優先，GraphQL 提供統計
+    const combinedData = useMemo(() => {
+        console.log('🔄 合併推薦人數據:', {
+            contractReferrer,
+            graphqlReferrer: graphqlProfile?.inviter,
+            isContractReferrerValid: contractReferrer && contractReferrer !== '0x0000000000000000000000000000000000000000'
+        });
+        
+        // 合約讀取的推薦人（最準確）
+        const validContractReferrer = contractReferrer && contractReferrer !== '0x0000000000000000000000000000000000000000' 
+            ? contractReferrer 
+            : null;
+        
+        // 優先使用合約數據，備用 GraphQL 數據
+        const finalReferrer = validContractReferrer || graphqlProfile?.inviter || null;
+        
+        console.log('✅ 最終推薦人數據:', {
+            finalReferrer,
+            dataSource: validContractReferrer ? 'contract' : (graphqlProfile?.inviter ? 'graphql' : 'none')
+        });
+        
+        return {
+            inviter: finalReferrer,
+            commissionEarned: graphqlProfile?.commissionEarned || '0',
+            invitees: graphqlProfile?.invitees || [],
+            // 數據來源標記（用於調試）
+            dataSource: validContractReferrer ? 'contract' : (graphqlProfile?.inviter ? 'graphql' : 'none')
+        };
+    }, [contractReferrer, graphqlProfile]);
+
+    return {
+        data: combinedData,
+        isLoading: isLoadingContract || isLoadingGraphql,
+        // 合約數據載入狀態（用於重要數據的載入提示）
+        isLoadingCritical: isLoadingContract
+    };
 };
 
 
@@ -123,12 +175,23 @@ const ReferralPage: React.FC = () => {
     const [showCommissionDetails, setShowCommissionDetails] = useState(true); // 預設展開
     const [hasProcessedReferral, setHasProcessedReferral] = useState(false); // 追蹤是否已處理過推薦
 
-    // ★ 核心改造：使用新的 Hook 獲取數據
-    const { data: referralData, isLoading } = useReferralData();
+    // ★ 核心改造：使用混合數據源 Hook 獲取數據
+    const { data: referralData, isLoading, isLoadingCritical } = useReferralData();
     
     const currentReferrer = referralData?.inviter;
     const totalCommission = referralData?.commissionEarned ? BigInt(referralData.commissionEarned) : 0n;
     const totalReferrals = referralData?.invitees?.length || 0;
+    
+    // 添加數據來源顯示（開發環境）
+    useEffect(() => {
+        if (import.meta.env.DEV && referralData) {
+            console.log('📈 推薦系統數據來源:', referralData.dataSource, {
+                referrer: currentReferrer,
+                commission: totalCommission.toString(),
+                referrals: totalReferrals
+            });
+        }
+    }, [referralData, currentReferrer, totalCommission, totalReferrals]);
 
     const playerVaultContract = getContractWithABI('PLAYERVAULT');
     const { writeContractAsync, isPending: isSettingReferrer } = useWriteContract();
