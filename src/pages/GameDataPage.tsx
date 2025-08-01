@@ -137,7 +137,7 @@ const QuerySection: React.FC<QuerySectionProps> = ({
     const inputId = `gamedata-${title.replace(/\s+/g, '-').toLowerCase()}`;
     
     return (
-        <div className="bg-gray-800/50 backdrop-blur-sm p-4 sm:p-5 md:p-6 rounded-xl shadow-md border border-gray-700/50">
+        <div className="bg-gray-800/70 backdrop-blur-sm p-4 sm:p-5 md:p-6 rounded-xl shadow-lg border border-gray-700">
             <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-200 mb-3 sm:mb-4">{title}</h3>
             <div className="flex gap-2 mb-3 sm:mb-4">
                 <div className="flex-1">
@@ -162,7 +162,7 @@ const QuerySection: React.FC<QuerySectionProps> = ({
                     查詢
                 </ActionButton>
             </div>
-            <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-gray-900/50 rounded-md min-h-[80px] sm:min-h-[100px] text-xs sm:text-sm space-y-2">
+            <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-gray-900/80 rounded-md min-h-[80px] sm:min-h-[100px] text-xs sm:text-sm space-y-2 border border-gray-700/50">
                 {isLoading ? (
                     <div className="flex justify-center items-center h-full">
                         <LoadingSpinner size="h-6 w-6" />
@@ -193,7 +193,7 @@ const HeroQuery: React.FC = () => {
     });
     
     const renderResult = () => {
-        if (!submittedId) return <p className="text-gray-500">請輸入英雄 ID 進行查詢。</p>;
+        if (!submittedId) return <p className="text-gray-400">請輸入英雄 ID 進行查詢。</p>;
         if (isError) return <p className="text-red-500">查詢失敗: {(error as Error).message}</p>;
         if (!data) return <p className="text-yellow-500">查無此英雄，請確認 ID 是否正確。</p>;
         
@@ -201,10 +201,10 @@ const HeroQuery: React.FC = () => {
         
         return (
             <div className="space-y-2">
-                <p><span className="text-gray-400">Token ID:</span> <span className="text-white">{data.tokenId}</span></p>
-                <p><span className="text-gray-400">擁有者:</span> <span className="text-blue-400 font-mono text-xs">{data.owner.id}</span></p>
-                <p><span className="text-gray-400">稀有度:</span> <span className="text-purple-400">{rarityInfo.chineseName} ({rarityInfo.number} ⭐)</span></p>
-                <p><span className="text-gray-400">戰力:</span> <span className="text-green-400">{data.power}</span></p>
+                <p><span className="text-gray-300">Token ID:</span> <span className="text-white font-medium">{data.tokenId}</span></p>
+                <p><span className="text-gray-300">擁有者:</span> <span className="text-blue-400 font-mono text-xs">{data.owner.id}</span></p>
+                <p><span className="text-gray-300">稀有度:</span> <span className="text-purple-400 font-medium">{rarityInfo.chineseName} ({rarityInfo.number} ⭐)</span></p>
+                <p><span className="text-gray-300">戰力:</span> <span className="text-green-400 font-medium">{data.power}</span></p>
             </div>
         );
     };
@@ -238,7 +238,7 @@ const RelicQuery: React.FC = () => {
     });
     
     const renderResult = () => {
-        if (!submittedId) return <p className="text-gray-500">請輸入聖物 ID 進行查詢。</p>;
+        if (!submittedId) return <p className="text-gray-400">請輸入聖物 ID 進行查詢。</p>;
         if (isError) return <p className="text-red-500">查詢失敗: {(error as Error).message}</p>;
         if (!data) return <p className="text-yellow-500">查無此聖物，請確認 ID 是否正確。</p>;
         
@@ -246,10 +246,10 @@ const RelicQuery: React.FC = () => {
         
         return (
             <div className="space-y-2">
-                <p><span className="text-gray-400">Token ID:</span> <span className="text-white">{data.tokenId}</span></p>
-                <p><span className="text-gray-400">擁有者:</span> <span className="text-blue-400 font-mono text-xs">{data.owner.id}</span></p>
-                <p><span className="text-gray-400">稀有度:</span> <span className="text-purple-400">{rarityInfo.chineseName} ({rarityInfo.number} ⭐)</span></p>
-                <p><span className="text-gray-400">容量:</span> <span className="text-orange-400">{data.capacity}</span></p>
+                <p><span className="text-gray-300">Token ID:</span> <span className="text-white font-medium">{data.tokenId}</span></p>
+                <p><span className="text-gray-300">擁有者:</span> <span className="text-blue-400 font-mono text-xs">{data.owner.id}</span></p>
+                <p><span className="text-gray-300">稀有度:</span> <span className="text-purple-400 font-medium">{rarityInfo.chineseName} ({rarityInfo.number} ⭐)</span></p>
+                <p><span className="text-gray-300">容量:</span> <span className="text-orange-400 font-medium">{data.capacity}</span></p>
             </div>
         );
     };
@@ -283,7 +283,7 @@ const PartyQuery: React.FC = () => {
     });
     
     const renderResult = () => {
-        if (!submittedId) return <p className="text-gray-500">請輸入隊伍 ID 進行查詢。</p>;
+        if (!submittedId) return <p className="text-gray-400">請輸入隊伍 ID 進行查詢。</p>;
         if (isError) return <p className="text-red-500">查詢失敗: {(error as Error).message}</p>;
         if (!data) return <p className="text-yellow-500">查無此隊伍，請確認 ID 是否正確。</p>;
         
@@ -291,11 +291,11 @@ const PartyQuery: React.FC = () => {
         
         return (
             <div className="space-y-2">
-                <p><span className="text-gray-400">Token ID:</span> <span className="text-white">{data.tokenId}</span></p>
-                <p><span className="text-gray-400">擁有者:</span> <span className="text-blue-400 font-mono text-xs">{data.owner.id}</span></p>
-                <p><span className="text-gray-400">隊伍稀有度:</span> <span className="text-purple-400">{rarityInfo.chineseName} ({rarityInfo.number} ⭐)</span></p>
-                <p><span className="text-gray-400">總戰力:</span> <span className="text-green-400">{data.totalPower}</span></p>
-                <p><span className="text-gray-400">總容量:</span> <span className="text-orange-400">{data.totalCapacity}</span></p>
+                <p><span className="text-gray-300">Token ID:</span> <span className="text-white font-medium">{data.tokenId}</span></p>
+                <p><span className="text-gray-300">擁有者:</span> <span className="text-blue-400 font-mono text-xs">{data.owner.id}</span></p>
+                <p><span className="text-gray-300">隊伍稀有度:</span> <span className="text-purple-400 font-medium">{rarityInfo.chineseName} ({rarityInfo.number} ⭐)</span></p>
+                <p><span className="text-gray-300">總戰力:</span> <span className="text-green-400 font-medium">{data.totalPower}</span></p>
+                <p><span className="text-gray-300">總容量:</span> <span className="text-orange-400 font-medium">{data.totalCapacity}</span></p>
             </div>
         );
     };
@@ -336,7 +336,7 @@ const PlayerQuery: React.FC = () => {
     };
     
     const renderResult = () => {
-        if (!submittedAddress) return <p className="text-gray-500">請輸入玩家地址進行查詢。</p>;
+        if (!submittedAddress) return <p className="text-gray-400">請輸入玩家地址進行查詢。</p>;
         if (!isAddress(submittedAddress)) return <p className="text-red-500">無效的錢包地址，請重新輸入。</p>;
         if (isError) {
             const errorMessage = (error as Error).message;
@@ -353,22 +353,22 @@ const PlayerQuery: React.FC = () => {
         
         return (
             <div className="space-y-2">
-                <p><span className="text-gray-400">地址:</span> <span className="text-blue-400 font-mono text-xs">{data.id}</span></p>
+                <p><span className="text-gray-300">地址:</span> <span className="text-blue-400 font-mono text-xs">{data.id}</span></p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
-                    <div className="bg-gray-800/30 p-2 rounded">
-                        <p className="text-gray-400 text-xs">英雄數量</p>
-                        <p className="text-green-400 font-bold">{data.heros?.length || 0}</p>
-                        <p className="text-gray-400 text-xs">總戰力: {totalHeroPower}</p>
+                    <div className="bg-gray-800/50 p-2 rounded border border-gray-700/30">
+                        <p className="text-gray-300 text-xs">英雄數量</p>
+                        <p className="text-green-400 font-bold text-lg">{data.heros?.length || 0}</p>
+                        <p className="text-gray-300 text-xs">總戰力: <span className="text-green-400">{totalHeroPower}</span></p>
                     </div>
-                    <div className="bg-gray-800/30 p-2 rounded">
-                        <p className="text-gray-400 text-xs">聖物數量</p>
-                        <p className="text-orange-400 font-bold">{data.relics?.length || 0}</p>
-                        <p className="text-gray-400 text-xs">總容量: {totalRelicCapacity}</p>
+                    <div className="bg-gray-800/50 p-2 rounded border border-gray-700/30">
+                        <p className="text-gray-300 text-xs">聖物數量</p>
+                        <p className="text-orange-400 font-bold text-lg">{data.relics?.length || 0}</p>
+                        <p className="text-gray-300 text-xs">總容量: <span className="text-orange-400">{totalRelicCapacity}</span></p>
                     </div>
-                    <div className="bg-gray-800/30 p-2 rounded">
-                        <p className="text-gray-400 text-xs">隊伍數量</p>
-                        <p className="text-purple-400 font-bold">{data.parties?.length || 0}</p>
-                        <p className="text-gray-400 text-xs">總戰力: {totalPartyPower}</p>
+                    <div className="bg-gray-800/50 p-2 rounded border border-gray-700/30">
+                        <p className="text-gray-300 text-xs">隊伍數量</p>
+                        <p className="text-purple-400 font-bold text-lg">{data.parties?.length || 0}</p>
+                        <p className="text-gray-300 text-xs">總戰力: <span className="text-purple-400">{totalPartyPower}</span></p>
                     </div>
                 </div>
             </div>

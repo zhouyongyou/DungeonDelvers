@@ -1,0 +1,3 @@
+{
+  "query": "{ playerStats(first: 3) { id totalRewardsEarned successfulExpeditions } }"
+}

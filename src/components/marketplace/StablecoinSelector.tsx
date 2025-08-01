@@ -2,7 +2,8 @@
 // 穩定幣選擇器組件
 
 import React from 'react';
-import { SUPPORTED_STABLECOINS, type StablecoinSymbol } from '../../hooks/useMarketplaceV2Contract';
+import { SUPPORTED_STABLECOINS } from '../../config/marketplace';
+import type { StablecoinSymbol } from '../../hooks/useMarketplaceV2Contract';
 import { useReadContract } from 'wagmi';
 import { formatUnits } from 'viem';
 import erc20Abi from '../../abis/ERC20.json';

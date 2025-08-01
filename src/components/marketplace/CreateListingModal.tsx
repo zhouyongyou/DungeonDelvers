@@ -56,16 +56,30 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
     const availableNfts = useMemo(() => {
         if (!userNfts) return [];
         
+        let nfts: (HeroNft | RelicNft | PartyNft)[] = [];
+        
         switch (selectedType) {
             case 'hero':
-                return userNfts.heros || [];  // Fixed: "heros" not "heroes"
+                nfts = userNfts.heros || [];  // Fixed: "heros" not "heroes"
+                break;
             case 'relic':
-                return userNfts.relics || [];
+                nfts = userNfts.relics || [];
+                break;
             case 'party':
-                return userNfts.parties || [];
+                nfts = userNfts.parties || [];
+                break;
             default:
                 return [];
         }
+        
+        // 過濾掉沒有 tokenId 的 NFT
+        return nfts.filter(nft => {
+            if (!nft.tokenId) {
+                console.warn('Found NFT without tokenId:', nft);
+                return false;
+            }
+            return true;
+        });
     }, [selectedType, userNfts]);
     
     const handleCreateListing = async () => {
@@ -127,11 +141,13 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
     
     // NFT 詳細資訊組件
     const NftDetailsCard = ({ nft }: { nft: HeroNft | RelicNft | PartyNft }) => {
-        const heroPower = useHeroPower(nft.type === 'hero' ? BigInt(nft.tokenId) : 0n);
-        const partyPower = usePartyPower(nft.type === 'party' ? BigInt(nft.tokenId) : 0n);
-        const heroDetails = useHeroDetails(nft.type === 'hero' ? BigInt(nft.tokenId) : 0n);
-        const relicDetails = useRelicDetails(nft.type === 'relic' ? BigInt(nft.tokenId) : 0n);
-        const partyDetails = usePartyDetails(nft.type === 'party' ? BigInt(nft.tokenId) : 0n);
+        // 確保 tokenId 不是 undefined
+        const safeTokenId = nft.tokenId ? BigInt(nft.tokenId) : 0n;
+        const heroPower = useHeroPower(nft.type === 'hero' ? safeTokenId : 0n);
+        const partyPower = usePartyPower(nft.type === 'party' ? safeTokenId : 0n);
+        const heroDetails = useHeroDetails(nft.type === 'hero' ? safeTokenId : 0n);
+        const relicDetails = useRelicDetails(nft.type === 'relic' ? safeTokenId : 0n);
+        const partyDetails = usePartyDetails(nft.type === 'party' ? safeTokenId : 0n);
 
         const powerValue = nft.type === 'hero' ? heroPower.power : 
                           nft.type === 'party' ? partyPower.power : null;
@@ -266,15 +282,17 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
                         {availableNfts.map((nft) => {
                             const NftCard = () => {
-                                const heroPower = useHeroPower(nft.type === 'hero' ? BigInt(nft.tokenId) : 0n);
-                                const partyPower = usePartyPower(nft.type === 'party' ? BigInt(nft.tokenId) : 0n);
+                                // 確保 tokenId 不是 undefined
+                                const safeTokenId = nft.tokenId ? BigInt(nft.tokenId) : 0n;
+                                const heroPower = useHeroPower(nft.type === 'hero' ? safeTokenId : 0n);
+                                const partyPower = usePartyPower(nft.type === 'party' ? safeTokenId : 0n);
                                 const powerValue = nft.type === 'hero' ? heroPower.power : 
                                                   nft.type === 'party' ? partyPower.power : null;
                                 const isLoadingPower = heroPower.isLoading || partyPower.isLoading;
 
                                 return (
                                     <button
-                                        key={`${nft.type}-${nft.tokenId}`}
+                                        key={`${nft.type}-${nft.tokenId || 'unknown'}-${nft.id || Math.random()}`}
                                         onClick={() => handleNftSelect(nft)}
                                         className={`p-3 rounded-lg border-2 transition-all ${
                                             selectedNft?.tokenId === nft.tokenId
@@ -311,7 +329,7 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
                                 );
                             };
                             
-                            return <NftCard key={`${nft.type}-${nft.tokenId}`} />;
+                            return <NftCard key={`${nft.type}-${nft.tokenId || 'unknown'}-${nft.id || Math.random()}`} />;
                         })}
                     </div>
                     {availableNfts.length === 0 && (

@@ -199,7 +199,7 @@ const VipPageContent: React.FC = () => {
         isLoading, vipStakingContract, soulShardContract,
         soulShardBalance, stakedAmount, stakedValueUSD,
         tokenId, vipLevel, taxReduction,
-        pendingUnstakeAmount, unstakeAvailableAt, isCooldownOver, countdown, allowance, 
+        pendingUnstakeAmount, unstakeAvailableAt, isCooldownOver, countdown, cooldownProgress, allowance, 
         cooldownDays, cooldownFormatted, cooldownPeriod, refetchAll, startPollingRefresh
     } = useVipStatus();
 
@@ -411,6 +411,13 @@ const VipPageContent: React.FC = () => {
                     placeholder={`輸入要${mode === 'stake' ? '質押' : '贖回'}的數量`} 
                     className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none h-12 bg-gray-800 border-gray-700" 
                 />
+                {mode === 'unstake' && (
+                    <div className="mt-2 p-3 bg-orange-900/20 border border-orange-500/30 rounded-lg">
+                        <p className="text-xs text-orange-300">
+                            ⚠️ <strong>重要提醒</strong>：贖回後需等待 <strong>{cooldownDays || 1} 天</strong>冷卻期才能領取，期間無法質押或贖回
+                        </p>
+                    </div>
+                )}
             </div>
             <div className="flex justify-between gap-2 text-xs">
                 {[25, 50, 75, 100].map(p => (
@@ -494,12 +501,12 @@ const VipPageContent: React.FC = () => {
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="text-xs sm:text-sm text-gray-400">您的提現稅率</div>
+                                    <div className="text-xs sm:text-sm text-gray-400">提現稅率減免</div>
                                     <div className="font-bold text-lg sm:text-2xl text-green-400">
-                                        {isLoading ? '...' : `${Math.max(0, 10 - (Number(taxReduction) / 10000 * 100)).toFixed(1)}%`}
+                                        {isLoading ? '...' : `-${(Number(taxReduction) / 10000 * 100).toFixed(1)}%`}
                                     </div>
                                     <div className="text-xs text-gray-500">
-                                        減免: {isLoading ? '...' : `-${(Number(taxReduction) / 10000 * 100).toFixed(1)}%`}
+                                        VIP {vipLevel} 級福利
                                     </div>
                                 </div>
                             </div>
@@ -535,8 +542,8 @@ const VipPageContent: React.FC = () => {
                                                     <div 
                                                         className="bg-gradient-to-r from-yellow-400 to-yellow-600 h-3 rounded-full transition-all duration-1000 relative"
                                                         style={{ 
-                                                            width: `${progressPercentage}%`,
-                                                            minWidth: progressPercentage > 0 ? '8px' : '0px'
+                                                            width: `${cooldownProgress || 0}%`,
+                                                            minWidth: cooldownProgress > 0 ? '8px' : '0px'
                                                         }}
                                                     >
                                                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>

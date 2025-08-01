@@ -1,112 +1,135 @@
-// src/hooks/useMarketplaceV2Contract.ts
-// Multi-currency marketplace contract hooks
-
+// Fixed version of marketplace V2 hook with proper error handling
 import { useState, useCallback } from 'react';
-import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
-import { parseUnits, type Address } from 'viem';
+import { 
+  useAccount, 
+  useWriteContract, 
+  usePublicClient,
+  useWalletClient 
+} from 'wagmi';
+import { 
+  parseUnits, 
+  type Address,
+  type Hash,
+  encodeFunctionData,
+  decodeFunctionResult
+} from 'viem';
 import { useAppToast } from '../contexts/SimpleToastContext';
-// ✅ V25 Marketplace V2 restored with deployed contract addresses
 import { HERO, RELIC, PARTY } from '../config/contracts';
-import { DUNGEONMARKETPLACE_V2, OFFERSYSTEM_V2, SUPPORTED_STABLECOINS } from '../config/marketplace';
+import { DUNGEONMARKETPLACE_V2, SUPPORTED_STABLECOINS } from '../config/marketplace';
 import marketplaceV2Abi from '../abis/DungeonMarketplaceV2.json';
-import offerSystemV2Abi from '../abis/OfferSystemV2.json';
-import type { HeroNft, RelicNft, PartyNft, NftType } from '../types/nft';
-
-// SUPPORTED_STABLECOINS is already imported from marketplace config
+import type { HeroNft, RelicNft, PartyNft } from '../types/nft';
 
 export type StablecoinSymbol = keyof typeof SUPPORTED_STABLECOINS;
 
-// NFT contract mapping - using V25 addresses from main config
+// NFT contract mapping
 const NFT_CONTRACTS = {
-  0: HERO,  // HERO (V25)
-  1: RELIC, // RELIC (V25)
-  2: PARTY  // PARTY (V25)
+  0: HERO,
+  1: RELIC,
+  2: PARTY
 } as const;
 
-// Minimal ERC20 ABI for allowance and approval
+// Standard ERC20 ABI for approval
 const ERC20_ABI = [
   {
-    "name": "allowance",
-    "type": "function",
-    "inputs": [
-      {"name": "owner", "type": "address"},
-      {"name": "spender", "type": "address"}
+    inputs: [
+      { name: 'owner', type: 'address' },
+      { name: 'spender', type: 'address' }
     ],
-    "outputs": [{"name": "", "type": "uint256"}],
-    "stateMutability": "view"
+    name: 'allowance',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
   },
   {
-    "name": "approve",
-    "type": "function",
-    "inputs": [
-      {"name": "spender", "type": "address"},
-      {"name": "amount", "type": "uint256"}
+    inputs: [
+      { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint256' }
     ],
-    "outputs": [{"name": "", "type": "bool"}],
-    "stateMutability": "nonpayable"
+    name: 'approve',
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'nonpayable',
+    type: 'function'
   },
   {
-    "name": "balanceOf",
-    "type": "function",
-    "inputs": [{"name": "account", "type": "address"}],
-    "outputs": [{"name": "", "type": "uint256"}],
-    "stateMutability": "view"
+    inputs: [{ name: 'account', type: 'address' }],
+    name: 'balanceOf',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
   }
 ] as const;
 
-// Minimal ERC721 ABI for approval
+// Standard ERC721 ABI for approval
 const ERC721_ABI = [
   {
-    "name": "setApprovalForAll",
-    "type": "function",
-    "inputs": [
-      {"name": "operator", "type": "address"},
-      {"name": "approved", "type": "bool"}
+    inputs: [
+      { name: 'operator', type: 'address' },
+      { name: 'approved', type: 'bool' }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    name: 'setApprovalForAll',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function'
   },
   {
-    "name": "isApprovedForAll",
-    "type": "function",
-    "inputs": [
-      {"name": "owner", "type": "address"},
-      {"name": "operator", "type": "address"}
+    inputs: [
+      { name: 'owner', type: 'address' },
+      { name: 'operator', type: 'address' }
     ],
-    "outputs": [{"name": "", "type": "bool"}],
-    "stateMutability": "view"
+    name: 'isApprovedForAll',
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function'
   }
 ] as const;
 
-export function useMarketplaceV2() {
+export function useMarketplaceV2Fixed() {
   const { address } = useAccount();
   const { showToast } = useAppToast();
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Safe contract read helper
+  const safeReadContract = useCallback(async <T,>(
+    contractAddress: Address,
+    abi: any,
+    functionName: string,
+    args?: any[]
+  ): Promise<T | null> => {
+    if (!publicClient) {
+      console.error('Public client not available');
+      return null;
+    }
+    
+    try {
+      const result = await publicClient.readContract({
+        address: contractAddress,
+        abi,
+        functionName,
+        args: args || []
+      });
+      return result as T;
+    } catch (error) {
+      console.error(`Error reading ${functionName}:`, error);
+      return null;
+    }
+  }, [publicClient]);
 
   // Check if NFT is approved for marketplace
   const checkNFTApproval = useCallback(async (
     nftContract: Address,
     owner: Address
   ): Promise<boolean> => {
-    if (!publicClient) {
-      console.error('Public client not available');
-      return false;
-    }
-    try {
-      const isApproved = await publicClient.readContract({
-        address: nftContract,
-        abi: ERC721_ABI,
-        functionName: 'isApprovedForAll',
-        args: [owner, DUNGEONMARKETPLACE_V2]
-      });
-      return isApproved as boolean;
-    } catch (error) {
-      console.error('Error checking NFT approval:', error);
-      return false;
-    }
-  }, [publicClient]);
+    const result = await safeReadContract<boolean>(
+      nftContract,
+      ERC721_ABI,
+      'isApprovedForAll',
+      [owner, DUNGEONMARKETPLACE_V2]
+    );
+    return result || false;
+  }, [safeReadContract]);
 
   // Check token allowance
   const checkTokenAllowance = useCallback(async (
@@ -114,44 +137,44 @@ export function useMarketplaceV2() {
     owner: Address,
     spender: Address
   ): Promise<bigint> => {
-    if (!publicClient) {
-      console.error('Public client not available');
-      return 0n;
-    }
-    try {
-      const allowance = await publicClient.readContract({
-        address: tokenAddress,
-        abi: ERC20_ABI,
-        functionName: 'allowance',
-        args: [owner, spender]
-      });
-      return allowance as bigint;
-    } catch (error) {
-      console.error('Error checking token allowance:', error);
-      return 0n;
-    }
-  }, [publicClient]);
+    const result = await safeReadContract<bigint>(
+      tokenAddress,
+      ERC20_ABI,
+      'allowance',
+      [owner, spender]
+    );
+    return result || 0n;
+  }, [safeReadContract]);
 
   // Check token balance
   const checkTokenBalance = useCallback(async (
     tokenAddress: Address,
     owner: Address
   ): Promise<bigint> => {
+    const result = await safeReadContract<bigint>(
+      tokenAddress,
+      ERC20_ABI,
+      'balanceOf',
+      [owner]
+    );
+    return result || 0n;
+  }, [safeReadContract]);
+
+  // Safe transaction wait helper
+  const waitForTransaction = useCallback(async (hash: Hash) => {
     if (!publicClient) {
-      console.error('Public client not available');
-      return 0n;
+      throw new Error('Public client not available');
     }
+    
     try {
-      const balance = await publicClient.readContract({
-        address: tokenAddress,
-        abi: ERC20_ABI,
-        functionName: 'balanceOf',
-        args: [owner]
+      const receipt = await publicClient.waitForTransactionReceipt({ 
+        hash,
+        confirmations: 1 
       });
-      return balance as bigint;
+      return receipt;
     } catch (error) {
-      console.error('Error checking token balance:', error);
-      return 0n;
+      console.error('Transaction wait error:', error);
+      throw error;
     }
   }, [publicClient]);
 
@@ -173,11 +196,7 @@ export function useMarketplaceV2() {
 
       showToast('NFT 授權交易已發送', 'info');
       
-      // Wait for confirmation
-      if (!publicClient) {
-        throw new Error('Public client not available');
-      }
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      const receipt = await waitForTransaction(hash);
       
       if (receipt.status === 'success') {
         showToast('NFT 授權成功！', 'success');
@@ -193,7 +212,7 @@ export function useMarketplaceV2() {
     } finally {
       setIsProcessing(false);
     }
-  }, [address, writeContractAsync, showToast]);
+  }, [address, writeContractAsync, showToast, waitForTransaction]);
 
   // Approve token for spending
   const approveToken = useCallback(async (
@@ -216,11 +235,7 @@ export function useMarketplaceV2() {
 
       showToast('代幣授權交易已發送', 'info');
       
-      // Wait for confirmation
-      if (!publicClient) {
-        throw new Error('Public client not available');
-      }
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      const receipt = await waitForTransaction(hash);
       
       if (receipt.status === 'success') {
         showToast('代幣授權成功！', 'success');
@@ -236,7 +251,7 @@ export function useMarketplaceV2() {
     } finally {
       setIsProcessing(false);
     }
-  }, [address, writeContractAsync, showToast]);
+  }, [address, writeContractAsync, showToast, waitForTransaction]);
 
   // Create listing with multiple accepted tokens
   const createListing = useCallback(async (
@@ -291,11 +306,7 @@ export function useMarketplaceV2() {
 
       showToast('掛單交易已發送', 'info');
       
-      // Wait for confirmation
-      if (!publicClient) {
-        throw new Error('Public client not available');
-      }
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      const receipt = await waitForTransaction(hash);
       
       if (receipt.status === 'success') {
         showToast('NFT 掛單成功！', 'success');
@@ -311,7 +322,7 @@ export function useMarketplaceV2() {
     } finally {
       setIsProcessing(false);
     }
-  }, [address, writeContractAsync, showToast, checkNFTApproval, approveNFT, publicClient]);
+  }, [address, writeContractAsync, showToast, checkNFTApproval, approveNFT, waitForTransaction]);
 
   // Purchase NFT with selected token
   const purchaseNFT = useCallback(async (
@@ -359,11 +370,7 @@ export function useMarketplaceV2() {
 
       showToast('購買交易已發送', 'info');
       
-      // Wait for confirmation
-      if (!publicClient) {
-        throw new Error('Public client not available');
-      }
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      const receipt = await waitForTransaction(hash);
       
       if (receipt.status === 'success') {
         showToast('購買成功！', 'success');
@@ -379,7 +386,7 @@ export function useMarketplaceV2() {
     } finally {
       setIsProcessing(false);
     }
-  }, [address, writeContractAsync, showToast, checkTokenBalance, checkTokenAllowance, approveToken]);
+  }, [address, writeContractAsync, showToast, checkTokenBalance, checkTokenAllowance, approveToken, waitForTransaction]);
 
   // Cancel listing
   const cancelListing = useCallback(async (listingId: string) => {
@@ -399,11 +406,7 @@ export function useMarketplaceV2() {
 
       showToast('取消掛單交易已發送', 'info');
       
-      // Wait for confirmation
-      if (!publicClient) {
-        throw new Error('Public client not available');
-      }
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      const receipt = await waitForTransaction(hash);
       
       if (receipt.status === 'success') {
         showToast('掛單已取消', 'success');
@@ -419,7 +422,7 @@ export function useMarketplaceV2() {
     } finally {
       setIsProcessing(false);
     }
-  }, [address, writeContractAsync, showToast]);
+  }, [address, writeContractAsync, showToast, waitForTransaction]);
 
   // Update listing price
   const updateListingPrice = useCallback(async (
@@ -444,11 +447,7 @@ export function useMarketplaceV2() {
 
       showToast('更新價格交易已發送', 'info');
       
-      // Wait for confirmation
-      if (!publicClient) {
-        throw new Error('Public client not available');
-      }
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      const receipt = await waitForTransaction(hash);
       
       if (receipt.status === 'success') {
         showToast('價格更新成功', 'success');
@@ -464,7 +463,7 @@ export function useMarketplaceV2() {
     } finally {
       setIsProcessing(false);
     }
-  }, [address, writeContractAsync, showToast]);
+  }, [address, writeContractAsync, showToast, waitForTransaction]);
 
   // Update accepted tokens for listing
   const updateListingTokens = useCallback(async (
@@ -496,11 +495,7 @@ export function useMarketplaceV2() {
 
       showToast('更新接受幣種交易已發送', 'info');
       
-      // Wait for confirmation
-      if (!publicClient) {
-        throw new Error('Public client not available');
-      }
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      const receipt = await waitForTransaction(hash);
       
       if (receipt.status === 'success') {
         showToast('接受幣種更新成功', 'success');
@@ -516,7 +511,7 @@ export function useMarketplaceV2() {
     } finally {
       setIsProcessing(false);
     }
-  }, [address, writeContractAsync, showToast]);
+  }, [address, writeContractAsync, showToast, waitForTransaction]);
 
   return {
     createListing,

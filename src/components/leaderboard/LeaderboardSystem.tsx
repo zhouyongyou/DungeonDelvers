@@ -53,10 +53,10 @@ export const LeaderboardSystem: React.FC<LeaderboardProps> = ({
 
   const getRankStyle = (rank: number) => {
     switch (rank) {
-      case 1: return 'bg-gradient-to-r from-yellow-600 to-yellow-500 text-black';
-      case 2: return 'bg-gradient-to-r from-gray-400 to-gray-300 text-black';
-      case 3: return 'bg-gradient-to-r from-orange-700 to-orange-600 text-white';
-      default: return 'bg-gray-800';
+      case 1: return 'bg-gradient-to-r from-yellow-900/60 to-yellow-800/60 text-yellow-100 border border-yellow-500/30';
+      case 2: return 'bg-gradient-to-r from-gray-800/60 to-gray-700/60 text-gray-100 border border-gray-400/30';
+      case 3: return 'bg-gradient-to-r from-orange-900/60 to-orange-800/60 text-orange-100 border border-orange-500/30';
+      default: return 'bg-gray-800/40 text-gray-200 border border-gray-700/30';
     }
   };
 
@@ -85,36 +85,27 @@ export const LeaderboardSystem: React.FC<LeaderboardProps> = ({
                 key={t}
                 onClick={() => setSelectedType(t)}
                 className={cn(
-                  'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
+                  'px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all',
                   selectedType === t
                     ? 'bg-purple-600 text-white'
                     : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                 )}
               >
-                {getTypeIcon(t)} {getTypeLabel(t)}
+                <span className="inline sm:hidden">{getTypeIcon(t)}</span>
+                <span className="hidden sm:inline">{getTypeIcon(t)} {getTypeLabel(t)}</span>
+                <span className="inline sm:hidden ml-1 text-[10px]">
+                  {t === 'totalEarnings' && '收益'}
+                  {t === 'dungeonClears' && '通關'}
+                  {t === 'playerLevel' && '等級'}
+                  {t === 'upgradeAttempts' && '升級'}
+                </span>
               </button>
             ))}
           </div>
 
-          {/* 時間範圍 */}
-          <div className="flex gap-2">
-            {(['daily', 'weekly', 'monthly', 'all'] as const).map(range => (
-              <button
-                key={range}
-                onClick={() => setTimeRange(range)}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
-                  timeRange === range
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                )}
-              >
-                {range === 'daily' && '今日'}
-                {range === 'weekly' && '本週'}
-                {range === 'monthly' && '本月'}
-                {range === 'all' && '全部'}
-              </button>
-            ))}
+          {/* 顯示狀態 */}
+          <div className="px-3 py-1.5 bg-gray-800 rounded-lg text-sm text-gray-400">
+            📊 全時段統計
           </div>
         </div>
       )}

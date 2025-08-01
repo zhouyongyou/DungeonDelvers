@@ -13,16 +13,26 @@ import {
 } from 'lucide-react';
 import { SkeletonLoader } from '../ui/SkeletonLoader';
 import { AnimatedButton } from '../ui/AnimatedButton';
-import { formatSoul } from '../../utils/formatters';
+import { formatSoul, formatLargeNumber } from '../../utils/formatters';
 import { cn } from '../../utils/cn';
 import { formatEther } from 'viem';
 
 export const AnalyticsDashboard: React.FC<{ className?: string }> = ({ className }) => {
   const { address } = useAccount();
-  const [timeRange, setTimeRange] = useState<7 | 30 | 90>(30); // 預設30天
+  const [timeRange, setTimeRange] = useState<7 | 30 | 90>(7); // 預設7天
   const [selectedChart, setSelectedChart] = useState<'earnings' | 'parties' | 'achievements'>('earnings');
 
   const { data, isLoading, hasRealData } = usePlayerAnalytics(timeRange);
+
+  // 圖表專用的格式化函數 - 使用 K 單位
+  const formatChartValue = (value: number) => {
+    if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(1)}M`;
+    } else if (value >= 1000) {
+      return `${(value / 1000).toFixed(1)}K`;
+    }
+    return value.toFixed(0);
+  };
 
   // 計算統計摘要
   const summary = useMemo(() => {
@@ -90,16 +100,6 @@ export const AnalyticsDashboard: React.FC<{ className?: string }> = ({ className
 
   return (
     <div className={cn('space-y-6', className)}>
-      {/* 數據來源指示器 - 只在有真實數據時顯示 */}
-      {hasRealData && (
-        <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3">
-          <div className="flex items-center gap-2 text-green-400 text-sm">
-            <Activity className="w-4 h-4" />
-            <span>✅ 顯示真實鏈上數據</span>
-          </div>
-        </div>
-      )}
-
       {/* 統計卡片 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {isLoading ? (
@@ -119,10 +119,16 @@ export const AnalyticsDashboard: React.FC<{ className?: string }> = ({ className
                 )}
               </div>
               <p className="text-2xl font-bold text-white">
-                {formatSoul(BigInt(Math.floor(summary.totalEarnings)))}
+                {summary.totalEarnings > 0 
+                  ? formatLargeNumber(BigInt(Math.floor(summary.totalEarnings)))
+                  : '尚無收益'
+                }
               </p>
               <p className="text-sm text-gray-400 mt-1">
-                日均: {formatSoul(BigInt(Math.floor(summary.avgDailyEarnings)))}
+                日均: {summary.avgDailyEarnings > 0 
+                  ? formatLargeNumber(BigInt(Math.floor(summary.avgDailyEarnings)))
+                  : '0'
+                }
               </p>
             </div>
 
@@ -150,7 +156,7 @@ export const AnalyticsDashboard: React.FC<{ className?: string }> = ({ className
                 {data.dungeonStats.favoritesDungeon}
               </p>
               <p className="text-sm text-gray-400 mt-1">
-                平均獎勵: {data.dungeonStats.avgRewardPerRun} SOUL
+                平均獎勵: {parseFloat(data.dungeonStats.avgRewardPerRun).toFixed(1)} SOUL
               </p>
             </div>
 
@@ -233,10 +239,17 @@ export const AnalyticsDashboard: React.FC<{ className?: string }> = ({ className
                   <AreaChart data={data.earningsTrend.slice(-timeRange)}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                     <XAxis dataKey="date" stroke="#9CA3AF" />
-                    <YAxis stroke="#9CA3AF" />
+                    <YAxis 
+                      stroke="#9CA3AF" 
+                      tickFormatter={formatChartValue}
+                    />
                     <Tooltip 
                       contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
                       labelStyle={{ color: '#9CA3AF' }}
+                      formatter={(value: number, name: string) => [
+                        `${formatChartValue(value)} SOUL`,
+                        name
+                      ]}
                     />
                     <Legend />
                     <Area 
@@ -276,10 +289,17 @@ export const AnalyticsDashboard: React.FC<{ className?: string }> = ({ className
                   <BarChart data={data.partyPerformance}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                     <XAxis dataKey="name" stroke="#9CA3AF" />
-                    <YAxis stroke="#9CA3AF" />
+                    <YAxis 
+                      stroke="#9CA3AF" 
+                      tickFormatter={formatChartValue}
+                    />
                     <Tooltip 
                       contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
                       labelStyle={{ color: '#9CA3AF' }}
+                      formatter={(value: number, name: string) => [
+                        name === '總收益' ? `${formatChartValue(value)} SOUL` : `${value}%`,
+                        name
+                      ]}
                     />
                     <Legend />
                     <Bar dataKey="totalEarnings" fill={chartColors.primary} name="總收益" />

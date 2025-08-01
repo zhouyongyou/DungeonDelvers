@@ -140,6 +140,38 @@ export default defineConfig(({ mode }) => ({
     // 🔥 新增：HMR 優化
     hmr: {
       overlay: false // 減少開發環境錯誤覆蓋的干擾
+    },
+    // 🔥 新增：API 代理配置，解決本地開發 RPC 問題
+    proxy: {
+      '/api/rpc-optimized': {
+        target: 'https://bsc-dataseed1.defibit.io',
+        changeOrigin: true,
+        secure: true,
+        rewrite: () => '/',
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, res) => {
+            console.log('🔧 本地 RPC 代理失敗，使用降級模式');
+            // 提供基本的 JSON-RPC 響應
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+              jsonrpc: '2.0',
+              error: { code: -32603, message: 'Local development mode - RPC unavailable' },
+              id: null
+            }));
+          });
+        }
+      },
+      '/api/metadata': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, res) => {
+            console.log('📝 元數據服務不可用，使用模擬數據');
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Metadata service unavailable in local dev' }));
+          });
+        }
+      }
     }
     // 移除 headers 設置，讓 Vite 自動處理 MIME 類型
   },

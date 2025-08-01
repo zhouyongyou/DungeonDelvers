@@ -307,8 +307,11 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     // 全額提領（備用功能）
     const handleFullWithdraw = () => {
         if (Number(pendingVaultRewards) > 0) {
-            setCustomWithdrawAmount(BigInt(pendingVaultRewards));
+            // 將字符串轉換為 BigInt，先乘以 1e18 轉為 wei 單位
+            const amountInWei = BigInt(Math.floor(parseFloat(pendingVaultRewards) * 1e18));
+            setCustomWithdrawAmount(amountInWei);
             setWithdrawUsdAmount(formatSoulToUsd(pendingVaultRewards));
+            setShowSmartWithdraw(false); // 關閉 Modal
             smartWithdrawTx.execute();
         }
     };
@@ -1118,6 +1121,66 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         )}
                     </div>
 
+                    {/* 快速提領全部按鈕 - 放在這裡更顯眼 */}
+                    <div className="bg-gradient-to-r from-purple-900/20 to-pink-900/20 border border-purple-500/30 rounded-lg p-4">
+                        <h4 className="font-medium text-purple-300 mb-2 flex items-center gap-2">
+                            <Icons.Zap className="h-4 w-4" />
+                            快速提領全部
+                        </h4>
+                        
+                        {/* 稅率預覽 - 針對全額提領 */}
+                        {Number(pendingVaultRewards) > 0 && (
+                            <div className="mb-3 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
+                                {(() => {
+                                    const usdValue = parseFloat(formatSoulToUsd(pendingVaultRewards));
+                                    const canUseFree = usdValue <= 20;
+                                    const isLarge = usdValue >= 1000;
+                                    const taxRate = canUseFree ? 0 : (isLarge ? actualLargeTaxRate : actualTaxRate);
+                                    const soulAmount = parseFloat(pendingVaultRewards);
+                                    const received = Math.floor(soulAmount * (100 - taxRate) / 100);
+                                    
+                                    return (
+                                        <div className="space-y-1 text-xs">
+                                            <p className="text-gray-300">
+                                                類型：
+                                                <span className={`ml-1 font-medium ${
+                                                    canUseFree ? 'text-green-400' :
+                                                    isLarge ? 'text-orange-400' : 'text-blue-400'
+                                                }`}>
+                                                    {canUseFree ? '免稅提領' : isLarge ? '大額提領' : '一般提領'}
+                                                </span>
+                                                <span className={`ml-1 font-medium ${
+                                                    taxRate === 0 ? 'text-green-400' : 'text-red-400'
+                                                }`}>
+                                                    ({taxRate.toFixed(1)}% 稅率)
+                                                </span>
+                                            </p>
+                                            <p className="text-gray-300">
+                                                到手：
+                                                <span className="ml-1 font-medium text-white">
+                                                    {received.toLocaleString()} SOUL
+                                                </span>
+                                            </p>
+                                            {canUseFree && (
+                                                <p className="text-green-400">
+                                                    🎁 每日免稅機會！
+                                                </p>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        )}
+                        
+                        <button
+                            onClick={handleFullWithdraw}
+                            disabled={smartWithdrawTx.isLoading || Number(pendingVaultRewards) === 0}
+                            className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-all"
+                        >
+                            {smartWithdrawTx.isLoading ? '處理中...' : '提領全部'}
+                        </button>
+                    </div>
+
                     {/* 預設金額選項 */}
                     <div className="space-y-3">
                         <h4 className="font-medium text-gray-300">策略性提領選項</h4>
@@ -1198,20 +1261,6 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                             </div>
                         </div>
                     )}
-
-                    {/* 快速提領全部選項 */}
-                    <div className="border-t border-gray-700 pt-4">
-                        <button
-                            onClick={handleFullWithdraw}
-                            disabled={smartWithdrawTx.isLoading || Number(pendingVaultRewards) === 0}
-                            className="w-full py-2 px-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-all"
-                        >
-                            {smartWithdrawTx.isLoading ? '處理中...' : '提領全部 (傳統模式)'}
-                        </button>
-                        <p className="text-xs text-gray-400 text-center mt-1">
-                            一次提領全部金庫餘額
-                        </p>
-                    </div>
                 </div>
             </Modal>
             {/* Full Project Introduction Modal */}

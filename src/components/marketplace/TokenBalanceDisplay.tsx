@@ -5,7 +5,8 @@ import React from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import { formatUnits, type Address } from 'viem';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
-import { SUPPORTED_STABLECOINS, type StablecoinSymbol } from '../../hooks/useMarketplaceV2Contract';
+import { SUPPORTED_STABLECOINS } from '../../config/marketplace';
+import type { StablecoinSymbol } from '../../hooks/useMarketplaceV2Contract';
 import erc20Abi from '../../abis/ERC20.json';
 
 interface TokenBalanceDisplayProps {

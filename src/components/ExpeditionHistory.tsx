@@ -302,15 +302,15 @@ export const ExpeditionHistory: React.FC<ExpeditionHistoryProps> = ({
                                     <div className="flex items-center gap-6 text-sm">
                                         {rewardValue > 0 && (
                                             <div className="flex items-center gap-2">
-                                                <span className="text-gray-400">獲得 SOUL:</span>
+                                                <span className="text-gray-400">SOUL:</span>
                                                 <span className="text-green-400 font-semibold">
-                                                    +{formatSoul(BigInt(expedition.reward))}
+                                                    +{formatSoul(BigInt(expedition.reward), 1)}
                                                 </span>
                                             </div>
                                         )}
                                         {expValue > 0 && (
                                             <div className="flex items-center gap-2">
-                                                <span className="text-gray-400">獲得經驗:</span>
+                                                <span className="text-gray-400">經驗值:</span>
                                                 <span className="text-blue-400 font-semibold">
                                                     +{expValue}
                                                 </span>
@@ -368,31 +368,6 @@ export const ExpeditionHistory: React.FC<ExpeditionHistoryProps> = ({
                 </div>
             )}
 
-            {/* 統計摘要 */}
-            {expeditions.length > 0 && (
-                <div className="mt-6 pt-4 border-t border-gray-700">
-                    <div className="grid grid-cols-3 gap-4 text-center text-sm">
-                        <div>
-                            <div className="text-gray-400">總出征次數</div>
-                            <div className="text-white font-semibold text-lg">
-                                {expeditions.length}
-                            </div>
-                        </div>
-                        <div>
-                            <div className="text-gray-400">成功次數</div>
-                            <div className="text-green-400 font-semibold text-lg">
-                                {expeditions.filter(exp => exp.success).length}
-                            </div>
-                        </div>
-                        <div>
-                            <div className="text-gray-400">成功率</div>
-                            <div className="text-blue-400 font-semibold text-lg">
-                                {((expeditions.filter(exp => exp.success).length / expeditions.length) * 100).toFixed(1)}%
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

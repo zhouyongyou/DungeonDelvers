@@ -406,6 +406,20 @@ export const useVipStatus = () => {
         });
     };
 
+    // 計算冷卻期進度百分比
+    const cooldownProgress = useMemo(() => {
+        if (!unstakeAvailableAt || isCooldownOver) return 100;
+        if (!pendingUnstakeAmount || pendingUnstakeAmount === 0n) return 0;
+        
+        const now = Date.now() / 1000; // 轉換為秒
+        const cooldownSeconds = Number(cooldownPeriod || 86400); // 默認 24 小時
+        const startTime = unstakeAvailableAt - cooldownSeconds;
+        const elapsedTime = now - startTime;
+        const progress = (elapsedTime / cooldownSeconds) * 100;
+        
+        return Math.min(Math.max(progress, 0), 100);
+    }, [unstakeAvailableAt, isCooldownOver, cooldownPeriod, pendingUnstakeAmount]);
+
     return {
         isLoading: isLoadingVipData || isLoadingBalance || (stakedAmount > 0n && isLoadingStakedValueUSD),
         error: vipDataError,
@@ -421,6 +435,7 @@ export const useVipStatus = () => {
         unstakeAvailableAt,
         isCooldownOver,
         countdown,
+        cooldownProgress,
         allowance: allowance ?? 0n,
         cooldownPeriod: cooldownPeriod as bigint | undefined,
         cooldownDays: cooldownPeriod ? Number(cooldownPeriod) / 86400 : 7,

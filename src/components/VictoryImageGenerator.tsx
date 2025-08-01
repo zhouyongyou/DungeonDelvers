@@ -6,6 +6,7 @@ import { formatEther } from 'viem';
 import { ActionButton } from './ui/ActionButton';
 import { Icons } from './ui/icons';
 import { useAppToast } from '../contexts/SimpleToastContext';
+import { useSoulPrice } from '../hooks/useSoulPrice';
 
 interface VictoryImageGeneratorProps {
   reward: bigint;
@@ -22,6 +23,7 @@ export const VictoryImageGenerator: React.FC<VictoryImageGeneratorProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { showToast } = useAppToast();
+  const { formatSoulToUsd, hasValidPrice } = useSoulPrice();
 
   const generateImage = useCallback(async () => {
     const canvas = canvasRef.current;
@@ -76,20 +78,29 @@ export const VictoryImageGenerator: React.FC<VictoryImageGeneratorProps> = ({
     // 獎勵數據
     const rewardAmount = parseFloat(formatEther(reward)).toFixed(1);
     const expAmount = expGained.toString();
+    const usdValue = hasValidPrice ? formatSoulToUsd(rewardAmount) : null;
 
     // SOUL 獎勵
     ctx.fillStyle = '#22c55e';
     ctx.font = 'bold 48px Arial, sans-serif';
-    ctx.fillText('💰 獲得獎勵', canvas.width / 2, rewardBoxY + 60);
+    ctx.fillText('💰 獲得獎勵', canvas.width / 2, rewardBoxY + 50);
     
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 42px Arial, sans-serif';
-    ctx.fillText(`${rewardAmount} $SOUL`, canvas.width / 2, rewardBoxY + 110);
+    ctx.fillText(`${rewardAmount} $SOUL`, canvas.width / 2, rewardBoxY + 100);
+
+    // USD 價值（如果有的話）
+    if (usdValue) {
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 28px Arial, sans-serif';
+      ctx.fillText(`($${usdValue} USD)`, canvas.width / 2, rewardBoxY + 130);
+    }
 
     // 經驗值
     ctx.fillStyle = '#3b82f6';
     ctx.font = 'bold 36px Arial, sans-serif';
-    ctx.fillText(`⭐ +${expAmount} EXP`, canvas.width / 2, rewardBoxY + 160);
+    const expY = usdValue ? rewardBoxY + 170 : rewardBoxY + 150;
+    ctx.fillText(`⭐ +${expAmount} EXP`, canvas.width / 2, expY);
 
     // 底部信息
     ctx.fillStyle = '#9ca3af';
@@ -118,7 +129,7 @@ export const VictoryImageGenerator: React.FC<VictoryImageGeneratorProps> = ({
     ctx.fillText('🗡️', canvas.width / 2, 580);
     ctx.fillText('🏆', canvas.width / 2 + 100, 580);
 
-  }, [reward, expGained, playerName]);
+  }, [reward, expGained, playerName, hasValidPrice, formatSoulToUsd]);
 
   const downloadImage = useCallback(async () => {
     try {
@@ -154,7 +165,10 @@ export const VictoryImageGenerator: React.FC<VictoryImageGeneratorProps> = ({
       await generateImage();
       
       const rewardAmount = parseFloat(formatEther(reward)).toFixed(1);
-      const text = `我剛剛在《Dungeon Delvers》的遠征中大獲全勝！🏆\n\n💰 獲得了 ${rewardAmount} $SOUL\n⭐ 獲得了 ${expGained.toString()} 經驗值\n\n快來加入我，一起探索地下城吧！\n\n#DungeonDelvers #GameFi #BNBChain`;
+      const usdValue = hasValidPrice ? formatSoulToUsd(rewardAmount) : null;
+      const soulDisplay = usdValue ? `${rewardAmount} $SOUL ($${usdValue} USD)` : `${rewardAmount} $SOUL`;
+      
+      const text = `我剛剛在《Dungeon Delvers》的遠征中大獲全勝！🏆\n\n💰 獲得了 ${soulDisplay}\n⭐ 獲得了 ${expGained.toString()} 經驗值\n\n快來加入我，一起探索地下城吧！\n\n#DungeonDelvers #GameFi #BNBChain`;
       
       const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent('https://www.dungeondelvers.xyz')}`;
       window.open(twitterUrl, '_blank');
@@ -164,7 +178,7 @@ export const VictoryImageGenerator: React.FC<VictoryImageGeneratorProps> = ({
       console.error('分享失敗:', error);
       showToast('分享失敗，請重試', 'error');
     }
-  }, [generateImage, reward, expGained, showToast]);
+  }, [generateImage, reward, expGained, showToast, hasValidPrice, formatSoulToUsd]);
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -190,6 +204,11 @@ export const VictoryImageGenerator: React.FC<VictoryImageGeneratorProps> = ({
             <p className="text-green-400">
               💰 獲得: {parseFloat(formatEther(reward)).toFixed(1)} $SOUL
             </p>
+            {hasValidPrice && (
+              <p className="text-yellow-400 text-sm">
+                (${formatSoulToUsd(parseFloat(formatEther(reward)).toFixed(1))} USD)
+              </p>
+            )}
             <p className="text-blue-400">
               ⭐ 經驗: +{expGained.toString()} EXP
             </p>

@@ -9,11 +9,8 @@ import { Icons } from '../ui/icons';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Modal } from '../ui/Modal';
 import { useAppToast } from '../../contexts/SimpleToastContext';
-import { 
-    useMarketplaceV2,
-    SUPPORTED_STABLECOINS,
-    type StablecoinSymbol 
-} from '../../hooks/useMarketplaceV2Contract';
+import { useMarketplaceV2, type StablecoinSymbol } from '../../hooks/useMarketplaceV2Contract';
+import { SUPPORTED_STABLECOINS } from '../../config/marketplace';
 import { useHeroPower, usePartyPower, useHeroDetails, useRelicDetails, usePartyDetails, getElementName, getClassName, getRelicCategoryName } from '../../hooks/useNftPower';
 import { StablecoinSelector } from './StablecoinSelector';
 import type { HeroNft, RelicNft, PartyNft, NftType } from '../../types/nft';

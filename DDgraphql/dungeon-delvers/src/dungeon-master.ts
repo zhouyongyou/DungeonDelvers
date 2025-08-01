@@ -158,10 +158,11 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
     
     const profile = PlayerProfile.load(playerAddress);
     if (profile) {
-      // 注意：獎勵已經在第 90 行通過 updatePlayerStatsBigInt 更新了
-      // 這裡只更新成功遠征次數，避免重複計算獎勵
+      // 同步更新 PlayerProfile 的統計數據，確保與 PlayerStats 一致
       if (event.params.success) {
         profile.successfulExpeditions = profile.successfulExpeditions + 1;
+        // ✅ 修復：同步更新 totalRewardsEarned
+        profile.totalRewardsEarned = profile.totalRewardsEarned.plus(event.params.reward);
       }
       profile.lastUpdatedAt = event.block.timestamp;
       profile.save();

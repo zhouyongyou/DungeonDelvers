@@ -40,6 +40,7 @@ import { Icons } from '../components/ui/icons';
 import { generatePartySVG } from '../utils/svgGenerators';
 import { useNftDisplayPreference } from '../hooks/useNftDisplayPreference';
 import { LazyImage } from '../components/ui/LazyImage';
+import { usePlayerVaultV4 } from '../hooks/usePlayerVaultV4';
 
 // RewardClaimButton 已移至統一的 RewardClaimSection 組件
 
@@ -494,10 +495,9 @@ const PartyStatusCard = memo<PartyStatusCardProps>(({ party, dungeons, onStartEx
     };
 
     const renderAction = () => {
-        if (isOnCooldown || isAnyTxPendingForThisParty) return <ActionButton disabled className="w-full h-10">{isAnyTxPendingForThisParty ? '載入中...' : '冷卻中'}</ActionButton>;
-        // 已移除儲備購買按鈕和疲勞度檢查
-        // if (party.fatigueLevel > 30) return <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10 bg-red-600 hover:bg-red-500">休息</ActionButton>;
-        // if (party.fatigueLevel > 15) return <ActionButton onClick={() => onRest(party.id)} isLoading={isTxPending} className="w-full h-10 bg-yellow-600 hover:bg-yellow-500">建議休息</ActionButton>;
+        // 冷卻中或載入中時不顯示按鈕
+        if (isOnCooldown) return null;
+        if (isAnyTxPendingForThisParty) return <ActionButton disabled className="w-full h-10">載入中...</ActionButton>;
         
         const fee = typeof explorationFee === 'bigint' ? explorationFee : 0n;
         return <ActionButton onClick={() => onStartExpedition(party.id, selectedDungeonId, fee)} isLoading={isTxPending} className="w-full h-10">開始遠征</ActionButton>;
@@ -569,7 +569,6 @@ const PartyStatusCard = memo<PartyStatusCardProps>(({ party, dungeons, onStartEx
                 {/* 已移除疲勞度顯示 */}
                 {/* <div><p className="text-sm text-gray-400">疲勞度</p><p className={`font-bold text-xl ${fatigueColorClass}`}>{party.fatigueLevel} / 45</p></div> */}
             </div>
-            <p className="text-center text-xs text-gray-400 mb-2">直接付費出征</p>
             <div className="mb-3 sm:mb-4">
                 <label className="text-xs text-gray-400">選擇地城:</label>
                 <select 
@@ -597,12 +596,6 @@ const PartyStatusCard = memo<PartyStatusCardProps>(({ party, dungeons, onStartEx
                         queryClient.invalidateQueries({ queryKey: ['playerParties'] });
                     }} 
                 />
-            ) : cooldownEndsAt > 0n ? (
-                <div className="mt-3 p-2 bg-green-900/20 rounded-lg border border-green-600/30">
-                    <p className="text-xs text-green-400 text-center">
-                        ✅ 冷卻已結束，可以再次出征！
-                    </p>
-                </div>
             ) : null}
             
             {/* 移除獎勵領取組件 - 獎勵不記錄在隊伍身上，應該在玩家個人檔案中領取 */}
@@ -690,6 +683,9 @@ const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => 
     
     // 頁面快速操作
     const quickActions = usePageQuickActions();
+
+    // 獲取金庫餘額用於提醒
+    const { withdrawableBalance } = usePlayerVaultV4();
     
     // 使用即時遠征通知
     const { } = useRealtimeExpeditions({
@@ -1095,6 +1091,29 @@ const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => 
                     progress={currentProgress}
                     title={'遠征進度'} // 已移除休息功能
                 />
+            {/* 金庫提醒 */}
+            {withdrawableBalance && withdrawableBalance > 0n && (
+                <div className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border border-yellow-500/30 rounded-xl p-4 mb-6">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <Icons.DollarSign className="h-6 w-6 text-yellow-400" />
+                            <div>
+                                <h3 className="text-lg font-bold text-yellow-300">個人金庫有獎勞待提取！</h3>
+                                <p className="text-sm text-gray-400">
+                                    您有 <span className="text-yellow-400 font-semibold">{formatSoul(withdrawableBalance, 1)} SOUL</span> 可以提取到錢包
+                                </p>
+                            </div>
+                        </div>
+                        <ActionButton
+                            onClick={() => setActivePage('dashboard')}
+                            className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 text-sm"
+                        >
+                            前往提取 →
+                        </ActionButton>
+                    </div>
+                </div>
+            )}
+
             {/* 已移除儲備購買 Modal */}
             <div>
                 <PageActionBar

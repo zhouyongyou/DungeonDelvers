@@ -1,13 +1,15 @@
 // src/components/ShareBattleResult.tsx
 // 分享戰績組件 - 支援即時和事後分享
 
-import React, { useCallback, useState, useRef, useEffect } from 'react';
+import React, { useCallback, useState, useRef, useEffect, useMemo } from 'react';
 import { formatEther } from 'viem';
+import { useAccount } from 'wagmi';
 import { Icons } from './ui/icons';
 import { ActionButton } from './ui/ActionButton';
 import { formatSoul } from '../utils/formatters';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { VictoryImageGenerator } from './VictoryImageGenerator';
+import { useSoulPrice } from '../hooks/useSoulPrice';
 
 interface BattleResult {
     success: boolean;
@@ -33,9 +35,19 @@ export const ShareBattleResult: React.FC<ShareBattleResultProps> = ({
     compact = false
 }) => {
     const { showToast } = useAppToast();
+    const { address } = useAccount();
     const [showImageGenerator, setShowImageGenerator] = useState(false);
     const [shareMode, setShareMode] = useState<'text' | 'image'>('text');
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // 獲取 SOUL 價格
+    const { formatSoulToUsd, hasValidPrice, priceInUsd } = useSoulPrice();
+    
+    // 生成邀請連結
+    const referralLink = useMemo(() => {
+        if (typeof window === 'undefined' || !address) return '';
+        return `${window.location.origin}/#/referral?ref=${address}`;
+    }, [address]);
     
     // 點擊外部關閉下拉選單
     useEffect(() => {
@@ -64,18 +76,31 @@ export const ShareBattleResult: React.FC<ShareBattleResultProps> = ({
         const dungeonInfo = result.dungeonName || '地下城';
         const time = result.timestamp ? new Date(parseInt(result.timestamp) * 1000).toLocaleString('zh-TW') : '剛剛';
         
-        return `✅ 成功 ${dungeonInfo}
-${time}
-地下城等級: #${result.dungeonLevel || 1}
-隊伍戰力: ${result.partyPower || 0}
-使用隊伍: ${result.partyName || 'Party'}
-獲得 SOUL: +${rewardAmount}
-獲得經驗: +${expGained.toString()}
-${result.transactionHash ? `查看交易: ${result.transactionHash.slice(0, 10)}...${result.transactionHash.slice(-6)}` : ''}
+        // 隨機選擇吸引人的開場白
+        const openings = [
+            '🔥 又是一場精彩的冒險！',
+            '⚔️ 地下城征服者歸來！',
+            '💎 今天的收穫豐富！',
+            '🚀 戰鬥力爆表的一天！',
+            '🏆 完美的地下城探索！'
+        ];
+        const randomOpening = openings[Math.floor(Math.random() * openings.length)];
+        
+        // 計算 USD 價值
+        const usdValue = hasValidPrice ? formatSoulToUsd(rewardAmount) : null;
+        const soulDisplay = usdValue ? `${rewardAmount} SOUL ($${usdValue} USD)` : `${rewardAmount} SOUL`;
+        
+        return `${randomOpening}
 
-🎮 DungeonDelvers - 探索地下城，贏取獎勵！
-#DungeonDelvers #GameFi #BNBChain`;
-    }, [result, rewardAmount, expGained]);
+✨ ${dungeonInfo} 征服成功！
+💰 獲得 ${soulDisplay} (+${expGained.toString()} EXP)
+⚔️ 隊伍戰力: ${result.partyPower || 0} | 使用: ${result.partyName || 'Party'}
+
+🎮 想體驗同樣的刺激嗎？
+${referralLink ? `來和我一起探索吧：${referralLink}` : ''}
+
+#DungeonDelvers #GameFi #BNBChain #區塊鏈遊戲`;
+    }, [result, rewardAmount, expGained, referralLink, hasValidPrice, formatSoulToUsd]);
     
     // 複製到剪貼板
     const copyToClipboard = useCallback(async () => {

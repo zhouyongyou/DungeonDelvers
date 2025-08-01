@@ -18,7 +18,10 @@ export const useSoulPrice = (options?: { enabled?: boolean }) => {
         args: [oneUsdInWei],
         query: {
             enabled: (options?.enabled !== false) && !!dungeonCoreContract?.address && !!dungeonCoreContract?.abi,
-            staleTime: 2 * 60 * 1000, // 2 分鐘
+            staleTime: 10 * 60 * 1000, // 10 分鐘 - 價格不需要頻繁更新
+            gcTime: 30 * 60 * 1000, // 30 分鐘垃圾回收
+            refetchOnWindowFocus: false, // 避免切換視窗時重新查詢
+            refetchOnMount: false, // 避免組件重新掛載時查詢
             retry: 3
         }
     });
@@ -37,8 +40,9 @@ export const useSoulPrice = (options?: { enabled?: boolean }) => {
                 // 合理性檢查：SOUL 價格應該在 $0.00001 - $0.1 之間
                 if (calculatedPrice >= 0.00001 && calculatedPrice <= 0.1) {
                     priceInUsd = calculatedPrice;
-                    // 減少日誌輸出頻率
-                    if (import.meta.env.DEV && Math.random() < 0.05) { // 5% 機率輸出
+                    // 完全移除日誌輸出，避免控制台雜訊
+                    // 只在開發環境且有重大變化時才輸出
+                    if (false) { // 暫時關閉所有日誌
                         console.log(`[useSoulPrice] SOUL 價格: $${priceInUsd.toFixed(8)} (${soulFor1USD.toFixed(2)} SOUL = $1)`);
                     }
                 } else {
