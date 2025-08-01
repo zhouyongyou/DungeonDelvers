@@ -519,7 +519,6 @@ ${referralLink}
                         </p>
                     </div>
                 )}
-                </div>
             </div>
 
             {/* 邀請連結分享 */}
