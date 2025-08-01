@@ -443,20 +443,20 @@ const PitchPage: React.FC = memo(() => {
                             <div>
                                 <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
                                     <span className="text-2xl">🪙</span>
-                                    $SOUL 代幣功能
+                                    雙代幣體系
                                 </h3>
                                 <div className="space-y-4">
                                     <div className="p-4 bg-gradient-to-r from-[#FFDF4D]/10 to-[#FF6B35]/10 rounded-lg border-l-4 border-[#FFDF4D]">
                                         <h4 className="font-semibold text-[#FFDF4D] mb-2 flex items-center gap-2">
-                                            🎮 遊戲內貨幣
+                                            🎮 $SOUL 遊戲內貨幣 (即將發行)
                                         </h4>
                                         <p className="text-sm text-gray-300">鑄造 NFT、升級英雄、購買道具的主要貨幣</p>
                                     </div>
                                     <div className="p-4 bg-gradient-to-r from-[#4A90E2]/10 to-blue-500/10 rounded-lg border-l-4 border-[#4A90E2]">
                                         <h4 className="font-semibold text-[#4A90E2] mb-2 flex items-center gap-2">
-                                            🏛️ 治理代幣
+                                            🏛️ 治理代幣 (十月後推出)
                                         </h4>
-                                        <p className="text-sm text-gray-300">參與社區治理，投票決定遊戲發展方向與參數調整</p>
+                                        <p className="text-sm text-gray-300">$SAGA - 參與社區治理，投票決定遊戲發展方向與參數調整</p>
                                     </div>
                                     <div className="p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border-l-4 border-green-500">
                                         <h4 className="font-semibold text-green-400 mb-2 flex items-center gap-2">

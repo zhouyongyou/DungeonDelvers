@@ -88,12 +88,12 @@ const CompactIntroduction: React.FC<{ showCallToAction: boolean }> = ({ showCall
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-purple-400 font-semibold">$SAGA</span>
-              <span className="text-gray-400">平台生態幣</span>
+              <span className="text-blue-400 font-semibold">$SOUL</span>
+              <span className="text-gray-400">遊戲獎勵幣（即將發行）</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-blue-400 font-semibold">$SOUL</span>
-              <span className="text-gray-400">遊戲獎勵幣</span>
+              <span className="text-purple-400 font-semibold">$SAGA</span>
+              <span className="text-gray-400">平台生態幣（十月後）</span>
             </div>
           </div>
         </div>
@@ -226,7 +226,7 @@ const TokenomicsSection: React.FC = () => {
             
             <div className="bg-purple-800/30 rounded p-3">
               <h4 className="text-white font-semibold mb-1">發行計劃</h4>
-              <p className="text-purple-200 text-sm">優先發行，為生態奠定基礎</p>
+              <p className="text-purple-200 text-sm">預計十月後推出，為生態奠定基礎</p>
             </div>
           </div>
         </div>
@@ -255,8 +255,8 @@ const TokenomicsSection: React.FC = () => {
             </div>
             
             <div className="bg-blue-800/30 rounded p-3">
-              <h4 className="text-white font-semibold mb-1">技術支撐</h4>
-              <p className="text-blue-200 text-sm">BSC 鏈 FOUR MEME 平台發行</p>
+              <h4 className="text-white font-semibold mb-1">發行計劃</h4>
+              <p className="text-blue-200 text-sm">即將發行，BSC 鏈 FOUR MEME 平台</p>
             </div>
           </div>
         </div>
@@ -295,19 +295,19 @@ const RoadmapSection: React.FC = () => {
   const phases = [
     {
       phase: "Phase 1",
-      title: "$SAGA 平台幣發行",
-      status: "準備中",
-      statusColor: "bg-yellow-500",
-      description: "建立生態基礎，為未來發展奠定根基",
-      features: ["平台幣發行", "社群建設", "生態治理框架"]
+      title: "首款遊戲 + $SOUL 上線",
+      status: "即將發行",
+      statusColor: "bg-green-500",
+      description: "經典 Play-to-Earn 體驗，穩定的 U 本位獎勵",
+      features: ["地城探索遊戲", "$SOUL 獎勵系統", "NFT 英雄收集"]
     },
     {
       phase: "Phase 2", 
-      title: "首款遊戲 + $SOUL 上線",
-      status: "開發中",
+      title: "$SAGA 平台幣發行",
+      status: "十月後",
       statusColor: "bg-blue-500",
-      description: "經典 Play-to-Earn 體驗，穩定的 U 本位獎勵",
-      features: ["地城探索遊戲", "$SOUL 獎勵系統", "NFT 英雄收集"]
+      description: "建立生態基礎，為未來發展奠定根基",
+      features: ["平台幣發行", "社群建設", "生態治理框架"]
     },
     {
       phase: "Phase 3",
@@ -441,7 +441,7 @@ const CallToActionSection: React.FC = () => {
       </div>
       
       <div className="mt-6 text-gray-300 text-sm">
-        <p>啟動順序：$SAGA 平台幣 → 首款遊戲 + $SOUL 代幣</p>
+        <p>啟動順序：首款遊戲 + $SOUL 代幣 → $SAGA 平台幣（十月後）</p>
       </div>
     </div>
   );
