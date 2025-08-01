@@ -1,4 +1,4 @@
-# Generated from v25-config.js on 2025-08-01T11:41:43.061Z
+# Generated from v25-config.js on 2025-08-01T13:55:22.216Z
 # V25 Production Deployment
 specVersion: 0.0.4
 schema:
@@ -182,9 +182,9 @@ dataSources:
     name: PlayerVault
     network: bsc
     source:
-      address: '0x8c3A73E27C518f082150330e5666e765B52297AF'
+      address: '0x913E5c5c6d844630fd01CbDed82F029f356f1809'
       abi: PlayerVault
-      startBlock: 56065457
+      startBlock: 55808316
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6

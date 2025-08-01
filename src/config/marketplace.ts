@@ -1,8 +1,7 @@
 // DungeonDelvers Marketplace V2 Configuration
 // 統一的 Marketplace 配置管理
 // ⚠️ IMPORTANT: 使用與主配置一致的 V25 NFT 合約地址
-// Last synced: 2025-08-01T11:26:53.174Z
-// Last synced: 2025-08-01T05:54:34.889Z
+// Last synced: 2025-08-01T13:56:00.000Z
 
 export const MARKETPLACE_V2_CONFIG = {
   // Contract addresses (deployed 2025-07-29)
@@ -13,9 +12,9 @@ export const MARKETPLACE_V2_CONFIG = {
   
   // V25 NFT Contract addresses (must match master-config.json)
   nftContracts: {
-    HERO: '0x785a8b7d7b2E64c5971D8f548a45B7db3CcA5797' as const,
-    RELIC: '0xaa7434e77343cd4AaE7dDea2f19Cb86232727D0d' as const,
-    PARTY: '0x2890F2bFe5ff4655d3096eC5521be58Eba6fAE50' as const,
+    HERO: '0x20E0db8EFCC7608fCFFBbF2f95A86824b034D1e7' as const,
+    RELIC: '0x3c8F1b4172a076D31f0F8fa981E166aDA92C2B79' as const,
+    PARTY: '0x1f21fE51c039321246b219B9F659eaCA9a53176F' as const,
   },
   
   // Supported stablecoins on BSC (only USDT and BUSD for simplicity)
