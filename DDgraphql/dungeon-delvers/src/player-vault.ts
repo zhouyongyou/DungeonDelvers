@@ -8,7 +8,7 @@ import {
     VirtualCommissionAdded,
     VirtualTaxCollected
 } from "../generated/PlayerVault/PlayerVault"
-import { PlayerVault, PlayerProfile } from "../generated/schema"
+import { PlayerVault, PlayerProfile, VirtualTaxRecord, TaxStatistics } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 
 function getOrCreatePlayerVault(playerAddress: Address): PlayerVault {
@@ -97,6 +97,25 @@ export function handleVirtualCommissionAdded(event: VirtualCommissionAdded): voi
 }
 
 export function handleVirtualTaxCollected(event: VirtualTaxCollected): void {
-    // 目前不需要特別處理稅收事件，可用於統計分析
-    // 未來可考慮添加全域稅收統計實體
+    // 創建個別稅收記錄
+    const recordId = event.transaction.hash.toHex() + "-" + event.logIndex.toString()
+    const record = new VirtualTaxRecord(recordId)
+    record.amount = event.params.amount
+    record.timestamp = event.block.timestamp
+    record.blockNumber = event.block.number
+    record.transactionHash = event.transaction.hash
+    record.save()
+    
+    // 更新全域稅收統計
+    let stats = TaxStatistics.load("global")
+    if (!stats) {
+        stats = new TaxStatistics("global")
+        stats.totalVirtualTaxCollected = BigInt.fromI32(0)
+        stats.totalTaxRecords = BigInt.fromI32(0)
+    }
+    
+    stats.totalVirtualTaxCollected = stats.totalVirtualTaxCollected.plus(event.params.amount)
+    stats.totalTaxRecords = stats.totalTaxRecords.plus(BigInt.fromI32(1))
+    stats.lastUpdated = event.block.timestamp
+    stats.save()
 }

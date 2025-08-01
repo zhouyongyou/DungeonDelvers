@@ -910,8 +910,8 @@ const MarketplacePage: React.FC = () => {
                     )}
                 </div>
                 
-                {/* Listings Grid */}
-                {isLoadingNfts ? (
+                {/* Listings Grid - 只在 listings 標籤時顯示 */}
+                {activeTab === 'listings' && (isLoadingNfts ? (
                     <div className="text-center py-12">
                         <LoadingSpinner size="lg" />
                         <p className="text-gray-400 mt-4">加載市場數據中...</p>
@@ -1001,8 +1001,25 @@ const MarketplacePage: React.FC = () => {
                         </ActionButton>
                     </div>
                 )}
+                )}
                 
-                {/* Create Listing - 改為使用全頁面版本 */}
+                {/* Create Listing Tab */}
+                {activeTab === 'create' && (
+                    <div className="mt-6">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-white">創建掛單</h2>
+                            <ActionButton
+                                onClick={() => setActiveTab('listings')}
+                                variant="secondary"
+                                className="px-4 py-2"
+                            >
+                                <Icons.ChevronLeft className="h-4 w-4 mr-2" />
+                                返回市場
+                            </ActionButton>
+                        </div>
+                        <CreateListingTab />
+                    </div>
+                )}
                 
                 {/* Purchase Modal */}
                 <PurchaseModalV2

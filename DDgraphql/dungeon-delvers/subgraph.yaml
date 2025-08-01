@@ -1,4 +1,4 @@
-# Generated from v25-config.js on 2025-07-31T16:34:09.238Z
+# Generated from v25-config.js on 2025-08-01T11:26:18.879Z
 # V25 Production Deployment
 specVersion: 0.0.4
 schema:
@@ -8,7 +8,7 @@ dataSources:
     name: Hero
     network: bsc
     source:
-      address: '0x785a8b7d7b2E64c5971D8f548a45B7db3CcA5797'
+      address: '0x20E0db8EFCC7608fCFFBbF2f95A86824b034D1e7'
       abi: Hero
       startBlock: 55808316
     mapping:
@@ -35,7 +35,7 @@ dataSources:
     name: Relic
     network: bsc
     source:
-      address: '0xaa7434e77343cd4AaE7dDea2f19Cb86232727D0d'
+      address: '0x3c8F1b4172a076D31f0F8fa981E166aDA92C2B79'
       abi: Relic
       startBlock: 55808316
     mapping:
@@ -62,7 +62,7 @@ dataSources:
     name: PartyV3
     network: bsc
     source:
-      address: '0x2890F2bFe5ff4655d3096eC5521be58Eba6fAE50'
+      address: '0x1f21fE51c039321246b219B9F659eaCA9a53176F'
       abi: PartyV3
       startBlock: 55808316
     mapping:
@@ -87,7 +87,7 @@ dataSources:
     name: VIPStaking
     network: bsc
     source:
-      address: '0x58A16F4845BA7Fea4377399d74D50d8aeE58fde4'
+      address: '0xa55fee3ba652e6Ff42ac12C8598C5fDfC26EE4Bf'
       abi: VIPStaking
       startBlock: 55808316
     mapping:
@@ -114,7 +114,7 @@ dataSources:
     name: PlayerProfile
     network: bsc
     source:
-      address: '0xF1b836D09A30C433A2479a856c84e0d64DBBD973'
+      address: '0xB203a1e73500E40A1eeb1D6A51cDDbf2fEb227a2'
       abi: PlayerProfile
       startBlock: 55808316
     mapping:
@@ -139,7 +139,7 @@ dataSources:
     name: AltarOfAscension
     network: bsc
     source:
-      address: '0xbaA5CC63F9d531288e4BD87De64Af05FdA481ED9'
+      address: '0x167F42bcC21a5ab5319b787F8C2e045f9Aeaa4dD'
       abi: AltarOfAscensionV2Fixed
       startBlock: 55808316
     mapping:
@@ -159,7 +159,7 @@ dataSources:
     name: DungeonMaster
     network: bsc
     source:
-      address: '0x2F78de7Fdc08E95616458038a7A1E2EE28e0fa85'
+      address: '0x913E5c5c6d844630fd01CbDed82F029f356f1809'
       abi: DungeonMaster
       startBlock: 55808316
     mapping:
@@ -182,9 +182,9 @@ dataSources:
     name: PlayerVault
     network: bsc
     source:
-      address: '0x2746Ce8D6Aa7A885c568530abD9846460cA602f1'
+      address: '0x8c3A73E27C518f082150330e5666e765B52297AF'
       abi: PlayerVault
-      startBlock: 55808316
+      startBlock: 56065457
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6

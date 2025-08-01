@@ -1,18 +1,16 @@
-# DungeonDelvers 前端 - AI 開發指南
+# 🎨 DungeonDelvers 前端 - 專案指南
 
-## 🗂️ 專案資料夾位置
+> 📖 **請先閱讀**: `~/MASTER-CLAUDE.md` 了解整體架構，此文檔專注於前端開發細節
+
+## 🗂️ 快速導航
 ```bash
-# 前端（當前資料夾）
-/Users/sotadic/Documents/GitHub/DungeonDelvers/
+# 當前專案
+/Users/sotadic/Documents/GitHub/DungeonDelvers/     # React 前端
 
-# 智能合約
-/Users/sotadic/Documents/DungeonDelversContracts/
-
-# 子圖
-/Users/sotadic/Documents/GitHub/DungeonDelvers/DDgraphql/dungeon-delvers/
-
-# 後端
-/Users/sotadic/Documents/dungeon-delvers-metadata-server/
+# 其他專案
+/Users/sotadic/Documents/DungeonDelversContracts/                    # 智能合約
+/Users/sotadic/Documents/GitHub/DungeonDelvers/DDgraphql/dungeon-delvers/  # 子圖
+/Users/sotadic/Documents/dungeon-delvers-metadata-server/                  # 後端 API
 ```
 
 ## 專案概述
@@ -27,40 +25,24 @@
 - **狀態管理**: Zustand
 - **UI 組件**: 自定義組件庫
 
-## 環境變數（2025-07-23 簡化版）
+## 🔄 配置管理 (參考主導航)
+
+> **詳細說明請參考**: `~/MASTER-CLAUDE.md` 中的統一配置管理系統
+
+### 前端專案特定配置
 ```bash
-# Vercel 上只需要這一個環境變數！
+# 必須環境變數
 VITE_WALLETCONNECT_PROJECT_ID=你的WalletConnect項目ID
 
-# 其他配置都從 CDN 自動載入
-# 不再需要設置合約地址、API URLs 等
-```
-
-## 🔄 配置管理系統
-
-### 自動配置載入
-前端現在使用 `configLoader.ts` 自動從 CDN 載入所有配置：
-- 合約地址
-- The Graph URLs
-- 網路設定
-
-### 配置優先級
-1. CDN 配置文件 (`/public/config/v25.json`)
-2. 環境變數（作為備份）
-3. 默認值（硬編碼）
-
-### 本地開發
-```bash
-# 開發時可選設置（通常不需要）
+# 開發時可選覆蓋
 VITE_HERO_ADDRESS=0x...  # 覆蓋特定合約地址
 VITE_USE_TESTNET=true    # 使用測試網
 ```
 
-### 配置更新流程
-1. 合約團隊更新 `master-config.json`
-2. 執行 `npm run sync:config`
-3. 前端自動從 CDN 載入新配置
-4. 無需重新部署！
+### 配置載入機制
+- 使用 `configLoader.ts` 自動從 CDN 載入配置
+- 5分鐘緩存機制 + 環境變數備份
+- 前端無需重新部署即可更新配置
 
 ## 目錄結構
 ```

@@ -481,7 +481,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                             <div className="flex items-center space-x-2 sm:space-x-4">
                                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse flex-shrink-0"></div>
                                 <span className="text-white font-semibold text-xs sm:text-sm md:text-base">
-                                    v3.3.3 已上線 <span className="hidden sm:inline">| 所有系統運行正常</span>
+                                    v1 已上線 <span className="hidden sm:inline">| 所有系統運行正常</span>
                                 </span>
                             </div>
                             
@@ -523,38 +523,30 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         {/* 項目介紹組件 */}
                         <ProjectIntroduction variant="full" showCallToAction={true} />
                         
-                        {/* 快速數據展示 */}
-                        <div className="bg-gray-900 rounded-lg p-6 sm:p-8">
-                            <h2 className="text-xl sm:text-2xl font-bold text-white text-center mb-6 sm:mb-8">項目概覽</h2>
-                            
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-                                {[
-                                    { label: "支持的地城", value: "12", color: "text-purple-400" },
-                                    { label: "獎勵代幣", value: "$SOUL", color: "text-blue-400" },
-                                    { label: "區塊鏈", value: "BSC", color: "text-yellow-400" },
-                                    { label: "開發狀態", value: "已上線", color: "text-green-400" },
-                                ].map((stat, index) => (
-                                    <div key={index} className="text-center">
-                                        <div className={`text-2xl sm:text-3xl font-bold ${stat.color} mb-1 sm:mb-2`}>
-                                            {stat.value}
-                                        </div>
-                                        <div className="text-gray-400 text-xs sm:text-sm">
-                                            {stat.label}
-                                        </div>
-                                    </div>
-                                ))}
+                        {/* 底部簡潔區域 - 只保留開發狀態和行動號召 */}
+                        <div className="bg-gradient-to-r from-purple-900 via-blue-900 to-purple-900 rounded-lg p-6 text-center">
+                            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">開發狀態</h2>
+                            <div className="flex items-center justify-center space-x-2 mb-4">
+                                <span className="text-gray-300">項目進度</span>
+                                <div className="w-32 bg-gray-700 rounded-full h-2">
+                                    <div className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full w-[90%]"></div>
+                                </div>
+                                <span className="text-white font-semibold">90%</span>
                             </div>
+                            <p className="text-sm text-gray-300 mb-6">目前處於最後 Debug 階段，即將開放測試</p>
                             
-                            <div className="mt-8 text-center">
+                            <div className="text-center">
+                                <h3 className="text-lg font-bold text-white mb-4">加入我們的世界</h3>
+                                <p className="text-gray-300 text-sm mb-6">一個偉大的遊戲世界需要熱情的玩家共同塑造。與開發團隊直接交流，見證嶄新遊戲品牌的誕生！</p>
+                                
                                 <ActionButton
                                     onClick={() => {
-                                        // 觸發錢包連接
                                         showToast('請點擊右上角連接錢包', 'info');
                                     }}
-                                    className="inline-flex items-center space-x-2 bg-gray-800 hover:bg-gray-700 rounded-full px-6 py-3"
+                                    className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-full px-6 py-3"
                                 >
                                     <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                                    <span className="text-green-400 text-sm font-semibold">立即開始遊戲</span>
+                                    <span className="text-white text-sm font-semibold">立即開始遊戲</span>
                                 </ActionButton>
                             </div>
                         </div>

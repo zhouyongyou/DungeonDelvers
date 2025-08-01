@@ -1,6 +1,30 @@
 # =================================================================
-# Schema 設計藍圖 (最終修正版)
+# Schema 設計藍圖 (最終修正版) - V25 虛擬稅收支援
 # =================================================================
+
+type VirtualTaxRecord @entity(immutable: true) {
+  " 唯一 ID：transactionHash-logIndex "
+  id: String!
+  " 稅收金額 "
+  amount: BigInt!
+  " 區塊時間戳 "
+  timestamp: BigInt!
+  " 區塊號 "
+  blockNumber: BigInt!
+  " 交易 hash "
+  transactionHash: Bytes!
+}
+
+type TaxStatistics @entity(immutable: false) {
+  " 固定 ID：global "
+  id: String!
+  " 累積虛擬稅收總額 "
+  totalVirtualTaxCollected: BigInt!
+  " 稅收記錄總數 "
+  totalTaxRecords: BigInt!
+  " 最後更新時間 "
+  lastUpdated: BigInt!
+}
 
 type Player @entity(immutable: false) {
   " 玩家的錢包地址 "

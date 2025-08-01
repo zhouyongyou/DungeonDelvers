@@ -109,14 +109,11 @@ const NftCard: React.FC<NftCardProps> = memo(({
     return null;
   };
 
-  // 幫助函數：將複數型NFT類型轉換為對應的圖片目錄名稱
+  // 幫助函數：NFT類型名稱（應該已經是正確的單數形式）
   const getImageDirName = (nftType: string): string => {
-    switch (nftType) {
-      case 'heros': return 'hero';
-      case 'relics': return 'relic';
-      case 'parties': return 'party';
-      default: return nftType;
-    }
+    // NFT 對象的 type 屬性應該已經是單數形式 ('hero', 'relic', 'party')
+    // 直接返回即可，因為圖片目錄也是單數形式
+    return nftType;
   };
 
   const renderImage = () => {
@@ -136,7 +133,7 @@ const NftCard: React.FC<NftCardProps> = memo(({
                          typeof nft.rarity === 'string' ? parseInt(nft.rarity) : 
                          typeof nft.rarity === 'bigint' ? Number(nft.rarity) : 1;
       rarity = Math.max(1, Math.min(5, rarityValue));
-    } else if (nft.type === 'parties' && 'partyRarity' in nft) {
+    } else if (nft.type === 'party' && 'partyRarity' in nft) {
       const partyRarity = (nft as PartyNft).partyRarity;
       rarity = Math.max(1, Math.min(5, partyRarity || 1));
     }
@@ -162,17 +159,17 @@ const NftCard: React.FC<NftCardProps> = memo(({
           <>
             {/* 底部屬性顯示 - 簡化版 */}
             <div className="absolute bottom-2 left-2 right-2 flex justify-between">
-              {nft.type === 'heros' && (
+              {nft.type === 'hero' && (
                 <div className="bg-black/60 text-white px-2 py-1 rounded text-xs">
                   ⚔️ {(nft as HeroNft).power?.toLocaleString?.() ?? '0'}
                 </div>
               )}
-              {nft.type === 'relics' && (
+              {nft.type === 'relic' && (
                 <div className="bg-black/60 text-white px-2 py-1 rounded text-xs">
                   📦 {(nft as RelicNft).capacity ?? '0'}
                 </div>
               )}
-              {nft.type === 'parties' && (
+              {nft.type === 'party' && (
                 <>
                   <div className="bg-black/60 text-white px-1.5 py-0.5 rounded text-xs">
                     ⚔️ {getPartyPowerSafe(nft)}
@@ -196,7 +193,7 @@ const NftCard: React.FC<NftCardProps> = memo(({
     let rarity: string | number | bigint = 1;
     if ('rarity' in nft && nft.rarity !== undefined) {
       rarity = nft.rarity;
-    } else if (nft.type === 'parties') {
+    } else if (nft.type === 'party') {
       const party = nft as PartyNft;
       rarity = party.partyRarity || 1;
     }
