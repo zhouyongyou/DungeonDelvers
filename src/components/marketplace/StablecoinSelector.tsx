@@ -30,7 +30,7 @@ export const StablecoinSelector: React.FC<StablecoinSelectorProps> = ({
         {mode === 'single' ? '選擇支付幣種' : '接受的支付幣種'}
       </div>
       
-      <div className="grid grid-cols-1 gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         {Object.entries(SUPPORTED_STABLECOINS).map(([symbol, info]) => (
           <StablecoinOption
             key={symbol}
@@ -95,9 +95,9 @@ const StablecoinOption: React.FC<StablecoinOptionProps> = ({
       disabled={disabled}
       className={`
         flex items-center justify-between p-3 rounded-lg border transition-all
-        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-cyan-500'}
+        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-[#C0A573]'}
         ${isSelected 
-          ? 'bg-gray-700 border-cyan-500' 
+          ? 'bg-gray-700 border-[#C0A573] ring-1 ring-[#C0A573]/50' 
           : 'bg-gray-800 border-gray-700'
         }
       `}
@@ -107,7 +107,7 @@ const StablecoinOption: React.FC<StablecoinOptionProps> = ({
           // 多選時顯示 checkbox
           <div className={`
             w-5 h-5 rounded border-2 flex items-center justify-center
-            ${isSelected ? 'bg-cyan-500 border-cyan-500' : 'border-gray-500'}
+            ${isSelected ? 'bg-[#C0A573] border-[#C0A573]' : 'border-gray-500'}
           `}>
             {isSelected && (
               <svg className="w-3 h-3 text-gray-900" fill="currentColor" viewBox="0 0 20 20">
@@ -119,10 +119,10 @@ const StablecoinOption: React.FC<StablecoinOptionProps> = ({
           // 單選時顯示 radio
           <div className={`
             w-5 h-5 rounded-full border-2 flex items-center justify-center
-            ${isSelected ? 'border-cyan-500' : 'border-gray-500'}
+            ${isSelected ? 'border-[#C0A573]' : 'border-gray-500'}
           `}>
             {isSelected && (
-              <div className="w-2.5 h-2.5 rounded-full bg-cyan-500" />
+              <div className="w-2.5 h-2.5 rounded-full bg-[#C0A573]" />
             )}
           </div>
         )}

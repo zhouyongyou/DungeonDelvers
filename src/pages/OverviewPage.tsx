@@ -260,16 +260,36 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     const vipDiscount = taxReduction ? Number(taxReduction) / 100 : 0; // VIP 減免（百分比）
     const levelDiscount = Math.floor(level / 10); // 等級減免，每 10 級減 1%（百分比）
     
-    // 時間衰減計算
+    // 時間衰減計算 - 與合約邏輯保持一致
     const lastWithdrawTimestamp = playerInfo ? Number(playerInfo[1]) : 0;
     const currentTime = Math.floor(Date.now() / 1000);
-    const timePassed = lastWithdrawTimestamp === 0 ? 0 : Math.max(0, currentTime - lastWithdrawTimestamp);
+    // 注意：當 lastWithdrawTimestamp = 0 時，合約會計算從 Unix 紀元開始的時間
+    const timePassed = currentTime - lastWithdrawTimestamp;
     const periodsPassed = Math.floor(timePassed / (periodDuration ? Number(periodDuration) : 24 * 60 * 60));
     const timeDecay = periodsPassed * (decreaseRatePerPeriod ? Number(decreaseRatePerPeriod) / 100 : 5); // 每天 5%
     
     const totalDiscount = vipDiscount + levelDiscount + timeDecay;
     const actualTaxRate = Math.max(0, standardBaseTaxRate - totalDiscount); // 百分比格式 (0-100)
     const actualLargeTaxRate = Math.max(0, largeBaseTaxRate - totalDiscount); // 百分比格式 (0-100)
+    
+    // Debug 日誌 - 幫助追蹤稅率計算問題
+    if (import.meta.env.DEV) {
+        console.log('🧮 稅率計算 Debug:', {
+            lastWithdrawTimestamp,
+            currentTime,
+            timePassed,
+            periodsPassed,
+            '基礎稅率': standardBaseTaxRate + '%',
+            'VIP減免': vipDiscount + '%',
+            '等級減免': levelDiscount + '%',
+            '時間衰減': timeDecay + '%',
+            '總減免': totalDiscount + '%',
+            '最終稅率': actualTaxRate + '%',
+            'playerInfo': playerInfo,
+            'VIP等級': vipTier,
+            '玩家等級': level
+        });
+    }
     
     // 顯示稅率說明模態框
     const showTaxInfo = () => {
@@ -285,6 +305,12 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                 setWithdrawUsdAmount('');
                 setCustomWithdrawAmount(0n);
             }, 2000); // 2秒後關閉
+            
+            // 重新獲取金庫數據（包括更新後的 lastWithdrawTimestamp）
+            setTimeout(() => {
+                refetchVault();
+                refetch();
+            }, 3000); // 3秒後刷新數據
         },
         successMessage: '提領成功！',
         errorMessage: '提領失敗，請重試'
@@ -324,6 +350,17 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
             return;
         }
         
+        // Debug 日誌 - 提領前的狀態
+        if (import.meta.env.DEV) {
+            console.log('💰 提領前狀態:', {
+                '提領金額USD': amount,
+                '提領金額SOUL': formatEther(soulAmount),
+                '當前lastWithdrawTimestamp': lastWithdrawTimestamp,
+                '預期稅率': actualTaxRate + '%',
+                '是否首次提領': lastWithdrawTimestamp === 0
+            });
+        }
+        
         try {
             setCustomWithdrawAmount(soulAmount);
             setWithdrawUsdAmount(amount);
@@ -351,8 +388,8 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
             try {
                 // 使用更精確的轉換方式，避免浮點數精度問題
                 const soulAmount = parseFloat(pendingVaultRewards);
-                // 減去一小部分以避免精度錯誤
-                const safeAmount = soulAmount * 0.999999; // 減去 0.0001% 以避免精度問題
+                // 減去 0.1% 以避免精度錯誤，更安全
+                const safeAmount = soulAmount * 0.999; // 減去 0.1% 以避免精度問題
                 const amountInWei = BigInt(Math.floor(safeAmount * 1e18));
                 const usdValue = formatSoulToUsd(pendingVaultRewards);
                 
@@ -658,6 +695,18 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         description={
                             <div className="space-y-1">
                                 <p className="text-xs text-gray-500">≈ ${formatSoulToUsd(pendingVaultRewards)} USD</p>
+                                
+                                {/* 首次提領免稅提示 */}
+                                {player?.lastWithdrawTimestamp === 0 && (
+                                    <div className="text-xs text-green-400 bg-green-900/20 p-2 rounded border border-green-600/30 mb-1">
+                                        <p className="font-medium flex items-center gap-1">
+                                            <span>🎉</span>
+                                            <span>首次提領免稅優惠！</span>
+                                        </p>
+                                        <p className="text-[10px] text-green-300 mt-0.5">您的首次提領將享受 0% 稅率</p>
+                                    </div>
+                                )}
+                                
                                 <div className="text-xs text-gray-500 space-y-1">
                                     <p>
                                         提款稅率：{actualTaxRate.toFixed(1)}% / {actualLargeTaxRate.toFixed(1)}%
@@ -678,6 +727,9 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                                 {levelDiscount > 0 && (
                                                     <p>等級 {level} 減免：-{levelDiscount.toFixed(1)}% (每10級-1%)</p>
                                                 )}
+                                                {timeDecay > 0 && (
+                                                    <p>時間衰減：-{timeDecay.toFixed(1)}%</p>
+                                                )}
                                                 <p className="text-green-300 font-medium">
                                                     最終稅率：{actualTaxRate.toFixed(1)}% / {actualLargeTaxRate.toFixed(1)}%
                                                 </p>
@@ -688,6 +740,13 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                     <div className="text-xs text-blue-400 mt-1">
                                         每天減少 5% 稅率（時間衰減）
                                     </div>
+                                    
+                                    {/* 首次提領備註 */}
+                                    {lastWithdrawTimestamp === 0 && (
+                                        <div className="text-xs text-green-400 bg-green-900/20 p-2 rounded border border-green-600/30 mt-2">
+                                            🎉 首次提領免稅優惠！時間衰減使稅率為 0%
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         }

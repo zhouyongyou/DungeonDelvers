@@ -17,7 +17,7 @@ export const MARKETPLACE_V2_CONFIG = {
     PARTY: '0x2890F2bFe5ff4655d3096eC5521be58Eba6fAE50' as const,
   },
   
-  // Supported stablecoins on BSC
+  // Supported stablecoins on BSC (only USDT and BUSD for simplicity)
   stablecoins: {
     USDT: {
       address: '0x55d398326f99059fF775485246999027B3197955' as const,
@@ -32,13 +32,6 @@ export const MARKETPLACE_V2_CONFIG = {
       name: 'Binance USD',
       decimals: 18,
       icon: '💰'
-    },
-    USD1: {
-      address: '0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d' as const,
-      symbol: 'USD1',
-      name: 'USD1 Stablecoin',
-      decimals: 18,
-      icon: '💎'
     }
   },
   

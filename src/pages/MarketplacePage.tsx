@@ -15,7 +15,7 @@ import type { HeroNft, RelicNft, PartyNft, NftType } from '../types/nft';
 import { THE_GRAPH_API_URL } from '../config/graphConfig';
 import { graphQLRateLimiter } from '../utils/rateLimiter';
 import { logger } from '../utils/logger';
-import { CreateListingModal } from '../components/marketplace/CreateListingModal';
+import { CreateListingTab } from '../components/marketplace/CreateListingTab';
 import { PurchaseModalV2 } from '../components/marketplace/PurchaseModalV2';
 import { TokenBalanceDisplay } from '../components/marketplace/TokenBalanceDisplay';
 import { useEnhancedNfts } from '../hooks/useEnhancedNfts';
@@ -25,11 +25,10 @@ import { useAppToast } from '../contexts/SimpleToastContext';
 import { MarketStats } from '../components/marketplace/MarketStats';
 import { MarketplaceDevTools } from '../components/marketplace/MarketplaceDevTools';
 import { MarketplaceNotifications } from '../components/marketplace/MarketplaceNotifications';
-import { BatchOperations } from '../components/marketplace/BatchOperations';
+// import { BatchOperations } from '../components/marketplace/BatchOperations'; // 已整合到 CreateListingModalV2
 import { MakeOfferModal } from '../components/marketplace/MakeOfferModal';
 import { OffersPanel } from '../components/marketplace/OffersPanel';
-import { NftDisplayToggleMini } from '../components/ui/NftDisplayToggle';
-import { NftSvgDisplay } from '../components/ui/NftSvgDisplay';
+// import { NftDisplayToggleMini } from '../components/ui/NftDisplayToggle'; // 已移除，使用 PNG 圖片
 
 // =================================================================
 // Section: Types
@@ -412,27 +411,29 @@ const ListingCard: React.FC<{
     return (
         <div className="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors">
             <div className="aspect-square bg-gray-900 rounded mb-3 flex items-center justify-center relative overflow-hidden">
-                {listing.nft ? (
-                    <NftSvgDisplay 
-                        nft={listing.nft} 
-                        className="w-full h-full"
-                        interactive={false}
-                        showFallback={true}
+                {listing.nft && listing.nft.image ? (
+                    <img 
+                        src={listing.nft.image} 
+                        alt={listing.nft.name || 'NFT'} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
                     />
-                ) : (
-                    <div className="text-center">
-                        <div className="text-4xl mb-2">
-                            {listing.nftType === 'hero' ? '⚔️' :
-                             listing.nftType === 'relic' ? '🛡️' : '👥'}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                            {listing.nftType.toUpperCase()}
-                        </div>
-                        <div className="text-xs text-yellow-400 mt-1">
-                            加載中...
-                        </div>
+                ) : null}
+                <div className={`text-center ${listing.nft?.image ? 'hidden' : ''}`}>
+                    <div className="text-4xl mb-2">
+                        {listing.nftType === 'hero' ? '⚔️' :
+                         listing.nftType === 'relic' ? '🛡️' : '👥'}
                     </div>
-                )}
+                    <div className="text-xs text-gray-400">
+                        {listing.nftType.toUpperCase()}
+                    </div>
+                    <div className="text-xs text-yellow-400 mt-1">
+                        #{listing.tokenId}
+                    </div>
+                </div>
                 {/* 戰力角標 */}
                 {powerValue && (
                     <div className="absolute top-2 right-2 bg-[#C0A573] text-white text-xs px-2 py-1 rounded-full font-bold">
@@ -572,13 +573,12 @@ const MarketplacePage: React.FC = () => {
     const { showToast } = useAppToast();
     const [page, setPage] = useState(0);
     const pageSize = 12;
-    const [showCreateListing, setShowCreateListing] = useState(false);
+    const [activeTab, setActiveTab] = useState<'listings' | 'create'>('listings');
     const [showPurchaseModal, setShowPurchaseModal] = useState(false);
     const [selectedListing, setSelectedListing] = useState<MarketListingType | null>(null);
     const [localListings, setLocalListings] = useState<MarketListingType[]>([]);
     const [showMyListings, setShowMyListings] = useState(false);
     const [showStats, setShowStats] = useState(false);
-    const [showBatchOperations, setShowBatchOperations] = useState(false);
     const [showOffers, setShowOffers] = useState(false);
     const [showMakeOffer, setShowMakeOffer] = useState(false);
     const [selectedOfferListing, setSelectedOfferListing] = useState<MarketListingType | null>(null);
@@ -801,7 +801,6 @@ const MarketplacePage: React.FC = () => {
                     </div>
                     {/* 桌面版按鈕 */}
                     <div className="hidden md:flex items-center gap-2">
-                        <NftDisplayToggleMini />
                         <MarketplaceNotifications />
                         <ActionButton
                             className="px-4 py-2"
@@ -826,14 +825,7 @@ const MarketplacePage: React.FC = () => {
                         </ActionButton>
                         <ActionButton
                             className="px-4 py-2"
-                            onClick={() => setShowBatchOperations(true)}
-                        >
-                            <Icons.Package className="h-4 w-4 mr-2" />
-                            批量操作
-                        </ActionButton>
-                        <ActionButton
-                            className="px-4 py-2"
-                            onClick={() => setShowCreateListing(true)}
+                            onClick={() => setActiveTab('create')}
                         >
                             <Icons.Plus className="h-4 w-4 mr-2" />
                             創建掛單
@@ -843,7 +835,6 @@ const MarketplacePage: React.FC = () => {
                     {/* 手機版按鈕 - 緊湊排列 */}
                     <div className="md:hidden">
                         <div className="flex items-center justify-between gap-2 mb-3">
-                            <NftDisplayToggleMini />
                             <MarketplaceNotifications />
                             <ActionButton
                                 className="px-2 py-1 text-xs"
@@ -861,7 +852,7 @@ const MarketplacePage: React.FC = () => {
                             </ActionButton>
                         </div>
                         
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                             <ActionButton
                                 className="px-2 py-2 text-xs"
                                 onClick={() => setShowMyListings(!showMyListings)}
@@ -871,17 +862,10 @@ const MarketplacePage: React.FC = () => {
                             </ActionButton>
                             <ActionButton
                                 className="px-2 py-2 text-xs"
-                                onClick={() => setShowBatchOperations(true)}
-                            >
-                                <Icons.Package className="h-3 w-3 mr-1" />
-                                批量
-                            </ActionButton>
-                            <ActionButton
-                                className="px-2 py-2 text-xs"
-                                onClick={() => setShowCreateListing(true)}
+                                onClick={() => setActiveTab('create')}
                             >
                                 <Icons.Plus className="h-3 w-3 mr-1" />
-                                掛單
+                                創建掛單
                             </ActionButton>
                         </div>
                     </div>
@@ -1018,15 +1002,7 @@ const MarketplacePage: React.FC = () => {
                     </div>
                 )}
                 
-                {/* Create Listing Modal */}
-                {userNfts && (
-                    <CreateListingModal
-                        isOpen={showCreateListing}
-                        onClose={() => setShowCreateListing(false)}
-                        userNfts={userNfts}
-                        onListingCreated={handleListingCreated}
-                    />
-                )}
+                {/* Create Listing - 改為使用全頁面版本 */}
                 
                 {/* Purchase Modal */}
                 <PurchaseModalV2
@@ -1039,21 +1015,7 @@ const MarketplacePage: React.FC = () => {
                     onPurchaseComplete={handlePurchaseComplete}
                 />
                 
-                {/* Batch Operations Modal */}
-                {userNfts && (
-                    <BatchOperations
-                        isOpen={showBatchOperations}
-                        onClose={() => setShowBatchOperations(false)}
-                        userNfts={userNfts}
-                        userListings={enhancedListings.filter(l => 
-                            address && l.seller.toLowerCase() === address.toLowerCase()
-                        )}
-                        onBatchComplete={() => {
-                            setLocalListings(getLocalListings());
-                            refetchNfts();
-                        }}
-                    />
-                )}
+                {/* Batch Operations Modal - 已整合到 CreateListingModalV2 */}
 
                 {/* Make Offer Modal */}
                 <MakeOfferModal

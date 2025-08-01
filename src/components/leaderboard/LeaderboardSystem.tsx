@@ -64,6 +64,9 @@ export const LeaderboardSystem: React.FC<LeaderboardProps> = ({
     if (type === 'totalEarnings') {
       return `${formatSoul(BigInt(value))} SOUL`;
     }
+    if (type === 'dungeonClears') {
+      return `${value} 次`;
+    }
     if (type === 'playerLevel') {
       return `LV ${value}`;
     }

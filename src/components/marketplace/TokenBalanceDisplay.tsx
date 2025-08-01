@@ -32,8 +32,8 @@ export const TokenBalanceDisplay: React.FC<TokenBalanceDisplayProps> = ({
         if (showAllTokens) {
             return Object.keys(SUPPORTED_STABLECOINS) as StablecoinSymbol[];
         }
-        // 默認顯示主要代幣
-        return ['USDT', 'BUSD', 'USD1'] as StablecoinSymbol[];
+        // 默認顯示主要代幣（只有 USDT 和 BUSD）
+        return ['USDT', 'BUSD'] as StablecoinSymbol[];
     }, [tokens, showAllTokens]);
     
     if (!isConnected || !address) {
@@ -113,6 +113,11 @@ const TokenBalanceItem: React.FC<{ address: Address; symbol: StablecoinSymbol }>
 }) => {
     const tokenInfo = SUPPORTED_STABLECOINS[symbol];
     
+    // 如果找不到代幣信息，返回空
+    if (!tokenInfo) {
+        return null;
+    }
+    
     const { data: balance, isLoading, error } = useReadContract({
         address: tokenInfo.address as Address,
         abi: erc20Abi,
@@ -165,6 +170,11 @@ const CompactTokenBalance: React.FC<{ address: Address; symbol: StablecoinSymbol
 }) => {
     const tokenInfo = SUPPORTED_STABLECOINS[symbol];
     
+    // 如果找不到代幣信息（例如 USD1 已被移除），返回空
+    if (!tokenInfo) {
+        return null;
+    }
+    
     const { data: balance, isLoading } = useReadContract({
         address: tokenInfo.address as Address,
         abi: erc20Abi,
@@ -200,6 +210,11 @@ const DetailedTokenBalance: React.FC<{ address: Address; symbol: StablecoinSymbo
     symbol
 }) => {
     const tokenInfo = SUPPORTED_STABLECOINS[symbol];
+    
+    // 如果找不到代幣信息，返回空
+    if (!tokenInfo) {
+        return null;
+    }
     
     const { data: balance, isLoading, error } = useReadContract({
         address: tokenInfo.address as Address,

@@ -127,7 +127,8 @@ const fetchLeaderboardData = async (
       
       switch (type) {
         case 'totalEarnings':
-          value = Math.floor(Number(formatEther(BigInt(profile.totalRewardsEarned || 0)))).toString();
+          // 直接傳遞原始 BigInt 字符串，讓 formatSoul 處理格式化
+          value = profile.totalRewardsEarned || '0';
           displayName = `${profile.successfulExpeditions || 0} 次成功遠征`;
           break;
         case 'dungeonClears':

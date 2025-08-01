@@ -72,10 +72,10 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
                 return [];
         }
         
-        // 過濾掉沒有 tokenId 的 NFT
+        // 過濾掉沒有 id 的 NFT（NFT 類型定義使用 id 而非 tokenId）
         return nfts.filter(nft => {
-            if (!nft.tokenId) {
-                console.warn('Found NFT without tokenId:', nft);
+            if (!nft.id) {
+                console.warn('Found NFT without id:', nft);
                 return false;
             }
             return true;
@@ -141,8 +141,8 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
     
     // NFT 詳細資訊組件
     const NftDetailsCard = ({ nft }: { nft: HeroNft | RelicNft | PartyNft }) => {
-        // 確保 tokenId 不是 undefined
-        const safeTokenId = nft.tokenId ? BigInt(nft.tokenId) : 0n;
+        // 確保 id 不是 undefined（NFT 類型定義使用 id）
+        const safeTokenId = nft.id ? BigInt(nft.id) : 0n;
         const heroPower = useHeroPower(nft.type === 'hero' ? safeTokenId : 0n);
         const partyPower = usePartyPower(nft.type === 'party' ? safeTokenId : 0n);
         const heroDetails = useHeroDetails(nft.type === 'hero' ? safeTokenId : 0n);
@@ -167,7 +167,7 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
                     <div>
                         <h4 className="font-bold text-white">
                             {nft.type === 'hero' ? '英雄' :
-                             nft.type === 'relic' ? '聖物' : '隊伍'} #{nft.tokenId.toString()}
+                             nft.type === 'relic' ? '聖物' : '隊伍'} #{nft.id.toString()}
                         </h4>
                         {powerValue && (
                             <p className="text-sm text-[#C0A573] font-bold">
@@ -282,54 +282,109 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
                         {availableNfts.map((nft) => {
                             const NftCard = () => {
-                                // 確保 tokenId 不是 undefined
-                                const safeTokenId = nft.tokenId ? BigInt(nft.tokenId) : 0n;
+                                // 確保 id 不是 undefined（NFT 類型定義使用 id）
+                                const safeTokenId = nft.id ? BigInt(nft.id) : 0n;
                                 const heroPower = useHeroPower(nft.type === 'hero' ? safeTokenId : 0n);
                                 const partyPower = usePartyPower(nft.type === 'party' ? safeTokenId : 0n);
                                 const powerValue = nft.type === 'hero' ? heroPower.power : 
                                                   nft.type === 'party' ? partyPower.power : null;
                                 const isLoadingPower = heroPower.isLoading || partyPower.isLoading;
 
+                                // 獲取詳細信息
+                                const heroDetails = useHeroDetails(nft.type === 'hero' ? safeTokenId : 0n);
+                                const relicDetails = useRelicDetails(nft.type === 'relic' ? safeTokenId : 0n);
+                                const partyDetails = usePartyDetails(nft.type === 'party' ? safeTokenId : 0n);
+                                
+                                const getRarityStars = (rarity: number) => {
+                                    return '★'.repeat(rarity) + '☆'.repeat(5 - rarity);
+                                };
+
                                 return (
-                                    <button
-                                        key={`${nft.type}-${nft.tokenId || 'unknown'}-${nft.id || Math.random()}`}
+                                    <div
+                                        key={`${nft.type}-${nft.id || 'unknown'}`}
                                         onClick={() => handleNftSelect(nft)}
-                                        className={`p-3 rounded-lg border-2 transition-all ${
-                                            selectedNft?.tokenId === nft.tokenId
-                                                ? 'border-[#C0A573] bg-gray-700'
-                                                : 'border-gray-600 hover:border-gray-500'
+                                        className={`relative p-3 rounded-lg border-2 transition-all cursor-pointer ${
+                                            selectedNft?.id === nft.id
+                                                ? 'border-[#C0A573] bg-gray-700/50 ring-1 ring-[#C0A573]/50'
+                                                : 'border-gray-600 hover:border-gray-500 bg-gray-800/30'
                                         }`}
                                     >
-                                        <div className="relative mb-2">
-                                            <div className="text-2xl">
+                                        {/* NFT 圖片或圖標 */}
+                                        <div className="aspect-square bg-gray-900/50 rounded mb-2 flex items-center justify-center overflow-hidden">
+                                            {nft.image ? (
+                                                <img 
+                                                    src={nft.image} 
+                                                    alt={nft.name || `${nft.type} #${nft.id}`}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.currentTarget.style.display = 'none';
+                                                        const fallback = e.currentTarget.nextElementSibling;
+                                                        if (fallback) fallback.classList.remove('hidden');
+                                                    }}
+                                                />
+                                            ) : null}
+                                            <div className={`text-4xl ${nft.image ? 'hidden' : ''}`}>
                                                 {nft.type === 'hero' ? '⚔️' :
                                                  nft.type === 'relic' ? '🛡️' : '👥'}
                                             </div>
-                                            {powerValue && (
-                                                <div className="absolute -top-1 -right-1 bg-[#C0A573] text-white text-xs px-1 py-0.5 rounded-full font-bold min-w-[16px] text-center">
-                                                    {powerValue > 999 ? `${Math.floor(powerValue/1000)}k` : powerValue}
-                                                </div>
+                                        </div>
+
+                                        {/* NFT 信息 */}
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-medium text-white truncate">
+                                                {nft.name || `${nft.type === 'hero' ? '英雄' : nft.type === 'relic' ? '聖物' : '隊伍'} #${nft.id}`}
+                                            </p>
+                                            
+                                            {/* 稀有度 */}
+                                            {'rarity' in nft && (
+                                                <p className="text-xs text-yellow-400">
+                                                    {getRarityStars(Number(nft.rarity))}
+                                                </p>
                                             )}
-                                            {isLoadingPower && (
-                                                <div className="absolute -top-1 -right-1 bg-gray-600 text-white text-xs px-1 py-0.5 rounded-full">
-                                                    <LoadingSpinner size="xs" />
-                                                </div>
+                                            
+                                            {/* 戰力/容量 */}
+                                            {nft.type === 'hero' && heroDetails.element && (
+                                                <p className="text-xs text-gray-400">
+                                                    {getElementName(heroDetails.element)} {getClassName(heroDetails.classId)}
+                                                </p>
+                                            )}
+                                            
+                                            {nft.type === 'relic' && relicDetails.category && (
+                                                <p className="text-xs text-gray-400">
+                                                    {getRelicCategoryName(relicDetails.category)}
+                                                </p>
+                                            )}
+                                            
+                                            {powerValue && (
+                                                <p className="text-xs font-bold text-[#C0A573]">
+                                                    ⚔️ {powerValue.toLocaleString()}
+                                                </p>
+                                            )}
+                                            
+                                            {nft.type === 'relic' && 'capacity' in nft && (
+                                                <p className="text-xs text-blue-400">
+                                                    📦 容量 {nft.capacity}
+                                                </p>
+                                            )}
+                                            
+                                            {nft.type === 'party' && partyDetails.heroCount !== undefined && (
+                                                <p className="text-xs text-gray-400">
+                                                    👥 {partyDetails.heroCount} 英雄 🛡️ {partyDetails.relicCount} 聖物
+                                                </p>
                                             )}
                                         </div>
-                                        <p className="text-sm text-white">#{nft.tokenId.toString()}</p>
-                                        {powerValue && (
-                                            <p className="text-xs text-[#C0A573] font-bold">
-                                                {powerValue.toLocaleString()}
-                                            </p>
+
+                                        {/* 選中標記 */}
+                                        {selectedNft?.id === nft.id && (
+                                            <div className="absolute top-2 right-2 bg-[#C0A573] text-white rounded-full p-1">
+                                                <Icons.Check className="w-3 h-3" />
+                                            </div>
                                         )}
-                                        {'tier' in nft && (
-                                            <p className="text-xs text-gray-400">T{nft.tier}</p>
-                                        )}
-                                    </button>
+                                    </div>
                                 );
                             };
                             
-                            return <NftCard key={`${nft.type}-${nft.tokenId || 'unknown'}-${nft.id || Math.random()}`} />;
+                            return <NftCard key={`${nft.type}-${nft.id || 'unknown'}`} />;
                         })}
                     </div>
                     {availableNfts.length === 0 && (
@@ -359,18 +414,16 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
                     )}
                 </div>
                 
-                {/* 穩定幣選擇 */}
+                {/* 穩定幣選擇 - 改為單選 */}
                 <div className="mb-4">
+                    <label className="block text-gray-400 mb-2">選擇接受的支付幣種</label>
                     <StablecoinSelector
                         selectedTokens={acceptedTokens}
                         onToggle={(token) => {
-                            setAcceptedTokens(prev => 
-                                prev.includes(token)
-                                    ? prev.filter(t => t !== token)
-                                    : [...prev, token]
-                            );
+                            // 單選模式：選擇新的幣種時，清除之前的選擇
+                            setAcceptedTokens([token]);
                         }}
-                        mode="multiple"
+                        mode="single"
                         address={address}
                     />
                 </div>

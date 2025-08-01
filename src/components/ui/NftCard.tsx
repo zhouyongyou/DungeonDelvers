@@ -9,7 +9,6 @@ import { getRarityChineseName, getRarityColor as getRarityColorUtil } from '../.
 import ImageWithFallback from './ImageWithFallback';
 import { LazyImage } from './LazyImage';
 import { safeBigintToString, getNftIdSafe, getPartyPowerSafe, getPartyCapacitySafe } from '../../utils/typeGuards';
-import { NftSvgDisplay } from './NftSvgDisplay';
 import { useNftDisplayMode } from '../../hooks/useNftDisplayMode';
 import { useImageOptimization } from '../../hooks/useImageOptimization';
 
@@ -110,6 +109,16 @@ const NftCard: React.FC<NftCardProps> = memo(({
     return null;
   };
 
+  // 幫助函數：將複數型NFT類型轉換為對應的圖片目錄名稱
+  const getImageDirName = (nftType: string): string => {
+    switch (nftType) {
+      case 'heros': return 'hero';
+      case 'relics': return 'relic';
+      case 'parties': return 'party';
+      default: return nftType;
+    }
+  };
+
   const renderImage = () => {
     // VIP卡片使用專門的組件
     if (nft.type === 'vip') {
@@ -127,49 +136,43 @@ const NftCard: React.FC<NftCardProps> = memo(({
                          typeof nft.rarity === 'string' ? parseInt(nft.rarity) : 
                          typeof nft.rarity === 'bigint' ? Number(nft.rarity) : 1;
       rarity = Math.max(1, Math.min(5, rarityValue));
-    } else if (nft.type === 'party' && 'partyRarity' in nft) {
+    } else if (nft.type === 'parties' && 'partyRarity' in nft) {
       const partyRarity = (nft as PartyNft).partyRarity;
       rarity = Math.max(1, Math.min(5, partyRarity || 1));
     }
+
+    const imageDirName = getImageDirName(nft.type);
     
     return (
       <div className="relative w-full h-full overflow-hidden rounded-lg">
         {renderSyncStatus()}
-        {shouldUseSvg ? (
-          <NftSvgDisplay 
-            nft={nft} 
-            className="w-full h-full rounded-lg"
-            showFallback={true}
-            isCodex={isCodex}
+        {/* 總是使用 PNG 圖片，不使用 SVG */}
+        <LazyImage
+          src={optimizeImageUrl(nft.image, { width: 400, height: 400 })}
+          alt={nft.name || `${nft.type} #${nft.id}`}
+          className={baseImageClass}
+          fallback={`/images/${imageDirName}/${imageDirName}-${rarity}.png`}
+          placeholder="skeleton"
+          width={400}
+          height={400}
+          aspectRatio="1/1"
           />
-        ) : (
-          <LazyImage
-            src={optimizeImageUrl(nft.image, { width: 400, height: 400 })}
-            alt={nft.name || `${nft.type} #${nft.id}`}
-            className={baseImageClass}
-            fallback={`/images/${nft.type}/${nft.type}-${rarity}.png`}
-            placeholder="skeleton"
-            width={400}
-            height={400}
-            aspectRatio="1/1"
-          />
-        )}
         {/* 只在圖片上顯示最重要的資訊 */}
         {showDetails && (
           <>
             {/* 底部屬性顯示 - 簡化版 */}
             <div className="absolute bottom-2 left-2 right-2 flex justify-between">
-              {nft.type === 'hero' && (
+              {nft.type === 'heros' && (
                 <div className="bg-black/60 text-white px-2 py-1 rounded text-xs">
                   ⚔️ {(nft as HeroNft).power?.toLocaleString?.() ?? '0'}
                 </div>
               )}
-              {nft.type === 'relic' && (
+              {nft.type === 'relics' && (
                 <div className="bg-black/60 text-white px-2 py-1 rounded text-xs">
                   📦 {(nft as RelicNft).capacity ?? '0'}
                 </div>
               )}
-              {nft.type === 'party' && (
+              {nft.type === 'parties' && (
                 <>
                   <div className="bg-black/60 text-white px-1.5 py-0.5 rounded text-xs">
                     ⚔️ {getPartyPowerSafe(nft)}
@@ -193,7 +196,7 @@ const NftCard: React.FC<NftCardProps> = memo(({
     let rarity: string | number | bigint = 1;
     if ('rarity' in nft && nft.rarity !== undefined) {
       rarity = nft.rarity;
-    } else if (nft.type === 'party') {
+    } else if (nft.type === 'parties') {
       const party = nft as PartyNft;
       rarity = party.partyRarity || 1;
     }

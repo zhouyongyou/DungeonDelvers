@@ -1,5 +1,6 @@
 // src/components/marketplace/BatchOperations.tsx
 // 批量掛單和取消功能組件
+// 注意：價格單位使用 USD 而非 SOUL
 
 import React, { useState, useMemo } from 'react';
 import { useAccount } from 'wagmi';
@@ -12,6 +13,9 @@ import { formatSoul } from '../../utils/formatters';
 import { useAppToast } from '../../contexts/SimpleToastContext';
 import type { HeroNft, RelicNft, PartyNft, NftType } from '../../types/nft';
 import { emitListingCreated, emitListingCancelled } from '../../utils/marketplaceEvents';
+import { StablecoinSelector } from './StablecoinSelector';
+import type { StablecoinSymbol } from '../../hooks/useMarketplaceV2Contract';
+import { useMarketplaceV2 } from '../../hooks/useMarketplaceV2Contract';
 
 interface BatchOperationsProps {
     isOpen: boolean;
@@ -45,12 +49,14 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
 }) => {
     const { address } = useAccount();
     const { showToast } = useAppToast();
+    const { createListing, isProcessing: isContractProcessing } = useMarketplaceV2();
     const [mode, setMode] = useState<'create' | 'cancel'>('create');
     const [isProcessing, setIsProcessing] = useState(false);
     const [batchPrice, setBatchPrice] = useState('');
     
     // Batch create state
     const [batchItems, setBatchItems] = useState<BatchItem[]>([]);
+    const [acceptedTokens, setAcceptedTokens] = useState<StablecoinSymbol[]>(['USDT']); // 預設選擇 USDT
     
     // Batch cancel state
     const [cancelItems, setCancelItems] = useState<BatchCancelItem[]>([]);
@@ -62,14 +68,14 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
                 ...(userNfts?.heros || []),
                 ...(userNfts?.relics || []),
                 ...(userNfts?.parties || [])
-                // Note: VIP cards are typically not tradeable on marketplace, so we exclude them
+                // 排除 VIP 卡片（通常不在市場上交易）
             ];
             
-            // Filter out NFTs that are already listed
+            // 過濾已經掛單的 NFT
             const listedTokenIds = new Set(userListings.map(l => l.tokenId?.toString()).filter(Boolean));
             const availableNfts = allNfts.filter(nft => {
-                // Use id from BaseNft instead of tokenId
-                // Make sure the NFT has a valid id and is a tradeable type
+                // 使用 BaseNft 的 id 而非 tokenId
+                // 確保 NFT 有有效的 id 且是可交易類型
                 if (!nft || !nft.id) return false;
                 const nftId = nft.id.toString();
                 return nftId && !listedTokenIds.has(nftId);
@@ -152,21 +158,22 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
         setIsProcessing(true);
         
         try {
-            // Simulate batch creation
+            // 批量創建掛單
             for (const item of selectedCreateItems) {
-                // In a real implementation, this would call the actual listing API
-                console.log(`Creating listing for ${item.nft.type} #${item.nft.id} at ${item.price} SOUL`);
+                console.log(`創建掛單: ${item.nft.type} #${item.nft.id} 價格: ${item.price} USD`);
                 
-                // 觸發通知事件
-                emitListingCreated({
-                    nftType: item.nft.type,
-                    tokenId: item.nft.id?.toString() || 'Unknown',
-                    price: item.price,
-                    seller: address
-                });
+                // 使用 MarketplaceV2 hook 創建掛單
+                const success = await createListing(item.nft, item.price, acceptedTokens);
                 
-                // Simulate API delay
-                await new Promise(resolve => setTimeout(resolve, 500));
+                if (success) {
+                    // 觸發通知事件
+                    emitListingCreated({
+                        nftType: item.nft.type,
+                        tokenId: item.nft.id?.toString() || 'Unknown',
+                        price: item.price,
+                        seller: address
+                    });
+                }
             }
             
             showToast(`成功創建 ${selectedCreateItems.length} 個掛單`, 'success');
@@ -188,9 +195,9 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
         setIsProcessing(true);
         
         try {
-            // Simulate batch cancellation
+            // 模擬批量取消
             for (const item of selectedCancelItems) {
-                console.log(`Cancelling listing ${item.listing.id}`);
+                console.log(`取消掛單: ${item.listing.id}`);
                 
                 // 觸發通知事件
                 emitListingCancelled({
@@ -200,7 +207,7 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
                     seller: address
                 });
                 
-                // Simulate API delay
+                // 模擬 API 延遲
                 await new Promise(resolve => setTimeout(resolve, 300));
             }
             
@@ -215,8 +222,8 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
     };
     
     const primaryAction = mode === 'create' ? handleBatchCreate : handleBatchCancel;
-    const isDisabled = isProcessing || 
-        (mode === 'create' && selectedCreateItems.length === 0) ||
+    const isDisabled = isProcessing || isContractProcessing ||
+        (mode === 'create' && (selectedCreateItems.length === 0 || acceptedTokens.length === 0)) ||
         (mode === 'cancel' && selectedCancelItems.length === 0);
     
     return (
@@ -232,7 +239,7 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
             }
             maxWidth="4xl"
             disabled={isDisabled}
-            isLoading={isProcessing}
+            isLoading={isProcessing || isContractProcessing}
             showCloseButton={!isProcessing}
         >
             <div className="space-y-6">
@@ -267,7 +274,7 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
                             <h3 className="text-lg font-semibold text-white mb-3">批量設定價格</h3>
                             <div className="flex gap-3 items-end">
                                 <div className="flex-1">
-                                    <label className="block text-gray-400 mb-2">統一價格 (SOUL)</label>
+                                    <label className="block text-gray-400 mb-2">統一價格 (USD)</label>
                                     <input
                                         type="number"
                                         value={batchPrice}
@@ -277,6 +284,11 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
                                         step="0.01"
                                         min="0"
                                     />
+                                    {batchPrice && (
+                                        <p className="text-sm text-gray-400 mt-1">
+                                            ${parseFloat(batchPrice).toFixed(2)} USD
+                                        </p>
+                                    )}
                                 </div>
                                 <ActionButton
                                     onClick={applyBatchPrice}
@@ -306,17 +318,18 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
                                 {batchItems.map((item, index) => (
                                     <div
                                         key={`${item.nft.type}-${item.nft.id}`}
-                                        className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-colors ${
+                                        onClick={() => handleItemSelect(index, 'create')}
+                                        className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-colors cursor-pointer ${
                                             item.selected
-                                                ? 'border-[#C0A573] bg-gray-700'
-                                                : 'border-gray-600 hover:border-gray-500'
+                                                ? 'border-[#C0A573] bg-gray-700/50 ring-1 ring-[#C0A573]/50'
+                                                : 'border-gray-600 hover:border-gray-500 bg-gray-800/30'
                                         }`}
                                     >
                                         <input
                                             type="checkbox"
                                             checked={item.selected}
-                                            onChange={() => handleItemSelect(index, 'create')}
-                                            className="w-4 h-4 text-[#C0A573] bg-gray-700 border-gray-600 rounded focus:ring-[#C0A573]"
+                                            onChange={() => {}} // 已由卡片點擊事件處理
+                                            className="w-4 h-4 text-[#C0A573] bg-gray-700 border-gray-600 rounded focus:ring-[#C0A573] pointer-events-none"
                                         />
                                         
                                         <div className="text-2xl">
@@ -325,44 +338,87 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
                                         </div>
                                         
                                         <div className="flex-1">
-                                            <div className="font-medium text-white">
-                                                {item.nft.type === 'hero' ? '英雄' :
-                                                 item.nft.type === 'relic' ? '聖物' : '隊伍'} #{item.nft.id?.toString() || 'N/A'}
-                                            </div>
-                                            {'power' in item.nft && (
-                                                <div className="text-sm text-gray-400">
-                                                    戰力: {item.nft.power}
+                                            <div className="flex items-center gap-2">
+                                                {/* NFT 圖片 */}
+                                                {item.nft.image && (
+                                                    <div className="w-10 h-10 rounded overflow-hidden bg-gray-900">
+                                                        <img 
+                                                            src={item.nft.image} 
+                                                            alt={item.nft.name || `${item.nft.type} #${item.nft.id}`}
+                                                            className="w-full h-full object-cover"
+                                                            onError={(e) => {
+                                                                e.currentTarget.style.display = 'none';
+                                                            }}
+                                                        />
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <div className="font-medium text-white">
+                                                        {item.nft.name || `${item.nft.type === 'hero' ? '英雄' : item.nft.type === 'relic' ? '聖物' : '隊伍'} #${item.nft.id?.toString() || 'N/A'}`}
+                                                    </div>
+                                                    {'power' in item.nft && item.nft.power && (
+                                                        <div className="text-xs text-gray-400">
+                                                            戰力: {item.nft.power.toLocaleString()}
+                                                        </div>
+                                                    )}
+                                                    {'rarity' in item.nft && (
+                                                        <div className="text-xs text-yellow-400">
+                                                            {'★'.repeat(Number(item.nft.rarity))}{'☆'.repeat(5 - Number(item.nft.rarity))}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
+                                            </div>
                                         </div>
                                         
-                                        <div className="w-32">
+                                        <div className="w-32" onClick={(e) => e.stopPropagation()}>
                                             <input
                                                 type="number"
                                                 value={item.price}
                                                 onChange={(e) => handlePriceChange(index, e.target.value)}
-                                                placeholder="價格"
+                                                placeholder="USD價格"
                                                 className="w-full px-2 py-1 bg-gray-800 text-white rounded border border-gray-600 focus:border-[#C0A573] focus:outline-none text-sm"
                                                 step="0.01"
                                                 min="0"
                                             />
+                                            {item.price && (
+                                                <p className="text-xs text-gray-400 mt-0.5">
+                                                    ${parseFloat(item.price).toFixed(2)} USD
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         </div>
                         
+                        {/* 支付幣種選擇 */}
+                        <div className="mt-4 mb-4">
+                            <label className="block text-gray-400 mb-2">選擇接受的支付幣種</label>
+                            <StablecoinSelector
+                                selectedTokens={acceptedTokens}
+                                onToggle={(token) => {
+                                    // 單選模式：選擇新的幣種時，清除之前的選擇
+                                    setAcceptedTokens([token]);
+                                }}
+                                mode="single"
+                                address={address}
+                            />
+                        </div>
+                        
                         {/* Create Summary */}
                         {selectedCreateItems.length > 0 && (
-                            <div className="p-3 bg-blue-900/20 border border-blue-700 rounded-lg">
+                            <div className="p-3 bg-blue-900/20 border border-blue-700 rounded-lg mt-4">
                                 <div className="text-blue-400 text-sm">
                                     即將創建 {selectedCreateItems.length} 個掛單，
-                                    總價值約 {formatSoul(
-                                        selectedCreateItems.reduce((sum, item) => 
-                                            sum + parseFloat(item.price || '0'), 0
-                                        ).toString()
-                                    )} SOUL
+                                    總價值約 ${selectedCreateItems.reduce((sum, item) => 
+                                        sum + parseFloat(item.price || '0'), 0
+                                    ).toFixed(2)} USD
                                 </div>
+                                {acceptedTokens.length > 0 && (
+                                    <div className="text-xs text-gray-400 mt-1">
+                                        接受支付：{acceptedTokens.join(', ')}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -388,17 +444,18 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
                                 {cancelItems.map((item, index) => (
                                     <div
                                         key={item.listing.id}
-                                        className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-colors ${
+                                        onClick={() => handleItemSelect(index, 'cancel')}
+                                        className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-colors cursor-pointer ${
                                             item.selected
-                                                ? 'border-red-500 bg-gray-700'
-                                                : 'border-gray-600 hover:border-gray-500'
+                                                ? 'border-red-500 bg-gray-700/50 ring-1 ring-red-500/50'
+                                                : 'border-gray-600 hover:border-gray-500 bg-gray-800/30'
                                         }`}
                                     >
                                         <input
                                             type="checkbox"
                                             checked={item.selected}
-                                            onChange={() => handleItemSelect(index, 'cancel')}
-                                            className="w-4 h-4 text-red-500 bg-gray-700 border-gray-600 rounded focus:ring-red-500"
+                                            onChange={() => {}} // 已由卡片點擊事件處理
+                                            className="w-4 h-4 text-red-500 bg-gray-700 border-gray-600 rounded focus:ring-red-500 pointer-events-none"
                                         />
                                         
                                         <div className="text-2xl">
@@ -412,7 +469,7 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
                                                  item.listing.nftType === 'relic' ? '聖物' : '隊伍'} #{item.listing.tokenId.toString()}
                                             </div>
                                             <div className="text-sm text-gray-400">
-                                                價格: {formatSoul(item.listing.price.toString())} SOUL
+                                                價格: ${parseFloat(item.listing.price).toFixed(2)} USD
                                             </div>
                                         </div>
                                         
