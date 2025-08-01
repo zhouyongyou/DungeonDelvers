@@ -1,4 +1,4 @@
-# Generated from v25-config.js on 2025-08-01T13:55:22.216Z
+# Generated from v25-config.js on 2025-08-01T19:01:01.513Z
 # V25 Production Deployment
 specVersion: 0.0.4
 schema:
@@ -257,9 +257,9 @@ dataSources:
     name: OfferSystemV2
     network: bsc
     source:
-      address: '0xE072DC1Ea6243aEaD9c794aFe2585A8b6A5350EF'
+      address: '0x4e1A3B4C072C81d6CB63A72F8fDD18A3aE55c65b'
       abi: OfferSystemV2
-      startBlock: 55700000
+      startBlock: 56065457
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6

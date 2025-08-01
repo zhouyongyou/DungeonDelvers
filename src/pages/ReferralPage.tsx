@@ -27,13 +27,11 @@ import { THE_GRAPH_API_URL } from '../config/graphConfig';
 // 查詢玩家的邀請人與佣金數據
 const GET_REFERRAL_DATA_QUERY = `
   query GetReferralData($owner: ID!) {
-    player(id: $owner) {
+    playerProfile(id: $owner) {
       id
-      profile {
-        inviter
-        commissionEarned
-        invitees
-      }
+      inviter
+      commissionEarned
+      invitees
     }
   }
 `;
@@ -58,24 +56,44 @@ const GET_REFERRER_INFO_QUERY = `
 const useReferralData = () => {
     const { address, chainId } = useAccount();
     
-    // 1. 合約直讀 - 獲取準確的推薦人數據
+    // 1. 合約直讀 - 獲取準確的推薦人和佣金數據
     const playerVaultContract = getContractWithABI('PLAYERVAULT');
-    const { data: contractReferrer, isLoading: isLoadingContract } = useReadContract({
+    
+    // 1a. 讀取推薦人
+    const { data: contractReferrer, isLoading: isLoadingReferrer } = useReadContract({
         address: playerVaultContract.address as `0x${string}`,
         abi: playerVaultContract.abi,
         functionName: 'referrers',
         args: [address],
         enabled: !!address && chainId === bsc.id,
-        // 較短的緩存時間，確保數據實時性
         staleTime: 1000 * 30, // 30秒內認為數據是新鮮的
         gcTime: 1000 * 60 * 2, // 2分鐘後垃圾回收
     });
+    
+    // 1b. 讀取總佣金收益
+    const { data: contractTotalCommission, isLoading: isLoadingCommission } = useReadContract({
+        address: playerVaultContract.address as `0x${string}`,
+        abi: playerVaultContract.abi,
+        functionName: 'getTotalCommissionPaid',
+        args: [address],
+        enabled: !!address && chainId === bsc.id,
+        staleTime: 1000 * 10, // 10秒內認為數據是新鮮的（佣金數據更新較頻繁）
+        gcTime: 1000 * 60 * 2, // 2分鐘後垃圾回收
+    });
+    
+    // 合併合約載入狀態
+    const isLoadingContract = isLoadingReferrer || isLoadingCommission;
     
     // 2. GraphQL 查詢 - 獲取統計數據（佣金、推薦人數等）
     const { data: graphqlProfile, isLoading: isLoadingGraphql } = useQuery({
         queryKey: ['referralData', address],
         queryFn: async () => {
-            console.log('🔄 執行 referralData 查詢:', { address, chainId, THE_GRAPH_API_URL });
+            console.log('🔄 執行 referralData 查詢:', { 
+                address, 
+                chainId, 
+                THE_GRAPH_API_URL,
+                query: 'playerProfile'
+            });
             
             if (!address || !THE_GRAPH_API_URL) {
                 console.log('❌ 缺少必要參數:', { address, THE_GRAPH_API_URL });
@@ -104,10 +122,19 @@ const useReferralData = () => {
                 }
                 return null; // 失敗時返回 null，不拋出錯誤
             }
-            const { data } = await response.json();
-            console.log('📊 GraphQL 返回數據:', { data, profile: data.player?.profile });
+            const result = await response.json();
+            console.log('📊 GraphQL 返回數據:', { 
+                result, 
+                playerProfile: result.data?.playerProfile,
+                errors: result.errors 
+            });
             
-            return data.player?.profile ?? null;
+            if (result.errors) {
+                console.error('❌ GraphQL 查詢錯誤:', result.errors);
+                return null;
+            }
+            
+            return result.data?.playerProfile ?? null;
         },
         enabled: !!address && chainId === bsc.id,
         staleTime: 1000 * 60 * 2, // 2分鐘緩存（縮短以便更快獲取統計數據）
@@ -119,10 +146,12 @@ const useReferralData = () => {
     
     // 3. 合併數據 - 合約數據優先，GraphQL 提供統計
     const combinedData = useMemo(() => {
-        console.log('🔄 合併推薦人數據:', {
+        console.log('🔄 合併推薦數據:', {
             contractReferrer,
+            contractTotalCommission,
             graphqlReferrer: graphqlProfile?.inviter,
-            isContractReferrerValid: contractReferrer && contractReferrer !== '0x0000000000000000000000000000000000000000'
+            graphqlCommission: graphqlProfile?.commissionEarned,
+            graphqlInvitees: graphqlProfile?.invitees?.length
         });
         
         // 合約讀取的推薦人（最準確）
@@ -132,20 +161,36 @@ const useReferralData = () => {
         
         // 優先使用合約數據，備用 GraphQL 數據
         const finalReferrer = validContractReferrer || graphqlProfile?.inviter || null;
+        const finalCommission = contractTotalCommission !== undefined ? contractTotalCommission.toString() : (graphqlProfile?.commissionEarned || '0');
+        const finalReferralCount = graphqlProfile?.invitees?.length || 0;
+        const finalInvitees = graphqlProfile?.invitees || [];
         
-        console.log('✅ 最終推薦人數據:', {
-            finalReferrer,
-            dataSource: validContractReferrer ? 'contract' : (graphqlProfile?.inviter ? 'graphql' : 'none')
+        console.log('✅ 最終合併數據:', {
+            referrer: finalReferrer,
+            commission: finalCommission,
+            referralCount: finalReferralCount,
+            inviteesCount: finalInvitees.length,
+            dataSource: {
+                referrer: validContractReferrer ? 'contract' : (graphqlProfile?.inviter ? 'graphql' : 'none'),
+                commission: contractTotalCommission !== undefined ? 'contract' : 'graphql',
+                referralCount: 'graphql' // 回到依賴 GraphQL 的正確做法
+            }
         });
         
         return {
             inviter: finalReferrer,
-            commissionEarned: graphqlProfile?.commissionEarned || '0',
-            invitees: graphqlProfile?.invitees || [],
+            commissionEarned: finalCommission,
+            invitees: finalInvitees, // 直接使用 GraphQL 數據
+            referralCount: finalReferralCount,
+            inviteesDetails: finalInvitees, // GraphQL 的 invitees 數組
             // 數據來源標記（用於調試）
-            dataSource: validContractReferrer ? 'contract' : (graphqlProfile?.inviter ? 'graphql' : 'none')
+            dataSource: {
+                referrer: validContractReferrer ? 'contract' : (graphqlProfile?.inviter ? 'graphql' : 'none'),
+                commission: contractTotalCommission !== undefined ? 'contract' : 'graphql',
+                referralCount: 'graphql' // 正確依賴 GraphQL
+            }
         };
-    }, [contractReferrer, graphqlProfile]);
+    }, [contractReferrer, contractTotalCommission, graphqlProfile]);
 
     return {
         data: combinedData,
@@ -180,7 +225,7 @@ const ReferralPage: React.FC = () => {
     
     const currentReferrer = referralData?.inviter;
     const totalCommission = referralData?.commissionEarned ? BigInt(referralData.commissionEarned) : 0n;
-    const totalReferrals = referralData?.invitees?.length || 0;
+    const totalReferrals = referralData?.referralCount || referralData?.invitees?.length || 0;
     
     // 添加數據來源顯示（開發環境）
     useEffect(() => {
@@ -234,7 +279,9 @@ const ReferralPage: React.FC = () => {
             showConfirmModal, 
             hasProcessedReferral,
             isLoading,
-            currentReferrer
+            isLoadingCritical,
+            currentReferrer,
+            dataSource: referralData?.dataSource
         });
         
         // 如果有推薦連結參數且彈窗未顯示且未處理過，才考慮顯示彈窗
@@ -247,9 +294,9 @@ const ReferralPage: React.FC = () => {
                 console.log('📱 未連錢包，應顯示彈窗');
             } else if (address && urlRefParam.toLowerCase() !== address.toLowerCase()) {
                 // 已連錢包且不是自己的推薦連結
-                if (isLoading) {
-                    console.log('⏳ 數據載入中，暫不顯示彈窗');
-                    return; // 數據載入中，暫不做決定
+                if (isLoading || isLoadingCritical) {
+                    console.log('⏳ 關鍵數據載入中，暫不顯示彈窗');
+                    return; // 等待合約數據載入完成，避免誤判
                 } else if (!hasReferrer) {
                     shouldShowModal = true;
                     console.log('✅ 已連錢包但無推薦人，應顯示彈窗');
@@ -276,7 +323,7 @@ const ReferralPage: React.FC = () => {
                 });
             }
         }
-    }, [urlRefParam, address, hasReferrer, showConfirmModal, hasProcessedReferral, currentReferrer, isLoading]);
+    }, [urlRefParam, address, hasReferrer, showConfirmModal, hasProcessedReferral, currentReferrer, isLoading, isLoadingCritical]);
 
     const handleSetReferrer = async () => {
         if (!isAddress(referrerInput)) return showToast('請輸入有效的錢包地址', 'error');
@@ -473,56 +520,6 @@ ${referralLink}
         <section className="space-y-6 sm:space-y-8 max-w-4xl mx-auto">
             <h2 className="page-title">邀請與佣金中心</h2>
             
-            {/* 推薦人狀態卡片 */}
-            {address && (
-                <div className="card-bg p-4 sm:p-6 rounded-xl border-l-4 border-l-blue-500">
-                    <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0">
-                            {isLoading ? (
-                                <LoadingSpinner size="h-8 w-8" />
-                            ) : hasReferrer ? (
-                                <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
-                                    <Icons.Hero className="w-6 h-6 text-green-400" />
-                                </div>
-                            ) : (
-                                <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center">
-                                    <Icons.ExternalLink className="w-6 h-6 text-yellow-400" />
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex-1">
-                            {isLoading ? (
-                                <div>
-                                    <h3 className="text-lg font-semibold text-white">檢查推薦人狀態...</h3>
-                                    <p className="text-sm text-gray-400">正在從區塊鏈讀取您的推薦人資訊</p>
-                                </div>
-                            ) : hasReferrer ? (
-                                <div>
-                                    <h3 className="text-lg font-semibold text-green-400 mb-2">✓ 已綁定推薦人</h3>
-                                    <p className="text-sm text-gray-400 mb-2">您的推薦人:</p>
-                                    <p className="font-mono text-sm text-white bg-black/30 px-3 py-2 rounded break-all">
-                                        {currentReferrer}
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-2">
-                                        邀請關係已建立，您的推薦人將持續獲得您提領時的 5% 佣金分成
-                                    </p>
-                                </div>
-                            ) : (
-                                <div>
-                                    <h3 className="text-lg font-semibold text-yellow-400 mb-2">⚠️ 尚未設定推薦人</h3>
-                                    <p className="text-sm text-gray-400 mb-2">
-                                        您可以設定推薦人來支持為您介紹遊戲的朋友
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                        設定推薦人不會影響您的收益，還能獲得社群支持
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-            
             {/* 佣金管理 - 新版 PlayerVault v4.0 功能 */}
             <CommissionManager className="mb-6" />
             
@@ -538,6 +535,26 @@ ${referralLink}
                             >
                                 {showCommissionDetails ? <ChevronUpIcon className="w-4 h-4" /> : <ChevronDownIcon className="w-4 h-4" />}
                             </button>
+                        {/* 手動刷新按鈕 */}
+                        <button
+                            onClick={() => {
+                                queryClient.invalidateQueries({ queryKey: ['referralData', address] });
+                                // 同時刷新合約數據
+                                queryClient.invalidateQueries({ 
+                                    predicate: (query) => 
+                                        query.queryKey[0] === 'readContract' && 
+                                        (query.queryKey[1]?.includes?.('referrers') || 
+                                         query.queryKey[1]?.includes?.('getTotalCommissionPaid'))
+                                });
+                                showToast('正在刷新數據...', 'info');
+                            }}
+                            className="text-gray-400 hover:text-white transition-colors p-1 ml-1"
+                            title="刷新數據"
+                            >
+                                <Icons.RefreshCw className="w-4 h-4" />
+                            </button>
+                        
+                        {/* 開發環境調試信息 - 僅在控制台顯示，不在 UI 顯示 */}
                     </div>
                     {isLoading ? <LoadingSpinner size="h-8 w-8" /> : (
                         <p className="text-lg sm:text-2xl font-bold text-yellow-400">
@@ -565,6 +582,47 @@ ${referralLink}
                                 {totalReferrals} 人
                             </span>
                         </div>
+                        
+                        {/* 佣金機制簡要說明 */}
+                        <div className="mt-3 pt-3 border-t border-gray-700">
+                            <p className="text-xs text-gray-400 leading-relaxed">
+                                💡 當好友從金庫提領時，您將獲得 <span className="text-yellow-400">5% 佣金</span>
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                                需等待被邀請人進行提領操作
+                            </p>
+                        </div>
+                        
+                        
+                        {/* 邀請人詳細列表 */}
+                        {referralData?.inviteesDetails && referralData.inviteesDetails.length > 0 && (
+                            <div className="mt-4 pt-3 border-t border-gray-600">
+                                <h5 className="text-sm font-semibold text-gray-300 mb-3">📋 我的邀請列表</h5>
+                                <div className="space-y-2 max-h-32 overflow-y-auto">
+                                    {referralData.inviteesDetails.map((invitee, index) => (
+                                        <div key={invitee.address} className="flex items-center justify-between p-2 bg-gray-800/50 rounded text-xs">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-blue-400">#{index + 1}</span>
+                                                <span className="font-mono text-gray-300">
+                                                    {invitee.address.slice(0, 6)}...{invitee.address.slice(-4)}
+                                                </span>
+                                            </div>
+                                            <div className="text-gray-400">
+                                                {new Date(invitee.timestamp * 1000).toLocaleDateString('zh-TW', {
+                                                    month: 'short',
+                                                    day: 'numeric'
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                {referralData.inviteesDetails.length > 3 && (
+                                    <p className="text-xs text-gray-500 text-center mt-2">
+                                        顯示最近 {Math.min(referralData.inviteesDetails.length, 10)} 位邀請人
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
                 

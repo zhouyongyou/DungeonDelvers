@@ -59,7 +59,7 @@ export const GRAPHQL_ENDPOINTS = {
   get [GraphQLEndpointType.STUDIO]() {
     return cachedEndpoints?.[GraphQLEndpointType.STUDIO] || {
       url: import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL || 
-         'https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.5.1',
+         'https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.3.9',
       description: '免費版本 - 有 15-30 分鐘延遲，Studio 額度有限',
       features: ['探索者', '數據瀏覽', '統計資料'],
       fallbackUrl: import.meta.env.VITE_THE_GRAPH_DECENTRALIZED_API_URL || 
@@ -73,7 +73,7 @@ export const GRAPHQL_ENDPOINTS = {
       description: '付費版本 - 即時數據，主要使用',
       features: ['隊伍管理', '戰鬥', '市場', '獎勵', '即時統計'],
       fallbackUrl: import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL || 
-                   'https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.5.1'
+                   'https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.3.9'
     };
   }
 };
