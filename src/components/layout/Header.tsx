@@ -209,12 +209,21 @@ export const Header: React.FC<HeaderProps> = ({
                 
                 <div className="flex items-center gap-1 md:gap-2">
                     {/* 桌面端顯示所有功能 */}
-                    <div className="hidden md:flex items-center gap-2">
+                    <div className="hidden md:flex items-center gap-3">
+                        {/* 網路狀態指示器 */}
                         <NetworkSwitcher />
+                        
+                        {/* 交易歷史按鈕 */}
                         {isConnected && (
                           <div className="relative" ref={popoverRef}>
-                            <button onClick={() => setIsTxPopoverOpen(prev => !prev)} className="p-2 rounded-full text-gray-300 hover:bg-gray-700 transition-colors" aria-label="最近交易">
+                            <button 
+                                onClick={() => setIsTxPopoverOpen(prev => !prev)} 
+                                className="flex items-center gap-2 p-2 rounded-full bg-gray-700/50 text-gray-300 hover:bg-gray-700 transition-colors" 
+                                aria-label="最近交易"
+                                title="查看最近交易"
+                            >
                               <Icons.History className="h-5 w-5" />
+                              <span className="text-xs">交易歷史</span>
                             </button>
                             {isTxPopoverOpen && <RecentTransactions />}
                           </div>
@@ -267,16 +276,20 @@ export const Header: React.FC<HeaderProps> = ({
                 
                 {/* 功能工具欄 - 緊湊化設計 */}
                 <div className="flex justify-center gap-3 mb-2 px-4">
-                    <div className="flex gap-3 bg-gray-700/50 rounded-lg p-1.5">
+                    <div className="flex items-center gap-3">
+                        {/* 網路狀態 - 更突出顯示 */}
                         <NetworkSwitcher />
+                        
+                        {/* 交易歷史按鈕 - 增強可見性 */}
                         {isConnected && (
                           <div className="relative">
                             <button 
                                 onClick={() => setIsTxPopoverOpen(prev => !prev)} 
-                                className="p-1.5 rounded-full text-gray-300 hover:bg-gray-700 transition-colors" 
+                                className="flex items-center gap-2 p-2 rounded-full bg-gray-700/50 text-gray-300 hover:bg-gray-700 transition-colors border border-gray-600" 
                                 aria-label="最近交易"
                             >
-                              <Icons.History className="h-4 w-4" />
+                              <Icons.History className="h-5 w-5" />
+                              <span className="text-xs">交易</span>
                             </button>
                             {/* 修復手機版交易歷史顯示 - 使用全屏覆蓋避免定位衝突 */}
                             {isTxPopoverOpen && (
@@ -315,24 +328,22 @@ export const Header: React.FC<HeaderProps> = ({
                         <a 
                             key={item.key} 
                             href={`#/${item.key}`} 
-                            className={`flex flex-col items-center gap-2 px-3 py-3 rounded-lg text-sm transition-all ${
+                            className={`flex flex-col items-center justify-center gap-2 px-3 py-3 rounded-lg text-sm transition-all ${
                                 activePage === item.key 
                                     ? 'bg-[#C0A573] text-white font-semibold shadow-lg' 
                                     : 'bg-gray-700/30 text-gray-300 hover:bg-gray-600'
                             }`}
                             onClick={(e) => { e.preventDefault(); handleNavClick(item.key); }}
                         >
-                            <div className="flex items-center gap-2">
-                                <span className="w-5 h-5">{React.cloneElement(item.icon, { className: 'w-5 h-5' })}</span>
-                                <span className="font-medium">{item.label}</span>
-                            </div>
+                            <span className="w-5 h-5">{React.cloneElement(item.icon, { className: 'w-5 h-5' })}</span>
+                            <span className="font-medium">{item.label}</span>
                         </a>
                     ))}
                 </nav>
                 
                 {/* 底部說明文字 - 簡化 */}
                 <div className="px-4 py-2 text-center text-gray-400 text-xs border-t border-gray-700">
-                    <p>綠色圓點：連接狀態 | 時鐘圖標：交易歷史</p>
+                    <p>請連接錢包以查看網路狀態和交易歷史</p>
                 </div>
             </div>
         )}

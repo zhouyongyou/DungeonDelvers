@@ -35,6 +35,7 @@ import { SkeletonLoader } from '../components/ui/SkeletonLoader';
 import { useSoulPrice } from '../hooks/useSoulPrice';
 import { SkeletonStats, SkeletonCard } from '../components/ui/SkeletonLoader';
 import { usePlayerVaultV4 } from '../hooks/usePlayerVaultV4';
+import { GameInfoSection } from '../components/GameInfoSection';
 
 // =================================================================
 // Section: Components
@@ -473,7 +474,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     // 未連接錢包時顯示項目介紹
     if (!isConnected) {
         return (
-            <div className="min-h-screen bg-gray-950">
+            <div className="min-h-screen">
                 {/* 頂部橫幅 */}
                 <div className="bg-gradient-to-r from-purple-900 via-blue-900 to-purple-900 py-3 sm:py-4 mb-6 sm:mb-8">
                     <div className="container mx-auto px-4">
@@ -493,11 +494,11 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                     </div>
                 </div>
 
-                <div className="container mx-auto px-4">
-                    <div className="space-y-8">
+                <div className="container mx-auto px-0 md:px-4">
+                    <div className="space-y-6 md:space-y-8">
                         {/* 歡迎標題 */}
-                        <div className="text-center py-8 md:py-12">
-                            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 md:mb-6 px-4">
+                        <div className="text-center py-6 md:py-8 lg:py-12 px-4">
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-4 md:mb-6">
                                 歡迎來到 <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent block sm:inline">DungeonDelvers</span>
                             </h1>
                             <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-6 md:mb-8 max-w-2xl mx-auto px-4">
@@ -523,32 +524,24 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         {/* 項目介紹組件 */}
                         <ProjectIntroduction variant="full" showCallToAction={true} />
                         
-                        {/* 底部簡潔區域 - 只保留開發狀態和行動號召 */}
-                        <div className="bg-gradient-to-r from-purple-900 via-blue-900 to-purple-900 rounded-lg p-6 text-center">
-                            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">開發狀態</h2>
-                            <div className="flex items-center justify-center space-x-2 mb-4">
-                                <span className="text-gray-300">項目進度</span>
-                                <div className="w-32 bg-gray-700 rounded-full h-2">
-                                    <div className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full w-[90%]"></div>
-                                </div>
-                                <span className="text-white font-semibold">90%</span>
-                            </div>
-                            <p className="text-sm text-gray-300 mb-6">目前處於最後 Debug 階段，即將開放測試</p>
+                        {/* 遊戲重要資訊 - 在電腦版使用 full variant */}
+                        <div className="mt-8 md:mt-12">
+                            <GameInfoSection variant="full" />
+                        </div>
+                        
+                        <div className="text-center mt-8">
+                            <h3 className="text-lg font-bold text-white mb-4">加入我們的世界</h3>
+                            <p className="text-gray-300 text-sm mb-6">一個偉大的遊戲世界需要熱情的玩家共同塑造。與開發團隊直接交流，見證嶄新遊戲品牌的誕生！</p>
                             
-                            <div className="text-center">
-                                <h3 className="text-lg font-bold text-white mb-4">加入我們的世界</h3>
-                                <p className="text-gray-300 text-sm mb-6">一個偉大的遊戲世界需要熱情的玩家共同塑造。與開發團隊直接交流，見證嶄新遊戲品牌的誕生！</p>
-                                
-                                <ActionButton
-                                    onClick={() => {
-                                        showToast('請點擊右上角連接錢包', 'info');
-                                    }}
-                                    className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-full px-6 py-3"
-                                >
-                                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                                    <span className="text-white text-sm font-semibold">立即開始遊戲</span>
-                                </ActionButton>
-                            </div>
+                            <ActionButton
+                                onClick={() => {
+                                    showToast('請點擊右上角連接錢包', 'info');
+                                }}
+                                className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-full px-6 py-3"
+                            >
+                                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                                <span className="text-white text-sm font-semibold">立即開始遊戲</span>
+                            </ActionButton>
                         </div>
                     </div>
                 </div>
@@ -965,6 +958,11 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
 
                 {/* Town Bulletin */}
                 <TownBulletin />
+
+                {/* Game Info Section - 在手機版顯示緊湊版本 */}
+                <div className="md:hidden">
+                    <GameInfoSection variant="compact" />
+                </div>
 
                 {/* Project Introduction Section - 可折疊 */}
                 <div className="bg-gray-800 rounded-lg">

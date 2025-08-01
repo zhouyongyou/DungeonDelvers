@@ -19,20 +19,20 @@ export const ProjectIntroduction: React.FC<ProjectIntroductionProps> = ({
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-gray-900 rounded-lg">
+    <div className="max-w-6xl mx-auto p-0 md:p-6 bg-transparent md:bg-gray-900 md:rounded-lg">
       {/* 主標題 */}
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-white mb-4">
+      <div className="text-center mb-6 md:mb-8">
+        <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-4">
           不僅是遊戲，更是可持續的 <span className="text-purple-400">Web3 娛樂生態</span>
         </h1>
-        <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+        <p className="text-base md:text-lg lg:text-xl text-gray-300 max-w-3xl mx-auto px-4">
           歡迎來到我們的世界！我們致力於打造能成功「出圈」、讓主流玩家也愛不釋手的 Web3 遊戲品牌。
         </p>
       </div>
 
       {/* 標籤導航 */}
-      <div className="flex justify-center mb-8">
-        <div className="bg-gray-800 rounded-lg p-1 flex space-x-1">
+      <div className="flex justify-center mb-6 md:mb-8 px-4 md:px-0">
+        <div className="bg-gray-800 rounded-lg p-1 flex space-x-1 w-full md:w-auto">
           {[
             { id: 'overview', label: '項目總覽', icon: GamepadIcon },
             { id: 'tokenomics', label: '雙代幣系統', icon: Coins },
@@ -55,7 +55,7 @@ export const ProjectIntroduction: React.FC<ProjectIntroductionProps> = ({
       </div>
 
       {/* 內容區域 */}
-      <div className="min-h-[400px]">
+      <div className="min-h-[400px] px-4 md:px-0">
         {activeTab === 'overview' && <OverviewSection />}
         {activeTab === 'tokenomics' && <TokenomicsSection />}
         {activeTab === 'roadmap' && <RoadmapSection />}
@@ -70,12 +70,12 @@ export const ProjectIntroduction: React.FC<ProjectIntroductionProps> = ({
 // 緊湊版本
 const CompactIntroduction: React.FC<{ showCallToAction: boolean }> = ({ showCallToAction }) => {
   return (
-    <div className="bg-gray-900 rounded-lg p-6">
+    <div className="bg-transparent md:bg-gray-900 md:rounded-lg p-0 md:p-6">
       <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-white mb-2">
+        <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-white mb-2">
           Web3 遊戲新紀元
         </h2>
-        <p className="text-gray-300">
+        <p className="text-sm md:text-base text-gray-300">
           致力於打造「真正好玩、能出圈」的 Web3 遊戲品牌
         </p>
       </div>
@@ -150,10 +150,10 @@ const OverviewSection: React.FC = () => {
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-white mb-4">
+        <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-white mb-3 md:mb-4">
           首發遊戲：致敬經典，穩定開局
         </h2>
-        <p className="text-gray-300 text-lg">
+        <p className="text-gray-300 text-sm md:text-base lg:text-lg">
           歷經近兩個月精心開發，目前已進入最終測試階段
         </p>
       </div>
@@ -163,15 +163,15 @@ const OverviewSection: React.FC = () => {
           <div key={index} className="bg-gray-800 rounded-lg p-6">
             <div className="flex items-center space-x-3 mb-3">
               {feature.icon}
-              <h3 className="text-xl font-bold text-white">{feature.title}</h3>
+              <h3 className="text-base md:text-lg lg:text-xl font-bold text-white">{feature.title}</h3>
             </div>
-            <p className="text-gray-300">{feature.description}</p>
+            <p className="text-gray-300 text-sm md:text-base">{feature.description}</p>
           </div>
         ))}
       </div>
 
       <div className="bg-gradient-to-r from-purple-900/50 to-blue-900/50 rounded-lg p-6">
-        <h3 className="text-xl font-bold text-white mb-3">開發狀態</h3>
+        <h3 className="text-base md:text-lg lg:text-xl font-bold text-white mb-3">開發狀態</h3>
         <div className="flex items-center justify-between">
           <span className="text-gray-300">項目進度</span>
           <div className="flex items-center space-x-2">
@@ -192,10 +192,10 @@ const TokenomicsSection: React.FC = () => {
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-white mb-4">
+        <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-white mb-3 md:mb-4">
           核心雙代幣系統：<span className="text-purple-400">$SAGA</span> 與 <span className="text-blue-400">$SOUL</span>
         </h2>
-        <p className="text-gray-300 text-lg">
+        <p className="text-gray-300 text-sm md:text-base lg:text-lg">
           健康且可持續的經濟模型，雙代幣分工明確
         </p>
       </div>
