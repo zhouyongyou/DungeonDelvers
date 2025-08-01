@@ -21,6 +21,8 @@ import { fetchMetadata } from '../api/nfts';
 import { PRICE_OVERRIDE, logPriceOverride } from '../config/priceOverride';
 import { invalidationStrategies } from '../config/queryConfig';
 import { BATCH_TIERS, RARITY_LABELS, RARITY_COLORS, getBatchTierForQuantity, type BatchTier } from '../utils/batchMintConfig';
+import { MintPagePreview } from '../components/mint/MintPagePreview';
+import { FeaturedNftsGallery } from '../components/mint/FeaturedNftsGallery';
 
 // =================================================================
 // Section: 工具函數
@@ -941,7 +943,13 @@ const MintingInterface = memo<{ chainId: typeof bsc.id }>(({ chainId }) => {
 MintingInterface.displayName = 'MintingInterface';
 
 const MintPage: React.FC = memo(() => {
-    const { chainId } = useAccount();
+    const { chainId, address } = useAccount();
+    
+    // 如果未連接錢包，顯示預覽模式
+    if (!address) {
+        return <MintPagePreview />;
+    }
+    
     return (
         <section>
             <h2 className="page-title">鑄造工坊</h2>
@@ -1000,6 +1008,11 @@ const MintPage: React.FC = memo(() => {
                             </ul>
                         </div>
                 </div>
+            </div>
+            
+            {/* 精選NFT展示 */}
+            <div className="mt-12 mb-8">
+                <FeaturedNftsGallery />
             </div>
         </section>
     );

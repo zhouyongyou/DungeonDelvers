@@ -14,19 +14,7 @@ import { SUPPORTED_STABLECOINS } from '../../config/marketplace';
 import { useHeroPower, usePartyPower, useHeroDetails, useRelicDetails, usePartyDetails, getElementName, getClassName, getRelicCategoryName } from '../../hooks/useNftPower';
 import { StablecoinSelector } from './StablecoinSelector';
 import type { HeroNft, RelicNft, PartyNft, NftType } from '../../types/nft';
-
-// Define MarketListingV2 type
-export interface MarketListingV2 {
-    id: string;
-    seller: string;
-    nftType: NftType;
-    tokenId: string;
-    price: string;
-    acceptedTokens: string[]; // Array of token addresses
-    status: 'active' | 'sold' | 'cancelled';
-    createdAt: string;
-    nft: HeroNft | RelicNft | PartyNft;
-}
+import type { MarketListingV2 } from '../../types/marketplace';
 
 interface PurchaseModalV2Props {
     isOpen: boolean;
@@ -81,7 +69,7 @@ export const PurchaseModalV2: React.FC<PurchaseModalV2Props> = ({
                 address as `0x${string}`,
                 '0xCd2Dc43ddB5f628f98CDAA273bd74605cBDF21F8' // DUNGEONMARKETPLACE_V2 address
             );
-            const requiredAmount = parseUnits(listing.price.toString(), 18);
+            const requiredAmount = parseUnits(listing.price, 18);
             setNeedsApproval(allowance < requiredAmount);
         } catch (error) {
             console.error('Error checking approval:', error);
@@ -111,7 +99,7 @@ export const PurchaseModalV2: React.FC<PurchaseModalV2Props> = ({
             // 如果需要授權，先進行授權
             if (needsApproval) {
                 const tokenInfo = SUPPORTED_STABLECOINS[selectedPaymentToken];
-                const requiredAmount = parseUnits(listing.price.toString(), 18);
+                const requiredAmount = parseUnits(listing.price, 18);
                 
                 showToast('正在授權代幣...', 'info');
                 const approved = await approveToken(tokenInfo.address as `0x${string}`, requiredAmount);
@@ -122,7 +110,7 @@ export const PurchaseModalV2: React.FC<PurchaseModalV2Props> = ({
             }
             
             const success = await purchaseNFT(
-                listing.id,
+                listing.listingId || listing.id,
                 listing.price,
                 selectedPaymentToken
             );
@@ -160,13 +148,13 @@ export const PurchaseModalV2: React.FC<PurchaseModalV2Props> = ({
             onClose={onClose}
             title="🛒 確認購買"
             onConfirm={handlePurchase}
-            confirmText={isApproving ? '授權中...' :
-                        isPurchasing ? '購買中...' :
-                        needsApproval ? `授權並購買 $${listing.price.toFixed(2)}` :
-                        `確認購買 $${listing.price.toFixed(2)}`}
+            confirmText={isProcessing ? '授權中...' :
+                        isProcessing ? '購買中...' :
+                        needsApproval ? `授權並購買 $${parseFloat(listing.price).toFixed(2)}` :
+                        `確認購買 $${parseFloat(listing.price).toFixed(2)}`}
             maxWidth="lg"
-            disabled={!confirmPurchase || isPurchasing || isApproving}
-            isLoading={isPurchasing || isApproving}
+            disabled={!confirmPurchase || isProcessing || isProcessing}
+            isLoading={isProcessing || isProcessing}
         >
             <div className="space-y-6">
                 
@@ -193,7 +181,7 @@ export const PurchaseModalV2: React.FC<PurchaseModalV2Props> = ({
                                 </p>
                             )}
                             <p className="text-sm text-gray-400">
-                                合約: {listing.contractAddress.slice(0, 8)}...{listing.contractAddress.slice(-6)}
+                                合約: {(listing.contractAddress || listing.nftContract).slice(0, 8)}...{(listing.contractAddress || listing.nftContract).slice(-6)}
                             </p>
                             <p className="text-sm text-gray-400">
                                 賣家: {listing.seller.slice(0, 8)}...{listing.seller.slice(-6)}
@@ -269,7 +257,7 @@ export const PurchaseModalV2: React.FC<PurchaseModalV2Props> = ({
                     <div className="flex justify-between items-center">
                         <span className="text-gray-400">購買價格</span>
                         <span className="text-[#C0A573] font-bold text-lg">
-                            ${listing.price.toFixed(2)} USD
+                            ${parseFloat(listing.price).toFixed(2)} USD
                         </span>
                     </div>
                 </div>
@@ -300,7 +288,7 @@ export const PurchaseModalV2: React.FC<PurchaseModalV2Props> = ({
                     <h3 className="text-white font-medium mb-2">交易摘要</h3>
                     <div className="flex justify-between text-sm">
                         <span className="text-gray-400">NFT 價格:</span>
-                        <span className="text-white">${listing.price.toFixed(2)} USD</span>
+                        <span className="text-white">${parseFloat(listing.price).toFixed(2)} USD</span>
                     </div>
                     <div className="flex justify-between text-sm">
                         <span className="text-gray-400">付款代幣:</span>
@@ -312,7 +300,7 @@ export const PurchaseModalV2: React.FC<PurchaseModalV2Props> = ({
                     <div className="flex justify-between text-sm">
                         <span className="text-gray-400">需要支付:</span>
                         <span className="text-[#C0A573] font-bold">
-                            {listing.price.toFixed(2)} {selectedTokenInfo.symbol}
+                            {parseFloat(listing.price).toFixed(2)} {selectedTokenInfo.symbol}
                         </span>
                     </div>
                 </div>
@@ -325,7 +313,7 @@ export const PurchaseModalV2: React.FC<PurchaseModalV2Props> = ({
                             checked={confirmPurchase}
                             onChange={(e) => setConfirmPurchase(e.target.checked)}
                             className="w-4 h-4 text-[#C0A573] bg-gray-700 border-gray-600 rounded focus:ring-[#C0A573]"
-                            disabled={isPurchasing || isApproving}
+                            disabled={isProcessing || isProcessing}
                         />
                         <span className="text-sm text-gray-300">
                             我確認要購買此 NFT，並了解交易完成後不可撤銷

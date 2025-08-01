@@ -1,5 +1,202 @@
 # =================================================================
-# Schema 設計藍圖 (最終修正版) - V25 虛擬稅收支援
+# Schema 設計藍圖 (最終修正版) - V25 虛擬稅收支援 + Marketplace V2
+# =================================================================
+
+# =================================================================
+# Marketplace V2 Entities
+# =================================================================
+
+type MarketListingV2 @entity(immutable: false) {
+  id: ID!
+  listingId: BigInt!
+  seller: Bytes!
+  nftType: NFTType!
+  nftContract: Bytes!
+  tokenId: BigInt!
+  price: BigDecimal!
+  acceptedTokens: [Bytes!]!
+  isActive: Boolean!
+  createdAt: BigInt!
+  updatedAt: BigInt!
+  expiresAt: BigInt
+  
+  # Relations
+  soldTransaction: MarketTransactionV2
+  priceUpdates: [ListingPriceUpdateV2!]! @derivedFrom(field: "listing")
+}
+
+type MarketTransactionV2 @entity(immutable: true) {
+  id: ID!
+  listingId: BigInt!
+  buyer: Bytes!
+  seller: Bytes!
+  nftType: NFTType!
+  nftContract: Bytes!
+  tokenId: BigInt!
+  price: BigDecimal!
+  paymentToken: Bytes!
+  platformFee: BigDecimal!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  transactionHash: Bytes!
+  
+  # Relations
+  listing: MarketListingV2!
+}
+
+type ListingPriceUpdateV2 @entity(immutable: true) {
+  id: ID!
+  listingId: BigInt!
+  oldPrice: BigDecimal!
+  newPrice: BigDecimal!
+  oldAcceptedTokens: [Bytes!]!
+  newAcceptedTokens: [Bytes!]!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  transactionHash: Bytes!
+  
+  # Relations
+  listing: MarketListingV2!
+}
+
+type OfferV2 @entity(immutable: false) {
+  id: ID!
+  offerId: BigInt!
+  offerer: Bytes!
+  targetAddress: Bytes!
+  nftType: NFTType!
+  nftContract: Bytes!
+  tokenId: BigInt!
+  offerAmount: BigDecimal!
+  paymentToken: Bytes!
+  expirationTime: BigInt!
+  message: String
+  status: OfferStatus!
+  createdAt: BigInt!
+  updatedAt: BigInt!
+  
+  # Relations
+  acceptedTransaction: OfferTransactionV2
+}
+
+type OfferTransactionV2 @entity(immutable: true) {
+  id: ID!
+  offerId: BigInt!
+  offerer: Bytes!
+  accepter: Bytes!
+  nftType: NFTType!
+  nftContract: Bytes!
+  tokenId: BigInt!
+  offerAmount: BigDecimal!
+  paymentToken: Bytes!
+  platformFee: BigDecimal!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  transactionHash: Bytes!
+  
+  # Relations
+  offer: OfferV2!
+}
+
+type MarketStatsV2 @entity(immutable: false) {
+  id: ID!
+  totalListings: BigInt!
+  activeListings: BigInt!
+  totalSales: BigInt!
+  totalVolume: BigDecimal!
+  totalVolumeByToken: [TokenVolume!]!
+  totalOffers: BigInt!
+  activeOffers: BigInt!
+  platformFeesCollected: BigDecimal!
+  platformFeesCollectedByToken: [TokenVolume!]!
+  lastUpdated: BigInt!
+}
+
+type TokenSupport @entity(immutable: false) {
+  id: ID! # token address
+  tokenAddress: Bytes!
+  isSupported: Boolean!
+  symbol: String
+  name: String
+  decimals: BigInt
+  addedAt: BigInt!
+  updatedAt: BigInt!
+}
+
+type TokenVolume @entity(immutable: false) {
+  id: ID! # token address
+  tokenAddress: Bytes!
+  volume: BigDecimal!
+  platformFees: BigDecimal!
+}
+
+# Daily/Hourly Statistics
+type DailyMarketStatsV2 @entity(immutable: true) {
+  id: ID! # timestamp / 86400
+  date: BigInt!
+  listings: BigInt!
+  sales: BigInt!
+  volume: BigDecimal!
+  volumeByToken: [TokenVolume!]!
+  uniqueBuyers: BigInt!
+  uniqueSellers: BigInt!
+  offers: BigInt!
+  offersAccepted: BigInt!
+}
+
+type HourlyMarketStatsV2 @entity(immutable: true) {
+  id: ID! # timestamp / 3600
+  hour: BigInt!
+  listings: BigInt!
+  sales: BigInt!
+  volume: BigDecimal!
+  volumeByToken: [TokenVolume!]!
+  uniqueBuyers: BigInt!
+  uniqueSellers: BigInt!
+  offers: BigInt!
+  offersAccepted: BigInt!
+}
+
+# User Statistics
+type UserMarketStatsV2 @entity(immutable: false) {
+  id: ID! # user address
+  userAddress: Bytes!
+  totalListings: BigInt!
+  totalSales: BigInt!
+  totalPurchases: BigInt!
+  totalVolumeAsSeller: BigDecimal!
+  totalVolumeAsBuyer: BigDecimal!
+  totalOffersMade: BigInt!
+  totalOffersReceived: BigInt!
+  totalOffersAccepted: BigInt!
+  firstActivityAt: BigInt!
+  lastActivityAt: BigInt!
+}
+
+# NFT Statistics
+type NFTMarketStatsV2 @entity(immutable: false) {
+  id: ID! # nftContract-tokenId
+  nftContract: Bytes!
+  tokenId: BigInt!
+  nftType: NFTType!
+  totalListings: BigInt!
+  totalSales: BigInt!
+  highestSalePrice: BigDecimal
+  lowestSalePrice: BigDecimal
+  lastSalePrice: BigDecimal
+  lastSaleToken: Bytes
+  averageSalePrice: BigDecimal
+  totalOffers: BigInt!
+  highestOfferAmount: BigDecimal
+  lastListingPrice: BigDecimal
+  lastListingTokens: [Bytes!]
+  firstSaleAt: BigInt
+  lastSaleAt: BigInt
+  lastListingAt: BigInt
+}
+
+# =================================================================
+# Core Game Entities
 # =================================================================
 
 type VirtualTaxRecord @entity(immutable: true) {
@@ -518,4 +715,23 @@ type AdminAction @entity(immutable: true) {
   transactionHash: Bytes!
   " 時間戳 "
   timestamp: BigInt!
+}
+
+# =================================================================
+# Enums (包含 Marketplace V2)  
+# =================================================================
+
+enum NFTType {
+  HERO
+  RELIC
+  PARTY
+  VIP
+}
+
+enum OfferStatus {
+  ACTIVE
+  ACCEPTED
+  DECLINED
+  CANCELLED
+  EXPIRED
 }

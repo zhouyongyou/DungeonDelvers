@@ -36,6 +36,7 @@ import { AltarFloatingStatsButton } from '../components/altar/AltarFloatingStats
 import { AltarNftAuthManager } from '../components/altar/AltarNftAuthManager';
 import { AltarNftSelector } from '../components/altar/AltarNftSelector';
 import { useVipStatus } from '../hooks/useVipStatus';
+import { AltarPagePreview } from '../components/altar/AltarPagePreview';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取 Hooks
@@ -795,6 +796,11 @@ const AltarPage = memo(() => {
     };
 
     const isLoading = isLoadingNfts || isLoadingRules;
+
+    // 如果未連接錢包，顯示預覽模式
+    if (!address) {
+        return <AltarPagePreview />;
+    }
 
     // Move early return after all hooks
     if (!chainId || chainId !== bsc.id) {

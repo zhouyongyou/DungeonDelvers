@@ -37,6 +37,7 @@ import { useRealtimeExpeditions } from '../hooks/useRealtimeExpeditions';
 import { usePartyValidation } from '../hooks/usePartyValidation';
 import { useBatchOperations } from '../hooks/useBatchOperations';
 import { Icons } from '../components/ui/icons';
+import { PagePreview } from '../components/common/PagePreview';
 import { generatePartySVG } from '../utils/svgGenerators';
 import { useNftDisplayPreference } from '../hooks/useNftDisplayPreference';
 import { LazyImage } from '../components/ui/LazyImage';
@@ -677,6 +678,63 @@ interface DungeonPageContentProps {
 const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => {
     // const { setLoading } = useGlobalLoading(); // 移除未使用的 hook
     const { chainId, address } = useAccount();
+    
+    // 如果未連接錢包，顯示預覽模式
+    if (!address) {
+        return (
+            <PagePreview
+                title="🏰 地城探險"
+                description="派遣您的隊伍前往神秘地城，挑戰強敵並獲得豐厚獎勵"
+                icon="🏰"
+                features={[
+                    {
+                        title: "隊伍探險",
+                        description: "組建強力隊伍，挑戰不同難度的地城",
+                        icon: "👥"
+                    },
+                    {
+                        title: "豐厚獎勵",
+                        description: "完成探險獲得代幣、經驗和稀有道具",
+                        icon: "💎"
+                    },
+                    {
+                        title: "策略搭配",
+                        description: "根據地城特色選擇最適合的英雄組合",
+                        icon: "🎯"
+                    },
+                    {
+                        title: "實時戰鬥",
+                        description: "觀看您的隊伍與怪物激烈戰鬥",
+                        icon: "⚔️"
+                    },
+                    {
+                        title: "升級系統",
+                        description: "英雄在戰鬥中獲得經驗值持續成長",
+                        icon: "📈"
+                    },
+                    {
+                        title: "排行榜",
+                        description: "與全球玩家競爭，證明您的實力",
+                        icon: "🏆"
+                    }
+                ]}
+                requirements={[
+                    "擁有至少 1 個英雄 NFT",
+                    "組建完整的探險隊伍",
+                    "確保隊伍戰力符合地城要求",
+                    "準備足夠的 Gas 費用"
+                ]}
+                benefits={[
+                    "每日穩定的代幣收益",
+                    "英雄經驗值和等級提升",
+                    "獲得稀有裝備和道具",
+                    "解鎖更高難度地城",
+                    "參與全球玩家競技"
+                ]}
+                gradient="from-orange-900/20 to-red-900/20"
+            />
+        );
+    }
     const { showToast } = useAppToast();
     const { transactions } = useTransactionStore();
     const queryClient = useQueryClient();

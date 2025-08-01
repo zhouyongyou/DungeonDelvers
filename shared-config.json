@@ -29,7 +29,7 @@
   },
   "services": {
     "subgraph": {
-      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.4.0",
+      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.5.0",
       "id": "dungeon-delvers"
     },
     "metadataServer": {

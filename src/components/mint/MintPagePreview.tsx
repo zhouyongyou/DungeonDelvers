@@ -9,6 +9,7 @@ import { THE_GRAPH_API_URL } from '../../config/graphConfig';
 import { graphQLRateLimiter } from '../../utils/rateLimiter';
 import { logger } from '../../utils/logger';
 import { BATCH_TIERS } from '../../utils/batchMintConfig';
+import { FeaturedNftsGallery } from './FeaturedNftsGallery';
 
 // GraphQL 查詢 - 獲取最近鑄造統計
 const GET_MINT_STATS_QUERY = `
@@ -503,6 +504,11 @@ export const MintPagePreview: React.FC = () => {
         >
           🔗 連接錢包開始鑄造
         </ActionButton>
+      </div>
+
+      {/* 精選NFT展示 */}
+      <div className="mt-12">
+        <FeaturedNftsGallery />
       </div>
     </div>
   );

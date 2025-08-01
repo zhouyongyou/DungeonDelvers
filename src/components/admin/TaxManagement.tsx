@@ -11,6 +11,7 @@ import { useSoulPrice } from '../../hooks/useSoulPrice';
 import { Icons } from '../ui/icons';
 import { bsc } from 'viem/chains';
 import { useQuery } from '@tanstack/react-query';
+import { getEndpointForFeature } from '../../config/graphql';
 
 interface TaxManagementProps {
   className?: string;
@@ -71,7 +72,8 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ className = '' }) 
         }
       `;
       
-      const response = await fetch('https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.4.0', {
+      const endpoint = await getEndpointForFeature('real-time-stats');
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query })
@@ -103,7 +105,8 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ className = '' }) 
         }
       `;
       
-      const response = await fetch('https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.4.0', {
+      const endpoint = await getEndpointForFeature('real-time-stats');
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query })

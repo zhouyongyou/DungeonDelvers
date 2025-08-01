@@ -27,7 +27,7 @@ export async function initializeSubgraphConfig() {
 export const SUBGRAPH_CONFIG = {
   // Studio endpoint (for development/testing)
   get STUDIO_URL() {
-    return cachedConfig?.STUDIO_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.2.3';
+    return cachedConfig?.STUDIO_URL || 'https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.5.1';
   },
   
   // Decentralized network endpoint (for production)
