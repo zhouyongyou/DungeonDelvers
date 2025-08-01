@@ -39,24 +39,31 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         position: 'fixed', 
         top: '16px', 
         right: '16px', 
+        left: '16px',
         zIndex: 100, 
-        width: '100%', 
         maxWidth: '384px',
+        marginLeft: 'auto',
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px'
+        gap: '8px',
+        pointerEvents: 'none'
       }}>
         {toasts.map(toast => ( 
           <div 
             key={toast.id} 
             style={{
-              padding: '12px 24px',
+              padding: '12px 16px',
               borderRadius: '8px',
               color: 'white',
-              fontSize: '16px',
+              fontSize: '14px',
+              lineHeight: '1.4',
               backgroundColor: toastColors[toast.type],
               boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-              animation: 'slideIn 0.3s ease-out forwards'
+              animation: 'slideIn 0.3s ease-out forwards',
+              wordWrap: 'break-word',
+              wordBreak: 'break-word',
+              maxWidth: '100%',
+              pointerEvents: 'auto'
             }}
           >
             {toast.text}

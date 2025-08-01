@@ -5,6 +5,7 @@ import { useAccount, useWriteContract } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getContractWithABI } from '../config/contractsWithABI';
 import { useAppToast } from '../contexts/SimpleToastContext';
+import { useContractError } from '../hooks/useContractError';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { ActionButton } from '../components/ui/ActionButton';
 import { Modal } from '../components/ui/Modal';
@@ -60,7 +61,12 @@ const useReferralData = () => {
     return useQuery({
         queryKey: ['referralData', address],
         queryFn: async () => {
-            if (!address || !THE_GRAPH_API_URL) return null;
+            console.log('🔄 執行 referralData 查詢:', { address, chainId, THE_GRAPH_API_URL });
+            
+            if (!address || !THE_GRAPH_API_URL) {
+                console.log('❌ 缺少必要參數:', { address, THE_GRAPH_API_URL });
+                return null;
+            }
             
             // 使用限流器來避免 429 錯誤
             const { graphQLRateLimiter } = await import('../utils/rateLimiter');
@@ -83,6 +89,8 @@ const useReferralData = () => {
                 throw new Error(`GraphQL 請求失敗: ${response.status} ${response.statusText}`);
             }
             const { data } = await response.json();
+            console.log('📊 GraphQL 返回數據:', { data, profile: data.player?.profile });
+            
             // ★★★ 核心修正：確保在找不到資料時回傳 null 而不是 undefined ★★★
             return data.player?.profile ?? null;
         },
@@ -103,6 +111,7 @@ const useReferralData = () => {
 const ReferralPage: React.FC = () => {
     const { address, chainId, isConnected } = useAccount();
     const { showToast } = useAppToast();
+    const { handleError } = useContractError();
     const { addTransaction } = useTransactionStore();
     const queryClient = useQueryClient();
 
@@ -111,7 +120,8 @@ const ReferralPage: React.FC = () => {
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [autoDetectedRef, setAutoDetectedRef] = useState<string | null>(null);
     const [urlRefParam, setUrlRefParam] = useState<string | null>(null);
-    const [showCommissionDetails, setShowCommissionDetails] = useState(false);
+    const [showCommissionDetails, setShowCommissionDetails] = useState(true); // 預設展開
+    const [hasProcessedReferral, setHasProcessedReferral] = useState(false); // 追蹤是否已處理過推薦
 
     // ★ 核心改造：使用新的 Hook 獲取數據
     const { data: referralData, isLoading } = useReferralData();
@@ -125,7 +135,18 @@ const ReferralPage: React.FC = () => {
 
     // 判斷是否已有邀請人 - 移到 useEffect 之前
     const hasReferrer = useMemo(() => {
-        return currentReferrer && currentReferrer !== '0x0000000000000000000000000000000000000000';
+        const result = currentReferrer && currentReferrer !== '0x0000000000000000000000000000000000000000';
+        
+        // 只在有地址且不在載入中時記錄調試資訊
+        if (address && !isLoading) {
+            console.log('🔍 推薦人狀態檢查:', { 
+                currentReferrer, 
+                hasReferrer: result,
+                referralDataExists: !!referralData
+            });
+        }
+        
+        return result;
     }, [currentReferrer]);
 
     // 檢測 URL 中的 ref 參數 - 分成兩個 useEffect
@@ -143,22 +164,56 @@ const ReferralPage: React.FC = () => {
 
     // 第二個：處理自動顯示確認彈窗
     useEffect(() => {
-        // 如果有推薦連結參數
-        if (urlRefParam) {
-            // 情況1：已連接錢包且沒有推薦人
-            if (address && !hasReferrer && urlRefParam.toLowerCase() !== address.toLowerCase()) {
-                setAutoDetectedRef(urlRefParam);
-                setShowConfirmModal(true);
-                logger.info('自動顯示推薦確認彈窗（已連接錢包）', { ref: urlRefParam, userAddress: address });
+        console.log('🎯 彈窗邏輯執行:', { 
+            urlRefParam, 
+            address, 
+            hasReferrer, 
+            showConfirmModal, 
+            hasProcessedReferral,
+            isLoading,
+            currentReferrer
+        });
+        
+        // 如果有推薦連結參數且彈窗未顯示且未處理過，才考慮顯示彈窗
+        if (urlRefParam && !showConfirmModal && !hasProcessedReferral) {
+            let shouldShowModal = false;
+            
+            if (!address) {
+                // 未連錢包，總是顯示彈窗
+                shouldShowModal = true;
+                console.log('📱 未連錢包，應顯示彈窗');
+            } else if (address && urlRefParam.toLowerCase() !== address.toLowerCase()) {
+                // 已連錢包且不是自己的推薦連結
+                if (isLoading) {
+                    console.log('⏳ 數據載入中，暫不顯示彈窗');
+                    return; // 數據載入中，暫不做決定
+                } else if (!hasReferrer) {
+                    shouldShowModal = true;
+                    console.log('✅ 已連錢包但無推薦人，應顯示彈窗');
+                } else {
+                    console.log('❌ 已有推薦人，不顯示彈窗');
+                    setHasProcessedReferral(true);
+                    if (urlRefParam.toLowerCase() !== currentReferrer?.toLowerCase()) {
+                        // 如果 URL 中的推薦人和實際推薦人不同，給予提示
+                        showToast('您已有推薦人，無法更改推薦關係', 'info');
+                    }
+                }
             }
-            // 情況2：未連接錢包，也顯示彈窗讓用戶先連接
-            else if (!address) {
+            
+            if (shouldShowModal) {
                 setAutoDetectedRef(urlRefParam);
                 setShowConfirmModal(true);
-                logger.info('自動顯示推薦確認彈窗（未連接錢包）', { ref: urlRefParam });
+                console.log('🚀 顯示彈窗');
+                logger.info('自動顯示推薦確認彈窗', { 
+                    ref: urlRefParam, 
+                    userAddress: address,
+                    connected: !!address,
+                    hasReferrer,
+                    shouldShowModal
+                });
             }
         }
-    }, [urlRefParam, address, hasReferrer]);
+    }, [urlRefParam, address, hasReferrer, showConfirmModal, hasProcessedReferral, currentReferrer, isLoading]);
 
     const handleSetReferrer = async () => {
         if (!isAddress(referrerInput)) return showToast('請輸入有效的錢包地址', 'error');
@@ -172,12 +227,19 @@ const ReferralPage: React.FC = () => {
                 functionName: 'setReferrer',
                 args: [referrerInput as `0x${string}`],
             });
+            
+            // 交易發送成功後立即關閉彈窗並顯示成功訊息
+            setShowConfirmModal(false);
+            setAutoDetectedRef(null);
+            setHasProcessedReferral(true); // 標記為已處理，防止重複彈窗
+            showToast('推薦人綁定請求已發送！等待區塊鏈確認中', 'success');
+            
             addTransaction({ hash, description: `設定邀請人為 ${referrerInput.substring(0, 6)}...` });
-            // 成功後，延遲一段時間再刷新 The Graph 的數據
+            
+            // 延遲一段時間再刷新 The Graph 的數據
             setTimeout(() => queryClient.invalidateQueries({ queryKey: ['referralData', address] }), 5000);
-        } catch (e: unknown) {
-            const error = e as { message?: string; shortMessage?: string };
-            if (!error.message?.includes('User rejected the request')) showToast(error.shortMessage || "設定邀請人失敗", "error");
+        } catch (error: unknown) {
+            handleError(error, "設定邀請人失敗");
         }
     };
 
@@ -212,177 +274,6 @@ ${referralLink}
         showToast('推薦文案已複製！可直接分享到社群', 'success');
     };
 
-    // 下載宣傳圖片
-    const handleDownloadImage = () => {
-        // 創建 Canvas 生成宣傳圖片
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        canvas.width = 1200;
-        canvas.height = 630;
-
-        // 背景 - 使用更豐富的漸變效果
-        const bgGradient = ctx.createRadialGradient(600, 315, 0, 600, 315, 800);
-        bgGradient.addColorStop(0, '#1e293b');
-        bgGradient.addColorStop(0.5, '#0f172a');
-        bgGradient.addColorStop(1, '#030712');
-        ctx.fillStyle = bgGradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // 添加網格背景效果
-        ctx.strokeStyle = 'rgba(59, 130, 246, 0.1)';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < canvas.width; i += 40) {
-            ctx.beginPath();
-            ctx.moveTo(i, 0);
-            ctx.lineTo(i, canvas.height);
-            ctx.stroke();
-        }
-        for (let i = 0; i < canvas.height; i += 40) {
-            ctx.beginPath();
-            ctx.moveTo(0, i);
-            ctx.lineTo(canvas.width, i);
-            ctx.stroke();
-        }
-
-        // 添加裝飾性漸變圓形
-        const decorGradient1 = ctx.createRadialGradient(150, 150, 0, 150, 150, 150);
-        decorGradient1.addColorStop(0, 'rgba(168, 85, 247, 0.3)');
-        decorGradient1.addColorStop(1, 'transparent');
-        ctx.fillStyle = decorGradient1;
-        ctx.fillRect(0, 0, 300, 300);
-
-        const decorGradient2 = ctx.createRadialGradient(1050, 480, 0, 1050, 480, 150);
-        decorGradient2.addColorStop(0, 'rgba(59, 130, 246, 0.3)');
-        decorGradient2.addColorStop(1, 'transparent');
-        ctx.fillStyle = decorGradient2;
-        ctx.fillRect(900, 330, 300, 300);
-
-        // 標題區域背景
-        const titleBg = ctx.createLinearGradient(0, 50, 0, 250);
-        titleBg.addColorStop(0, 'rgba(168, 85, 247, 0.1)');
-        titleBg.addColorStop(1, 'transparent');
-        ctx.fillStyle = titleBg;
-        ctx.fillRect(0, 50, canvas.width, 200);
-
-        // 主標題 - 使用陰影效果
-        ctx.save();
-        ctx.shadowColor = '#fbbf24';
-        ctx.shadowBlur = 20;
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 80px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('DUNGEON DELVERS', canvas.width / 2, 130);
-        ctx.restore();
-
-        // 副標題
-        ctx.fillStyle = '#fbbf24';
-        ctx.font = '32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('征服地下城 · 收集 NFT · 賺取獎勵', canvas.width / 2, 180);
-
-        // 遊戲特色卡片
-        const features = [
-            { icon: '⚔️', title: '英雄收集', desc: '獨特 NFT 英雄' },
-            { icon: '💎', title: '稀有聖物', desc: '強化你的隊伍' },
-            { icon: '🏰', title: '地城探索', desc: '豐厚獎勵等你' }
-        ];
-
-        // 繪製特色卡片
-        features.forEach((feature, index) => {
-            const x = 150 + index * 350;
-            const y = 250;
-            const width = 300;
-            const height = 120;
-
-            // 卡片背景
-            const cardGradient = ctx.createLinearGradient(x, y, x + width, y + height);
-            cardGradient.addColorStop(0, 'rgba(59, 130, 246, 0.2)');
-            cardGradient.addColorStop(1, 'rgba(168, 85, 247, 0.2)');
-            ctx.fillStyle = cardGradient;
-            ctx.fillRect(x, y, width, height);
-
-            // 卡片邊框
-            ctx.strokeStyle = 'rgba(168, 85, 247, 0.5)';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x, y, width, height);
-
-            // 圖標
-            ctx.font = '48px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.fillText(feature.icon, x + 60, y + 65);
-
-            // 標題
-            ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'left';
-            ctx.fillText(feature.title, x + 100, y + 50);
-
-            // 描述
-            ctx.font = '18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-            ctx.fillStyle = '#9ca3af';
-            ctx.fillText(feature.desc, x + 100, y + 80);
-        });
-
-        // 推薦碼區域
-        const refY = 420;
-        const refBg = ctx.createLinearGradient(200, refY, 1000, refY + 140);
-        refBg.addColorStop(0, 'rgba(251, 191, 36, 0.1)');
-        refBg.addColorStop(1, 'rgba(245, 158, 11, 0.1)');
-        ctx.fillStyle = refBg;
-        ctx.fillRect(200, refY, 800, 140);
-
-        // 推薦碼邊框
-        ctx.strokeStyle = 'rgba(251, 191, 36, 0.8)';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(200, refY, 800, 140);
-
-        // 推薦碼標題
-        ctx.fillStyle = '#fbbf24';
-        ctx.font = 'bold 28px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('🎁 使用我的推薦碼加入遊戲', canvas.width / 2, refY + 40);
-
-        // 推薦地址
-        if (address) {
-            ctx.save();
-            ctx.shadowColor = '#fbbf24';
-            ctx.shadowBlur = 10;
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 36px monospace';
-            ctx.textAlign = 'center';
-            const shortAddress = `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-            ctx.fillText(shortAddress, canvas.width / 2, refY + 85);
-            ctx.restore();
-        }
-
-        // 底部提示
-        ctx.fillStyle = '#6b7280';
-        ctx.font = '16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('推薦人可獲得 5% 永久佣金獎勵', canvas.width / 2, refY + 120);
-
-        // 添加品牌標識
-        ctx.fillStyle = '#374151';
-        ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.textAlign = 'right';
-        ctx.fillText('dungeondelvers.io', canvas.width - 30, canvas.height - 20);
-        
-        // 下載圖片
-        canvas.toBlob((blob) => {
-            if (blob) {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'dungeon-delvers-referral.png';
-                a.click();
-                URL.revokeObjectURL(url);
-                showToast('宣傳圖片已下載！', 'success');
-            }
-        });
-    };
     
     // 查詢推薦人信息（用於落地頁顯示）
     const { data: referrerInfo } = useQuery({
@@ -409,7 +300,7 @@ ${referralLink}
 
 
     // 如果未連接錢包且有推薦參數，顯示推薦落地頁
-    if (!isConnected && urlRefParam) {
+    if (!isConnected && urlRefParam && !showConfirmModal) {
         return (
             <div className="min-h-screen bg-gradient-to-b from-gray-900 via-purple-900/20 to-gray-900">
                 <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -484,11 +375,20 @@ ${referralLink}
                         </p>
                         <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-500/30 mb-6">
                             <p className="text-sm text-blue-300">
-                                💡 提示：連接錢包後您可以確認綁定推薦人
+                                💡 提示：可以點擊下方按鈕進行推薦綁定操作
                             </p>
                         </div>
-                        <p className="text-2xl mb-6">👇</p>
-                        <p className="text-lg text-gray-300 mb-4">請點擊右上角的錢包按鈕連接</p>
+                        
+                        {/* 新增：手動觸發按鈕 */}
+                        <div className="space-y-4 text-center">
+                            <ActionButton 
+                                onClick={() => setShowConfirmModal(true)}
+                                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-3 text-lg font-semibold mx-auto"
+                            >
+                                🎯 確認推薦關係
+                            </ActionButton>
+                            <p className="text-sm text-gray-400">或者點擊右上角的錢包按鈕直接連接</p>
+                        </div>
                     </div>
 
                     {/* 底部說明 */}
@@ -510,106 +410,115 @@ ${referralLink}
         <section className="space-y-6 sm:space-y-8 max-w-4xl mx-auto">
             <h2 className="page-title">邀請與佣金中心</h2>
             
+            {/* 推薦人狀態卡片 */}
+            {address && (
+                <div className="card-bg p-4 sm:p-6 rounded-xl border-l-4 border-l-blue-500">
+                    <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0">
+                            {isLoading ? (
+                                <LoadingSpinner size="h-8 w-8" />
+                            ) : hasReferrer ? (
+                                <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                                    <Icons.Hero className="w-6 h-6 text-green-400" />
+                                </div>
+                            ) : (
+                                <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                                    <Icons.ExternalLink className="w-6 h-6 text-yellow-400" />
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex-1">
+                            {isLoading ? (
+                                <div>
+                                    <h3 className="text-lg font-semibold text-white">檢查推薦人狀態...</h3>
+                                    <p className="text-sm text-gray-400">正在從區塊鏈讀取您的推薦人資訊</p>
+                                </div>
+                            ) : hasReferrer ? (
+                                <div>
+                                    <h3 className="text-lg font-semibold text-green-400 mb-2">✓ 已綁定推薦人</h3>
+                                    <p className="text-sm text-gray-400 mb-2">您的推薦人:</p>
+                                    <p className="font-mono text-sm text-white bg-black/30 px-3 py-2 rounded break-all">
+                                        {currentReferrer}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-2">
+                                        邀請關係已建立，您的推薦人將持續獲得您提領時的 5% 佣金分成
+                                    </p>
+                                </div>
+                            ) : (
+                                <div>
+                                    <h3 className="text-lg font-semibold text-yellow-400 mb-2">⚠️ 尚未設定推薦人</h3>
+                                    <p className="text-sm text-gray-400 mb-2">
+                                        您可以設定推薦人來支持為您介紹遊戲的朋友
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                        設定推薦人不會影響您的收益，還能獲得社群支持
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+            
             {/* 佣金管理 - 新版 PlayerVault v4.0 功能 */}
             <CommissionManager className="mb-6" />
             
             {/* 邀請收益展示 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-                <div className="card-bg p-4 sm:p-6 rounded-xl">
-                    <div className="text-center">
-                        <Icons.Copy className="w-10 h-10 sm:w-12 sm:h-12 text-yellow-400 mx-auto mb-3" />
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                            <h3 className="font-bold text-base sm:text-lg text-white">我的邀請收益</h3>
-                            <button
-                                onClick={() => setShowCommissionDetails(!showCommissionDetails)}
-                                className="text-gray-400 hover:text-white transition-colors p-1"
+            <div className="card-bg p-4 sm:p-6 rounded-xl">
+                <div className="text-center">
+                    <Icons.Copy className="w-10 h-10 sm:w-12 sm:h-12 text-yellow-400 mx-auto mb-3" />
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                        <h3 className="font-bold text-base sm:text-lg text-white">我的邀請收益</h3>
+                        <button
+                            onClick={() => setShowCommissionDetails(!showCommissionDetails)}
+                            className="text-gray-400 hover:text-white transition-colors p-1"
                             >
                                 {showCommissionDetails ? <ChevronUpIcon className="w-4 h-4" /> : <ChevronDownIcon className="w-4 h-4" />}
                             </button>
-                        </div>
-                        {isLoading ? <LoadingSpinner size="h-8 w-8" /> : (
-                            <p className="text-lg sm:text-2xl font-bold text-yellow-400">
-                                {formatEther(totalCommission)} $SoulShard
-                            </p>
-                        )}
-                        <p className="text-xs sm:text-sm text-gray-400 mt-2">累計佣金總額</p>
                     </div>
-                    
-                    {/* 傭金明細 */}
-                    {showCommissionDetails && (
-                        <div className="mt-4 pt-4 border-t border-gray-700 space-y-2 text-sm">
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">累計佣金收益：</span>
-                                <span className="text-gray-300 font-mono">
-                                    {totalCommission ? 
-                                        formatLargeNumber(totalCommission) : 
-                                        '0'
-                                    } SOUL
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">總推薦人數：</span>
-                                <span className="text-gray-300">
-                                    {totalReferrals} 人
-                                </span>
-                            </div>
-                        </div>
+                    {isLoading ? <LoadingSpinner size="h-8 w-8" /> : (
+                        <p className="text-lg sm:text-2xl font-bold text-yellow-400">
+                            {formatEther(totalCommission)} $SoulShard
+                        </p>
                     )}
+                    <p className="text-xs sm:text-sm text-gray-400 mt-2">累計佣金總額</p>
                 </div>
                 
-                <div className="card-bg p-4 sm:p-6 rounded-xl text-center">
-                    <Icons.ExternalLink className="w-10 h-10 sm:w-12 sm:h-12 text-green-400 mx-auto mb-3" />
-                    <h3 className="font-bold text-base sm:text-lg text-white mb-2">佣金比例</h3>
-                    <p className="text-lg sm:text-2xl font-bold text-green-400">5%</p>
-                    <p className="text-xs sm:text-sm text-gray-400 mt-2">好友提領時的佣金</p>
-                </div>
+                {/* 傭金明細 */}
+                {showCommissionDetails && (
+                    <div className="mt-4 pt-4 border-t border-gray-700 space-y-2 text-sm">
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">累計佣金收益：</span>
+                            <span className="text-gray-300 font-mono">
+                                {totalCommission ? 
+                                    formatLargeNumber(totalCommission) : 
+                                    '0'
+                                } SOUL
+                            </span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">總推薦人數：</span>
+                            <span className="text-gray-300">
+                                {totalReferrals} 人
+                            </span>
+                        </div>
+                    </div>
+                )}
                 
-                <div className="card-bg p-4 sm:p-6 rounded-xl text-center">
-                    <Icons.Hero className="w-10 h-10 sm:w-12 sm:h-12 text-blue-400 mx-auto mb-3" />
-                    <h3 className="font-bold text-base sm:text-lg text-white mb-2">邀請人好處</h3>
-                    <p className="text-lg sm:text-2xl font-bold text-blue-400">終身收益</p>
-                    <p className="text-xs sm:text-sm text-gray-400 mt-2">持續獲得佣金</p>
-                </div>
-            </div>
-
-            {/* 邀請系統說明 */}
-            <div className="card-bg p-4 sm:p-6 rounded-xl">
-                <h3 className="section-title text-lg sm:text-xl mb-3 sm:mb-4">邀請系統說明</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                    <div>
-                        <h4 className="font-semibold text-base sm:text-lg text-yellow-400 mb-2 sm:mb-3">邀請人收益</h4>
-                        <ul className="space-y-2 text-sm text-gray-300">
-                            <li className="flex items-start gap-2">
-                                <span className="text-green-400">✓</span>
-                                <span>被邀請人每次從金庫提領時，您可獲得 5% 佣金</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <span className="text-green-400">✓</span>
-                                <span>佣金以 $SoulShard 代幣形式自動發放到您的金庫</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <span className="text-green-400">✓</span>
-                                <span>邀請關係永久有效，持續獲得收益</span>
-                            </li>
-                        </ul>
+                {/* 提領收益引導 */}
+                {totalCommission > 0n && (
+                    <div className="mt-4 pt-4 border-t border-gray-700">
+                        <ActionButton 
+                            onClick={() => window.location.hash = '#/dashboard'}
+                            className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                            >
+                                💰 前往金庫提領收益
+                        </ActionButton>
+                        <p className="text-xs text-gray-500 mt-2 text-center">
+                            在總覽頁面的金庫區域提領您的佣金收益
+                        </p>
                     </div>
-                    <div>
-                        <h4 className="font-semibold text-base sm:text-lg text-blue-400 mb-2 sm:mb-3">被邀請人好處</h4>
-                        <ul className="space-y-2 text-sm text-gray-300">
-                            <li className="flex items-start gap-2">
-                                <span className="text-green-400">✓</span>
-                                <span>綁定邀請人後，享有社群支援和指導</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <span className="text-green-400">✓</span>
-                                <span>不影響您的任何收益和遊戲體驗</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <span className="text-green-400">✓</span>
-                                <span>支持邀請人同時建立長期互助關係</span>
-                            </li>
-                        </ul>
-                    </div>
+                )}
                 </div>
             </div>
 
@@ -637,24 +546,10 @@ ${referralLink}
                 {/* 推廣工具 */}
                 <div className="mt-4 sm:mt-6 space-y-3">
                     <h4 className="text-base sm:text-lg font-semibold text-blue-400">推廣工具</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                        <ActionButton onClick={handleCopyReferralText} className="flex items-center justify-center gap-2">
-                            <Icons.Copy className="w-4 h-4" />
-                            複製推薦文案
-                        </ActionButton>
-                        <ActionButton onClick={handleDownloadImage} className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700">
-                            <Icons.Download className="w-4 h-4" />
-                            下載宣傳圖片
-                        </ActionButton>
-                    </div>
-                    <div className="text-xs text-gray-400 bg-gray-800/30 p-3 rounded-lg">
-                        <p className="mb-2"><strong>使用建議：</strong></p>
-                        <ul className="space-y-1">
-                            <li>• 複製文案可直接分享到 Discord、Telegram、Twitter 等社群平台</li>
-                            <li>• 宣傳圖片適合用於群組分享，提高視覺吸引力</li>
-                            <li>• 建議搭配個人介紹，提升推薦轉換率</li>
-                        </ul>
-                    </div>
+                    <ActionButton onClick={handleCopyReferralText} className="w-full flex items-center justify-center gap-2">
+                        <Icons.Copy className="w-4 h-4" />
+                        複製推薦文案
+                    </ActionButton>
                 </div>
 
             </div>
@@ -662,49 +557,116 @@ ${referralLink}
             {/* 設定邀請人 */}
             <div className="card-bg p-4 sm:p-6 rounded-xl shadow-lg">
                 <h3 className="section-title">設定我的邀請人</h3>
-                {isLoading ? <LoadingSpinner /> : (
-                    hasReferrer ? (
-                        <div className="bg-green-900/20 p-4 rounded-lg border border-green-500/30">
-                            <p className="text-green-400 font-medium mb-2">✓ 您已成功綁定邀請人</p>
-                            <p className="text-gray-400">您的邀請人:</p>
-                            <p className="font-mono text-lg text-green-400 bg-black/20 p-2 rounded break-all">{currentReferrer}</p>
-                            <p className="text-xs text-gray-500 mt-2">邀請關係已建立，您的邀請人將持續獲得您提領時的佣金分成。</p>
+                
+                {/* 未連錢包且有推薦參數時，顯示推薦綁定區塊 */}
+                {!address && urlRefParam && (
+                    <div className="mb-6 p-4 rounded-lg border border-purple-500/30 bg-gradient-to-r from-purple-900/20 to-blue-900/20">
+                        <div className="flex items-start gap-3 mb-4">
+                            <Icons.ExternalLink className="w-6 h-6 text-purple-400 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <h4 className="font-semibold text-purple-400 mb-2">檢測到推薦關係</h4>
+                                <p className="text-sm text-gray-300 mb-3">您通過推薦連結進入，以下地址將成為您的邀請人：</p>
+                                <p className="font-mono text-xs text-gray-400 bg-black/30 p-2 rounded break-all mb-3">{urlRefParam}</p>
+                            </div>
                         </div>
-                    ) : (
-                        <div>
-                            <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-500/30 mb-4">
-                                <h4 className="font-semibold text-blue-400 mb-2">為什麼要設定邀請人？</h4>
-                                <ul className="text-sm text-gray-300 space-y-1">
-                                    <li>• 支持為您介紹遊戲的朋友</li>
-                                    <li>• 建立長期的互助關係</li>
-                                    <li>• 不影響您的任何收益</li>
+                        
+                        <div className="space-y-3">
+                            <ActionButton 
+                                onClick={() => setShowConfirmModal(true)}
+                                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                            >
+                                🔗 連接錢包並綁定推薦人
+                            </ActionButton>
+                            
+                            <div className="text-xs text-gray-400 bg-gray-800/30 p-3 rounded-lg">
+                                <p className="mb-1"><strong>提醒：</strong></p>
+                                <ul className="space-y-1">
+                                    <li>• 連接錢包後即可確認推薦關係</li>
+                                    <li>• 推薦關係一旦建立無法更改</li>
+                                    <li>• 不會影響您的任何遊戲收益</li>
                                 </ul>
                             </div>
-                            <p className="text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4">如果您是透過好友的連結來到這裡，請在此輸入他的錢包地址以綁定邀請關係。此操作只能進行一次。</p>
-                            <div className="flex flex-col sm:flex-row items-center gap-2">
-                                <div className="flex-1 w-full">
-                                    <label htmlFor="referrer-address" className="sr-only">邀請人錢包地址</label>
-                                    <input 
-                                        id="referrer-address"
-                                        name="referrer-address"
-                                        type="text" 
-                                        value={referrerInput} 
-                                        onChange={(e) => setReferrerInput(e.target.value)} 
-                                        placeholder="貼上邀請人的錢包地址" 
-                                        className="w-full p-2 border rounded-lg bg-gray-800 border-gray-600 text-white font-mono text-sm" 
-                                    />
-                                </div>
-                                <ActionButton 
-                                    onClick={handleSetReferrer} 
-                                    isLoading={isSettingReferrer} 
-                                    disabled={!isAddress(referrerInput)} 
-                                    className="w-full sm:w-auto flex-shrink-0"
-                                >
-                                    確認綁定
-                                </ActionButton>
-                            </div>
                         </div>
+                    </div>
+                )}
+                
+                {/* 標準邀請人設定區塊 */}
+                {address ? (
+                    isLoading ? <LoadingSpinner /> : (
+                        hasReferrer ? (
+                            <div className="bg-green-900/20 p-4 rounded-lg border border-green-500/30">
+                                <p className="text-green-400 font-medium mb-2">✓ 您已成功綁定邀請人</p>
+                                <p className="text-gray-400">您的邀請人:</p>
+                                <p className="font-mono text-lg text-green-400 bg-black/20 p-2 rounded break-all">{currentReferrer}</p>
+                                <p className="text-xs text-gray-500 mt-2">邀請關係已建立，您的邀請人將持續獲得您提領時的佣金分成。</p>
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-500/30 mb-4">
+                                    <h4 className="font-semibold text-blue-400 mb-2">為什麼要設定邀請人？</h4>
+                                    <ul className="text-sm text-gray-300 space-y-1">
+                                        <li>• 支持為您介紹遊戲的朋友</li>
+                                        <li>• 建立長期的互助關係</li>
+                                        <li>• 不影響您的任何收益</li>
+                                    </ul>
+                                </div>
+                                <p className="text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4">如果您是透過好友的連結來到這裡，請在此輸入他的錢包地址以綁定邀請關係。此操作只能進行一次。</p>
+                                <div className="flex flex-col sm:flex-row items-center gap-2">
+                                    <div className="flex-1 w-full">
+                                        <label htmlFor="referrer-address" className="sr-only">邀請人錢包地址</label>
+                                        <input 
+                                            id="referrer-address"
+                                            name="referrer-address"
+                                            type="text" 
+                                            value={referrerInput} 
+                                            onChange={(e) => setReferrerInput(e.target.value)} 
+                                            placeholder="貼上邀請人的錢包地址" 
+                                            className="w-full p-2 border rounded-lg bg-gray-800 border-gray-600 text-white font-mono text-sm" 
+                                        />
+                                    </div>
+                                    <ActionButton 
+                                        onClick={handleSetReferrer} 
+                                        isLoading={isSettingReferrer} 
+                                        disabled={!isAddress(referrerInput)} 
+                                        className="w-full sm:w-auto flex-shrink-0"
+                                    >
+                                        確認綁定
+                                    </ActionButton>
+                                </div>
+                            </div>
+                        )
                     )
+                ) : (
+                    // 未連錢包且沒有推薦參數的情況
+                    <div className="text-center py-8">
+                        <Icons.ExternalLink className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+                        <h4 className="text-lg font-semibold text-gray-300 mb-2">連接錢包以管理推薦關係</h4>
+                        <p className="text-sm text-gray-400 mb-4">請先連接您的 Web3 錢包以查看和設定邀請人</p>
+                        <ActionButton 
+                            onClick={() => {
+                                const connectButton = document.querySelector('[data-testid="rk-connect-button"]') as HTMLButtonElement;
+                                if (connectButton) {
+                                    connectButton.click();
+                                } else {
+                                    // 備案邏輯
+                                    const buttons = Array.from(document.querySelectorAll('button'));
+                                    const connectBtn = buttons.find(btn => 
+                                        btn.textContent?.includes('連接') || 
+                                        btn.textContent?.includes('Connect') ||
+                                        btn.textContent?.includes('連結')
+                                    );
+                                    if (connectBtn) {
+                                        (connectBtn as HTMLButtonElement).click();
+                                    } else {
+                                        showToast('請手動點擊右上角連接錢包', 'info');
+                                    }
+                                }
+                            }}
+                            className="bg-blue-600 hover:bg-blue-700"
+                        >
+                            連接錢包
+                        </ActionButton>
+                    </div>
                 )}
             </div>
 
@@ -827,16 +789,37 @@ ${referralLink}
                 onClose={() => {
                     setShowConfirmModal(false);
                     setAutoDetectedRef(null);
+                    setHasProcessedReferral(true); // 用戶主動關閉後，標記為已處理
                 }}
                 title="🎯 確認綁定邀請人"
                 onConfirm={address ? () => {
-                    setShowConfirmModal(false);
                     handleSetReferrer();
                 } : () => {
-                    setShowConfirmModal(false);
+                    // 不關閉彈窗，直接觸發錢包連接
                     const connectButton = document.querySelector('[data-testid="rk-connect-button"]') as HTMLButtonElement;
                     if (connectButton) {
                         connectButton.click();
+                    } else {
+                        // 如果找不到按鈕，嘗試其他選擇器
+                        const altButton = document.querySelector('button[data-testid*="connect"]') as HTMLButtonElement;
+                        if (altButton) {
+                            altButton.click();
+                        } else {
+                            // 最後的備案：查找包含 "連接" 或 "Connect" 文字的按鈕
+                            const buttons = Array.from(document.querySelectorAll('button'));
+                            const connectBtn = buttons.find(btn => 
+                                btn.textContent?.includes('連接') || 
+                                btn.textContent?.includes('Connect') ||
+                                btn.textContent?.includes('連結')
+                            );
+                            if (connectBtn) {
+                                (connectBtn as HTMLButtonElement).click();
+                            } else {
+                                console.warn('找不到錢包連接按鈕');
+                                setShowConfirmModal(false);
+                                showToast('請手動點擊右上角連接錢包', 'info');
+                            }
+                        }
                     }
                 }}
                 confirmText={address ? (isSettingReferrer ? '綁定中...' : '確認綁定') : '連接錢包'}
