@@ -1,6 +1,0 @@
-{
-  "query": "query GetTotalEarningsLeaderboard($first: Int!) { playerStats(first: $first, orderBy: totalRewardsEarned, orderDirection: desc, where: { totalRewardsEarned_gt: \"0\" }) { id totalRewardsEarned successfulExpeditions } }",
-  "variables": {
-    "first": 5
-  }
-}

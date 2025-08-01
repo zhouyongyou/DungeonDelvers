@@ -230,12 +230,44 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
         chainId: bsc.id,
     });
     
-    // 計算實際稅率（保持為百分比格式，用於顯示和計算）
+    // 獲取玩家資訊（包含 lastWithdrawTimestamp）
+    const { data: playerInfo } = useReadContract({
+        address: playerVaultContract?.address,
+        abi: playerVaultContract?.abi,
+        functionName: 'playerInfo',
+        args: [address],
+        chainId: bsc.id,
+    });
+    
+    // 獲取時間減免參數
+    const { data: decreaseRatePerPeriod } = useReadContract({
+        address: playerVaultContract?.address,
+        abi: playerVaultContract?.abi,
+        functionName: 'decreaseRatePerPeriod',
+        chainId: bsc.id,
+    });
+    
+    const { data: periodDuration } = useReadContract({
+        address: playerVaultContract?.address,
+        abi: playerVaultContract?.abi,
+        functionName: 'periodDuration',
+        chainId: bsc.id,
+    });
+    
+    // 計算實際稅率（包含時間衰減）
     const standardBaseTaxRate = contractStandardRate ? Number(contractStandardRate) / 100 : 25; // 一般金額基礎稅率（百分比）
     const largeBaseTaxRate = contractLargeRate ? Number(contractLargeRate) / 100 : 40; // 大額金額基礎稅率（百分比）
     const vipDiscount = taxReduction ? Number(taxReduction) / 100 : 0; // VIP 減免（百分比）
     const levelDiscount = Math.floor(level / 10); // 等級減免，每 10 級減 1%（百分比）
-    const totalDiscount = vipDiscount + levelDiscount;
+    
+    // 時間衰減計算
+    const lastWithdrawTimestamp = playerInfo ? Number(playerInfo[1]) : 0;
+    const currentTime = Math.floor(Date.now() / 1000);
+    const timePassed = lastWithdrawTimestamp === 0 ? 0 : Math.max(0, currentTime - lastWithdrawTimestamp);
+    const periodsPassed = Math.floor(timePassed / (periodDuration ? Number(periodDuration) : 24 * 60 * 60));
+    const timeDecay = periodsPassed * (decreaseRatePerPeriod ? Number(decreaseRatePerPeriod) / 100 : 5); // 每天 5%
+    
+    const totalDiscount = vipDiscount + levelDiscount + timeDecay;
     const actualTaxRate = Math.max(0, standardBaseTaxRate - totalDiscount); // 百分比格式 (0-100)
     const actualLargeTaxRate = Math.max(0, largeBaseTaxRate - totalDiscount); // 百分比格式 (0-100)
     
@@ -246,18 +278,16 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     
     // 智能提領交易
     const smartWithdrawTx = useTransactionWithProgress({
-        contractCall: {
-            address: playerVaultContract.address,
-            abi: playerVaultContract.abi,
-            functionName: 'withdraw',
-            args: [customWithdrawAmount]
-        },
-        actionName: `智能提領 ${withdrawUsdAmount ? `$${withdrawUsdAmount}` : ''}`,
         onSuccess: () => {
-            setShowSmartWithdraw(false);
-            setWithdrawUsdAmount('');
-            setCustomWithdrawAmount(0n);
-        }
+            // 交易成功後延遲關閉 Modal，讓用戶看到成功狀態
+            setTimeout(() => {
+                setShowSmartWithdraw(false);
+                setWithdrawUsdAmount('');
+                setCustomWithdrawAmount(0n);
+            }, 2000); // 2秒後關閉
+        },
+        successMessage: '提領成功！',
+        errorMessage: '提領失敗，請重試'
     });
     
     // USD轉SOUL計算
@@ -278,7 +308,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     ];
     
     // 處理智能提領
-    const handleSmartWithdraw = (usdAmount?: string) => {
+    const handleSmartWithdraw = async (usdAmount?: string) => {
         const amount = usdAmount || withdrawUsdAmount;
         if (!amount || parseFloat(amount) <= 0) {
             showToast('請輸入有效的USD金額', 'warning');
@@ -286,16 +316,27 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
         }
         
         const soulAmount = calculateSoulAmount(amount);
-        const maxBalance = BigInt(pendingVaultRewards || '0');
+        // 正確處理 pendingVaultRewards 的 BigInt 轉換
+        const maxBalance = BigInt(Math.floor(parseFloat(pendingVaultRewards || '0') * 1e18));
         
         if (soulAmount > maxBalance) {
             showToast(`金庫餘額不足。最大可提領約 $${formatSoulToUsd(pendingVaultRewards)} USD`, 'warning');
             return;
         }
         
-        setCustomWithdrawAmount(soulAmount);
-        setWithdrawUsdAmount(amount);
-        smartWithdrawTx.execute();
+        try {
+            setCustomWithdrawAmount(soulAmount);
+            setWithdrawUsdAmount(amount);
+            
+            await smartWithdrawTx.execute({
+                address: playerVaultContract.address,
+                abi: playerVaultContract.abi,
+                functionName: 'withdraw',
+                args: [soulAmount]
+            }, `智能提領 $${amount}`);
+        } catch (error) {
+            console.error('智能提領失敗:', error);
+        }
     };
     
     // 原提取按鈕點擊（現在打開智能提領界面）
@@ -305,14 +346,29 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     };
     
     // 全額提領（備用功能）
-    const handleFullWithdraw = () => {
+    const handleFullWithdraw = async () => {
         if (Number(pendingVaultRewards) > 0) {
-            // 將字符串轉換為 BigInt，先乘以 1e18 轉為 wei 單位
-            const amountInWei = BigInt(Math.floor(parseFloat(pendingVaultRewards) * 1e18));
-            setCustomWithdrawAmount(amountInWei);
-            setWithdrawUsdAmount(formatSoulToUsd(pendingVaultRewards));
-            setShowSmartWithdraw(false); // 關閉 Modal
-            smartWithdrawTx.execute();
+            try {
+                // 使用更精確的轉換方式，避免浮點數精度問題
+                const soulAmount = parseFloat(pendingVaultRewards);
+                // 減去一小部分以避免精度錯誤
+                const safeAmount = soulAmount * 0.999999; // 減去 0.0001% 以避免精度問題
+                const amountInWei = BigInt(Math.floor(safeAmount * 1e18));
+                const usdValue = formatSoulToUsd(pendingVaultRewards);
+                
+                setCustomWithdrawAmount(amountInWei);
+                setWithdrawUsdAmount(usdValue);
+                
+                // 執行交易
+                await smartWithdrawTx.execute({
+                    address: playerVaultContract.address,
+                    abi: playerVaultContract.abi,
+                    functionName: 'withdraw',
+                    args: [amountInWei]
+                }, `提領全部 $${usdValue}`);
+            } catch (error) {
+                console.error('提領失敗:', error);
+            }
         }
     };
     
@@ -1082,9 +1138,17 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                 價值：≈ ${formatSoulToUsd(pendingVaultRewards)} USD
                             </p>
                             {Number(pendingVaultRewards) > 0 ? (
-                                <p className="text-yellow-400 text-xs">
-                                    💡 策略性提領可避免高稅率！
-                                </p>
+                                <div className="space-y-1">
+                                    {lastWithdrawTimestamp === 0 ? (
+                                        <p className="text-green-400 text-xs">
+                                            🎉 首次提領免稅優惠！時間衰減使稅率為 0%
+                                        </p>
+                                    ) : (
+                                        <p className="text-yellow-400 text-xs">
+                                            💡 策略性提領可避免高稅率！
+                                        </p>
+                                    )}
+                                </div>
                             ) : (
                                 <p className="text-orange-400 text-xs">
                                     ⚠️ 金庫餘額為空，請先完成地城探險獲得獎勵
@@ -1135,7 +1199,12 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                     const usdValue = parseFloat(formatSoulToUsd(pendingVaultRewards));
                                     const canUseFree = usdValue <= 20;
                                     const isLarge = usdValue >= 1000;
-                                    const taxRate = canUseFree ? 0 : (isLarge ? actualLargeTaxRate : actualTaxRate);
+                                    const isFirstWithdraw = lastWithdrawTimestamp === 0;
+                                    
+                                    // 特殊情況：首次提領通常免稅（時間衰減過大）
+                                    const taxRate = isFirstWithdraw ? 0 : 
+                                        (canUseFree ? 0 : (isLarge ? actualLargeTaxRate : actualTaxRate));
+                                    
                                     const soulAmount = parseFloat(pendingVaultRewards);
                                     const received = Math.floor(soulAmount * (100 - taxRate) / 100);
                                     
@@ -1144,10 +1213,14 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                             <p className="text-gray-300">
                                                 類型：
                                                 <span className={`ml-1 font-medium ${
-                                                    canUseFree ? 'text-green-400' :
+                                                    isFirstWithdraw || canUseFree || taxRate === 0 ? 'text-green-400' :
                                                     isLarge ? 'text-orange-400' : 'text-blue-400'
                                                 }`}>
-                                                    {canUseFree ? '免稅提領' : isLarge ? '大額提領' : '一般提領'}
+                                                    {
+                                                        isFirstWithdraw ? '首次提領' :
+                                                        canUseFree ? '免稅提領' : 
+                                                        isLarge ? '大額提領' : '一般提領'
+                                                    }
                                                 </span>
                                                 <span className={`ml-1 font-medium ${
                                                     taxRate === 0 ? 'text-green-400' : 'text-red-400'
@@ -1161,9 +1234,9 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                                     {received.toLocaleString()} SOUL
                                                 </span>
                                             </p>
-                                            {canUseFree && (
+                                            {(isFirstWithdraw || canUseFree) && (
                                                 <p className="text-green-400">
-                                                    🎁 每日免稅機會！
+                                                    🎁 {isFirstWithdraw ? '首次提領免稅優惠！' : '每日免稅機會！'}
                                                 </p>
                                             )}
                                         </div>
@@ -1179,6 +1252,20 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         >
                             {smartWithdrawTx.isLoading ? '處理中...' : '提領全部'}
                         </button>
+                    </div>
+
+                    {/* 重要提醒 - 移動到策略性提領選項上方 */}
+                    <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
+                        <p className="text-red-400 text-xs font-medium mb-1">⚠️ 重要提醒</p>
+                        <p className="text-red-300 text-xs">
+                            任何提領（包括$19免稅）都會重置稅率計算，每日5%降低會重新開始。
+                        </p>
+                        <p className="text-orange-300 text-xs mt-1">
+                            📅 稅率減免機制：今日率 {actualTaxRate.toFixed(1)}%，已過 {periodsPassed} 天（減免 {timeDecay.toFixed(1)}%）
+                        </p>
+                        <p className="text-gray-400 text-xs mt-1">
+                            ℹ️ 每24小時自動降低5%，直至最低0%
+                        </p>
                     </div>
 
                     {/* 預設金額選項 */}
@@ -1199,14 +1286,6 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                 </button>
                             ))}
                         </div>
-                        
-                        {/* 重要提示 */}
-                        <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
-                            <p className="text-red-400 text-xs font-medium mb-1">⚠️ 重要提醒</p>
-                            <p className="text-red-300 text-xs">
-                                任何提領（包括$19免稅）都會重置稅率計算，每日5%降低會重新開始。建議策略性選擇提領時機！
-                            </p>
-                        </div>
                     </div>
 
                     {/* 稅率預覽 */}
@@ -1221,7 +1300,12 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                     const usdValue = parseFloat(withdrawUsdAmount);
                                     const canUseFree = usdValue <= 20;
                                     const isLarge = usdValue >= 1000;
-                                    const taxRate = canUseFree ? 0 : (isLarge ? actualLargeTaxRate : actualTaxRate);
+                                    const isFirstWithdraw = lastWithdrawTimestamp === 0;
+                                    
+                                    // 特殊情況：首次提領通常免稅（時間衰減過大）
+                                    const taxRate = isFirstWithdraw ? 0 : 
+                                        (canUseFree ? 0 : (isLarge ? actualLargeTaxRate : actualTaxRate));
+                                    
                                     const soulAmount = Number(calculateSoulAmount(withdrawUsdAmount)) / 1e18;
                                     const received = Math.floor(soulAmount * (100 - taxRate) / 100);
                                     
@@ -1230,10 +1314,14 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                             <p className="text-gray-300">
                                                 提領類型：
                                                 <span className={`ml-1 font-medium ${
-                                                    canUseFree ? 'text-green-400' :
+                                                    isFirstWithdraw || canUseFree || taxRate === 0 ? 'text-green-400' :
                                                     isLarge ? 'text-orange-400' : 'text-blue-400'
                                                 }`}>
-                                                    {canUseFree ? '免稅提領' : isLarge ? '大額提領' : '一般提領'}
+                                                    {
+                                                        isFirstWithdraw ? '首次提領' :
+                                                        canUseFree ? '免稅提領' : 
+                                                        isLarge ? '大額提領' : '一般提領'
+                                                    }
                                                 </span>
                                             </p>
                                             <p className="text-gray-300">

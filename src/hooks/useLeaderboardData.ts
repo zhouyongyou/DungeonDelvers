@@ -1,4 +1,4 @@
-// useLeaderboardData.ts - 獲取排行榜真實數據
+// useLeaderboardData.ts - 獲取排行榜真實數據（簡化版）
 import { useQuery } from '@tanstack/react-query';
 import { THE_GRAPH_API_URL, isGraphConfigured } from '../config/graphConfig';
 import { formatEther } from 'viem';
@@ -7,8 +7,7 @@ export type LeaderboardType =
   | 'totalEarnings'    // 總收益
   | 'dungeonClears'    // 地下城通關數
   | 'playerLevel'      // 玩家等級
-  | 'upgradeAttempts'; // 升級次數
-  // VIP 等級已移除 - 子圖沒有 VIP level 欄位
+  | 'upgradeAttempts'; // 升級次數（使用等級替代）
 
 export interface LeaderboardEntry {
   rank: number;
@@ -19,51 +18,18 @@ export interface LeaderboardEntry {
   isCurrentUser?: boolean;
 }
 
-// GraphQL 查詢 - 總收益排行榜（改用 PlayerStats）
-const GET_TOTAL_EARNINGS_LEADERBOARD = `
-  query GetTotalEarningsLeaderboard($first: Int!) {
-    playerStats(
-      first: $first
-      orderBy: totalRewardsEarned
-      orderDirection: desc
-      where: { totalRewardsEarned_gt: "0" }
-    ) {
-      id
-      totalRewardsEarned
-      successfulExpeditions
-    }
-  }
-`;
-
-// GraphQL 查詢 - 地下城通關數排行榜
-const GET_DUNGEON_CLEARS_LEADERBOARD = `
-  query GetDungeonClearsLeaderboard($first: Int!) {
+// 統一使用 PlayerProfiles 實體，因為其他實體查詢有問題
+const GET_LEADERBOARD_DATA = `
+  query GetLeaderboardData($first: Int!, $orderBy: String!, $orderDirection: String!) {
     playerProfiles(
       first: $first
-      orderBy: successfulExpeditions
-      orderDirection: desc
-      where: { successfulExpeditions_gt: 0 }
-    ) {
-      id
-      totalRewardsEarned
-      successfulExpeditions
-      owner {
-        id
-      }
-    }
-  }
-`;
-
-// GraphQL 查詢 - 玩家等級排行榜
-const GET_PLAYER_LEVEL_LEADERBOARD = `
-  query GetPlayerLevelLeaderboard($first: Int!) {
-    playerProfiles(
-      first: $first
-      orderBy: level
-      orderDirection: desc
+      orderBy: $orderBy
+      orderDirection: $orderDirection
       where: { level_gt: 0 }
     ) {
       id
+      totalRewardsEarned
+      successfulExpeditions
       level
       experience
       name
@@ -73,26 +39,6 @@ const GET_PLAYER_LEVEL_LEADERBOARD = `
     }
   }
 `;
-
-// GraphQL 查詢 - 升級次數排行榜
-const GET_UPGRADE_ATTEMPTS_LEADERBOARD = `
-  query GetUpgradeAttemptsLeaderboard($first: Int!) {
-    playerStats(
-      first: $first
-      orderBy: totalUpgradeAttempts
-      orderDirection: desc
-      where: { totalUpgradeAttempts_gt: 0 }
-    ) {
-      id
-      totalUpgradeAttempts
-      successfulUpgrades
-    }
-  }
-`;
-
-// VIP 等級排行榜已移除 - 子圖 VIP 實體沒有 level 欄位
-// VIP 等級需要從前端合約直接讀取
-
 
 const fetchLeaderboardData = async (
   type: LeaderboardType, 
@@ -104,33 +50,40 @@ const fetchLeaderboardData = async (
     throw new Error('子圖 API 未配置');
   }
 
-  let query: string;
-  let variables: any = { first: limit };
+  // 根據類型設置排序欄位
+  let orderBy: string;
+  let orderDirection = 'desc';
 
-  // 根據類型選擇查詢
   switch (type) {
     case 'totalEarnings':
-      query = GET_TOTAL_EARNINGS_LEADERBOARD;
+      orderBy = 'totalRewardsEarned';
       break;
     case 'dungeonClears':
-      query = GET_DUNGEON_CLEARS_LEADERBOARD;
+      orderBy = 'successfulExpeditions';
       break;
     case 'playerLevel':
-      query = GET_PLAYER_LEVEL_LEADERBOARD;
+      orderBy = 'level';
       break;
     case 'upgradeAttempts':
-      query = GET_UPGRADE_ATTEMPTS_LEADERBOARD;
+      // 使用等級作為活躍度指標
+      orderBy = 'level';
       break;
     default:
       throw new Error(`不支援的排行榜類型: ${type}`);
   }
+
+  const variables = { 
+    first: limit, 
+    orderBy, 
+    orderDirection 
+  };
 
   try {
     const response = await fetch(THE_GRAPH_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        query,
+        query: GET_LEADERBOARD_DATA,
         variables
       })
     });
@@ -145,108 +98,65 @@ const fetchLeaderboardData = async (
     if (import.meta.env.DEV) {
       console.log(`[Leaderboard] ${type} 查詢結果:`, {
         type,
+        orderBy,
         hasData: !!result.data,
         hasErrors: !!result.errors,
         dataKeys: result.data ? Object.keys(result.data) : [],
-        firstItem: result.data?.playerProfiles?.[0] || result.data?.playerStats?.[0]
+        dataCount: result.data?.playerProfiles?.length || 0,
+        firstItem: result.data?.playerProfiles?.[0]
       });
     }
 
     if (result.errors) {
       console.warn('GraphQL 錯誤:', result.errors);
       console.warn('查詢類型:', type);
-      console.warn('查詢內容:', query);
       console.warn('查詢變數:', variables);
       throw new Error(result.errors[0]?.message || 'GraphQL 查詢失敗');
     }
 
     const data = result.data;
-    if (!data) {
+    if (!data || !data.playerProfiles) {
       console.warn(`[Leaderboard] ${type} 無數據返回`);
       return [];
     }
 
-    // 處理不同類型的數據
-    let entries: LeaderboardEntry[] = [];
+    // 處理數據
+    const entries: LeaderboardEntry[] = data.playerProfiles.map((profile: any, index: number) => {
+      let value: string;
+      let displayName: string | undefined;
+      
+      switch (type) {
+        case 'totalEarnings':
+          value = Math.floor(Number(formatEther(BigInt(profile.totalRewardsEarned || 0)))).toString();
+          displayName = `${profile.successfulExpeditions || 0} 次成功遠征`;
+          break;
+        case 'dungeonClears':
+          value = profile.successfulExpeditions.toString();
+          displayName = `總獎勵 ${Math.floor(Number(formatEther(BigInt(profile.totalRewardsEarned || 0))))} SOUL`;
+          break;
+        case 'playerLevel':
+          value = profile.level.toString();
+          displayName = profile.name || `經驗 ${Math.floor(Number(formatEther(BigInt(profile.experience || 0))))}`;
+          break;
+        case 'upgradeAttempts':
+          // 使用等級作為活躍度指標
+          value = profile.level.toString();
+          displayName = `${profile.successfulExpeditions || 0} 次遠征`;
+          break;
+        default:
+          value = '0';
+          displayName = '';
+      }
 
-    if (type === 'playerLevel' && data.playerProfiles) {
-      entries = data.playerProfiles.map((profile: any, index: number) => ({
+      return {
         rank: index + 1,
         address: profile.owner.id,
-        value: profile.level.toString(),
-        displayName: profile.name || undefined,
+        value,
+        displayName,
         isCurrentUser: currentUserAddress ? 
           profile.owner.id.toLowerCase() === currentUserAddress.toLowerCase() : false
-      }));
-    } else if (type === 'upgradeAttempts' && data.playerStats) {
-      entries = data.playerStats.map((stats: any, index: number) => ({
-        rank: index + 1,
-        address: stats.id, // PlayerStats 的 id 就是玩家地址
-        value: stats.totalUpgradeAttempts.toString(),
-        displayName: `成功率 ${Math.round((stats.successfulUpgrades / stats.totalUpgradeAttempts) * 100)}%`,
-        isCurrentUser: currentUserAddress ? 
-          stats.id.toLowerCase() === currentUserAddress.toLowerCase() : false
-      }));
-    } else if (type === 'totalEarnings' && data.playerStats) {
-      // 處理總收益數據（從 PlayerStats）
-      entries = data.playerStats.map((stats: any, index: number) => ({
-        rank: index + 1,
-        address: stats.id, // PlayerStats 的 id 就是玩家地址
-        value: Math.floor(Number(formatEther(BigInt(stats.totalRewardsEarned || 0)))).toString(),
-        displayName: `${stats.successfulExpeditions || 0} 次成功遠征`,
-        isCurrentUser: currentUserAddress ? 
-          stats.id.toLowerCase() === currentUserAddress.toLowerCase() : false
-      }));
-    // VIP 等級排行榜已移除 - 子圖沒有相應數據結構
-    } else if (data.playerProfiles) {
-      // 處理玩家檔案數據（地下城通關數）
-      entries = data.playerProfiles.map((profile: any, index: number) => {
-        let value: string;
-        let displayName: string | undefined;
-        
-        switch (type) {
-          case 'dungeonClears':
-            value = profile.successfulExpeditions.toString();
-            displayName = `總獎勵 ${Math.floor(Number(formatEther(BigInt(profile.totalRewardsEarned || 0))))} SOUL`;
-            break;
-          default:
-            value = '0';
-        }
-
-        return {
-          rank: index + 1,
-          address: profile.owner.id, // 使用 owner.id 而不是 profile.id
-          value,
-          displayName,
-          isCurrentUser: currentUserAddress ? 
-            profile.owner.id.toLowerCase() === currentUserAddress.toLowerCase() : false
-        };
-      });
-    } else if (data.players) {
-      // 處理玩家數據（舊版查詢兼容）
-      entries = data.players.map((player: any, index: number) => {
-        let value: string;
-        
-        switch (type) {
-          case 'totalEarnings':
-            value = Math.floor(Number(formatEther(BigInt(player.totalRewardsEarned || 0)))).toString();
-            break;
-          case 'dungeonClears':
-            value = player.successfulExpeditions.toString();
-            break;
-          default:
-            value = '0';
-        }
-
-        return {
-          rank: index + 1,
-          address: player.id,
-          value,
-          isCurrentUser: currentUserAddress ? 
-            player.id.toLowerCase() === currentUserAddress.toLowerCase() : false
-        };
-      });
-    }
+      };
+    });
 
     return entries;
   } catch (error) {
@@ -269,7 +179,6 @@ export const useLeaderboardData = (
         return { staleTime: 5 * 60 * 1000, gcTime: 30 * 60 * 1000 }; // 5分鐘過期，30分鐘清理
       
       // 中等變動頻率
-      case 'partyPower':
       case 'upgradeAttempts':
         return { staleTime: 2 * 60 * 1000, gcTime: 10 * 60 * 1000 }; // 2分鐘過期，10分鐘清理
       

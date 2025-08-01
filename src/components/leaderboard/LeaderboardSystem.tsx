@@ -47,7 +47,7 @@ export const LeaderboardSystem: React.FC<LeaderboardProps> = ({
       case 'totalEarnings': return '總收益排行';
       case 'dungeonClears': return '通關次數排行';
       case 'playerLevel': return '玩家等級排行';
-      case 'upgradeAttempts': return '升級次數排行';
+      case 'upgradeAttempts': return '活躍玩家排行'; // 實際使用等級作為活躍度指標
     }
   };
 
@@ -68,7 +68,7 @@ export const LeaderboardSystem: React.FC<LeaderboardProps> = ({
       return `LV ${value}`;
     }
     if (type === 'upgradeAttempts') {
-      return `${value} 次`;
+      return `LV ${value}`; // 顯示等級而不是次數
     }
     return value;
   };
@@ -97,7 +97,7 @@ export const LeaderboardSystem: React.FC<LeaderboardProps> = ({
                   {t === 'totalEarnings' && '收益'}
                   {t === 'dungeonClears' && '通關'}
                   {t === 'playerLevel' && '等級'}
-                  {t === 'upgradeAttempts' && '升級'}
+                  {t === 'upgradeAttempts' && '活躍'}
                 </span>
               </button>
             ))}

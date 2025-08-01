@@ -44,12 +44,21 @@ export function useTransactionWithProgress(options?: UseTransactionWithProgressO
     status: 'idle',
     confirmations: 0,
   });
+  
+  const [showProgress, setShowProgress] = useState(false);
+  const [actionName, setActionName] = useState('');
 
   const execute = useCallback(async (
     config: TransactionConfig,
     description: string
   ) => {
     try {
+      // 記錄動作名稱
+      setActionName(description);
+      
+      // 顯示進度 Modal
+      setShowProgress(true);
+      
       // 1. 開始簽名
       setProgress({ status: 'signing', confirmations: 0 });
       logger.info('請求用戶簽名交易', { description });
@@ -118,6 +127,12 @@ export function useTransactionWithProgress(options?: UseTransactionWithProgressO
                   );
                   
                   options?.onSuccess?.(receipt);
+                  
+                  // 延遲關閉進度 Modal
+                  setTimeout(() => {
+                    setShowProgress(false);
+                  }, 2000);
+                  
                   unwatch?.();
                 }
               }
@@ -141,6 +156,7 @@ export function useTransactionWithProgress(options?: UseTransactionWithProgressO
               error: new Error('Transaction timeout'),
             }));
             showToast('交易超時，請在區塊鏈瀏覽器查看', 'warning');
+            setShowProgress(false);
           }
         }, 30000);
       }
@@ -182,6 +198,7 @@ export function useTransactionWithProgress(options?: UseTransactionWithProgressO
         options?.onError?.(error);
       }
       
+      setShowProgress(false);
       throw error;
     }
   }, [writeContractAsync, publicClient, showToast, addTransaction, options]);
@@ -191,6 +208,7 @@ export function useTransactionWithProgress(options?: UseTransactionWithProgressO
       status: 'idle',
       confirmations: 0,
     });
+    setShowProgress(false);
   }, []);
 
   return {
@@ -198,5 +216,11 @@ export function useTransactionWithProgress(options?: UseTransactionWithProgressO
     progress,
     reset,
     isLoading: progress.status === 'signing' || progress.status === 'pending' || progress.status === 'confirming',
+    showProgress,
+    setShowProgress,
+    status: progress.status,
+    error: progress.error,
+    txHash: progress.hash,
+    actionName,
   };
 }
