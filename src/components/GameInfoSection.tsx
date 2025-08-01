@@ -38,7 +38,7 @@ export const GameInfoSection: React.FC<GameInfoSectionProps> = ({ variant = 'ful
           <h2 className="text-xl md:text-2xl font-bold text-gray-100 mb-3">核心遊戲代幣</h2>
           {soulShardAddress && (
             <div className="flex items-center justify-center gap-2">
-              <span className="text-gray-400">$SoulShard:</span>
+              <span className="text-gray-400">$SOUL:</span>
               <button 
                 onClick={handleCopy} 
                 className="flex items-center gap-2 font-mono text-gray-300 bg-black/20 px-3 py-1.5 rounded-lg hover:bg-black/30 transition-all cursor-pointer group"
@@ -67,7 +67,7 @@ export const GameInfoSection: React.FC<GameInfoSectionProps> = ({ variant = 'ful
                 <ul className="space-y-3 text-sm text-gray-200">
                   <li className="flex items-start gap-2">
                     <span className="text-yellow-400 mt-1">•</span>
-                    <span>目前顯示的代幣地址為測試版本，正式版本將會更新</span>
+                    <span>$SOUL 遊戲代幣即將發行，敬請期待</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-yellow-400 mt-1">•</span>
@@ -79,7 +79,7 @@ export const GameInfoSection: React.FC<GameInfoSectionProps> = ({ variant = 'ful
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-yellow-400 mt-1">•</span>
-                    <span>請等待官方通知後再開始遊戲</span>
+                    <span>$SAGA 治理代幣預計十月後推出</span>
                   </li>
                 </ul>
               </div>
@@ -181,7 +181,7 @@ export const GameInfoSection: React.FC<GameInfoSectionProps> = ({ variant = 'ful
             <h3 className="text-base md:text-lg font-bold text-yellow-400">核心遊戲代幣</h3>
             {soulShardAddress && (
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs text-gray-400">$SoulShard:</span>
+                <span className="text-xs text-gray-400">$SOUL:</span>
                 <button 
                   onClick={handleCopy} 
                   className="flex items-center gap-2 font-mono text-xs text-gray-300 bg-black/20 px-2 py-1 rounded hover:bg-black/30 transition-all cursor-pointer group"
@@ -193,7 +193,7 @@ export const GameInfoSection: React.FC<GameInfoSectionProps> = ({ variant = 'ful
               </div>
             )}
             <p className="text-xs md:text-sm text-gray-300 leading-relaxed">
-              目前顯示的代幣地址為測試版本，正式版本將會更新
+              $SOUL 遊戲代幣即將發行，$SAGA 治理代幣預計十月後推出
             </p>
           </div>
         </div>
@@ -208,7 +208,7 @@ export const GameInfoSection: React.FC<GameInfoSectionProps> = ({ variant = 'ful
             <ul className="space-y-2 text-xs md:text-sm text-gray-300">
               <li className="flex items-start">
                 <span className="text-red-400 mr-2">•</span>
-                <span>請關注我們的 Telegram 獲取最新消息</span>
+                <span>$SOUL 遊戲代幣即將發行</span>
               </li>
               <li className="flex items-start">
                 <span className="text-red-400 mr-2">•</span>
@@ -216,7 +216,7 @@ export const GameInfoSection: React.FC<GameInfoSectionProps> = ({ variant = 'ful
               </li>
               <li className="flex items-start">
                 <span className="text-red-400 mr-2">•</span>
-                <span>請等待官方通知後再開始遊戲</span>
+                <span>請關注 Telegram 獲取最新消息</span>
               </li>
             </ul>
           </div>
