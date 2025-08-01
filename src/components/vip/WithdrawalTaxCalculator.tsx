@@ -165,8 +165,8 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
       // 計算時間間隔
       let timePassed: number;
       if (lastWithdrawTimestamp === 0) {
-        // 如果從未提現，假設0天（第一次提現無時間衰減）
-        timePassed = 0;
+        // 首次提領：時間衰減非常大，通常導致 0% 稅率
+        timePassed = currentTime; // 從 Unix 紀元開始計算
       } else {
         timePassed = Math.max(0, currentTime - lastWithdrawTimestamp);
       }

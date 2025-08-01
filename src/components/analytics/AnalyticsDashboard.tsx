@@ -40,7 +40,11 @@ export const AnalyticsDashboard: React.FC<{ className?: string }> = ({ className
     
     // 使用實際的總收益，而不是從趨勢圖計算
     const totalEarnings = Number(formatEther(data.totalEarnings));
-    const avgDailyEarnings = data.earningsTrend.reduce((sum, day) => sum + day.earnings, 0) / data.earningsTrend.length;
+    // 計算實際有收益的天數來得到更準確的日均
+    const daysWithEarnings = data.earningsTrend.filter(day => day.earnings > 0).length;
+    const avgDailyEarnings = daysWithEarnings > 0 
+      ? data.earningsTrend.reduce((sum, day) => sum + day.earnings, 0) / daysWithEarnings
+      : 0;
     const trend = data.earningsTrend.length > 1 && 
       data.earningsTrend[data.earningsTrend.length - 1].earnings > data.earningsTrend[0].earnings;
     
@@ -120,14 +124,14 @@ export const AnalyticsDashboard: React.FC<{ className?: string }> = ({ className
               </div>
               <p className="text-2xl font-bold text-white">
                 {summary.totalEarnings > 0 
-                  ? formatLargeNumber(BigInt(Math.floor(summary.totalEarnings)))
+                  ? `${formatSoul(data.totalEarnings, 0)} SOUL`
                   : '尚無收益'
                 }
               </p>
               <p className="text-sm text-gray-400 mt-1">
                 日均: {summary.avgDailyEarnings > 0 
-                  ? formatLargeNumber(BigInt(Math.floor(summary.avgDailyEarnings)))
-                  : '0'
+                  ? `${summary.avgDailyEarnings.toFixed(1)} SOUL`
+                  : '0 SOUL'
                 }
               </p>
             </div>
@@ -290,20 +294,27 @@ export const AnalyticsDashboard: React.FC<{ className?: string }> = ({ className
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                     <XAxis dataKey="name" stroke="#9CA3AF" />
                     <YAxis 
+                      yAxisId="left"
                       stroke="#9CA3AF" 
                       tickFormatter={formatChartValue}
+                    />
+                    <YAxis 
+                      yAxisId="right"
+                      orientation="right"
+                      stroke="#9CA3AF"
+                      tickFormatter={(value) => `${value}%`}
                     />
                     <Tooltip 
                       contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
                       labelStyle={{ color: '#9CA3AF' }}
                       formatter={(value: number, name: string) => [
-                        name === '總收益' ? `${formatChartValue(value)} SOUL` : `${value}%`,
+                        name === '總收益' ? `${formatChartValue(value)} SOUL` : `${value.toFixed(1)}%`,
                         name
                       ]}
                     />
                     <Legend />
-                    <Bar dataKey="totalEarnings" fill={chartColors.primary} name="總收益" />
-                    <Bar dataKey="winRate" fill={chartColors.secondary} name="勝率%" />
+                    <Bar dataKey="totalEarnings" fill={chartColors.primary} name="總收益" yAxisId="left" />
+                    <Bar dataKey="winRate" fill={chartColors.secondary} name="勝率" yAxisId="right" />
                   </BarChart>
                 </ResponsiveContainer>
               )}

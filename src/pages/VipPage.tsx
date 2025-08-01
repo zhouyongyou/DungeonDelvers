@@ -57,9 +57,14 @@ const VipBenefitsCollapsible: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => 
                     {/* 提現稅率減免 */}
                     <div className="bg-green-900/20 p-4 rounded-xl border border-green-500/30 hover:border-green-400/50 transition-all">
                         <h3 className="font-bold text-green-300 mb-2">提現稅率減免</h3>
-                        <p className="text-sm text-gray-300">
-                            從金庫提取代幣時享受手續費減免，每級減免 <strong className="text-green-300">0.5%</strong>，最高可減免 10%
-                        </p>
+                        <div className="space-y-2">
+                            <p className="text-sm text-gray-300">
+                                從金庫提取代幣時享受手續費減免，每級減免 <strong className="text-green-300">0.5%</strong>，最高可減免 10%
+                            </p>
+                            <p className="text-xs text-green-400 bg-green-900/30 rounded-lg px-2 py-1">
+                                🎉 注意：首次提領用戶通常可以享受 0% 稅率（時間衰減機制）
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>

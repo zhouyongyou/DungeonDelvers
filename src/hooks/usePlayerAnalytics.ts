@@ -182,6 +182,13 @@ export const usePlayerAnalytics = (timeRange: number = 30) => {
     
     // 使用正確的總收益數據，優先從 stats 中取得，因為它是實際更新的欄位
     const totalEarnings = BigInt(statsData?.totalRewardsEarned || profileData?.totalRewardsEarned || 0);
+    
+    // 調試日誌
+    console.log('[usePlayerAnalytics] 總收益計算:', {
+      statsTotal: statsData?.totalRewardsEarned,
+      profileTotal: profileData?.totalRewardsEarned,
+      finalTotal: totalEarnings.toString()
+    });
     const totalExpeditions = expeditions.length;
     const successfulExpeditions = profileData?.successfulExpeditions || 0;
     const successRate = totalExpeditions > 0 

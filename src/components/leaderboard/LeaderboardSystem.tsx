@@ -142,13 +142,6 @@ export const LeaderboardSystem: React.FC<LeaderboardProps> = ({
               <span>❌ The Graph 子圖未配置 - 排行榜功能不可用</span>
             </div>
           </div>
-        ) : isUsingRealData ? (
-          <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3">
-            <div className="flex items-center gap-2 text-green-400 text-sm">
-              <TrendingUp className="w-4 h-4" />
-              <span>✅ 顯示真實鏈上數據</span>
-            </div>
-          </div>
         ) : error ? (
           <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
             <div className="flex items-center gap-2 text-red-400 text-sm">

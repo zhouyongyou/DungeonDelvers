@@ -215,10 +215,18 @@ export const TaxRateModal: React.FC<TaxRateModalProps> = ({
                         )}
                     </div>
                     <div className="mt-3 space-y-2">
-                        <div className="p-3 bg-green-900/20 border border-green-600/30 rounded-lg">
+                        <div className="p-3 bg-gradient-to-r from-green-900/20 to-emerald-900/20 border border-green-500/30 rounded-lg">
+                            <p className="text-xs text-green-400 flex items-center gap-1 mb-2">
+                                <span>🎉</span>
+                                <span className="font-medium">首次提領優惠：0% 稅率</span>
+                            </p>
+                            <p className="text-xs text-green-300 pl-4 mb-2">
+                                ✨ 由於時間衰減機制，首次提領的用戶通常可以享受 0% 稅率
+                            </p>
+                            <hr className="border-green-600/30 my-2" />
                             <p className="text-xs text-green-400 flex items-center gap-1 mb-1">
                                 <span>🎁</span>
-                                <span>免稅提領（≤$20 USD）- 每日一次</span>
+                                <span>每日免稅提領（≤$20 USD）</span>
                             </p>
                             <p className="text-xs text-yellow-400 pl-4">
                                 ⚠️ 重要：任何提領（包括免稅）都會重置稅率計算，每日5%降低會重新開始
