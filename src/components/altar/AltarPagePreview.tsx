@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ActionButton } from '../ui/ActionButton';
+import { PreviewFooterNote } from '../common/PreviewFooterNote';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { THE_GRAPH_API_URL } from '../../config/graphConfig';
 import { graphQLRateLimiter } from '../../utils/rateLimiter';
@@ -269,17 +270,17 @@ export const AltarPagePreview: React.FC = () => {
       <div className="relative z-10 container mx-auto px-4 py-8 space-y-6">
         {/* Header */}
         <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
             ⭐ 升星祭壇
           </h1>
-          <p className="text-lg text-gray-300">
+          <p className="text-base md:text-lg text-gray-300 px-4">
             提升您的 NFT 稀有度，解鎖更強大的力量
           </p>
         </div>
 
         {/* Tab Navigation */}
         <div className="flex justify-center">
-          <div className="bg-gray-800 rounded-lg p-1 flex">
+          <div className="bg-gray-800 rounded-lg p-1 flex flex-wrap md:flex-nowrap justify-center">
             {[
               { key: 'simulator', label: '⚗️ 升星模擬', icon: '⚗️' },
               { key: 'mechanics', label: '⚙️ 機制說明', icon: '⚙️' },
@@ -512,6 +513,9 @@ export const AltarPagePreview: React.FC = () => {
             </ActionButton>
           </div>
         </div>
+
+        {/* 底部備註 */}
+        <PreviewFooterNote />
       </div>
     </section>
   );

@@ -1,0 +1,55 @@
+/* responsive-preview.css - 預覽頁面響應式優化 */
+
+/* 手機版標題優化 */
+@media (max-width: 640px) {
+  /* 主標題 */
+  .preview-main-title {
+    font-size: 1.5rem !important;
+    line-height: 2rem !important;
+  }
+  
+  /* 副標題 */
+  .preview-subtitle {
+    font-size: 0.875rem !important;
+    line-height: 1.25rem !important;
+  }
+  
+  /* 卡片標題 */
+  .preview-card-title {
+    font-size: 1.125rem !important;
+    line-height: 1.75rem !important;
+  }
+  
+  /* 按鈕優化 */
+  .preview-action-button {
+    padding: 0.5rem 1.5rem !important;
+    font-size: 0.875rem !important;
+  }
+  
+  /* 網格調整 */
+  .preview-grid-mobile {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+  
+  /* 內距優化 */
+  .preview-mobile-padding {
+    padding: 1rem !important;
+  }
+  
+  /* Tab 按鈕優化 */
+  .preview-tab-button {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.75rem !important;
+  }
+  
+  /* 表格文字 */
+  .preview-table-text {
+    font-size: 0.75rem !important;
+  }
+  
+  /* 隱藏次要元素 */
+  .preview-hide-mobile {
+    display: none !important;
+  }
+}

@@ -143,10 +143,20 @@ const ReferralPage: React.FC = () => {
 
     // 第二個：處理自動顯示確認彈窗
     useEffect(() => {
-        if (urlRefParam && address && !hasReferrer && urlRefParam.toLowerCase() !== address.toLowerCase()) {
-            setAutoDetectedRef(urlRefParam);
-            setShowConfirmModal(true);
-            logger.info('自動顯示推薦確認彈窗', { ref: urlRefParam, userAddress: address });
+        // 如果有推薦連結參數
+        if (urlRefParam) {
+            // 情況1：已連接錢包且沒有推薦人
+            if (address && !hasReferrer && urlRefParam.toLowerCase() !== address.toLowerCase()) {
+                setAutoDetectedRef(urlRefParam);
+                setShowConfirmModal(true);
+                logger.info('自動顯示推薦確認彈窗（已連接錢包）', { ref: urlRefParam, userAddress: address });
+            }
+            // 情況2：未連接錢包，也顯示彈窗讓用戶先連接
+            else if (!address) {
+                setAutoDetectedRef(urlRefParam);
+                setShowConfirmModal(true);
+                logger.info('自動顯示推薦確認彈窗（未連接錢包）', { ref: urlRefParam });
+            }
         }
     }, [urlRefParam, address, hasReferrer]);
 
@@ -819,11 +829,17 @@ ${referralLink}
                     setAutoDetectedRef(null);
                 }}
                 title="🎯 確認綁定邀請人"
-                onConfirm={() => {
+                onConfirm={address ? () => {
                     setShowConfirmModal(false);
                     handleSetReferrer();
+                } : () => {
+                    setShowConfirmModal(false);
+                    const connectButton = document.querySelector('[data-testid="rk-connect-button"]') as HTMLButtonElement;
+                    if (connectButton) {
+                        connectButton.click();
+                    }
                 }}
-                confirmText={isSettingReferrer ? '綁定中...' : '確認綁定'}
+                confirmText={address ? (isSettingReferrer ? '綁定中...' : '確認綁定') : '連接錢包'}
                 maxWidth="lg"
                 disabled={isSettingReferrer}
                 isLoading={isSettingReferrer}
@@ -833,14 +849,32 @@ ${referralLink}
                         <p className="text-sm text-blue-300 mb-2">檢測到推薦連結</p>
                         <p className="font-mono text-xs text-gray-400 break-all">{autoDetectedRef}</p>
                     </div>
-                    <p className="text-gray-300">
-                        您是否要將此地址設為您的邀請人？綁定後無法更改。
-                    </p>
-                    <ul className="text-xs text-gray-400 space-y-1">
-                        <li>• 邀請人將獲得您提領時 5% 的佣金</li>
-                        <li>• 不會影響您的收益</li>
-                        <li>• 綁定關係永久有效</li>
-                    </ul>
+                    {!address ? (
+                        <div className="space-y-4">
+                            <p className="text-gray-300">
+                                🎉 歡迎加入 DungeonDelvers！
+                            </p>
+                            <p className="text-sm text-gray-400">
+                                您通過推薦連結進入遊戲。連接錢包後，此地址將成為您的邀請人。
+                            </p>
+                            <div className="bg-yellow-900/20 p-3 rounded-lg border border-yellow-500/30">
+                                <p className="text-sm text-yellow-300">
+                                    ⚠️ 請先連接您的 Web3 錢包以繼續
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            <p className="text-gray-300">
+                                您是否要將此地址設為您的邀請人？綁定後無法更改。
+                            </p>
+                            <ul className="text-xs text-gray-400 space-y-1">
+                                <li>• 邀請人將獲得您提領時 5% 的佣金</li>
+                                <li>• 不會影響您的收益</li>
+                                <li>• 綁定關係永久有效</li>
+                            </ul>
+                        </>
+                    )}
                 </div>
             </Modal>
         </section>

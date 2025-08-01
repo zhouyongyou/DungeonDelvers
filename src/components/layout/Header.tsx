@@ -246,7 +246,10 @@ export const Header: React.FC<HeaderProps> = ({
                       onClick={(e) => { e.preventDefault(); handleNavClick(item.key); }}
                       onMouseEnter={() => preloadPage(item.key)}
                   >
-                      {item.label}
+                      <span className="flex items-center gap-1">
+                          <span className="w-4 h-4">{React.cloneElement(item.icon, { className: 'w-4 h-4' })}</span>
+                          {item.label}
+                      </span>
                   </a>
               ))}
             </nav>
@@ -319,8 +322,10 @@ export const Header: React.FC<HeaderProps> = ({
                             }`}
                             onClick={(e) => { e.preventDefault(); handleNavClick(item.key); }}
                         >
-                            <span className="text-xl">{item.icon}</span>
-                            <span className="font-medium">{item.label}</span>
+                            <div className="flex items-center gap-2">
+                                <span className="w-5 h-5">{React.cloneElement(item.icon, { className: 'w-5 h-5' })}</span>
+                                <span className="font-medium">{item.label}</span>
+                            </div>
                         </a>
                     ))}
                 </nav>

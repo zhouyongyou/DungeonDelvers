@@ -45,7 +45,7 @@ export const SubgraphDiagnostics: React.FC = () => {
   const overallStatus = getOverallStatus();
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="fixed bottom-20 sm:bottom-4 right-4 z-50">
       {/* 狀態指示器 */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}

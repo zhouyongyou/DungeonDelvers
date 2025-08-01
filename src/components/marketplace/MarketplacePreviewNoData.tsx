@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { ActionButton } from '../ui/ActionButton';
+import { PreviewFooterNote } from '../common/PreviewFooterNote';
 
 export const MarketplacePreview: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState<'overview' | 'features' | 'guide'>('overview');
@@ -153,7 +154,7 @@ export const MarketplacePreview: React.FC = () => {
               <div className="text-center">
                 <div className="text-3xl font-bold text-blue-400 mb-2">2.5%</div>
                 <div className="text-sm text-gray-400">平台手續費</div>
-                <div className="text-xs text-gray-500 mt-1">VIP用戶享有減免</div>
+                <div className="text-xs text-gray-500 mt-1">公平透明的收費</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-green-400 mb-2">24/7</div>
@@ -376,10 +377,6 @@ export const MarketplacePreview: React.FC = () => {
                 </li>
                 <li className="flex items-start">
                   <span className="text-purple-400 mr-2">•</span>
-                  VIP 用戶享有手續費優惠
-                </li>
-                <li className="flex items-start">
-                  <span className="text-purple-400 mr-2">•</span>
                   手續費用於維護平台運營和獎勵機制
                 </li>
               </ul>
@@ -414,6 +411,9 @@ export const MarketplacePreview: React.FC = () => {
           </ActionButton>
         </div>
       </div>
+
+      {/* 底部備註 */}
+      <PreviewFooterNote />
     </div>
   );
 };

@@ -10,6 +10,7 @@ import { graphQLRateLimiter } from '../../utils/rateLimiter';
 import { logger } from '../../utils/logger';
 import { BATCH_TIERS } from '../../utils/batchMintConfig';
 import { FeaturedNftsGallery } from './FeaturedNftsGallery';
+import { PreviewFooterNote } from '../common/PreviewFooterNote';
 
 // GraphQL 查詢 - 獲取最近鑄造統計
 const GET_MINT_STATS_QUERY = `
@@ -104,23 +105,16 @@ interface MintPreviewCardProps {
 }
 
 const MintPreviewCard: React.FC<MintPreviewCardProps> = ({ type, recentItems }) => {
-  const [selectedQuantity, setSelectedQuantity] = useState(1);
+  const [selectedQuantity, setSelectedQuantity] = useState(50);
   const options = [50, 20, 10, 5, 1];
-  
-  const rarityStats = recentItems.reduce((acc, item) => {
-    acc[item.rarity] = (acc[item.rarity] || 0) + 1;
-    return acc;
-  }, {} as Record<number, number>);
-
-  const totalItems = recentItems.length;
 
   return (
-    <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-      <div className="text-center mb-6">
-        <h3 className="text-2xl font-bold text-white mb-2">
+    <div className="bg-gray-800/50 rounded-xl p-4 md:p-6 border border-gray-700">
+      <div className="text-center mb-4 md:mb-6">
+        <h3 className="text-xl md:text-2xl font-bold text-white mb-2">
           {type === 'hero' ? '🦸 召喚英雄' : '🔮 鑄造聖物'}
         </h3>
-        <p className="text-gray-400">
+        <p className="text-sm md:text-base text-gray-400">
           {type === 'hero' 
             ? '召喚強大的英雄加入您的冒險隊伍' 
             : '鑄造神秘聖物增強您的戰鬥力量'
@@ -129,8 +123,8 @@ const MintPreviewCard: React.FC<MintPreviewCardProps> = ({ type, recentItems }) 
       </div>
 
       {/* 數量選擇 */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-300 mb-3">
+      <div className="mb-4 md:mb-6">
+        <label className="block text-xs md:text-sm font-medium text-gray-300 mb-2 md:mb-3">
           選擇數量 (批量越大，稀有度越高)
         </label>
         <div className="grid grid-cols-5 gap-2">
@@ -163,51 +157,49 @@ const MintPreviewCard: React.FC<MintPreviewCardProps> = ({ type, recentItems }) 
         </div>
       </div>
 
-      {/* 最近鑄造展示 */}
+      {/* 稀有度機率展示 */}
       <div className="mb-6">
         <h4 className="text-lg font-semibold text-white mb-3">
-          📊 最近{type === 'hero' ? '召喚' : '鑄造'}統計
+          📊 {type === 'hero' ? '英雄' : '聖物'}稀有度機率
         </h4>
         
-        {/* 稀有度分布 */}
-        <div className="grid grid-cols-5 gap-2 mb-4">
-          {[1, 2, 3, 4, 5].map(rarity => (
-            <div key={rarity} className="text-center p-2 bg-gray-900/30 rounded">
-              <div className={`text-sm font-bold ${RARITY_COLORS[rarity]}`}>
-                {RARITY_LABELS[rarity]}
-              </div>
-              <div className="text-xs text-gray-400">
-                {((rarityStats[rarity] || 0) / totalItems * 100).toFixed(1)}%
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* 最近物品列表 */}
-        <div className="space-y-2 max-h-48 overflow-y-auto">
-          {recentItems.slice(0, 5).map((item, index) => (
-            <div key={item.id} className="flex items-center justify-between p-2 bg-gray-900/20 rounded">
-              <div className="flex items-center space-x-3">
-                <span className="text-gray-400">#{item.tokenId}</span>
-                <span className={`text-sm font-medium ${RARITY_COLORS[item.rarity]}`}>
-                  {RARITY_LABELS[item.rarity]}
-                </span>
-                {type === 'hero' ? (
-                  <span className="text-xs text-gray-300">
-                    {ELEMENT_LABELS[item.element]} {CLASS_LABELS[item.class]} | {item.power}⚔️
-                  </span>
-                ) : (
-                  <span className="text-xs text-gray-300">
-                    {RELIC_CATEGORY_LABELS[item.category]} | {item.capacity}📦
-                  </span>
+        {/* 根據選擇的數量顯示對應的機率 */}
+        <div className="grid grid-cols-5 gap-2">
+          {(() => {
+            // 根據批量大小決定機率分布
+            let rates = { 1: 44, 2: 35, 3: 15, 4: 5, 5: 1 }; // 預設為50個批量
+            
+            if (selectedQuantity === 1) {
+              rates = { 1: 70, 2: 30, 3: 0, 4: 0, 5: 0 };
+            } else if (selectedQuantity === 5) {
+              rates = { 1: 60, 2: 40, 3: 0, 4: 0, 5: 0 };
+            } else if (selectedQuantity === 10) {
+              rates = { 1: 50, 2: 35, 3: 15, 4: 0, 5: 0 };
+            } else if (selectedQuantity === 20) {
+              rates = { 1: 45, 2: 35, 3: 15, 4: 5, 5: 0 };
+            }
+            
+            return [1, 2, 3, 4, 5].map(rarity => (
+              <div key={rarity} className="text-center p-2 bg-gray-900/30 rounded">
+                <div className={`text-sm font-bold ${RARITY_COLORS[rarity]}`}>
+                  {RARITY_LABELS[rarity]}
+                </div>
+                <div className="text-xs text-gray-400">
+                  {rates[rarity as keyof typeof rates]}%
+                </div>
+                {rates[rarity as keyof typeof rates] === 0 && (
+                  <div className="text-xs text-red-500">不可得</div>
                 )}
               </div>
-              <span className="text-xs text-gray-500">
-                {new Date(item.createdAt * 1000).toLocaleDateString()}
-              </span>
-            </div>
-          ))}
+            ));
+          })()}
         </div>
+        
+        {selectedQuantity < 50 && (
+          <p className="text-xs text-yellow-400 text-center mt-3">
+            💡 提示：批量越大，高稀有度機率越高
+          </p>
+        )}
       </div>
 
       {/* 行動按鈕 */}
@@ -252,10 +244,10 @@ export const MintPagePreview: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center space-y-4">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+        <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
           ⚒️ 鑄造工坊
         </h1>
-        <p className="text-lg text-gray-300">
+        <p className="text-base md:text-lg text-gray-300">
           召喚英雄與鑄造聖物，打造您的專屬戰鬥隊伍
         </p>
       </div>
@@ -507,6 +499,9 @@ export const MintPagePreview: React.FC = () => {
       <div className="mt-12">
         <FeaturedNftsGallery />
       </div>
+
+      {/* 底部備註 */}
+      <PreviewFooterNote />
     </div>
   );
 };

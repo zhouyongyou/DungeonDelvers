@@ -107,21 +107,21 @@ const RELIC_CATEGORY_LABELS: Record<string, string> = {
   consumable: '消耗品'
 };
 
-// 備用的樣本NFT數據（按稀有度排序，5★最高）
+// 備用的樣本NFT數據（每個稀有度一個，根據白皮書戰力範圍）
 const SAMPLE_NFTS = {
   heroes: [
-    { id: '1', tokenId: '5678', power: 3200, element: 'fire', class: 'warrior', rarity: 5 },
-    { id: '2', tokenId: '3456', power: 2800, element: 'water', class: 'mage', rarity: 4 },
-    { id: '3', tokenId: '7890', power: 2650, element: 'earth', class: 'archer', rarity: 4 },
-    { id: '4', tokenId: '2468', power: 2400, element: 'metal', class: 'priest', rarity: 4 },
-    { id: '5', tokenId: '9012', power: 2200, element: 'wood', class: 'warrior', rarity: 3 },
+    { id: '1', tokenId: '1001', power: 230, element: 'fire', class: 'warrior', rarity: 5 },  // 傳說: 200-255
+    { id: '2', tokenId: '1002', power: 175, element: 'water', class: 'mage', rarity: 4 },    // 史詩: 150-200
+    { id: '3', tokenId: '1003', power: 125, element: 'earth', class: 'archer', rarity: 3 },  // 稀有: 100-150
+    { id: '4', tokenId: '1004', power: 75, element: 'metal', class: 'priest', rarity: 2 },   // 罕見: 50-100
+    { id: '5', tokenId: '1005', power: 35, element: 'wood', class: 'warrior', rarity: 1 },   // 普通: 15-50
   ],
   relics: [
-    { id: '1', tokenId: '1111', capacity: 250, category: 'weapon', rarity: 5 },
-    { id: '2', tokenId: '2222', capacity: 220, category: 'armor', rarity: 4 },
-    { id: '3', tokenId: '3333', capacity: 200, category: 'accessory', rarity: 4 },
-    { id: '4', tokenId: '4444', capacity: 180, category: 'weapon', rarity: 3 },
-    { id: '5', tokenId: '5555', capacity: 170, category: 'armor', rarity: 3 },
+    { id: '1', tokenId: '2001', capacity: 5, category: 'weapon', rarity: 5 },
+    { id: '2', tokenId: '2002', capacity: 4, category: 'armor', rarity: 4 },
+    { id: '3', tokenId: '2003', capacity: 3, category: 'accessory', rarity: 3 },
+    { id: '4', tokenId: '2004', capacity: 2, category: 'weapon', rarity: 2 },
+    { id: '5', tokenId: '2005', capacity: 1, category: 'armor', rarity: 1 },
   ]
 };
 
@@ -135,10 +135,17 @@ const NftCard: React.FC<NftCardProps> = ({ nft, type }) => {
   
   // 生成NFT圖片URL
   const getImageUrl = () => {
-    // 直接使用SVG生成器確保圖片正常顯示
-    return type === 'hero' 
-      ? `data:image/svg+xml,${encodeURIComponent(generateHeroSVG(nft))}`
-      : `data:image/svg+xml,${encodeURIComponent(generateRelicSVG(nft))}`;
+    if (imageError) {
+      // 使用SVG生成器作為後備
+      return type === 'hero' 
+        ? `data:image/svg+xml,${encodeURIComponent(generateHeroSVG(nft))}`
+        : `data:image/svg+xml,${encodeURIComponent(generateRelicSVG(nft))}`;
+    }
+    
+    // 嘗試使用PNG圖片
+    return type === 'hero'
+      ? `https://dungeondelvers.xyz/images/hero/hero-${nft.rarity}.png`
+      : `https://dungeondelvers.xyz/images/relic/relic-${nft.rarity}.png`;
   };
 
   // 簡化的SVG生成函數
@@ -161,13 +168,10 @@ const NftCard: React.FC<NftCardProps> = ({ nft, type }) => {
         </defs>
         <rect width="400" height="400" fill="url(#bg)"/>
         <circle cx="200" cy="180" r="60" fill="${colors[hero.element as keyof typeof colors]}" opacity="0.8"/>
-        <text x="200" y="320" text-anchor="middle" fill="white" font-size="16" font-family="Arial">
-          ${ELEMENT_LABELS[hero.element]} ${CLASS_LABELS[hero.class]}
-        </text>
-        <text x="200" y="340" text-anchor="middle" fill="#fbbf24" font-size="14" font-family="Arial">
+        <text x="200" y="330" text-anchor="middle" fill="#fbbf24" font-size="18" font-family="Arial">
           ⚔️ ${hero.power}
         </text>
-        <text x="200" y="360" text-anchor="middle" fill="#a855f7" font-size="12" font-family="Arial">
+        <text x="200" y="360" text-anchor="middle" fill="#a855f7" font-size="14" font-family="Arial">
           ${RARITY_LABELS[hero.rarity]} (${hero.rarity}★)
         </text>
       </svg>
@@ -192,13 +196,10 @@ const NftCard: React.FC<NftCardProps> = ({ nft, type }) => {
         </defs>
         <rect width="400" height="400" fill="url(#bg)"/>
         <rect x="150" y="150" width="100" height="100" fill="${colors[relic.category as keyof typeof colors]}" opacity="0.8" rx="10"/>
-        <text x="200" y="320" text-anchor="middle" fill="white" font-size="16" font-family="Arial">
-          ${RELIC_CATEGORY_LABELS[relic.category]}
-        </text>
-        <text x="200" y="340" text-anchor="middle" fill="#3b82f6" font-size="14" font-family="Arial">
+        <text x="200" y="330" text-anchor="middle" fill="#3b82f6" font-size="18" font-family="Arial">
           📦 ${relic.capacity}
         </text>
-        <text x="200" y="360" text-anchor="middle" fill="#a855f7" font-size="12" font-family="Arial">
+        <text x="200" y="360" text-anchor="middle" fill="#a855f7" font-size="14" font-family="Arial">
           ${RARITY_LABELS[relic.rarity]} (${relic.rarity}★)
         </text>
       </svg>
@@ -217,24 +218,14 @@ const NftCard: React.FC<NftCardProps> = ({ nft, type }) => {
       </div>
       
       <div className="text-center space-y-1">
-        <div className="text-sm font-medium text-white">
-          #{nft.tokenId}
-        </div>
-        
         {type === 'hero' ? (
           <div className="space-y-1">
-            <div className="text-xs text-gray-300">
-              {ELEMENT_LABELS[nft.element]} {CLASS_LABELS[nft.class]}
-            </div>
             <div className="text-xs text-orange-400">
               ⚔️ {nft.power}
             </div>
           </div>
         ) : (
           <div className="space-y-1">
-            <div className="text-xs text-gray-300">
-              {RELIC_CATEGORY_LABELS[nft.category]}
-            </div>
             <div className="text-xs text-blue-400">
               📦 {nft.capacity}
             </div>
@@ -263,13 +254,33 @@ export const FeaturedNftsGallery: React.FC = () => {
   });
 
   // 使用真實數據或樣本數據，並按稀有度排序
-  const heroes = (featuredData?.featuredHeroes || SAMPLE_NFTS.heroes)
-    .sort((a: any, b: any) => b.rarity - a.rarity || b.power - a.power);
-  const relics = (featuredData?.featuredRelics || SAMPLE_NFTS.relics)
-    .sort((a: any, b: any) => b.rarity - a.rarity || b.capacity - a.capacity);
+  let heroes = featuredData?.featuredHeroes || SAMPLE_NFTS.heroes;
+  let relics = featuredData?.featuredRelics || SAMPLE_NFTS.relics;
   
-  const displayHeroes = showAll ? heroes : heroes.slice(0, 5);
-  const displayRelics = showAll ? relics : relics.slice(0, 5);
+  // 如果是樣本數據，直接使用（已經按稀有度排序）
+  // 如果是真實數據，去重並每個稀有度只取一個
+  if (featuredData?.featuredHeroes) {
+    const heroMap = new Map<number, any>();
+    heroes.forEach((hero: any) => {
+      if (!heroMap.has(hero.rarity)) {
+        heroMap.set(hero.rarity, hero);
+      }
+    });
+    heroes = Array.from(heroMap.values()).sort((a, b) => b.rarity - a.rarity);
+  }
+  
+  if (featuredData?.featuredRelics) {
+    const relicMap = new Map<number, any>();
+    relics.forEach((relic: any) => {
+      if (!relicMap.has(relic.rarity)) {
+        relicMap.set(relic.rarity, relic);
+      }
+    });
+    relics = Array.from(relicMap.values()).sort((a, b) => b.rarity - a.rarity);
+  }
+  
+  const displayHeroes = heroes;
+  const displayRelics = relics;
 
   if (isLoading) {
     return (
@@ -286,10 +297,10 @@ export const FeaturedNftsGallery: React.FC = () => {
     <div className="space-y-8">
       {/* Section Header */}
       <div className="text-center space-y-4">
-        <h3 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+        <h3 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
           🌟 精選NFT展示
         </h3>
-        <p className="text-gray-300 max-w-2xl mx-auto">
+        <p className="text-sm md:text-base text-gray-300 max-w-2xl mx-auto px-4">
           探索其他玩家鑄造的傑作，這些高稀有度的NFT展現了遊戲的藝術美感與強大力量
         </p>
       </div>
@@ -301,7 +312,7 @@ export const FeaturedNftsGallery: React.FC = () => {
             🦸 傳奇英雄
           </h4>
           <span className="text-sm text-gray-400">
-            戰力 {Math.min(...heroes.map(h => h.power))} - {Math.max(...heroes.map(h => h.power))}
+            各稀有度精選展示
           </span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -318,7 +329,7 @@ export const FeaturedNftsGallery: React.FC = () => {
             🔮 神秘聖物
           </h4>
           <span className="text-sm text-gray-400">
-            容量 {Math.min(...relics.map(r => r.capacity))} - {Math.max(...relics.map(r => r.capacity))}
+            各稀有度精選展示
           </span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -328,17 +339,6 @@ export const FeaturedNftsGallery: React.FC = () => {
         </div>
       </div>
 
-      {/* Show More Button */}
-      {!showAll && (heroes.length > 5 || relics.length > 5) && (
-        <div className="text-center">
-          <button
-            onClick={() => setShowAll(true)}
-            className="px-6 py-2 bg-gradient-to-r from-indigo-600/80 to-purple-600/80 hover:from-indigo-600 hover:to-purple-600 rounded-lg font-medium text-white transition-all"
-          >
-            查看更多精選NFT
-          </button>
-        </div>
-      )}
 
       {/* Footer Note */}
       <div className="text-center p-4 bg-gradient-to-r from-gray-900/50 to-gray-800/50 rounded-lg border border-gray-700">

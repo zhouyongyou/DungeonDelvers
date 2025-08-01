@@ -234,7 +234,7 @@ const VipPageContent: React.FC = () => {
                 requirements={[
                     "持有 SoulShard (SOUL) 代幣",
                     "最低質押量：1,000 SOUL",
-                    "質押期間：最少 30 天",
+                    "贖回冷卻期：1 天",
                     "維持最低餘額以保持 VIP 狀態"
                 ]}
                 benefits={[

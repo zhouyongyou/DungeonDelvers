@@ -152,6 +152,9 @@ function App() {
     // 使用 history.pushState 來改變 URL 而不重新整理頁面
     window.history.pushState({}, '', newUrl);
     setActivePage(page);
+    
+    // 滾動到頁面頂部，提供更好的體驗
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const renderPage = () => {
