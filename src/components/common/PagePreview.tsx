@@ -108,12 +108,14 @@ export const PagePreview: React.FC<PagePreviewProps> = ({
         <p className="text-gray-300 max-w-2xl mx-auto">
           連接您的錢包即可體驗完整功能，開始您的 DungeonDelvers 冒險之旅
         </p>
-        <ActionButton
-          onClick={handleConnectWallet}
-          className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 px-8 py-3 text-lg font-semibold"
-        >
-          🔗 連接錢包開始體驗
-        </ActionButton>
+        <div className="flex justify-center">
+          <ActionButton
+            onClick={handleConnectWallet}
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 px-8 py-3 text-lg font-semibold"
+          >
+            🔗 連接錢包開始體驗
+          </ActionButton>
+        </div>
       </div>
     </div>
   );

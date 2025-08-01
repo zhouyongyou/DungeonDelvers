@@ -70,10 +70,10 @@ const RARITY_COLORS: Record<number, string> = {
 
 const RARITY_LABELS: Record<number, string> = {
   1: '普通',
-  2: '稀有',
-  3: '史詩',
-  4: '傳說',
-  5: '神話',
+  2: '罕見',
+  3: '稀有',
+  4: '史詩',
+  5: '傳說',
 };
 
 const ELEMENT_LABELS: Record<string, string> = {
@@ -211,19 +211,21 @@ const MintPreviewCard: React.FC<MintPreviewCardProps> = ({ type, recentItems }) 
       </div>
 
       {/* 行動按鈕 */}
-      <ActionButton
-        onClick={() => {
-          const connectButton = document.querySelector('[data-testid="rk-connect-button"]') as HTMLButtonElement;
-          if (connectButton) {
-            connectButton.click();
-          } else {
-            alert('請點擊右上角的「連接錢包」按鈕');
-          }
-        }}
-        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 py-3 font-semibold"
-      >
-        🔗 連接錢包開始{type === 'hero' ? '召喚' : '鑄造'}
-      </ActionButton>
+      <div className="flex justify-center">
+        <ActionButton
+          onClick={() => {
+            const connectButton = document.querySelector('[data-testid="rk-connect-button"]') as HTMLButtonElement;
+            if (connectButton) {
+              connectButton.click();
+            } else {
+              alert('請點擊右上角的「連接錢包」按鈕');
+            }
+          }}
+          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 py-3 font-semibold"
+        >
+          🔗 連接錢包開始{type === 'hero' ? '召喚' : '鑄造'}
+        </ActionButton>
+      </div>
     </div>
   );
 };
@@ -284,17 +286,10 @@ export const MintPagePreview: React.FC = () => {
       {/* Content based on selected tab */}
       {selectedTab === 'overview' && (
         <div className="space-y-6">
-          {mintData?.recentHeroes && mintData?.recentRelics ? (
-            <div className="grid md:grid-cols-2 gap-6">
-              <MintPreviewCard type="hero" recentItems={mintData.recentHeroes} />
-              <MintPreviewCard type="relic" recentItems={mintData.recentRelics} />
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">⚒️</div>
-              <p className="text-gray-400">正在載入鑄造數據...</p>
-            </div>
-          )}
+          <div className="grid md:grid-cols-2 gap-6">
+            <MintPreviewCard type="hero" recentItems={mintData?.recentHeroes || []} />
+            <MintPreviewCard type="relic" recentItems={mintData?.recentRelics || []} />
+          </div>
         </div>
       )}
 
@@ -353,11 +348,11 @@ export const MintPagePreview: React.FC = () => {
             <h4 className="text-lg font-semibold text-white mb-4">📊 稀有度機率分布</h4>
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {[
-                { rarity: 1, label: '普通', rate: '60%', color: 'text-gray-400' },
-                { rarity: 2, label: '稀有', rate: '25%', color: 'text-green-400' },
-                { rarity: 3, label: '史詩', rate: '10%', color: 'text-blue-400' },
-                { rarity: 4, label: '傳說', rate: '4%', color: 'text-purple-400' },
-                { rarity: 5, label: '神話', rate: '1%', color: 'text-orange-400' },
+                { rarity: 1, label: '普通', rate: '44%', color: 'text-gray-400' },
+                { rarity: 2, label: '罕見', rate: '35%', color: 'text-green-400' },
+                { rarity: 3, label: '稀有', rate: '15%', color: 'text-blue-400' },
+                { rarity: 4, label: '史詩', rate: '5%', color: 'text-purple-400' },
+                { rarity: 5, label: '傳說', rate: '1%', color: 'text-orange-400' },
               ].map(item => (
                 <div key={item.rarity} className="text-center p-3 bg-gray-900/30 rounded">
                   <div className={`text-lg font-bold ${item.color}`}>{item.label}</div>
@@ -463,19 +458,19 @@ export const MintPagePreview: React.FC = () => {
               <ul className="space-y-3 text-gray-300">
                 <li className="flex items-start">
                   <span className="text-blue-400 mr-2">•</span>
-                  <span><strong>混沌深淵挑戰者</strong>：隊伍戰力 4500+，日收益 $50+</span>
+                  <span><strong>深淵挑戰者</strong>：隊伍戰力 3000+，日收益 $200+</span>
                 </li>
                 <li className="flex items-start">
                   <span className="text-blue-400 mr-2">•</span>
-                  <span><strong>傳說裝備收藏家</strong>：擁有 5★ 英雄 + 聖物套裝</span>
+                  <span><strong>傳說收藏家</strong>：擁有多個 4-5★ 英雄和聖物</span>
                 </li>
                 <li className="flex items-start">
                   <span className="text-blue-400 mr-2">•</span>
-                  <span><strong>高效率農夫</strong>：多隊並行，穩定產出</span>
+                  <span><strong>效率專家</strong>：多隊伍並行，持續穩定產出</span>
                 </li>
                 <li className="flex items-start">
                   <span className="text-blue-400 mr-2">•</span>
-                  <span><strong>市場交易專家</strong>：低買高賣，資產增值</span>
+                  <span><strong>市場達人</strong>：掌握交易時機，資產穩定增值</span>
                 </li>
               </ul>
             </div>
@@ -491,19 +486,21 @@ export const MintPagePreview: React.FC = () => {
         <p className="text-gray-300 max-w-2xl mx-auto">
           連接錢包即可開始召喚英雄和鑄造聖物，打造屬於您的專屬戰鬥隊伍
         </p>
-        <ActionButton
-          onClick={() => {
-            const connectButton = document.querySelector('[data-testid="rk-connect-button"]') as HTMLButtonElement;
-            if (connectButton) {
-              connectButton.click();
-            } else {
-              alert('請點擊右上角的「連接錢包」按鈕');
-            }
-          }}
-          className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 px-8 py-3 text-lg font-semibold"
-        >
-          🔗 連接錢包開始鑄造
-        </ActionButton>
+        <div className="flex justify-center">
+          <ActionButton
+            onClick={() => {
+              const connectButton = document.querySelector('[data-testid="rk-connect-button"]') as HTMLButtonElement;
+              if (connectButton) {
+                connectButton.click();
+              } else {
+                alert('請點擊右上角的「連接錢包」按鈕');
+              }
+            }}
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 px-8 py-3 text-lg font-semibold"
+          >
+            🔗 連接錢包開始鑄造
+          </ActionButton>
+        </div>
       </div>
 
       {/* 精選NFT展示 */}

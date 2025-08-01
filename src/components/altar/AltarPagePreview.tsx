@@ -56,10 +56,10 @@ const RARITY_COLORS: Record<number, string> = {
 
 const RARITY_LABELS: Record<number, string> = {
   1: '普通',
-  2: '稀有',
-  3: '史詩',
-  4: '傳說',
-  5: '神話',
+  2: '罕見',
+  3: '稀有',
+  4: '史詩',
+  5: '傳說',
 };
 
 const NFT_TYPE_LABELS: Record<string, string> = {
@@ -80,20 +80,20 @@ const UpgradeSimulator: React.FC<UpgradeSimulatorProps> = ({ fromRarity, onRarit
     cost: number;
   } | null>(null);
 
-  // 升星成功率（模擬數據）
+  // 升星成功率（實際遊戲數據）
   const successRates: Record<number, number> = {
-    1: 85, // 1星升2星
-    2: 70, // 2星升3星  
-    3: 50, // 3星升4星
-    4: 25, // 4星升5星
+    1: 85, // 1星升2星：85%
+    2: 75, // 2星升3星：75%
+    3: 45, // 3星升4星：45%
+    4: 25, // 4星升5星：25%
   };
 
-  // 升星成本（模擬數據）
+  // 所需材料數量（實際遊戲設計）
   const costs: Record<number, number> = {
-    1: 10,
-    2: 25, 
-    3: 50,
-    4: 100,
+    1: 5,  // 1星升2星需要5個材料
+    2: 4,  // 2星升3星需要4個材料
+    3: 3,  // 3星升4星需要3個材料
+    4: 2,  // 4星升5星需要2個材料
   };
 
   const handleSimulate = async () => {
@@ -351,8 +351,8 @@ export const AltarPagePreview: React.FC = () => {
                 <div className="space-y-3">
                   {[
                     { from: 1, to: 2, rate: '85%', color: 'text-green-400' },
-                    { from: 2, to: 3, rate: '70%', color: 'text-yellow-400' },
-                    { from: 3, to: 4, rate: '50%', color: 'text-orange-400' },
+                    { from: 2, to: 3, rate: '75%', color: 'text-yellow-400' },
+                    { from: 3, to: 4, rate: '45%', color: 'text-orange-400' },
                     { from: 4, to: 5, rate: '25%', color: 'text-red-400' },
                   ].map(item => (
                     <div key={item.from} className="flex justify-between items-center p-2 bg-gray-900/30 rounded">
@@ -422,69 +422,69 @@ export const AltarPagePreview: React.FC = () => {
 
         {selectedTab === 'stats' && (
           <div className="space-y-6">
-            <div className="text-center">
-              <h3 className="text-xl font-semibold text-white mb-2">📊 升星統計數據</h3>
-              <p className="text-gray-400">查看最近的升星活動和成功率統計</p>
+            <div className="text-center space-y-4">
+              <div className="text-6xl mb-4">📊</div>
+              <h3 className="text-xl font-semibold text-white mb-2">升星統計數據</h3>
+              <p className="text-gray-400 max-w-2xl mx-auto">
+                連接錢包後可查看您的升星歷史記錄、成功率統計和最佳升星時機分析
+              </p>
             </div>
 
-            {/* 統計卡片 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* 功能預覽 */}
+            <div className="grid md:grid-cols-3 gap-6">
               <div className="bg-gradient-to-br from-blue-900/30 to-blue-800/20 rounded-lg p-6 border border-blue-500/20">
-                <div className="text-3xl font-bold text-blue-400">{stats.totalAttempts}</div>
-                <div className="text-sm text-gray-400">最近嘗試次數</div>
+                <div className="text-3xl mb-3">📈</div>
+                <h4 className="text-lg font-semibold text-blue-400 mb-2">個人統計</h4>
+                <p className="text-gray-400 text-sm">查看您的升星歷史、成功率和投入的材料統計</p>
               </div>
               <div className="bg-gradient-to-br from-green-900/30 to-green-800/20 rounded-lg p-6 border border-green-500/20">
-                <div className="text-3xl font-bold text-green-400">{stats.successRate.toFixed(1)}%</div>
-                <div className="text-sm text-gray-400">整體成功率</div>
+                <div className="text-3xl mb-3">🏆</div>
+                <h4 className="text-lg font-semibold text-green-400 mb-2">成就系統</h4>
+                <p className="text-gray-400 text-sm">解鎖升星成就，獲得特殊稱號和獎勵</p>
               </div>
               <div className="bg-gradient-to-br from-purple-900/30 to-purple-800/20 rounded-lg p-6 border border-purple-500/20">
-                <div className="text-3xl font-bold text-purple-400">{stats.avgRarity.toFixed(1)}★</div>
-                <div className="text-sm text-gray-400">平均起始稀有度</div>
+                <div className="text-3xl mb-3">🕰️</div>
+                <h4 className="text-lg font-semibold text-purple-400 mb-2">最佳時機</h4>
+                <p className="text-gray-400 text-sm">基於市場數據和成功率的升星時機建議</p>
               </div>
             </div>
 
-            {/* 最近升星記錄 */}
-            {altarData?.recentUpgrades && altarData.recentUpgrades.length > 0 && (
-              <div className="bg-gray-800/50 rounded-lg p-6">
-                <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-                  📈 最近升星記錄
-                </h4>
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {altarData.recentUpgrades.slice(0, 10).map((upgrade: any, index: number) => (
-                    <div 
-                      key={upgrade.id} 
-                      className={`flex items-center justify-between p-3 rounded-lg border ${
-                        upgrade.success 
-                          ? 'bg-green-900/20 border-green-500/30'
-                          : 'bg-red-900/20 border-red-500/30'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-3 h-3 rounded-full ${
-                          upgrade.success ? 'bg-green-400' : 'bg-red-400'
-                        }`}></div>
-                        <span className="text-gray-300">
-                          {NFT_TYPE_LABELS[upgrade.nftType]} #{upgrade.tokenId}
-                        </span>
-                        <span className="text-sm text-gray-400">
-                          {upgrade.fromRarity}★ → {upgrade.success ? upgrade.toRarity : upgrade.fromRarity}★
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <div className={`text-sm font-medium ${
-                          upgrade.success ? 'text-green-400' : 'text-red-400'
-                        }`}>
-                          {upgrade.success ? '成功' : '失敗'}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {new Date(upgrade.timestamp * 1000).toLocaleDateString()}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            {/* 精選功能 */}
+            <div className="bg-gradient-to-r from-indigo-900/30 to-purple-900/30 rounded-lg p-6 border border-indigo-500/20">
+              <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+                ✨ 連接錢包後解鎖的功能
+              </h4>
+              <div className="grid md:grid-cols-2 gap-4">
+                <ul className="space-y-2 text-gray-300">
+                  <li className="flex items-start">
+                    <span className="text-indigo-400 mr-2">•</span>
+                    <span>實時升星成功率追蹤</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-indigo-400 mr-2">•</span>
+                    <span>最近 50 次升星記錄</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-indigo-400 mr-2">•</span>
+                    <span>材料消耗和收益分析</span>
+                  </li>
+                </ul>
+                <ul className="space-y-2 text-gray-300">
+                  <li className="flex items-start">
+                    <span className="text-purple-400 mr-2">•</span>
+                    <span>VIP 加成和特殊時間提醒</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-purple-400 mr-2">•</span>
+                    <span>智能升星策略建議</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-purple-400 mr-2">•</span>
+                    <span>成本效益計算器</span>
+                  </li>
+                </ul>
               </div>
-            )}
+            </div>
           </div>
         )}
 
@@ -496,19 +496,21 @@ export const AltarPagePreview: React.FC = () => {
           <p className="text-gray-300 max-w-2xl mx-auto">
             連接錢包即可使用升星祭壇，將您的 NFT 提升至更高稀有度，解鎖強大力量
           </p>
-          <ActionButton
-            onClick={() => {
-              const connectButton = document.querySelector('[data-testid="rk-connect-button"]') as HTMLButtonElement;
-              if (connectButton) {
-                connectButton.click();
-              } else {
-                alert('請點擊右上角的「連接錢包」按鈕');
-              }
-            }}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 px-8 py-3 text-lg font-semibold"
-          >
-            🔗 連接錢包開始升星
-          </ActionButton>
+          <div className="flex justify-center">
+            <ActionButton
+              onClick={() => {
+                const connectButton = document.querySelector('[data-testid="rk-connect-button"]') as HTMLButtonElement;
+                if (connectButton) {
+                  connectButton.click();
+                } else {
+                  alert('請點擊右上角的「連接錢包」按鈕');
+                }
+              }}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 px-8 py-3 text-lg font-semibold"
+            >
+              🔗 連接錢包開始升星
+            </ActionButton>
+          </div>
         </div>
       </div>
     </section>

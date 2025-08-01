@@ -155,8 +155,9 @@ function App() {
   };
 
   const renderPage = () => {
-    // 移除 dashboard 從需要錢包的頁面清單，讓它可以顯示項目介紹
-    const pageRequiresWallet: Page[] = ['mint', 'party', 'dungeon', 'admin', 'altar', 'profile', 'vip', 'myAssets' /* , 'codex' */];
+    // 移除已添加預覽模式的頁面，讓它們可以顯示預覽內容
+    // 只有真正需要錢包才能運作的頁面才放在這裡
+    const pageRequiresWallet: Page[] = ['admin', 'profile' /* , 'codex' */];
     
     // 如果頁面需要錢包但尚未連接，則顯示提示
     if (!isConnected && pageRequiresWallet.includes(activePage)) {

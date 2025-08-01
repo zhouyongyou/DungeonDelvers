@@ -17,6 +17,7 @@ import { VipBenefitsGuide } from '../components/vip/VipBenefitsGuide';
 import { WithdrawalTaxCalculator } from '../components/vip/WithdrawalTaxCalculator';
 import { VipLevelConverter } from '../components/vip/VipLevelConverter';
 import { LazyImage } from '../components/ui/LazyImage';
+import { PagePreview } from '../components/common/PagePreview';
 
 // VIP 福利摺疊組件
 const VipBenefitsCollapsible: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
@@ -189,7 +190,65 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
 };
 
 const VipPageContent: React.FC = () => {
-    const { chainId } = useAccount();
+    const { chainId, address } = useAccount();
+    
+    // 如果未連接錢包，顯示預覽模式
+    if (!address) {
+        return (
+            <PagePreview
+                title="👑 VIP 會員"
+                description="質押 SoulShard 代幣成為 VIP，享受專屬福利和特權"
+                icon="👑"
+                features={[
+                    {
+                        title: "升星加成",
+                        description: "VIP 用戶享有升星成功率加成",
+                        icon: "⭐"
+                    },
+                    {
+                        title: "手續費減免",
+                        description: "交易手續費享有高達 50% 的減免",
+                        icon: "💰"
+                    },
+                    {
+                        title: "專屬徽章",
+                        description: "獲得 VIP NFT 徽章展示您的身份",
+                        icon: "🏅"
+                    },
+                    {
+                        title: "提前參與",
+                        description: "優先參與新功能測試和限時活動",
+                        icon: "🚀"
+                    },
+                    {
+                        title: "特殊獎勵",
+                        description: "額外的探險獎勵和稀有道具掉落",
+                        icon: "🎁"
+                    },
+                    {
+                        title: "社群特權",
+                        description: "VIP 專屬頻道和客服支持",
+                        icon: "💬"
+                    }
+                ]}
+                requirements={[
+                    "持有 SoulShard (SOUL) 代幣",
+                    "最低質押量：1,000 SOUL",
+                    "質押期間：最少 30 天",
+                    "維持最低餘額以保持 VIP 狀態"
+                ]}
+                benefits={[
+                    "升星成功率提升 5-15%",
+                    "交易手續費減免 25-50%", 
+                    "VIP 專屬 NFT 徽章",
+                    "優先參與新功能測試",
+                    "專屬客服和社群支持"
+                ]}
+                gradient="from-yellow-900/20 to-orange-900/20"
+            />
+        );
+    }
+    
     const publicClient = usePublicClient();
     const { showToast } = useAppToast();
     const { isAdmin } = useAdminAccess();

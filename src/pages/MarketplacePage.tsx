@@ -28,7 +28,7 @@ import { MarketplaceNotifications } from '../components/marketplace/MarketplaceN
 // import { BatchOperations } from '../components/marketplace/BatchOperations'; // 已整合到 CreateListingModalV2
 import { MakeOfferModal } from '../components/marketplace/MakeOfferModal';
 import { OffersPanel } from '../components/marketplace/OffersPanel';
-import { MarketplacePreview } from '../components/marketplace/MarketplacePreview';
+import { MarketplacePreview } from '../components/marketplace/MarketplacePreviewNoData';
 // import { NftDisplayToggleMini } from '../components/ui/NftDisplayToggle'; // 已移除，使用 PNG 圖片
 
 // =================================================================
@@ -978,7 +978,7 @@ const MarketplacePage: React.FC = () => {
                             </p>
                         </div>
                     </>
-                )}
+                ))}
                 
                 {/* Pagination */}
                 {filteredListings.length > pageSize && (
@@ -1001,7 +1001,6 @@ const MarketplacePage: React.FC = () => {
                             下一頁
                         </ActionButton>
                     </div>
-                )}
                 )}
                 
                 {/* Create Listing Tab */}

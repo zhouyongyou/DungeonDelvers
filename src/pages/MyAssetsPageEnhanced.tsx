@@ -25,6 +25,7 @@ import { THE_GRAPH_API_URL } from '../config/graphConfig';
 import { graphQLRateLimiter } from '../utils/rateLimiter';
 import { QuickActions, usePageQuickActions, PageActionBar } from '../components/ui/QuickActions';
 import { NftDisplayToggleMini } from '../components/ui/NftDisplayToggle';
+import { PagePreview } from '../components/common/PagePreview';
 
 // Import TeamBuilder from components
 import { TeamBuilder } from '../components/TeamBuilder';
@@ -68,6 +69,62 @@ const sortOptions: Record<string, SortOption[]> = {
 
 const MyAssetsPageEnhanced: React.FC = () => {
     const { address, chainId } = useAccount();
+    
+    // 如果未連接錢包，顯示預覽模式
+    if (!address) {
+        return (
+            <PagePreview
+                title="🎒 我的資產"
+                description="管理您的英雄、聖物和隊伍，組建最強戰鬥組合"
+                icon="🎒"
+                features={[
+                    {
+                        title: "英雄收藏",
+                        description: "查看和管理您擁有的所有英雄NFT",
+                        icon: "🦸"
+                    },
+                    {
+                        title: "聖物庫存",
+                        description: "管理聖物裝備，提升隊伍戰鬥力",
+                        icon: "🔮"
+                    },
+                    {
+                        title: "隊伍組建",
+                        description: "創建和編輯探險隊伍配置",
+                        icon: "👥"
+                    },
+                    {
+                        title: "智能排序",
+                        description: "按戰力、稀有度等條件排序資產",
+                        icon: "📊"
+                    },
+                    {
+                        title: "快速操作",
+                        description: "批量管理、轉移和交易您的NFT",
+                        icon: "⚡"
+                    },
+                    {
+                        title: "價值評估",
+                        description: "查看資產當前市場價值和趨勢",
+                        icon: "💰"
+                    }
+                ]}
+                requirements={[
+                    "擁有至少 1 個 NFT (英雄或聖物)",
+                    "錢包連接到 BSC 主網",
+                    "足夠的 Gas 費用進行交易"
+                ]}
+                benefits={[
+                    "完整的資產管理功能",
+                    "智能隊伍組建建議",
+                    "實時市場價值追蹤",
+                    "一鍵批量操作"
+                ]}
+                gradient="from-purple-900/20 to-blue-900/20"
+            />
+        );
+    }
+    
     const [activeTab, setActiveTab] = useState<'myHeroes' | 'myRelics' | 'myParties' | 'teamBuilder'>('myHeroes');
     const { showToast } = useAppToast();
     const queryClient = useQueryClient();

@@ -79,10 +79,10 @@ const RARITY_COLORS: Record<number, string> = {
 
 const RARITY_LABELS: Record<number, string> = {
   1: '普通',
-  2: '稀有',
-  3: '史詩',
-  4: '傳說',
-  5: '神話',
+  2: '罕見',
+  3: '稀有',
+  4: '史詩',
+  5: '傳說',
 };
 
 const ELEMENT_LABELS: Record<string, string> = {
@@ -107,21 +107,21 @@ const RELIC_CATEGORY_LABELS: Record<string, string> = {
   consumable: '消耗品'
 };
 
-// 備用的樣本NFT數據（當GraphQL查詢失敗時使用）
+// 備用的樣本NFT數據（按稀有度排序，5★最高）
 const SAMPLE_NFTS = {
   heroes: [
-    { id: '1', tokenId: '1234', power: 2800, element: 'fire', class: 'warrior', rarity: 4 },
-    { id: '2', tokenId: '5678', power: 2650, element: 'water', class: 'mage', rarity: 5 },
-    { id: '3', tokenId: '9012', power: 2400, element: 'earth', class: 'archer', rarity: 3 },
-    { id: '4', tokenId: '3456', power: 2200, element: 'metal', class: 'priest', rarity: 4 },
-    { id: '5', tokenId: '7890', power: 2100, element: 'wood', class: 'warrior', rarity: 3 },
-    { id: '6', tokenId: '2468', power: 1950, element: 'fire', class: 'mage', rarity: 4 },
+    { id: '1', tokenId: '5678', power: 3200, element: 'fire', class: 'warrior', rarity: 5 },
+    { id: '2', tokenId: '3456', power: 2800, element: 'water', class: 'mage', rarity: 4 },
+    { id: '3', tokenId: '7890', power: 2650, element: 'earth', class: 'archer', rarity: 4 },
+    { id: '4', tokenId: '2468', power: 2400, element: 'metal', class: 'priest', rarity: 4 },
+    { id: '5', tokenId: '9012', power: 2200, element: 'wood', class: 'warrior', rarity: 3 },
   ],
   relics: [
-    { id: '1', tokenId: '1111', capacity: 240, category: 'weapon', rarity: 5 },
+    { id: '1', tokenId: '1111', capacity: 250, category: 'weapon', rarity: 5 },
     { id: '2', tokenId: '2222', capacity: 220, category: 'armor', rarity: 4 },
     { id: '3', tokenId: '3333', capacity: 200, category: 'accessory', rarity: 4 },
-    { id: '4', tokenId: '4444', capacity: 180, category: 'consumable', rarity: 3 },
+    { id: '4', tokenId: '4444', capacity: 180, category: 'weapon', rarity: 3 },
+    { id: '5', tokenId: '5555', capacity: 170, category: 'armor', rarity: 3 },
   ]
 };
 
@@ -135,17 +135,10 @@ const NftCard: React.FC<NftCardProps> = ({ nft, type }) => {
   
   // 生成NFT圖片URL
   const getImageUrl = () => {
-    if (imageError) {
-      // 使用SVG生成器作為後備
-      return type === 'hero' 
-        ? `data:image/svg+xml,${encodeURIComponent(generateHeroSVG(nft))}`
-        : `data:image/svg+xml,${encodeURIComponent(generateRelicSVG(nft))}`;
-    }
-    
-    // 嘗試使用PNG圖片
-    return type === 'hero'
-      ? `https://dungeondelvers.xyz/images/hero/hero-${nft.element}-${nft.class}-${nft.rarity}.png`
-      : `https://dungeondelvers.xyz/images/relic/relic-${nft.category}-${nft.rarity}.png`;
+    // 直接使用SVG生成器確保圖片正常顯示
+    return type === 'hero' 
+      ? `data:image/svg+xml,${encodeURIComponent(generateHeroSVG(nft))}`
+      : `data:image/svg+xml,${encodeURIComponent(generateRelicSVG(nft))}`;
   };
 
   // 簡化的SVG生成函數
@@ -269,12 +262,14 @@ export const FeaturedNftsGallery: React.FC = () => {
     retry: 1, // 只重試一次
   });
 
-  // 使用真實數據或樣本數據
-  const heroes = featuredData?.featuredHeroes || SAMPLE_NFTS.heroes;
-  const relics = featuredData?.featuredRelics || SAMPLE_NFTS.relics;
+  // 使用真實數據或樣本數據，並按稀有度排序
+  const heroes = (featuredData?.featuredHeroes || SAMPLE_NFTS.heroes)
+    .sort((a: any, b: any) => b.rarity - a.rarity || b.power - a.power);
+  const relics = (featuredData?.featuredRelics || SAMPLE_NFTS.relics)
+    .sort((a: any, b: any) => b.rarity - a.rarity || b.capacity - a.capacity);
   
-  const displayHeroes = showAll ? heroes : heroes.slice(0, 4);
-  const displayRelics = showAll ? relics : relics.slice(0, 2);
+  const displayHeroes = showAll ? heroes : heroes.slice(0, 5);
+  const displayRelics = showAll ? relics : relics.slice(0, 5);
 
   if (isLoading) {
     return (
@@ -309,7 +304,7 @@ export const FeaturedNftsGallery: React.FC = () => {
             戰力 {Math.min(...heroes.map(h => h.power))} - {Math.max(...heroes.map(h => h.power))}
           </span>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {displayHeroes.map((hero) => (
             <NftCard key={hero.id} nft={hero} type="hero" />
           ))}
@@ -326,7 +321,7 @@ export const FeaturedNftsGallery: React.FC = () => {
             容量 {Math.min(...relics.map(r => r.capacity))} - {Math.max(...relics.map(r => r.capacity))}
           </span>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {displayRelics.map((relic) => (
             <NftCard key={relic.id} nft={relic} type="relic" />
           ))}
@@ -334,7 +329,7 @@ export const FeaturedNftsGallery: React.FC = () => {
       </div>
 
       {/* Show More Button */}
-      {!showAll && (heroes.length > 4 || relics.length > 2) && (
+      {!showAll && (heroes.length > 5 || relics.length > 5) && (
         <div className="text-center">
           <button
             onClick={() => setShowAll(true)}
