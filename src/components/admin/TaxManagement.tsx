@@ -10,15 +10,30 @@ import { useContractTransaction } from '../../hooks/useContractTransaction';
 import { useSoulPrice } from '../../hooks/useSoulPrice';
 import { Icons } from '../ui/icons';
 import { bsc } from 'viem/chains';
+import { useQuery } from '@tanstack/react-query';
 
 interface TaxManagementProps {
   className?: string;
+}
+
+interface VirtualTaxRecord {
+  id: string;
+  amount: string;
+  timestamp: string;
+  transactionHash: string;
+}
+
+interface TaxStatistics {
+  totalVirtualTaxCollected: string;
+  totalTaxRecords: string;
+  lastUpdated: string;
 }
 
 export const TaxManagement: React.FC<TaxManagementProps> = ({ className = '' }) => {
   const { address } = useAccount();
   const { formatSoulToUsd } = useSoulPrice();
   const [showDetails, setShowDetails] = useState(false);
+  const [showTaxHistory, setShowTaxHistory] = useState(false);
   
   const playerVaultContract = getContractWithABI('PLAYERVAULT');
   
@@ -40,6 +55,65 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ className = '' }) 
     args: playerVaultContract?.address ? [playerVaultContract.address] : undefined,
     chainId: bsc.id,
     query: { enabled: !!playerVaultContract && !!soulShardContract }
+  });
+
+  // 查詢子圖稅收統計
+  const { data: taxStats, isLoading: isStatsLoading } = useQuery({
+    queryKey: ['taxStatistics'],
+    queryFn: async () => {
+      const query = `
+        query GetTaxStatistics {
+          taxStatistics(id: "global") {
+            totalVirtualTaxCollected
+            totalTaxRecords
+            lastUpdated
+          }
+        }
+      `;
+      
+      const response = await fetch('https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.4.0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      });
+      
+      const result = await response.json();
+      return result.data?.taxStatistics as TaxStatistics | null;
+    },
+    enabled: showTaxHistory,
+    refetchInterval: 30000
+  });
+
+  // 查詢最近的稅收記錄
+  const { data: taxRecords, isLoading: isRecordsLoading } = useQuery({
+    queryKey: ['virtualTaxRecords'],
+    queryFn: async () => {
+      const query = `
+        query GetVirtualTaxRecords {
+          virtualTaxRecords(
+            first: 10
+            orderBy: timestamp
+            orderDirection: desc
+          ) {
+            id
+            amount
+            timestamp
+            transactionHash
+          }
+        }
+      `;
+      
+      const response = await fetch('https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.4.0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      });
+      
+      const result = await response.json();
+      return result.data?.virtualTaxRecords as VirtualTaxRecord[] | [];
+    },
+    enabled: showTaxHistory,
+    refetchInterval: 30000
   });
 
   // 提取稅收交易
@@ -107,12 +181,20 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ className = '' }) 
           <Icons.CreditCard className="h-5 w-5 text-purple-400" />
           <h3 className="text-lg font-bold text-purple-300">稅收與收益管理</h3>
         </div>
-        <button
-          onClick={() => setShowDetails(!showDetails)}
-          className="text-purple-400 hover:text-purple-300 text-sm font-medium"
-        >
-          {showDetails ? '收起' : '詳情'} {showDetails ? '▲' : '▼'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowTaxHistory(!showTaxHistory)}
+            className="text-blue-400 hover:text-blue-300 text-sm font-medium px-2 py-1 rounded bg-blue-900/20"
+          >
+            {showTaxHistory ? '隱藏' : '稅收'} 明細
+          </button>
+          <button
+            onClick={() => setShowDetails(!showDetails)}
+            className="text-purple-400 hover:text-purple-300 text-sm font-medium"
+          >
+            {showDetails ? '收起' : '詳情'} {showDetails ? '▲' : '▼'}
+          </button>
+        </div>
       </div>
 
       {/* 餘額概覽 */}
@@ -189,6 +271,78 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ className = '' }) 
               💡 <strong>v4.0 新功能</strong>：稅收和佣金採用虛擬記帳系統，大幅降低 gas 費用。
               稅收會自動累積，可以批量提取以提高效率。
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* 稅收歷史記錄 */}
+      {showTaxHistory && (
+        <div className="mt-4 pt-4 border-t border-blue-600/30">
+          <div className="flex items-center gap-2 mb-3">
+            <Icons.BarChart className="h-4 w-4 text-blue-400" />
+            <h4 className="text-sm font-semibold text-blue-300">稅收記錄統計</h4>
+          </div>
+
+          {/* 統計數據 */}
+          {taxStats && (
+            <div className="grid grid-cols-3 gap-3 mb-4 text-xs">
+              <div className="text-center p-2 bg-blue-900/20 rounded">
+                <div className="text-gray-400">累計記錄</div>
+                <div className="text-blue-400 font-semibold">{taxStats.totalTaxRecords}</div>
+              </div>
+              <div className="text-center p-2 bg-blue-900/20 rounded">
+                <div className="text-gray-400">歷史總額</div>
+                <div className="text-blue-400 font-semibold">
+                  {parseFloat((BigInt(taxStats.totalVirtualTaxCollected) / BigInt(10**18)).toString()).toFixed(2)}
+                </div>
+              </div>
+              <div className="text-center p-2 bg-blue-900/20 rounded">
+                <div className="text-gray-400">最後更新</div>
+                <div className="text-blue-400 font-semibold">
+                  {new Date(parseInt(taxStats.lastUpdated) * 1000).toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 最近記錄 */}
+          <div className="space-y-2">
+            <div className="text-xs text-gray-400 mb-2">最近10筆稅收記錄：</div>
+            
+            {isRecordsLoading || isStatsLoading ? (
+              <div className="text-center py-4 text-gray-400">
+                <Icons.Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+                載入中...
+              </div>
+            ) : taxRecords && taxRecords.length > 0 ? (
+              <div className="max-h-40 overflow-y-auto space-y-1">
+                {taxRecords.map((record) => (
+                  <div key={record.id} className="flex justify-between items-center text-xs p-2 bg-gray-800/30 rounded">
+                    <div>
+                      <div className="text-white font-medium">
+                        {parseFloat((BigInt(record.amount) / BigInt(10**18)).toString()).toFixed(4)} SOUL
+                      </div>
+                      <div className="text-gray-400">
+                        {new Date(parseInt(record.timestamp) * 1000).toLocaleString()}
+                      </div>
+                    </div>
+                    <a 
+                      href={`https://bscscan.com/tx/${record.transactionHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300"
+                      title="查看交易"
+                    >
+                      <Icons.ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-gray-400">
+                暫無稅收記錄
+              </div>
+            )}
           </div>
         </div>
       )}
