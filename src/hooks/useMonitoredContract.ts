@@ -158,7 +158,7 @@ export function useMonitoredReadContracts<T = any>(
   }
   
   // 無條件調用 Hook，在最頂層，不在 try-catch 內
-  let result = useSafeReadContracts({
+  const result = useSafeReadContracts({
     ...optimizedConfig,
     query: {
       ...optimizedConfig.query,
@@ -295,9 +295,6 @@ export function useBatchOptimizer() {
       );
 
       return results;
-    } catch (error) {
-      throw error;
-    }
   }, []);
 
   return { executeBatch };
@@ -315,12 +312,8 @@ export function useOptimizedQuery<T>(
   } = {}
 ) {
   const executeQuery = useCallback(async (): Promise<T> => {
-    try {
-      const result = await queryFn();
-      return result;
-    } catch (error) {
-      throw error;
-    }
+    const result = await queryFn();
+    return result;
   }, [queryFn]);
 
   return { executeQuery };

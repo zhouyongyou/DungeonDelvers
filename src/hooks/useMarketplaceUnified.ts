@@ -125,17 +125,13 @@ export const useUnifiedCancelListing = () => {
         
         return {
             cancelListing: async (listingId: string) => {
-                try {
-                    const existingListings = getLocalListingsImpl();
-                    const updatedListings = existingListings.map(listing => 
-                        listing.id === listingId ? { ...listing, status: 'cancelled' as const } : listing
-                    );
-                    
-                    localStorage.setItem('marketplace_listings', JSON.stringify(updatedListings));
-                    window.dispatchEvent(new Event('marketplaceUpdate'));
-                } catch (error) {
-                    throw error;
-                }
+                const existingListings = getLocalListingsImpl();
+                const updatedListings = existingListings.map(listing => 
+                    listing.id === listingId ? { ...listing, status: 'cancelled' as const } : listing
+                );
+                
+                localStorage.setItem('marketplace_listings', JSON.stringify(updatedListings));
+                window.dispatchEvent(new Event('marketplaceUpdate'));
             },
             isCancelling: false
         };

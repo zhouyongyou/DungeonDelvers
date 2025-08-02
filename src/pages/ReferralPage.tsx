@@ -795,7 +795,7 @@ ${referralLink}
                                     }
                                 }
                             }}
-                            className="bg-blue-600 hover:bg-blue-700"
+                            className="bg-blue-600 hover:bg-blue-700 mx-auto"
                         >
                             連接錢包
                         </ActionButton>

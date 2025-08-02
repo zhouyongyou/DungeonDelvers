@@ -424,7 +424,7 @@ class RpcAnalytics {
     // 簡化版本：假設相同的請求在短時間內是緩存命中
     const timeWindow = 60000; // 1分鐘
     let cacheHits = 0;
-    let totalRequests = requests.length;
+    const totalRequests = requests.length;
 
     const requestMap = new Map<string, number>();
 

@@ -465,13 +465,9 @@ class AutoDebugDeploy {
   // ========== 輔助方法 ==========
   
   async runCommand(command: string, cwd: string): Promise<string> {
-    try {
-      const { stdout, stderr } = await execAsync(command, { cwd });
-      if (stderr) console.warn(chalk.yellow('Warning:'), stderr);
-      return stdout;
-    } catch (error) {
-      throw error;
-    }
+    const { stdout, stderr } = await execAsync(command, { cwd });
+    if (stderr) console.warn(chalk.yellow('Warning:'), stderr);
+    return stdout;
   }
 
   async getAllFiles(dir: string, extensions: string[]): Promise<string[]> {

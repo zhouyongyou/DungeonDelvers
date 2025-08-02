@@ -127,18 +127,23 @@ export class VipTester {
             if (vipResult.vipLevel === 0 || vipResult.vipLevel === undefined) {
 
                 if (vipResult.stakedAmount === 0n) {
-
+                    // No staked amount - user needs to stake to get VIP level
+                    console.log('No staked amount detected - user should stake to gain VIP level');
                 } else {
-
+                    // Has staked amount but no VIP level - potential issue
+                    console.warn('User has staked amount but no VIP level - potential contract issue');
                 }
             } else {
-
+                // User has VIP level - check if it matches staked amount
+                console.log(`User has VIP level ${vipResult.vipLevel}`);
             }
             
             if (vipResult.taxReduction === 0 || vipResult.taxReduction === undefined) {
-
+                // No tax reduction - expected for non-VIP users
+                console.log('No tax reduction detected');
             } else {
-
+                // Has tax reduction - VIP benefits are working
+                console.log(`Tax reduction active: ${vipResult.taxReduction}%`);
             }
             
             return {

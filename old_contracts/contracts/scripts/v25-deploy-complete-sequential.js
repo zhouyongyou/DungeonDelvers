@@ -305,7 +305,7 @@ ${colors.reset}`);
 
   getConstructorArgs(contractName) {
     switch (contractName) {
-      case 'Oracle_V22_Adaptive':
+      case 'Oracle_V22_Adaptive': {
         const soulShardAddress = this.contracts.SOULSHARD ? 
           this.contracts.SOULSHARD.address : 
           DEPLOYMENT_CONFIG.existingContracts.SOULSHARD;
@@ -319,6 +319,7 @@ ${colors.reset}`);
           soulShardAddress,
           DEPLOYMENT_CONFIG.externalAddresses.USDT
         ];
+      }
       
       case 'Test_SoulShard':
         return [];

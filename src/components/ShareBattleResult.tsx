@@ -200,17 +200,14 @@ ${referralLink ? `來和我一起探索吧：${referralLink}` : ''}
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                <div className="bg-gray-700 rounded p-3 text-center">
-                                    <p className="text-xs text-gray-300 mb-2">
-                                        生成精美的戰績圖片
-                                    </p>
-                                    <div className="text-2xl mb-1">🏆</div>
-                                    <p className="text-xs text-green-400">+{rewardAmount} SOUL</p>
-                                    <p className="text-xs text-blue-400">+{expGained.toString()} EXP</p>
-                                </div>
-                                <p className="text-xs text-gray-400 text-center">
-                                    關閉此選單，使用完整模式查看圖片生成器
-                                </p>
+                                <VictoryImageGenerator
+                                    reward={reward}
+                                    expGained={expGained}
+                                    playerName={result.partyName}
+                                    dungeonName={result.dungeonName}
+                                    partyPower={result.partyPower}
+                                    className="scale-75 origin-top"
+                                />
                             </div>
                         )}
                     </div>
@@ -305,6 +302,8 @@ ${referralLink ? `來和我一起探索吧：${referralLink}` : ''}
                     reward={reward}
                     expGained={expGained}
                     playerName={result.partyName}
+                    dungeonName={result.dungeonName}
+                    partyPower={result.partyPower}
                 />
             )}
         </div>

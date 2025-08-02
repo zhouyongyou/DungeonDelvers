@@ -119,10 +119,8 @@ export function useTransactionWithProgress(options?: UseTransactionWithProgressO
       // 3. 等待確認
       if (publicClient) {
         const requiredConfirmations = options?.requiredConfirmations || 2;
-        let unwatch: (() => void) | undefined;
-        
         // 監聽區塊
-        unwatch = publicClient.watchBlockNumber({
+        const unwatch = publicClient.watchBlockNumber({
           onBlockNumber: async (blockNumber) => {
             try {
               const receipt = await publicClient.getTransactionReceipt({ hash });

@@ -732,13 +732,14 @@ const MarketplacePage: React.FC = () => {
         // 排序
         filtered.sort((a, b) => {
             switch (filters.sortBy) {
-                case 'price':
+                case 'price': {
                     const priceA = Number(a.price);
                     const priceB = Number(b.price);
                     return filters.sortOrder === 'asc' ? priceA - priceB : priceB - priceA;
+                }
                 case 'newest':
                     return filters.sortOrder === 'asc' ? a.createdAt - b.createdAt : b.createdAt - a.createdAt;
-                case 'power':
+                case 'power': {
                     const getPower = (listing: MarketListingType) => {
                         if (!listing.nft) return 0;
                         if (listing.nftType === 'hero' && 'power' in listing.nft) {
@@ -752,6 +753,7 @@ const MarketplacePage: React.FC = () => {
                     const powerA = getPower(a);
                     const powerB = getPower(b);
                     return filters.sortOrder === 'asc' ? powerA - powerB : powerB - powerA;
+                }
                 default:
                     return 0;
             }

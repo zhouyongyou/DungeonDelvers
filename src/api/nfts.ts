@@ -162,7 +162,8 @@ export async function fetchMetadata(
                 await nftMetadataPersistentCache.set(cacheKey, metadata);
                 return { ...metadata, source: 'local-api' };
             } catch (localError) {
-
+                // Log error but continue to CDN fallback
+                console.warn('Local API metadata fetch failed:', localError);
             }
         
         // 🔥 3. 如果本地 API 失敗，嘗試 CDN（次選）
@@ -174,7 +175,8 @@ export async function fetchMetadata(
             await nftMetadataPersistentCache.set(cacheKey, metadata);
             return { ...metadata, source: 'cdn' };
         } catch (cdnError) {
-
+            // Log error but continue to base64 fallback
+            console.warn('CDN metadata fetch failed:', cdnError);
         }
         
         // 🔥 4. 原始邏輯作為最後備援
@@ -268,7 +270,7 @@ function generateFallbackMetadata(nftType: string, tokenId: string, rarity?: num
     };
     
     switch (nftType) {
-        case 'relic':
+        case 'relic': {
             const relicRarityPrefix = getRarityAbbreviation(rarity);
             return {
                 ...baseData,
@@ -279,7 +281,8 @@ function generateFallbackMetadata(nftType: string, tokenId: string, rarity?: num
                     { trait_type: 'Rarity', value: rarity || '載入中...' }
                 ]
             };
-        case 'hero':
+        }
+        case 'hero': {
             const heroRarityPrefix = getRarityAbbreviation(rarity);
             return {
                 ...baseData,
@@ -290,6 +293,7 @@ function generateFallbackMetadata(nftType: string, tokenId: string, rarity?: num
                     { trait_type: 'Rarity', value: rarity || '載入中...' }
                 ]
             };
+        }
         case 'party':
             // fallback時不顯示戰力範圍，避免誤導用戶
             return {

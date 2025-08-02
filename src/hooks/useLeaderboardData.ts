@@ -52,7 +52,7 @@ const fetchLeaderboardData = async (
 
   // 根據類型設置排序欄位
   let orderBy: string;
-  let orderDirection = 'desc';
+  const orderDirection = 'desc';
 
   switch (type) {
     case 'totalEarnings':

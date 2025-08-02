@@ -12,6 +12,9 @@ interface VictoryImageGeneratorProps {
   reward: bigint;
   expGained: bigint;
   playerName?: string;
+  dungeonName?: string;
+  partyPower?: number;
+  partyImageUrl?: string;
   className?: string;
 }
 
@@ -19,6 +22,9 @@ export const VictoryImageGenerator: React.FC<VictoryImageGeneratorProps> = ({
   reward,
   expGained,
   playerName = '冒險者',
+  dungeonName = '神秘地下城',
+  partyPower = 0,
+  partyImageUrl,
   className = ''
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -36,100 +42,192 @@ export const VictoryImageGenerator: React.FC<VictoryImageGeneratorProps> = ({
     canvas.width = 1200;
     canvas.height = 630;
 
-    // 背景漸變
-    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    gradient.addColorStop(0, '#1a1a2e');
-    gradient.addColorStop(0.5, '#16213e');
-    gradient.addColorStop(1, '#0f3460');
+    // 增強的背景漸變
+    const gradient = ctx.createRadialGradient(600, 315, 0, 600, 315, 800);
+    gradient.addColorStop(0, '#2d1b69');
+    gradient.addColorStop(0.3, '#1e1b3a');
+    gradient.addColorStop(0.6, '#0f172a');
+    gradient.addColorStop(1, '#000000');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 添加裝飾性邊框
-    ctx.strokeStyle = '#fbbf24';
-    ctx.lineWidth = 8;
-    ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+    // 添加星空效果
+    const stars = 50;
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < stars; i++) {
+      const x = Math.random() * canvas.width;
+      const y = Math.random() * canvas.height;
+      const size = Math.random() * 2 + 1;
+      ctx.globalAlpha = Math.random() * 0.8 + 0.2;
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
 
-    // 內部邊框
-    ctx.strokeStyle = '#f59e0b';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+    // 增強的裝飾性邊框
+    const borderGradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+    borderGradient.addColorStop(0, '#fbbf24');
+    borderGradient.addColorStop(0.5, '#f59e0b');
+    borderGradient.addColorStop(1, '#fbbf24');
+    ctx.strokeStyle = borderGradient;
+    ctx.lineWidth = 12;
+    ctx.strokeRect(15, 15, canvas.width - 30, canvas.height - 30);
 
-    // 主標題
+    // 內部邊框 - 魔法效果
+    ctx.strokeStyle = '#a855f7';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10, 5]);
+    ctx.strokeRect(35, 35, canvas.width - 70, canvas.height - 70);
+    ctx.setLineDash([]);
+
+    // 主標題 - 發光效果
+    ctx.shadowColor = '#fbbf24';
+    ctx.shadowBlur = 20;
     ctx.fillStyle = '#fbbf24';
-    ctx.font = 'bold 72px Arial, sans-serif';
+    ctx.font = 'bold 80px Arial, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('🏆 VICTORY! 🏆', canvas.width / 2, 150);
+    ctx.fillText('🏆 VICTORY! 🏆', canvas.width / 2, 140);
+    ctx.shadowBlur = 0;
 
     // 副標題
     ctx.fillStyle = '#e5e7eb';
-    ctx.font = 'bold 36px Arial, sans-serif';
-    ctx.fillText('Dungeon Delvers', canvas.width / 2, 200);
-
-    // 獎勵信息背景
-    const rewardBoxY = 250;
-    const rewardBoxHeight = 200;
-    ctx.fillStyle = 'rgba(34, 197, 94, 0.2)';
-    ctx.fillRect(100, rewardBoxY, canvas.width - 200, rewardBoxHeight);
+    ctx.font = 'bold 32px Arial, sans-serif';
+    ctx.fillText('Dungeon Delvers', canvas.width / 2, 180);
     
+    // 地下城名稱
+    ctx.fillStyle = '#a855f7';
+    ctx.font = 'bold 28px Arial, sans-serif';
+    ctx.fillText(`⚔️ ${dungeonName} 征服成功！`, canvas.width / 2, 210);
+
+    // 增強的獎勵信息區域
+    const rewardBoxY = 240;
+    const rewardBoxHeight = 220;
+    
+    // 左側獎勵框
+    const leftBoxGradient = ctx.createLinearGradient(80, rewardBoxY, 80, rewardBoxY + rewardBoxHeight);
+    leftBoxGradient.addColorStop(0, 'rgba(34, 197, 94, 0.3)');
+    leftBoxGradient.addColorStop(1, 'rgba(34, 197, 94, 0.1)');
+    ctx.fillStyle = leftBoxGradient;
+    ctx.fillRect(80, rewardBoxY, canvas.width / 2 - 100, rewardBoxHeight);
+    
+    // 右側統計框
+    const rightBoxGradient = ctx.createLinearGradient(canvas.width / 2 + 20, rewardBoxY, canvas.width / 2 + 20, rewardBoxY + rewardBoxHeight);
+    rightBoxGradient.addColorStop(0, 'rgba(59, 130, 246, 0.3)');
+    rightBoxGradient.addColorStop(1, 'rgba(59, 130, 246, 0.1)');
+    ctx.fillStyle = rightBoxGradient;
+    ctx.fillRect(canvas.width / 2 + 20, rewardBoxY, canvas.width / 2 - 100, rewardBoxHeight);
+    
+    // 邊框
     ctx.strokeStyle = '#22c55e';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(100, rewardBoxY, canvas.width - 200, rewardBoxHeight);
+    ctx.lineWidth = 2;
+    ctx.strokeRect(80, rewardBoxY, canvas.width / 2 - 100, rewardBoxHeight);
+    
+    ctx.strokeStyle = '#3b82f6';
+    ctx.strokeRect(canvas.width / 2 + 20, rewardBoxY, canvas.width / 2 - 100, rewardBoxHeight);
 
     // 獎勵數據
     const rewardAmount = parseFloat(formatEther(reward)).toFixed(1);
     const expAmount = expGained.toString();
     const usdValue = hasValidPrice ? formatSoulToUsd(rewardAmount) : null;
 
-    // SOUL 獎勵
+    // 左側 - SOUL 獎勵
     ctx.fillStyle = '#22c55e';
-    ctx.font = 'bold 48px Arial, sans-serif';
-    ctx.fillText('💰 獲得獎勵', canvas.width / 2, rewardBoxY + 50);
+    ctx.font = 'bold 32px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('💰 SOUL 獲得', 80 + (canvas.width / 2 - 100) / 2, rewardBoxY + 40);
     
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 42px Arial, sans-serif';
-    ctx.fillText(`${rewardAmount} $SOUL`, canvas.width / 2, rewardBoxY + 100);
+    ctx.font = 'bold 48px Arial, sans-serif';
+    ctx.fillText(rewardAmount, 80 + (canvas.width / 2 - 100) / 2, rewardBoxY + 90);
+    
+    ctx.fillStyle = '#22c55e';
+    ctx.font = 'bold 24px Arial, sans-serif';
+    ctx.fillText('$SOUL', 80 + (canvas.width / 2 - 100) / 2, rewardBoxY + 120);
 
-    // USD 價值（如果有的話）
+    // USD 價值
     if (usdValue) {
       ctx.fillStyle = '#fbbf24';
-      ctx.font = 'bold 28px Arial, sans-serif';
-      ctx.fillText(`($${usdValue} USD)`, canvas.width / 2, rewardBoxY + 130);
+      ctx.font = 'bold 20px Arial, sans-serif';
+      ctx.fillText(`≈ $${usdValue} USD`, 80 + (canvas.width / 2 - 100) / 2, rewardBoxY + 150);
     }
 
-    // 經驗值
+    // 右側 - 經驗值和戰力
     ctx.fillStyle = '#3b82f6';
+    ctx.font = 'bold 32px Arial, sans-serif';
+    ctx.fillText('⭐ 經驗 & 戰力', canvas.width / 2 + 20 + (canvas.width / 2 - 100) / 2, rewardBoxY + 40);
+    
+    ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 36px Arial, sans-serif';
-    const expY = usdValue ? rewardBoxY + 170 : rewardBoxY + 150;
-    ctx.fillText(`⭐ +${expAmount} EXP`, canvas.width / 2, expY);
+    ctx.fillText(`+${expAmount}`, canvas.width / 2 + 20 + (canvas.width / 2 - 100) / 2, rewardBoxY + 85);
+    
+    ctx.fillStyle = '#3b82f6';
+    ctx.font = 'bold 20px Arial, sans-serif';
+    ctx.fillText('經驗值', canvas.width / 2 + 20 + (canvas.width / 2 - 100) / 2, rewardBoxY + 110);
+    
+    // 隊伍戰力
+    if (partyPower > 0) {
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = 'bold 28px Arial, sans-serif';
+      ctx.fillText(`⚔️ ${partyPower.toLocaleString()}`, canvas.width / 2 + 20 + (canvas.width / 2 - 100) / 2, rewardBoxY + 145);
+      
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = 'bold 16px Arial, sans-serif';
+      ctx.fillText('隊伍戰力', canvas.width / 2 + 20 + (canvas.width / 2 - 100) / 2, rewardBoxY + 165);
+    }
 
-    // 底部信息
+    // 增強的底部信息
     ctx.fillStyle = '#9ca3af';
-    ctx.font = '28px Arial, sans-serif';
-    ctx.fillText('加入 Dungeon Delvers 一起探索地下城！', canvas.width / 2, 520);
+    ctx.font = 'bold 24px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🎮 加入 Dungeon Delvers 開始你的冒險之旅！', canvas.width / 2, 500);
     
     ctx.fillStyle = '#6b7280';
-    ctx.font = '24px Arial, sans-serif';
-    ctx.fillText('www.dungeondelvers.xyz', canvas.width / 2, 560);
-
-    // 添加一些裝飾元素
-    // 左上角裝飾
-    ctx.fillStyle = '#fbbf24';
-    ctx.font = '60px Arial, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('⚔️', 80, 120);
+    ctx.font = '20px Arial, sans-serif';
+    ctx.fillText('🌐 www.dungeondelvers.xyz | 🚀 在 BNB Chain 上的 GameFi', canvas.width / 2, 530);
     
-    // 右上角裝飾
+    // 社交媒體標籤
+    ctx.fillStyle = '#a855f7';
+    ctx.font = 'bold 18px Arial, sans-serif';
+    ctx.fillText('#DungeonDelvers #GameFi #BNBChain #NFT #Play2Earn', canvas.width / 2, 560);
+
+    // 增強的裝飾元素
+    // 左上角 - 劍盾組合
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = '48px Arial, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('⚔️', 60, 100);
+    ctx.fillText('🛡️', 110, 100);
+    
+    // 右上角 - 寶石裝飾
     ctx.textAlign = 'right';
-    ctx.fillText('🛡️', canvas.width - 80, 120);
+    ctx.fillText('💎', canvas.width - 110, 100);
+    ctx.fillText('🏆', canvas.width - 60, 100);
 
-    // 底部裝飾
+    // 底部裝飾 - 地下城主題
     ctx.textAlign = 'center';
-    ctx.font = '40px Arial, sans-serif';
-    ctx.fillText('🏰', canvas.width / 2 - 100, 580);
-    ctx.fillText('🗡️', canvas.width / 2, 580);
-    ctx.fillText('🏆', canvas.width / 2 + 100, 580);
+    ctx.font = '36px Arial, sans-serif';
+    ctx.fillText('🏰', canvas.width / 2 - 150, 590);
+    ctx.fillText('🗡️', canvas.width / 2 - 75, 590);
+    ctx.fillText('💰', canvas.width / 2, 590);
+    ctx.fillText('⭐', canvas.width / 2 + 75, 590);
+    ctx.fillText('🔮', canvas.width / 2 + 150, 590);
+    
+    // 添加魔法粒子效果
+    const particles = 20;
+    ctx.fillStyle = '#fbbf24';
+    for (let i = 0; i < particles; i++) {
+      const x = 100 + Math.random() * (canvas.width - 200);
+      const y = 480 + Math.random() * 100;
+      const size = Math.random() * 3 + 1;
+      ctx.globalAlpha = Math.random() * 0.6 + 0.2;
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
 
-  }, [reward, expGained, playerName, hasValidPrice, formatSoulToUsd]);
+  }, [reward, expGained, playerName, dungeonName, partyPower, hasValidPrice, formatSoulToUsd]);
 
   const downloadImage = useCallback(async () => {
     try {
@@ -200,21 +298,34 @@ export const VictoryImageGenerator: React.FC<VictoryImageGeneratorProps> = ({
         <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/30 rounded-lg p-6 text-center border border-blue-500/30 mb-4">
           <div className="text-4xl mb-2">🏆</div>
           <h3 className="text-xl font-bold text-yellow-400 mb-2">VICTORY!</h3>
-          <div className="space-y-2">
-            <p className="text-green-400">
-              💰 獲得: {parseFloat(formatEther(reward)).toFixed(1)} $SOUL
-            </p>
-            {hasValidPrice && (
-              <p className="text-yellow-400 text-sm">
-                (${formatSoulToUsd(parseFloat(formatEther(reward)).toFixed(1))} USD)
+          <p className="text-purple-400 text-sm mb-3">⚔️ {dungeonName} 征服成功！</p>
+          
+          <div className="grid grid-cols-2 gap-4 mb-3">
+            <div className="bg-green-900/20 rounded-lg p-3">
+              <p className="text-green-400 text-sm">💰 SOUL 獲得</p>
+              <p className="text-white font-bold text-lg">
+                {parseFloat(formatEther(reward)).toFixed(1)}
               </p>
-            )}
-            <p className="text-blue-400">
-              ⭐ 經驗: +{expGained.toString()} EXP
-            </p>
+              {hasValidPrice && (
+                <p className="text-yellow-400 text-xs">
+                  ≈ ${formatSoulToUsd(parseFloat(formatEther(reward)).toFixed(1))} USD
+                </p>
+              )}
+            </div>
+            
+            <div className="bg-blue-900/20 rounded-lg p-3">
+              <p className="text-blue-400 text-sm">⭐ 經驗 & 戰力</p>
+              <p className="text-white font-bold text-lg">+{expGained.toString()}</p>
+              {partyPower > 0 && (
+                <p className="text-orange-400 text-xs">
+                  ⚔️ {partyPower.toLocaleString()} 戰力
+                </p>
+              )}
+            </div>
           </div>
-          <p className="text-xs text-gray-400 mt-3">
-            1200x630 像素 - 適合社交媒體分享
+          
+          <p className="text-xs text-gray-400">
+            1200x630 像素 - 精美設計，適合社交媒體分享
           </p>
         </div>
         

@@ -186,10 +186,10 @@ const NftCard: React.FC<NftCardProps> = memo(({
         {renderSyncStatus()}
         {/* 總是使用 PNG 圖片，不使用 SVG */}
         <EnhancedLazyImage
-          src={optimizeImageUrl(nft.image, { width: 400, height: 400 })}
+          src={imageSrc}
           alt={nft.name || `${nft.type} #${nft.id}`}
           className={baseImageClass}
-          fallback={getFallbackPath()}
+          fallback={fallbackPath}
           placeholder="skeleton"
           width={400}
           height={400}

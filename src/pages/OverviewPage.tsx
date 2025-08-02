@@ -29,7 +29,6 @@ import { useTransactionHistory, createTransactionRecord } from '../stores/useTra
 import { TaxRateModal } from '../components/ui/TaxRateModal';
 import { Modal } from '../components/ui/Modal';
 import { useUnassignedAssets } from '../hooks/useUnassignedAssets';
-import { useFallbackAssets } from '../hooks/useFallbackAssets';
 import { SkeletonLoader } from '../components/ui/SkeletonLoader';
 import { useSoulPrice } from '../hooks/useSoulPrice';
 import { SkeletonStats, SkeletonCard } from '../components/ui/SkeletonLoader';
@@ -188,10 +187,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     // 獲取未分配資產數據
     const { data: assetData, isLoading: isLoadingAssets } = useUnassignedAssets(address);
     
-    // 智能備用策略：只在子圖數據過期超過5分鐘時使用
-    const isSubgraphStale = data && Date.now() - (data.lastFetchTime || 0) > 5 * 60 * 1000;
-    const shouldUseFallback = isSubgraphStale || (isError && !isLoading);
-    const fallbackAssets = useFallbackAssets(address, shouldUseFallback);
+    // 移除了危險的備用 RPC 策略
     
     // 使用未分配的英雄/聖物數量，如果還在載入則顯示子圖數據
     const heroCount = isLoadingAssets 
@@ -564,19 +560,6 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                             <Icons.RefreshCw className="h-4 w-4" />
                         </ActionButton>
                         
-                        {/* 緊急備用按鈕 */}
-                        {shouldUseFallback && (
-                            <ActionButton
-                                onClick={() => {
-                                    fallbackAssets.refetch?.();
-                                    showToast('使用直接合約查詢...', 'warning');
-                                }}
-                                className="px-4 py-2 bg-orange-600 hover:bg-orange-700"
-                                title="子圖延遲時的緊急備用"
-                            >
-                                🚨 備用
-                            </ActionButton>
-                        )}
                     </div>
                 </div>
 

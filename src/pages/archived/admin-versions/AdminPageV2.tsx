@@ -146,7 +146,7 @@ const ApprovalDiagnostic: React.FC = () => {
                 </span>
                 {(soulShardAllowanceToHero || 0n) < MAX_ALLOWANCE && (
                   <ActionButton
-                    onClick={() => fixApproval('soulShard', heroContract?.address!, 'Hero')}
+                    onClick={() => heroContract?.address && fixApproval('soulShard', heroContract.address, 'Hero')}
                     className="px-3 py-1 text-xs"
                   >
                     修復
@@ -163,7 +163,7 @@ const ApprovalDiagnostic: React.FC = () => {
                 </span>
                 {(soulShardAllowanceToRelic || 0n) < MAX_ALLOWANCE && (
                   <ActionButton
-                    onClick={() => fixApproval('soulShard', relicContract?.address!, 'Relic')}
+                    onClick={() => relicContract?.address && fixApproval('soulShard', relicContract.address, 'Relic')}
                     className="px-3 py-1 text-xs"
                   >
                     修復
@@ -180,7 +180,7 @@ const ApprovalDiagnostic: React.FC = () => {
                 </span>
                 {(soulShardAllowanceToParty || 0n) < MAX_ALLOWANCE && (
                   <ActionButton
-                    onClick={() => fixApproval('soulShard', partyContract?.address!, 'Party')}
+                    onClick={() => partyContract?.address && fixApproval('soulShard', partyContract.address, 'Party')}
                     className="px-3 py-1 text-xs"
                   >
                     修復
@@ -197,7 +197,7 @@ const ApprovalDiagnostic: React.FC = () => {
                 </span>
                 {(soulShardAllowanceToAltar || 0n) < MAX_ALLOWANCE && (
                   <ActionButton
-                    onClick={() => fixApproval('soulShard', altarContract?.address!, 'Altar')}
+                    onClick={() => altarContract?.address && fixApproval('soulShard', altarContract.address, 'Altar')}
                     className="px-3 py-1 text-xs"
                   >
                     修復
@@ -220,7 +220,7 @@ const ApprovalDiagnostic: React.FC = () => {
                 </span>
                 {!heroApprovedToAltar && (
                   <ActionButton
-                    onClick={() => fixApproval('hero', altarContract?.address!, 'Altar')}
+                    onClick={() => altarContract?.address && fixApproval('hero', altarContract.address, 'Altar')}
                     className="px-3 py-1 text-xs"
                   >
                     修復
@@ -237,7 +237,7 @@ const ApprovalDiagnostic: React.FC = () => {
                 </span>
                 {!relicApprovedToAltar && (
                   <ActionButton
-                    onClick={() => fixApproval('relic', altarContract?.address!, 'Altar')}
+                    onClick={() => altarContract?.address && fixApproval('relic', altarContract.address, 'Altar')}
                     className="px-3 py-1 text-xs"
                   >
                     修復
@@ -254,7 +254,7 @@ const ApprovalDiagnostic: React.FC = () => {
                 </span>
                 {!heroApprovedToParty && (
                   <ActionButton
-                    onClick={() => fixApproval('hero', partyContract?.address!, 'Party')}
+                    onClick={() => partyContract?.address && fixApproval('hero', partyContract.address, 'Party')}
                     className="px-3 py-1 text-xs"
                   >
                     修復
@@ -271,7 +271,7 @@ const ApprovalDiagnostic: React.FC = () => {
                 </span>
                 {!relicApprovedToParty && (
                   <ActionButton
-                    onClick={() => fixApproval('relic', partyContract?.address!, 'Party')}
+                    onClick={() => partyContract?.address && fixApproval('relic', partyContract.address, 'Party')}
                     className="px-3 py-1 text-xs"
                   >
                     修復

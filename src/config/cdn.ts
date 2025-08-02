@@ -203,7 +203,8 @@ export async function loadResourceWithFallback<T>(
             return response as unknown as T;
           }
         } catch (fallbackError) {
-
+          // Log fallback error but continue trying other options
+          console.warn('Fallback resource fetch failed:', fallbackError);
         }
       }
       

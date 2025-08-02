@@ -106,59 +106,29 @@ export const MarketplaceRedirect: React.FC = () => {
           </div>
 
           {/* NFT 類型快速連結 */}
-          <div className="mt-8 grid md:grid-cols-3 gap-4">
-            <div className="bg-gray-800/20 border border-gray-700 rounded-lg p-4">
-              <div className="text-center mb-3">
-                <Icons.Sword className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-                <h4 className="font-semibold text-gray-200">英雄 NFT</h4>
-              </div>
-              <p className="text-gray-400 text-sm mb-3">
+          <div className="mt-8 grid md:grid-cols-3 gap-6">
+            <div className="bg-gray-800/20 border border-gray-700 rounded-lg p-6 text-center">
+              <Icons.Hero className="w-12 h-12 text-blue-400 mx-auto mb-3" />
+              <h4 className="font-semibold text-gray-200 mb-2">英雄 NFT</h4>
+              <p className="text-gray-400 text-sm">
                 具有獨特技能和屬性的戰士
               </p>
-              <ActionButton
-                onClick={() => handleRedirectToOKX(heroAddress)}
-                variant="secondary"
-                size="sm"
-                className="w-full"
-              >
-                查看英雄市場
-              </ActionButton>
             </div>
             
-            <div className="bg-gray-800/20 border border-gray-700 rounded-lg p-4">
-              <div className="text-center mb-3">
-                <Icons.Shield className="w-8 h-8 text-purple-400 mx-auto mb-2" />
-                <h4 className="font-semibold text-gray-200">聖物 NFT</h4>
-              </div>
-              <p className="text-gray-400 text-sm mb-3">
+            <div className="bg-gray-800/20 border border-gray-700 rounded-lg p-6 text-center">
+              <Icons.Shield className="w-12 h-12 text-purple-400 mx-auto mb-3" />
+              <h4 className="font-semibold text-gray-200 mb-2">聖物 NFT</h4>
+              <p className="text-gray-400 text-sm">
                 強化英雄能力的神秘物品
               </p>
-              <ActionButton
-                onClick={() => handleRedirectToOKX(relicAddress)}
-                variant="secondary"
-                size="sm"
-                className="w-full"
-              >
-                查看聖物市場
-              </ActionButton>
             </div>
             
-            <div className="bg-gray-800/20 border border-gray-700 rounded-lg p-4">
-              <div className="text-center mb-3">
-                <Icons.Users className="w-8 h-8 text-green-400 mx-auto mb-2" />
-                <h4 className="font-semibold text-gray-200">隊伍 NFT</h4>
-              </div>
-              <p className="text-gray-400 text-sm mb-3">
+            <div className="bg-gray-800/20 border border-gray-700 rounded-lg p-6 text-center">
+              <Icons.Users className="w-12 h-12 text-green-400 mx-auto mb-3" />
+              <h4 className="font-semibold text-gray-200 mb-2">隊伍 NFT</h4>
+              <p className="text-gray-400 text-sm">
                 組合英雄和聖物的戰隊
               </p>
-              <ActionButton
-                onClick={() => handleRedirectToOKX(partyAddress)}
-                variant="secondary"
-                size="sm"
-                className="w-full"
-              >
-                查看隊伍市場
-              </ActionButton>
             </div>
           </div>
         </div>

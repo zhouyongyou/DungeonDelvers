@@ -37,21 +37,9 @@ function DiagnosticApp() {
     setComponentStatuses(prev => ({ ...prev, [name]: { status, error: error?.toString() } }));
   };
 
-  // 始終調用 Hooks（React 規則要求）
-  let mobileData = null;
-  let prefetchData = null;
-  
-  try {
-    mobileData = useMobileOptimization();
-  } catch (error) {
-    console.warn('useMobileOptimization error:', error);
-  }
-  
-  try {
-    prefetchData = usePrefetchOnHover();
-  } catch (error) {
-    console.warn('usePrefetchOnHover error:', error);
-  }
+  // 始終調用 Hooks（React 規則要求 - 無條件調用）
+  const mobileData = useMobileOptimization();
+  const prefetchData = usePrefetchOnHover();
 
   // 根據啟用狀態處理結果
   const mobileOptimizationResult = enabledComponents.useMobileOptimization && mobileData
@@ -95,14 +83,24 @@ function DiagnosticApp() {
     }
   };
 
-  // 執行測試
+  // 更新測試狀態
   useEffect(() => {
-    testMobileOptimization();
-  }, [enabledComponents.useMobileOptimization]);
-
+    if (mobileOptimizationResult) {
+      updateStatus('useMobileOptimization', 
+        mobileOptimizationResult.startsWith('success') ? 'success' : 'error',
+        mobileOptimizationResult.startsWith('error') ? mobileOptimizationResult : undefined
+      );
+    }
+  }, [mobileOptimizationResult]);
+  
   useEffect(() => {
-    testPrefetchOnHover();
-  }, [enabledComponents.usePrefetchOnHover]);
+    if (prefetchResult) {
+      updateStatus('usePrefetchOnHover', 
+        prefetchResult === 'success' ? 'success' : 'error',
+        prefetchResult.startsWith('error') ? prefetchResult : undefined
+      );
+    }
+  }, [prefetchResult]);
 
   useEffect(() => {
     testImagePreloading();
