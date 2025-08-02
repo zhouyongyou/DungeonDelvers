@@ -115,7 +115,7 @@ class AutoDebugDeploy {
 
       this.results.push(result);
       spinner.succeed('前端掃描完成');
-    } catch (error) {
+    } catch (_error) {
       spinner.fail('前端掃描失敗');
       result.status = 'error';
     }
@@ -154,7 +154,7 @@ class AutoDebugDeploy {
 
       this.results.push(result);
       spinner.succeed('後端掃描完成');
-    } catch (error) {
+    } catch (_error) {
       spinner.fail('後端掃描失敗');
       result.status = 'error';
     }
@@ -197,7 +197,7 @@ class AutoDebugDeploy {
 
       this.results.push(result);
       spinner.succeed('子圖掃描完成');
-    } catch (error) {
+    } catch (_error) {
       spinner.fail('子圖掃描失敗');
       result.status = 'error';
     }
@@ -228,7 +228,7 @@ class AutoDebugDeploy {
           });
         }
       }
-    } catch (error) {
+    } catch (_error) {
       this.results[0].issues.push({
         severity: 'high',
         type: 'Missing File',
@@ -357,7 +357,7 @@ class AutoDebugDeploy {
             suggestion: '檢查後端服務和路由配置'
           });
         }
-      } catch (error) {
+      } catch (_error) {
         this.results[1].issues.push({
           severity: 'critical',
           type: 'API Unreachable',
@@ -396,7 +396,7 @@ class AutoDebugDeploy {
               description: '已從 .env.example 創建 .env',
               applied: true
             };
-          } catch (error) {
+          } catch (_error) {
             return {
               description: '嘗試創建 .env 失敗',
               applied: false
@@ -413,7 +413,7 @@ class AutoDebugDeploy {
             description: '已運行 ESLint 自動修復',
             applied: true
           };
-        } catch (error) {
+        } catch (_error) {
           return null;
         }
         break;
@@ -456,7 +456,7 @@ class AutoDebugDeploy {
       try {
         await this.runCommand('graph deploy --studio dungeondelvers', this.subgraphPath);
         spinner.succeed('子圖部署成功');
-      } catch (error) {
+      } catch (_error) {
         spinner.fail('子圖部署失敗');
       }
     }
@@ -657,7 +657,7 @@ class AutoDebugDeploy {
           suggestion: '在 .env 中設置 DATABASE_URL'
         });
       }
-    } catch (error) {
+    } catch (_error) {
       this.results[1].issues.push({
         severity: 'critical',
         type: 'Missing Configuration',
@@ -691,7 +691,7 @@ class AutoDebugDeploy {
           });
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // 已在 checkDatabaseConnection 中處理
     }
   }
@@ -724,7 +724,7 @@ class AutoDebugDeploy {
               });
             }
           }
-        } catch (error) {
+        } catch (_error) {
           // API 無法訪問的錯誤已在 testAPIEndpoints 中處理
         }
       }
