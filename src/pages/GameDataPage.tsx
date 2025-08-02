@@ -11,6 +11,7 @@ import { LeaderboardSystem } from '../components/leaderboard/LeaderboardSystem';
 import { THE_GRAPH_API_URL, isGraphConfigured } from '../config/graphConfig';
 import { getContractWithABI } from '../config/contractsWithABI';
 import { convertRarity } from '../utils/rarityConverter';
+import { MobileAddress } from '../components/mobile/MobileAddress';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取
@@ -202,7 +203,10 @@ const HeroQuery: React.FC = () => {
         return (
             <div className="space-y-2">
                 <p><span className="text-gray-300">Token ID:</span> <span className="text-white font-medium">{data.tokenId}</span></p>
-                <p><span className="text-gray-300">擁有者:</span> <span className="text-blue-400 font-mono text-xs">{data.owner.id}</span></p>
+                <p className="flex items-center justify-between">
+                    <span className="text-gray-300">擁有者:</span>
+                    <MobileAddress address={data.owner.id} className="text-blue-400" />
+                </p>
                 <p><span className="text-gray-300">稀有度:</span> <span className="text-purple-400 font-medium">{rarityInfo.chineseName} ({rarityInfo.number} ⭐)</span></p>
                 <p><span className="text-gray-300">戰力:</span> <span className="text-green-400 font-medium">{data.power}</span></p>
             </div>
@@ -247,7 +251,10 @@ const RelicQuery: React.FC = () => {
         return (
             <div className="space-y-2">
                 <p><span className="text-gray-300">Token ID:</span> <span className="text-white font-medium">{data.tokenId}</span></p>
-                <p><span className="text-gray-300">擁有者:</span> <span className="text-blue-400 font-mono text-xs">{data.owner.id}</span></p>
+                <p className="flex items-center justify-between">
+                    <span className="text-gray-300">擁有者:</span>
+                    <MobileAddress address={data.owner.id} className="text-blue-400" />
+                </p>
                 <p><span className="text-gray-300">稀有度:</span> <span className="text-purple-400 font-medium">{rarityInfo.chineseName} ({rarityInfo.number} ⭐)</span></p>
                 <p><span className="text-gray-300">容量:</span> <span className="text-orange-400 font-medium">{data.capacity}</span></p>
             </div>
@@ -292,7 +299,10 @@ const PartyQuery: React.FC = () => {
         return (
             <div className="space-y-2">
                 <p><span className="text-gray-300">Token ID:</span> <span className="text-white font-medium">{data.tokenId}</span></p>
-                <p><span className="text-gray-300">擁有者:</span> <span className="text-blue-400 font-mono text-xs">{data.owner.id}</span></p>
+                <p className="flex items-center justify-between">
+                    <span className="text-gray-300">擁有者:</span>
+                    <MobileAddress address={data.owner.id} className="text-blue-400" />
+                </p>
                 <p><span className="text-gray-300">隊伍稀有度:</span> <span className="text-purple-400 font-medium">{rarityInfo.chineseName} ({rarityInfo.number} ⭐)</span></p>
                 <p><span className="text-gray-300">總戰力:</span> <span className="text-green-400 font-medium">{data.totalPower}</span></p>
                 <p><span className="text-gray-300">總容量:</span> <span className="text-orange-400 font-medium">{data.totalCapacity}</span></p>
@@ -353,7 +363,9 @@ const PlayerQuery: React.FC = () => {
         
         return (
             <div className="space-y-2">
-                <p><span className="text-gray-300">地址:</span> <span className="text-blue-400 font-mono text-xs">{data.id}</span></p>
+                <p className="flex items-center justify-between">
+                    <span className="text-gray-300">地址:</span>
+                    <MobileAddress address={data.id} className="text-blue-400" /></p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
                     <div className="bg-gray-800/50 p-2 rounded border border-gray-700/30">
                         <p className="text-gray-300 text-xs">英雄數量</p>

@@ -542,3 +542,5 @@ export const CreateListingTab: React.FC<CreateListingTabProps> = ({
         </div>
     );
 };
+
+export default CreateListingTab;

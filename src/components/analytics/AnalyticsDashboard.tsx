@@ -327,3 +327,5 @@ export const AnalyticsDashboard: React.FC<{ className?: string }> = ({ className
     </div>
   );
 };
+
+export default AnalyticsDashboard;

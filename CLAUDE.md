@@ -2,6 +2,25 @@
 
 > 📖 **請先閱讀**: `~/MASTER-CLAUDE.md` 了解整體架構，此文檔專注於前端開發細節
 
+## 🚨 重要編碼規則
+
+### 程式碼修改檢查流程
+**每次修改程式碼後，必須執行以下步驟：**
+```bash
+# 1. 檢查語法錯誤（括號、逗號、分號等）
+npm run type-check
+
+# 2. 檢查程式碼規範
+npm run lint
+
+# 3. 確認無錯誤後再繼續
+```
+
+### 常見語法錯誤提醒
+- **編輯時特別注意**：`}` `]` `)` `,` `;` 的配對和位置
+- **使用 MultiEdit 時**：確保每個編輯的語法完整性
+- **修改對象或數組時**：檢查最後一項是否多餘逗號
+
 ## 🗂️ 快速導航
 ```bash
 # 當前專案
@@ -13,101 +32,40 @@
 /Users/sotadic/Documents/dungeon-delvers-metadata-server/                  # 後端 API
 ```
 
-## 專案概述
-使用 React + TypeScript + Vite 構建的 Web3 遊戲前端，整合 wagmi v2 進行區塊鏈交互。
-
 ## 技術棧
-- **框架**: React 18 + TypeScript
-- **構建工具**: Vite
+- **框架**: React 18 + TypeScript + Vite
 - **Web3**: wagmi v2 + viem
 - **樣式**: Tailwind CSS
-- **路由**: React Router v6
 - **狀態管理**: Zustand
-- **UI 組件**: 自定義組件庫
-
-## 🔄 配置管理 (參考主導航)
-
-> **詳細說明請參考**: `~/MASTER-CLAUDE.md` 中的統一配置管理系統
-
-### 前端專案特定配置
-```bash
-# 必須環境變數
-VITE_WALLETCONNECT_PROJECT_ID=你的WalletConnect項目ID
-
-# 開發時可選覆蓋
-VITE_HERO_ADDRESS=0x...  # 覆蓋特定合約地址
-VITE_USE_TESTNET=true    # 使用測試網
-```
-
-### 配置載入機制
-- 使用 `configLoader.ts` 自動從 CDN 載入配置
-- 5分鐘緩存機制 + 環境變數備份
-- 前端無需重新部署即可更新配置
-
-## 目錄結構
-```
-src/
-├── components/      # 可重用組件
-│   ├── ui/         # 基礎 UI 組件
-│   ├── admin/      # 管理頁面組件
-│   └── wallet/     # 錢包相關組件
-├── pages/          # 頁面組件
-├── hooks/          # 自定義 React hooks
-├── stores/         # Zustand 狀態管理
-├── utils/          # 工具函數
-├── config/         # 配置文件
-│   ├── contracts.ts # 合約地址和 ABI
-│   └── constants.ts # 常量定義
-└── api/            # API 相關邏輯
-```
-
-## 重要文件說明
-
-### 合約配置 (src/config/contracts.ts)
-- 包含所有合約的地址和 ABI
-- 支援多鏈配置（目前僅 BSC）
-- 有環境變數覆蓋機制
-
-### 常用 Hooks
-1. **useContractTransaction** - 處理合約交易的統一介面
-2. **useVipStatus** - VIP 狀態管理
-3. **useHeroStats** - 英雄數據管理
-4. **useAppToast** - 通知提示管理
 
 ## 開發指令
 ```bash
-# 安裝依賴
-npm install
-
-# 開發模式
-npm run dev
-
-# 構建生產版本
-npm run build
-
-# 預覽構建結果
-npm run preview
-
-# 類型檢查
-npm run type-check
-
-# 代碼檢查
-npm run lint
+npm install      # 安裝依賴
+npm run dev      # 開發模式
+npm run build    # 構建生產版本
+npm run preview  # 預覽構建結果
+npm run type-check  # 類型檢查
+npm run lint     # 代碼檢查
 ```
+
+## 🪝 React Hooks 規則
+
+### 核心規則
+1. **只在最頂層調用 Hook** - 不要在條件、循環或嵌套函數中調用
+2. **只在 React 函數中調用 Hook** - 僅在組件或自定義 Hook 中使用
+
+### 快速檢查
+```bash
+# 檢查條件性 Hook 錯誤
+npm run lint 2>&1 | grep "React Hook.*is called conditionally"
+```
+
+詳細指南：[📖 React Hooks 規則指南](./docs/REACT_HOOKS_RULES.md)
 
 ## 常見開發任務
 
-### 1. 更新合約地址
-編輯 `src/config/contracts.ts`，更新對應網路的合約地址。
-
-### 2. 添加新頁面
-1. 在 `src/pages/` 創建新組件
-2. 在 `src/App.tsx` 添加路由
-3. 在導航組件中添加鏈接
-
-### 3. 處理合約交互
+### 處理合約交互
 ```typescript
-// 使用 useContractTransaction hook
 const { executeTransaction } = useContractTransaction();
 
 await executeTransaction({
@@ -123,112 +81,65 @@ await executeTransaction({
 });
 ```
 
-### 4. SVG 生成器
-- 位置：`src/utils/svgGenerators.ts`
-- 用於生成英雄、聖物、隊伍、VIP 的 SVG 圖像
-- 統一使用 400x400 正方形格式
+### 合約配置
+- 文件：`src/config/contracts.ts`
+- 支援環境變數覆蓋
+- 自動從 CDN 載入配置
 
-## UI/UX 規範
-1. **顏色主題**: 深色主題為主，使用灰色系配合品牌色
-2. **響應式設計**: 支援手機、平板、桌面
-3. **加載狀態**: 使用 LoadingSpinner 組件
-4. **錯誤處理**: 使用 ErrorBoundary 和 toast 通知
+## 📱 手機版開發原則
 
-## 部署流程
+### 使用手機優化組件
+當需要手機版優化時，優先使用 `src/components/mobile/` 目錄中的組件：
+- `MobileAddress` - 地址顯示與複製
+- `MobileDataCard` - 替代表格的卡片佈局
+- `MobileActionMenu` - 整合多個操作按鈕
+- `MobileStatsCard` - 統計數據展示
+- `MobileTabs` - 可滾動標籤導航
 
-### Vercel 部署
-1. 連接 GitHub 倉庫
-2. 設定環境變數
-3. 部署命令：`npm run build`
-4. 輸出目錄：`dist`
+### 觸控體驗優化
+1. **最小觸控區域**: 44x44px
+2. **防止雙擊縮放**: `touch-action: manipulation`
+3. **響應式佈局**: 使用 `md:hidden` 和 `hidden md:block`
 
-### 本地預覽
-```bash
-npm run build
-npm run preview
-```
+## ⚡ 性能優化原則
 
-## 性能優化建議
-1. 使用 React.lazy 進行代碼分割
-2. 圖片使用 WebP 格式
-3. 實現虛擬滾動處理大列表
-4. 使用 React.memo 優化重渲染
+### RPC 請求管理
+- 避免在循環中單獨請求，使用批次處理
+- 事件監聽器應該節流或防抖
+- 優先使用 multicall 合約
 
-## 調試技巧
-1. 使用 `logger.ts` 記錄日誌
-2. Chrome DevTools 的 Network 標籤查看請求
-3. React Developer Tools 檢查組件狀態
-4. 使用 `wagmi` 的調試模式
+### 組件性能
+- 長列表使用虛擬滾動
+- 圖片實現懶加載
+- 適當使用 React.memo 和 useMemo
+
+## 🛡️ 避免常見錯誤
+
+### React.lazy 載入錯誤
+- **錯誤**: `Cannot convert object to primitive value`
+- **原因**: 組件缺少 default export
+- **解決**: 確保懶加載的組件有 `export default`
+
+### ESLint 維護
+- 定期執行 `npm run lint` 檢查
+- 避免累積大量 lint 錯誤
+- 修改代碼後立即修復相關 lint 問題
 
 ## 常見問題
 1. **MIME type 錯誤**: 檢查 vercel.json 配置
 2. **合約調用失敗**: 確認網路和地址正確
 3. **圖片 404**: 檢查公共資源路徑
 4. **狀態不同步**: 使用 refetch 函數更新
+5. **React.lazy 錯誤**: 確保組件有 default export
 
-## RPC 監控系統
-
-### 系統概述
-全面的 RPC 請求監控和統計系統，用於追踪、分析和優化 DungeonDelvers 應用的 RPC 使用情況。
-
-### 核心組件
-- **rpcMonitor**: 核心監控器，追踪所有 RPC 請求
-- **rpcAnalytics**: 分析工具，生成統計報告和建議
-- **rpcOptimizer**: 自動優化建議系統
-- **RpcDashboard**: 用戶儀表板組件
-- **RpcMonitoringPanel**: 管理員監控面板
-
-### 使用方法
-
-#### 1. 監控的 Hook
-```typescript
-import { useMonitoredReadContract, useMonitoredReadContracts } from '../hooks/useMonitoredContract';
-
-// 替代標準的 useReadContract
-const { data, isLoading } = useMonitoredReadContract({
-  address: contractAddress,
-  abi: contractAbi,
-  functionName: 'balanceOf',
-  args: [address],
-  contractName: 'ERC20',
-  functionName: 'balanceOf'
-});
-```
-
-#### 2. 獲取統計數據
-```typescript
-import { useRpcMonitoring } from '../hooks/useRpcMonitoring';
-
-const { stats, insights, clearStats, exportStats } = useRpcMonitoring();
-```
-
-#### 3. 查看監控面板
-- 用戶：使用 `<RpcDashboard />` 組件
-- 管理員：在 AdminPage 中的 RPC 監控面板
-
-### 優化建議
-系統會自動分析 RPC 使用情況並提供優化建議：
-- 緩存策略優化
-- 重試機制調整
-- 批量請求合併
-- 超時設置優化
-
-### 性能指標
-- 總請求數
-- 成功率和錯誤率
-- 平均響應時間
-- 按合約/頁面的使用統計
-- 實時性能洞察
-
-### 配置建議
-基於監控數據，系統會自動生成：
-- React Query 緩存配置
-- 請求重試策略
-- 批量請求設置
+## 詳細文檔
+- [RPC 監控系統](./docs/RPC_MONITORING.md)
+- [React Hooks 規則](./docs/REACT_HOOKS_RULES.md)
+- [手機優化組件](./src/components/mobile/README.md)
 
 ## 最近的重要更新
+- 2025-08-02: 創建完整手機優化組件庫，修復 React.lazy import 錯誤
+- 2025-08-02: 修復所有 React Hooks 條件調用錯誤，優化 CLAUDE.md
 - 2025-01-15: 實施完整的 RPC 監控和統計系統
 - 2025-01-14: 修復 unknown NFT 類型錯誤
 - 2025-01-14: 改進 SVG 顯示為正方形格式
-- 2025-01-14: 添加 VIP 冷卻期動態顯示
-- 2025-01-14: 後台添加 BNB 提取和折疊功能

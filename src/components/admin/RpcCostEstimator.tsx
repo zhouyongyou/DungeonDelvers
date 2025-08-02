@@ -337,7 +337,32 @@ const RpcCostEstimator: React.FC = () => {
         <h4 className="text-lg font-semibold text-white mb-4">
           成本最高的 RPC 方法
         </h4>
-        <div className="overflow-x-auto">
+        
+        {/* 手機版：卡片式顯示 */}
+        <div className="md:hidden space-y-3">
+          {breakdown.costByMethod.map((item, index) => (
+            <div key={index} className="bg-gray-800 p-4 rounded-lg">
+              <div className="font-medium text-white mb-2">{item.method}</div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div>
+                  <div className="text-gray-400">請求數</div>
+                  <div className="text-gray-300">{formatNumber(item.requests)}</div>
+                </div>
+                <div>
+                  <div className="text-gray-400">計算單位</div>
+                  <div className="text-gray-300">{formatNumber(item.units)}</div>
+                </div>
+                <div>
+                  <div className="text-gray-400">預估成本</div>
+                  <div className="text-yellow-400 font-medium">{formatCurrency(item.cost)}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        {/* 桌面版：表格顯示 */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-full">
             <thead>
               <tr className="border-b border-gray-600">

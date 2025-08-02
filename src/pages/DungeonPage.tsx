@@ -956,6 +956,14 @@ const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => 
         return processedDungeons;
     }, [dungeonsData, isLoadingDungeons]);
 
+    // 使用批量操作 Hook - 移到條件返回之前
+    const { 
+        claimAllRewards: batchClaimRewards, 
+        hasClaimableRewards,
+        isProcessing: isBatchProcessing,
+        isLoadingStatuses 
+    } = useBatchOperations({ parties, chainId: bsc.id });
+
     // ✅ 條件渲染移到所有Hooks之後
     if (chainId !== bsc.id) {
         return <div className="flex justify-center items-center h-64"><p className="text-lg text-gray-500">請連接到支援的網路</p></div>;
@@ -1056,14 +1064,6 @@ const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => 
             showToast(`${errorCount} 支隊伍出征失敗`, 'error');
         }
     };
-    
-    // 使用批量操作 Hook
-    const { 
-        claimAllRewards: batchClaimRewards, 
-        hasClaimableRewards,
-        isProcessing: isBatchProcessing,
-        isLoadingStatuses 
-    } = useBatchOperations({ parties, chainId: bsc.id });
     
     // 一鍵領取所有獎勵
     const handleClaimAllRewards = async () => {

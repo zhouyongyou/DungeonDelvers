@@ -47,18 +47,29 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({
     const [isSubmitting, setIsSubmitting] = useState(false);
     
     // Early return if no listing to prevent errors
-    if (!listing) {
-        return null;
-    }
+    // 獲取 NFT 戰力和詳細資訊 - 無條件調用所有 Hook，使用 enabled 控制
+    const heroPower = useHeroPower(
+        listing?.tokenId ? BigInt(listing.tokenId) : 0n,
+        { enabled: listing?.nftType === 'hero' && !!listing?.tokenId }
+    );
+    const partyPower = usePartyPower(
+        listing?.tokenId ? BigInt(listing.tokenId) : 0n,
+        { enabled: listing?.nftType === 'party' && !!listing?.tokenId }
+    );
+    const heroDetails = useHeroDetails(
+        listing?.tokenId ? BigInt(listing.tokenId) : 0n,
+        { enabled: listing?.nftType === 'hero' && !!listing?.tokenId }
+    );
+    const relicDetails = useRelicDetails(
+        listing?.tokenId ? BigInt(listing.tokenId) : 0n,
+        { enabled: listing?.nftType === 'relic' && !!listing?.tokenId }
+    );
+    const partyDetails = usePartyDetails(
+        listing?.tokenId ? BigInt(listing.tokenId) : 0n,
+        { enabled: listing?.nftType === 'party' && !!listing?.tokenId }
+    );
 
-    // 獲取 NFT 戰力和詳細資訊
-    const heroPower = listing?.nftType === 'hero' && listing?.tokenId ? useHeroPower(BigInt(listing.tokenId)) : { power: null, isLoading: false };
-    const partyPower = listing?.nftType === 'party' && listing?.tokenId ? usePartyPower(BigInt(listing.tokenId)) : { power: null, isLoading: false };
-    const heroDetails = listing?.nftType === 'hero' && listing?.tokenId ? useHeroDetails(BigInt(listing.tokenId)) : { details: null };
-    const relicDetails = listing?.nftType === 'relic' && listing?.tokenId ? useRelicDetails(BigInt(listing.tokenId)) : { details: null };
-    const partyDetails = listing?.nftType === 'party' && listing?.tokenId ? usePartyDetails(BigInt(listing.tokenId)) : { details: null };
-
-    // 計算出價建議
+    // 計算出價建議 - 移到 early return 之前
     const priceSuggestions = useMemo(() => {
         if (!listing) return [];
         
@@ -71,7 +82,7 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({
         ].filter(price => price > 0);
     }, [listing]);
 
-    // 驗證出價
+    // 驗證出價 - 移到 early return 之前
     const validation = useMemo(() => {
         if (!listing || !offerAmount) return null;
         
@@ -79,19 +90,24 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({
         const listingPrice = Number(listing.price);
         
         if (isNaN(amount) || amount <= 0) {
-            return { isValid: false, message: '請輸入有效的出價金額' };
+            return { isValid: false, error: '請輸入有效的出價金額' };
         }
         
         if (amount >= listingPrice) {
-            return { isValid: false, message: '出價不能高於或等於掛單價格' };
+            return { isValid: false, error: '出價不能大於或等於賣價' };
         }
         
-        if (amount < listingPrice * 0.1) {
-            return { isValid: false, message: '出價過低，至少需要掛單價格的 10%' };
+        const minOffer = listingPrice * 0.1; // 最低 10%
+        if (amount < minOffer) {
+            return { isValid: false, error: `出價不能低於 ${minOffer.toFixed(2)} USDT (賣價的 10%)` };
         }
         
-        return { isValid: true, message: null };
+        return { isValid: true, error: null };
     }, [listing, offerAmount]);
+
+    if (!listing) {
+        return null;
+    }
 
     const handleSubmitOffer = async () => {
         if (!listing || !address || !validation?.isValid) return;
@@ -261,3 +277,5 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({
         </Modal>
     );
 };
+
+export default MakeOfferModal;

@@ -21,6 +21,7 @@ const GET_PLAYER_OVERVIEW_QUERY = `
         id
         unclaimedRewards
         heroIds
+        relicIds
         totalPower
       }
       vip {
@@ -131,9 +132,10 @@ export const usePlayerOverview = (address?: Address) => {
             }
         },
         enabled: !!address && !!THE_GRAPH_API_URL,
-        staleTime: 30 * 1000,
+        staleTime: 5 * 1000, // 進一步降低到5秒
         gcTime: 5 * 60 * 1000,
-        refetchInterval: 60 * 1000,
+        refetchInterval: 8 * 1000, // 每8秒刷新
+        refetchOnWindowFocus: true, // 視窗焦點時刷新
     });
 
     return { data, isLoading, isError, refetch };

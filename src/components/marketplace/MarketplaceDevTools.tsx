@@ -142,3 +142,5 @@ export const MarketplaceDevTools: React.FC<MarketplaceDevToolsProps> = ({
         </div>
     );
 };
+
+export default MarketplaceDevTools;

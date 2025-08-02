@@ -275,3 +275,5 @@ export const LeaderboardSystem: React.FC<LeaderboardProps> = ({
     </div>
   );
 };
+
+export default LeaderboardSystem;

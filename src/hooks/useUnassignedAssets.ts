@@ -124,6 +124,7 @@ export const useUnassignedAssets = (address?: Address) => {
       }
     },
     enabled: !!address,
-    staleTime: 30 * 1000, // 30 秒
+    staleTime: 5 * 1000, // 降低到5秒  
+    refetchInterval: 10 * 1000, // 每10秒刷新
   });
 };

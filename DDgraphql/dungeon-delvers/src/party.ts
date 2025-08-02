@@ -60,7 +60,7 @@ export function handlePartyCreated(event: PartyCreated): void {
         if (hero) {
             heroIds.push(heroId);
             heroIdStrings.push(heroIdString);
-            log.info('Added hero {} to party: {}', [heroId, partyId]);
+    // log.info('Added hero {} to party: {}', [heroId, partyId]);
         } else {
             // 如果英雄不存在，仍然記錄ID（可能是新鑄造的）
             heroIdStrings.push(heroIdString);
@@ -83,7 +83,7 @@ export function handlePartyCreated(event: PartyCreated): void {
         if (relic) {
             relicIds.push(relicId);
             relicIdStrings.push(relicIdString);
-            log.info('Added relic {} to party: {}', [relicId, partyId]);
+    // log.info('Added relic {} to party: {}', [relicId, partyId]);
         } else {
             // 如果聖物不存在，仍然記錄ID（可能是新鑄造的）
             relicIdStrings.push(relicIdString);
@@ -99,7 +99,7 @@ export function handlePartyCreated(event: PartyCreated): void {
     updateGlobalStats(TOTAL_PARTIES, 1, event.block.timestamp)
     updatePlayerStats(event.params.owner, TOTAL_PARTIES_CREATED, 1, event.block.timestamp)
     
-    log.info('Successfully processed PartyCreated event: {}', [partyId]);
+    // log.info('Successfully processed PartyCreated event: {}', [partyId]);
 }
 
 export function handlePartyTransfer(event: Transfer): void {
@@ -121,7 +121,7 @@ export function handlePartyTransfer(event: Transfer): void {
             
             // 保存變更
             party.save()
-            log.info('Party disbanded: {} from {}', [partyId, event.params.from.toHexString()]);
+    // log.info('Party disbanded: {} from {}', [partyId, event.params.from.toHexString()]);
         } else {
             log.warning('Burn event for Party that does not exist: {}', [partyId]);
         }
@@ -132,11 +132,11 @@ export function handlePartyTransfer(event: Transfer): void {
         const newOwner = getOrCreatePlayer(event.params.to)
         party.owner = newOwner.id
         party.save()
-        log.info('Successfully transferred party {} to {}', [partyId, event.params.to.toHexString()]);
+    // log.info('Successfully transferred party {} to {}', [partyId, event.params.to.toHexString()]);
     } else {
         // 對於 Party，不創建占位實體，因為它需要複雜的初始化
         log.warning("Transfer handled for a Party that doesn't exist in the subgraph: {}", [partyId])
-        log.info('Party transfer skipped - cannot create placeholder for complex entity: {}', [partyId]);
+    // log.info('Party transfer skipped - cannot create placeholder for complex entity: {}', [partyId]);
     }
 }
 
@@ -152,7 +152,7 @@ export function handleHeroTransferForParty(event: Transfer): void {
     // 查找所有包含此 Hero 的 Party
     // 注意：這裡需要查詢所有 Party，在實際應用中可能需要優化
     // 可以考慮在 Party 實體中增加索引或使用其他方式優化查詢
-    log.info('Hero transfer detected: {}, checking party associations', [heroId]);
+    // log.info('Hero transfer detected: {}, checking party associations', [heroId]);
 }
 
 export function handleRelicTransferForParty(event: Transfer): void {
@@ -164,7 +164,7 @@ export function handleRelicTransferForParty(event: Transfer): void {
     const relicId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
     
     // 查找所有包含此 Relic 的 Party
-    log.info('Relic transfer detected: {}, checking party associations', [relicId]);
+    // log.info('Relic transfer detected: {}, checking party associations', [relicId]);
 }
 
 // V23 removed individual member add/remove events - use handlePartyMemberChanged instead
@@ -185,7 +185,7 @@ export function handleTransfer(event: Transfer): void {
             party.burnedAt = event.block.timestamp
             party.save()
             
-            log.info('Party burned: {} from {}', [partyId, event.params.from.toHexString()])
+    // log.info('Party burned: {} from {}', [partyId, event.params.from.toHexString()])
         }
         return
     }
@@ -195,11 +195,11 @@ export function handleTransfer(event: Transfer): void {
         const newOwner = getOrCreatePlayer(event.params.to)
         party.owner = newOwner.id
         party.save()
-        log.info('Successfully transferred party {} from {} to {}', [
-            partyId, 
-            event.params.from.toHexString(), 
-            event.params.to.toHexString()
-        ])
+    // log.info('Successfully transferred party {} from {} to {}', [
+    //         partyId, 
+    //         event.params.from.toHexString(), 
+    //         event.params.to.toHexString()
+    //     ])
     } else {
         log.warning("Transfer event for Party that doesn't exist in subgraph: {}", [partyId])
     }

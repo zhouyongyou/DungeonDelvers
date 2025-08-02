@@ -25,11 +25,11 @@ export function createPausedEvent(account: Address, event: ethereum.Event, contr
     
     pausableEvent.save()
     
-    log.info("{} contract paused by {} at block {}", [
-        contractName, 
-        account.toHex(), 
-        event.block.number.toString()
-    ])
+    // log.info("{} contract paused by {} at block {}", [
+    //     contractName, 
+    //     account.toHex(), 
+    //     event.block.number.toString()
+    // ])
 }
 
 /**
@@ -52,9 +52,9 @@ export function createUnpausedEvent(account: Address, event: ethereum.Event, con
     
     pausableEvent.save()
     
-    log.info("{} contract unpaused by {} at block {}", [
-        contractName, 
-        account.toHex(), 
-        event.block.number.toString()
-    ])
+    // log.info("{} contract unpaused by {} at block {}", [
+    //     contractName, 
+    //     account.toHex(), 
+    //     event.block.number.toString()
+    // ])
 }

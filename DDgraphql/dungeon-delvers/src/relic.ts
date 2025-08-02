@@ -45,7 +45,7 @@ export function handleRelicMinted(event: RelicMinted): void {
     updateGlobalStats(TOTAL_RELICS, 1, event.block.timestamp)
     updatePlayerStats(event.params.owner, TOTAL_RELICS_MINTED, 1, event.block.timestamp)
     
-    log.info('Successfully processed RelicMinted event: {}', [relicId]);
+    // log.info('Successfully processed RelicMinted event: {}', [relicId]);
 }
 
 export function handleTransfer(event: Transfer): void {
@@ -63,7 +63,7 @@ export function handleTransfer(event: Transfer): void {
             
             // 從資料庫中移除 Relic 實體
             relic.save() // 先保存任何變更
-            log.info('Relic burned: {} from {}', [relicId, event.params.from.toHexString()]);
+    // log.info('Relic burned: {} from {}', [relicId, event.params.from.toHexString()]);
         } else {
             log.warning('Burn event for Relic that does not exist: {}', [relicId]);
         }
@@ -76,7 +76,7 @@ export function handleTransfer(event: Transfer): void {
         const newOwner = getOrCreatePlayer(event.params.to)
         relic.owner = newOwner.id
         relic.save()
-        log.info('Successfully transferred relic {} from {} to {}', [relicId, event.params.from.toHexString(), event.params.to.toHexString()]);
+    // log.info('Successfully transferred relic {} from {} to {}', [relicId, event.params.from.toHexString(), event.params.to.toHexString()]);
     } else {
         // 如果 Relic 實體不存在，我們不應該創建占位實體
         // 因為這會導致所有 NFT 顯示為默認 rarity 1
@@ -106,20 +106,20 @@ export function handleRelicBurned(event: RelicBurned): void {
     updateGlobalStats(TOTAL_RELICS, -1, event.block.timestamp)
     updatePlayerStats(event.params.owner, TOTAL_RELICS_MINTED, -1, event.block.timestamp)
 
-    log.info('Successfully processed RelicBurned event: {} (Rarity: {}, Capacity: {})', [
-        relicId,
-        event.params.rarity.toString(),
-        event.params.capacity.toString()
-    ])
+    // log.info('Successfully processed RelicBurned event: {} (Rarity: {}, Capacity: {})', [
+    //     relicId,
+    //     event.params.rarity.toString(),
+    //     event.params.capacity.toString()
+    // ])
 }
 
 export function handleBatchMintCompleted(event: BatchMintCompleted): void {
     // 記錄批量鑄造事件
-    log.info('BatchMintCompleted: Player {} minted {} relics with max rarity {}', [
-        event.params.player.toHexString(),
-        event.params.quantity.toString(),
-        event.params.maxRarity.toString()
-    ])
+    // log.info('BatchMintCompleted: Player {} minted {} relics with max rarity {}', [
+    //     event.params.player.toHexString(),
+    //     event.params.quantity.toString(),
+    //     event.params.maxRarity.toString()
+    // ])
     
     // 批量鑄造完成事件本身不需要特別處理
     // 因為每個聖物的創建已經在 RelicMinted 事件中處理了

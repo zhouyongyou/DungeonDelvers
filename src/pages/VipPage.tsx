@@ -1,6 +1,6 @@
 // src/pages/VipPage.tsx (移除 SVG 讀取功能版)
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useAccount, usePublicClient } from 'wagmi';
 import { formatEther, maxUint256, parseEther } from 'viem';
 import { ActionButton } from '../components/ui/ActionButton';
@@ -96,15 +96,6 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
     const [nftImage, setNftImage] = useState<string | null>(null);
     const [imageError, setImageError] = useState(false);
 
-    // ✅ 條件渲染移到Hook之後
-    if (!chainId || (chainId !== bsc.id)) {
-        return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-500">網路不支援</div>;
-    }
-
-    if (!tokenId || tokenId === 0n) {
-        return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-400 dark:text-gray-500">無 VIP 卡</div>;
-    }
-    
     // VIP 等級顏色和圖標
     const getVipTierWithColor = (level: number) => {
         const tier = getVipTier(level);
@@ -169,6 +160,15 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
         return '/images/vip/vip.png';
     };
     
+    // 條件檢查移到這裡，在所有 Hooks 之後
+    if (!chainId || (chainId !== bsc.id)) {
+        return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-500">網路不支援</div>;
+    }
+
+    if (!tokenId || tokenId === 0n) {
+        return <div className="w-full aspect-square bg-gray-900/50 rounded-xl flex items-center justify-center text-gray-400 dark:text-gray-500">無 VIP 卡</div>;
+    }
+
     return (
         <div className="w-full space-y-4">
             <div className="w-full aspect-square rounded-xl overflow-hidden shadow-lg border border-white/20 bg-gray-900">
@@ -210,64 +210,6 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
 
 const VipPageContent: React.FC = () => {
     const { chainId, address } = useAccount();
-    
-    // 如果未連接錢包，顯示預覽模式
-    if (!address) {
-        return (
-            <PagePreview
-                title="👑 VIP 會員"
-                description="質押 SoulShard 代幣成為 VIP，享受專屬福利和特權"
-                icon="👑"
-                features={[
-                    {
-                        title: "升星加成",
-                        description: "VIP 用戶享有升星成功率加成",
-                        icon: "⭐"
-                    },
-                    {
-                        title: "手續費減免",
-                        description: "交易手續費享有高達 50% 的減免",
-                        icon: "💰"
-                    },
-                    {
-                        title: "專屬徽章",
-                        description: "獲得 VIP NFT 徽章展示您的身份",
-                        icon: "🏅"
-                    },
-                    {
-                        title: "提前參與",
-                        description: "優先參與新功能測試和限時活動",
-                        icon: "🚀"
-                    },
-                    {
-                        title: "特殊獎勵",
-                        description: "額外的探險獎勵和稀有道具掉落",
-                        icon: "🎁"
-                    },
-                    {
-                        title: "社群特權",
-                        description: "VIP 專屬頻道和客服支持",
-                        icon: "💬"
-                    }
-                ]}
-                requirements={[
-                    "持有 SoulShard (SOUL) 代幣",
-                    "最低質押量：1,000 SOUL",
-                    "贖回冷卻期：1 天",
-                    "維持最低餘額以保持 VIP 狀態"
-                ]}
-                benefits={[
-                    "升星成功率提升 5-15%",
-                    "交易手續費減免 25-50%", 
-                    "VIP 專屬 NFT 徽章",
-                    "優先參與新功能測試",
-                    "專屬客服和社群支持"
-                ]}
-                gradient="from-yellow-900/20 to-orange-900/20"
-            />
-        );
-    }
-    
     const publicClient = usePublicClient();
     const { showToast } = useAppToast();
     const { isAdmin } = useAdminAccess();
@@ -422,30 +364,53 @@ const VipPageContent: React.FC = () => {
         if (balance > 0n) setAmount(formatEther((balance * BigInt(percentage)) / 100n));
     }, [mode, soulShardBalance, stakedAmount, setAmount]);
 
+    const handlePostApprovalRef = useRef<boolean>(false);
+    const stakeParamsRef = useRef<{ mode: string; amount: string; allowance: bigint | undefined }>({ mode: '', amount: '', allowance: undefined });
+    
+    // 🔥 修復：保存質押參數的引用，避免閉包問題
+    useEffect(() => {
+        stakeParamsRef.current = { mode, amount, allowance };
+    }, [mode, amount, allowance]);
+    
     useEffect(() => {
         async function handlePostApproval() {
-            if (isAwaitingStakeAfterApproval && !isTxPending) {
-                // 等待足夠時間確保區塊鏈狀態更新
-                await new Promise<void>(resolve => setTimeout(resolve, 3000));
-                await refetchAll();
-                setIsAwaitingStakeAfterApproval(false);
-                if (mode === 'stake' && amount) {
-                    // 再次檢查授權狀態
-                    try {
-                        const parsedAmount = parseEther(amount);
-                        if (typeof allowance === 'bigint' && allowance >= parsedAmount) {
-                            handleStake();
-                        } else {
-                            showToast('授權尚未完成，請稍後重試', 'info');
+            // 🔥 修復：使用 ref 防止重複執行
+            if (isAwaitingStakeAfterApproval && !isTxPending && !handlePostApprovalRef.current) {
+                handlePostApprovalRef.current = true;
+                
+                try {
+                    // 等待足夠時間確保區塊鏈狀態更新
+                    await new Promise<void>(resolve => setTimeout(resolve, 3000));
+                    await refetchAll();
+                    
+                    const { mode: currentMode, amount: currentAmount, allowance: currentAllowance } = stakeParamsRef.current;
+                    
+                    if (currentMode === 'stake' && currentAmount) {
+                        // 再次檢查授權狀態
+                        try {
+                            const parsedAmount = parseEther(currentAmount);
+                            if (typeof currentAllowance === 'bigint' && currentAllowance >= parsedAmount) {
+                                logger.info('🎯 開始執行質押，金額:', currentAmount);
+                                await handleStake();
+                            } else {
+                                showToast('授權尚未完成，請稍後重試', 'info');
+                            }
+                        } catch (error) {
+                            logger.error('質押執行失敗:', error);
+                            showToast('質押失敗，請重試', 'error');
                         }
-                    } catch (error) {
-                        logger.error('解析質押金額失敗:', error);
                     }
+                } finally {
+                    setIsAwaitingStakeAfterApproval(false);
+                    // 🔥 延遲重置，避免競態條件
+                    setTimeout(() => {
+                        handlePostApprovalRef.current = false;
+                    }, 1000);
                 }
             }
         }
         handlePostApproval();
-    }, [isAwaitingStakeAfterApproval, isTxPending, allowance, mode, amount, handleStake, refetchAll, showToast]);
+    }, [isAwaitingStakeAfterApproval, isTxPending]); // 🔥 修復：只依賴關鍵狀態，防止重複觸發
 
     // 檢查是否有待處理的 unstake 請求
     const hasPendingUnstake = pendingUnstakeAmount > 0n;

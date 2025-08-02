@@ -32,17 +32,18 @@ const SettingRow: React.FC<SettingRowProps> = ({
   unit = '無',
   placeholders = ['輸入新值']
 }) => {
-  // 防護：確保 label 有值
-  if (!label) {
-    console.warn('SettingRow: label is undefined or null');
-    return null;
-  }
   const [inputValues, setInputValues] = useState<string[]>(
     new Array(placeholders.length).fill('')
   );
   const { showToast } = useAppToast();
   const { writeContractAsync, isPending } = useWriteContract();
   const queryClient = useQueryClient();
+
+  // 防護：確保 label 有值 - 移到所有 Hook 之後
+  if (!label) {
+    console.warn('SettingRow: label is undefined or null');
+    return null;
+  }
 
   const handleUpdate = async () => {
     if (inputValues.some(v => !v)) return;

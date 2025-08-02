@@ -340,3 +340,5 @@ export const PurchaseModalV2: React.FC<PurchaseModalV2Props> = ({
         </Modal>
     );
 };
+
+export default PurchaseModalV2;

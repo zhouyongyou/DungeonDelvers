@@ -113,17 +113,20 @@ const TokenBalanceItem: React.FC<{ address: Address; symbol: StablecoinSymbol }>
 }) => {
     const tokenInfo = SUPPORTED_STABLECOINS[symbol];
     
-    // 如果找不到代幣信息，返回空
-    if (!tokenInfo) {
-        return null;
-    }
-    
     const { data: balance, isLoading, error } = useReadContract({
-        address: tokenInfo.address as Address,
+        address: tokenInfo?.address as Address,
         abi: erc20Abi,
         functionName: 'balanceOf',
         args: [address],
+        query: {
+            enabled: !!tokenInfo // 只有當 tokenInfo 存在時才執行查詢
+        }
     });
+    
+    // 如果找不到代幣信息，返回空 - 移到 Hook 之後
+    if (!tokenInfo) {
+        return null;
+    }
     
     if (isLoading) {
         return (
@@ -170,17 +173,20 @@ const CompactTokenBalance: React.FC<{ address: Address; symbol: StablecoinSymbol
 }) => {
     const tokenInfo = SUPPORTED_STABLECOINS[symbol];
     
-    // 如果找不到代幣信息（例如 USD1 已被移除），返回空
-    if (!tokenInfo) {
-        return null;
-    }
-    
     const { data: balance, isLoading } = useReadContract({
-        address: tokenInfo.address as Address,
+        address: tokenInfo?.address as Address,
         abi: erc20Abi,
         functionName: 'balanceOf',
         args: [address],
+        query: {
+            enabled: !!tokenInfo // 只有當 tokenInfo 存在時才執行查詢
+        }
     });
+    
+    // 如果找不到代幣信息（例如 USD1 已被移除），返回空 - 移到 Hook 之後
+    if (!tokenInfo) {
+        return null;
+    }
     
     if (isLoading) {
         return (
@@ -211,17 +217,20 @@ const DetailedTokenBalance: React.FC<{ address: Address; symbol: StablecoinSymbo
 }) => {
     const tokenInfo = SUPPORTED_STABLECOINS[symbol];
     
-    // 如果找不到代幣信息，返回空
-    if (!tokenInfo) {
-        return null;
-    }
-    
     const { data: balance, isLoading, error } = useReadContract({
-        address: tokenInfo.address as Address,
+        address: tokenInfo?.address as Address,
         abi: erc20Abi,
         functionName: 'balanceOf',
         args: [address],
+        query: {
+            enabled: !!tokenInfo // 只有當 tokenInfo 存在時才執行查詢
+        }
     });
+    
+    // 如果找不到代幣信息，返回空 - 移到 Hook 之後
+    if (!tokenInfo) {
+        return null;
+    }
     
     if (isLoading) {
         return (

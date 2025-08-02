@@ -41,7 +41,7 @@ const MyAssetsPage = lazy(() => import('./pages/MyAssetsPageEnhanced'));
 const DungeonPage = lazy(() => import('./pages/DungeonPage'));
 const AltarPage = lazy(() => import('./pages/AltarPage'));
 const AdminPage = lazy(() => import('./pages/AdminPageFixed'));
-const MarketplacePage = lazy(() => import('./pages/MarketplacePage'));
+const MarketplacePage = lazy(() => import('./pages/MarketplaceRedirect'));
 const VipPage = lazy(() => import('./pages/VipPage'));
 const ReferralPage = lazy(() => import('./pages/ReferralPage'));
 // 暫時禁用圖鑑功能

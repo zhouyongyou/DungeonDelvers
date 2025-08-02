@@ -33,6 +33,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   const [imageSrc, setImageSrc] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [showPlaceholder, setShowPlaceholder] = useState(true);
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -74,6 +75,8 @@ export const LazyImage: React.FC<LazyImageProps> = ({
       setImageSrc(src);
       setIsLoading(false);
       setHasError(false);
+      // 延遲隱藏佔位符，確保圖片完全載入
+      setTimeout(() => setShowPlaceholder(false), 100);
       onLoad?.();
     };
 
@@ -85,6 +88,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
           setImageSrc(fallback);
           setIsLoading(false);
           setHasError(false);
+          setTimeout(() => setShowPlaceholder(false), 100);
         };
         fallbackImg.onerror = () => {
           setIsLoading(false);
@@ -136,14 +140,14 @@ export const LazyImage: React.FC<LazyImageProps> = ({
       className="relative overflow-hidden"
       style={containerStyle}
     >
-      {isLoading && renderPlaceholder()}
+      {showPlaceholder && renderPlaceholder()}
       
       {imageSrc && (
         <img
           ref={imageRef}
           src={imageSrc}
           alt={alt}
-          className={`${className} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
+          className={`${className} ${showPlaceholder ? 'absolute inset-0 opacity-0' : 'opacity-100'} transition-opacity duration-300`}
           loading="lazy"
           decoding="async"
           width={width}

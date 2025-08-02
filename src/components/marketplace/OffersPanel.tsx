@@ -338,3 +338,5 @@ export const OffersPanel: React.FC<OffersPanelProps> = ({ className = '' }) => {
         </div>
     );
 };
+
+export default OffersPanel;

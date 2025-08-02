@@ -42,12 +42,12 @@ export function handleExperienceAdded(event: ExperienceAdded): void {
         profile.lastUpdatedAt = event.block.timestamp
         profile.save()
         
-        log.info("Experience added for player {}: amount={}, newTotal={}, level={}", [
-            profileId.toHexString(),
-            event.params.amount.toString(),
-            event.params.newTotalExperience.toString(),
-            profile.level.toString()
-        ])
+    // log.info("Experience added for player {}: amount={}, newTotal={}, level={}", [
+    //         profileId.toHexString(),
+    //         event.params.amount.toString(),
+    //         event.params.newTotalExperience.toString(),
+    //         profile.level.toString()
+    //     ])
     } else {
         log.warning("ExperienceAdded for a non-existent profile: {}. A profile should be created first.", [profileId.toHexString()])
     }
@@ -57,7 +57,7 @@ export function handleTransfer(event: Transfer): void {
     // PlayerProfile 是 SBT，只處理 mint
     if (event.params.from.toHexString() === '0x0000000000000000000000000000000000000000') {
         // Mint case - 由 ProfileCreated 處理
-        log.info('Profile minted to: {}', [event.params.to.toHexString()])
+    // log.info('Profile minted to: {}', [event.params.to.toHexString()])
     } else if (event.params.to.toHexString() === '0x0000000000000000000000000000000000000000') {
         // Burn case - 不應該發生
         log.warning('Unexpected profile burn from: {}', [event.params.from.toHexString()])

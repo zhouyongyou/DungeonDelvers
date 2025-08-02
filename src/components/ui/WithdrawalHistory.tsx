@@ -235,6 +235,7 @@ export const WithdrawalHistoryButton: React.FC<WithdrawalHistoryButtonProps> = (
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
+  // 條件檢查移到 Hook 調用之後
   if (!userAddress) return null;
 
   return (

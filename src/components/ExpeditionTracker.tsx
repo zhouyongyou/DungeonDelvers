@@ -59,6 +59,10 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
     const [showBanner, setShowBanner] = useState(false);
     const [latestResult, setLatestResult] = useState<ExpeditionResult | null>(null);
     const { showExpeditionResult } = useExpeditionResult();
+    
+    // Widget state hooks - 移到頂部避免條件性調用
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     const dungeonMasterContract = getContractWithABI('DUNGEONMASTER');
 
@@ -300,8 +304,6 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
     }
 
     // Recent results widget (for sidebar or dedicated section)
-    const [isExpanded, setIsExpanded] = React.useState(false);
-    const [isRefreshing, setIsRefreshing] = React.useState(false);
     const displayLimit = isExpanded ? 20 : 5; // 預設顯示5筆，展開顯示20筆
     
     const handleManualRefresh = async () => {

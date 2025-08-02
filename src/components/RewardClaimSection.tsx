@@ -26,16 +26,6 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
 }) => {
     const [showRewardAnimation, setShowRewardAnimation] = useState(false);
     const [lastClaimedAmount, setLastClaimedAmount] = useState('0');
-    try {
-    // 檢查輸入參數
-    if (!partyId) {
-        console.error('[RewardClaimSection] partyId is missing');
-        return null;
-    }
-    // 移除 Apollo 即時訂閱，直接使用合約數據
-    // const { party, isRealtime } = useRealtimePartyStatus({ 
-    //     partyId: partyId.toString() 
-    // });
     
     const {
         unclaimedRewards: contractRewards,
@@ -47,6 +37,19 @@ export const RewardClaimSection: React.FC<RewardClaimSectionProps> = ({
     } = useRewardManager({ partyId, chainId });
     
     // 當領取成功時顯示動畫
+    useEffect(() => {
+        if (isClaimSuccess && contractRewards === 0n && lastClaimedAmount !== '0') {
+            setShowRewardAnimation(true);
+        }
+    }, [isClaimSuccess, contractRewards, lastClaimedAmount]);
+
+    try {
+    // 檢查輸入參數 - 移到所有 Hook 之後
+    if (!partyId) {
+        console.error('[RewardClaimSection] partyId is missing');
+        return null;
+    }
+    
     useEffect(() => {
         if (isClaimSuccess && contractRewards === 0n && lastClaimedAmount !== '0') {
             setShowRewardAnimation(true);

@@ -45,7 +45,7 @@ export function handleHeroMinted(event: HeroMinted): void {
     updateGlobalStats(TOTAL_HEROES, 1, event.block.timestamp)
     updatePlayerStats(event.params.owner, TOTAL_HEROES_MINTED, 1, event.block.timestamp)
     
-    log.info('Successfully processed HeroMinted event: {}', [heroId]);
+    // log.info('Successfully processed HeroMinted event: {}', [heroId]);
 }
 
 export function handleTransfer(event: Transfer): void {
@@ -63,7 +63,7 @@ export function handleTransfer(event: Transfer): void {
             
             // 從資料庫中移除 Hero 實體
             hero.save() // 先保存任何變更
-            log.info('Hero burned: {} from {}', [heroId, event.params.from.toHexString()]);
+    // log.info('Hero burned: {} from {}', [heroId, event.params.from.toHexString()]);
         } else {
             log.warning('Burn event for Hero that does not exist: {}', [heroId]);
         }
@@ -76,7 +76,7 @@ export function handleTransfer(event: Transfer): void {
         const newOwner = getOrCreatePlayer(event.params.to)
         hero.owner = newOwner.id
         hero.save()
-        log.info('Successfully transferred hero {} from {} to {}', [heroId, event.params.from.toHexString(), event.params.to.toHexString()]);
+    // log.info('Successfully transferred hero {} from {} to {}', [heroId, event.params.from.toHexString(), event.params.to.toHexString()]);
     } else {
         // 如果 Hero 實體不存在，我們不應該創建占位實體
         // 因為這會導致所有 NFT 顯示為默認 rarity 1
@@ -106,20 +106,20 @@ export function handleHeroBurned(event: HeroBurned): void {
     updateGlobalStats(TOTAL_HEROES, -1, event.block.timestamp)
     updatePlayerStats(event.params.owner, TOTAL_HEROES_MINTED, -1, event.block.timestamp)
 
-    log.info('Successfully processed HeroBurned event: {} (Rarity: {}, Power: {})', [
-        heroId,
-        event.params.rarity.toString(),
-        event.params.power.toString()
-    ])
+    // log.info('Successfully processed HeroBurned event: {} (Rarity: {}, Power: {})', [
+    //     heroId,
+    //     event.params.rarity.toString(),
+    //     event.params.power.toString()
+    // ])
 }
 
 export function handleBatchMintCompleted(event: BatchMintCompleted): void {
     // 記錄批量鑄造事件
-    log.info('BatchMintCompleted: Player {} minted {} heroes with max rarity {}', [
-        event.params.player.toHexString(),
-        event.params.quantity.toString(),
-        event.params.maxRarity.toString()
-    ])
+    // log.info('BatchMintCompleted: Player {} minted {} heroes with max rarity {}', [
+    //     event.params.player.toHexString(),
+    //     event.params.quantity.toString(),
+    //     event.params.maxRarity.toString()
+    // ])
     
     // 批量鑄造完成事件本身不需要特別處理
     // 因為每個英雄的創建已經在 HeroMinted 事件中處理了

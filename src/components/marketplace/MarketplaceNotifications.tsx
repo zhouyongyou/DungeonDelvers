@@ -304,3 +304,5 @@ export const MarketplaceNotifications: React.FC<MarketplaceNotificationsProps> =
         </div>
     );
 };
+
+export default MarketplaceNotifications;

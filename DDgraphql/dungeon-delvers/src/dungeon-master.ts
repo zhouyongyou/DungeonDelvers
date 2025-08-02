@@ -105,7 +105,7 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
     party.lastUpdatedAt = event.block.timestamp
     party.save()
     
-    log.info("Created fallback party entity: {}", [partyId])
+    // log.info("Created fallback party entity: {}", [partyId])
   }
 
   // 現在 party 一定存在，繼續處理遠征
@@ -118,11 +118,11 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
     const dungeonIdInt = getDungeonIdFromExp(event.params.expGained, event.params.success)
     const dungeonId = BigInt.fromI32(dungeonIdInt)
     
-    log.info("反推地城ID: expGained={}, success={}, dungeonId={}", [
-      event.params.expGained.toString(),
-      event.params.success.toString(),
-      dungeonIdInt.toString()
-    ])
+    // log.info("反推地城ID: expGained={}, success={}, dungeonId={}", [
+    //   event.params.expGained.toString(),
+    //   event.params.success.toString(),
+    //   dungeonIdInt.toString()
+    // ])
     
     expedition.player = event.params.player
     expedition.party = partyId
@@ -228,11 +228,11 @@ export function handleRewardsBanked(event: RewardsBanked): void {
       log.warning("RewardsBanked for a non-existent profile: {}", [playerAddress.toHexString()])
     }
     
-    log.info("Rewards banked - Player: {}, Party: {}, Amount: {}", [
-      playerAddress.toHexString(),
-      event.params.partyId.toString(),
-      event.params.amount.toString()
-    ])
+    // log.info("Rewards banked - Player: {}, Party: {}, Amount: {}", [
+    //   playerAddress.toHexString(),
+    //   event.params.partyId.toString(),
+    //   event.params.amount.toString()
+    // ])
   } else {
     log.warning("RewardsBanked for a non-existent party: {}", [partyId])
   }

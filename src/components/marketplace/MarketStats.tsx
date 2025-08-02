@@ -253,3 +253,5 @@ export const MarketStats: React.FC<MarketStatsProps> = ({ className = '' }) => {
         </div>
     );
 };
+
+export default MarketStats;

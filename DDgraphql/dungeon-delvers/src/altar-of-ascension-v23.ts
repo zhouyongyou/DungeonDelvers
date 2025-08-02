@@ -26,10 +26,10 @@ export function handleUpgradeAttempted(event: UpgradeAttempted): void {
     
     attempt.save()
     
-    log.info('Successfully processed UpgradeAttempted event: player {}, nftType {}, targetRarity {}, success {}', [
-        event.params.player.toHexString(),
-        event.params.nftType.toString(),
-        event.params.targetRarity.toString(),
-        attempt.success ? 'true' : 'false'
-    ])
+    // log.info('Successfully processed UpgradeAttempted event: player {}, nftType {}, targetRarity {}, success {}', [
+    //     event.params.player.toHexString(),
+    //     event.params.nftType.toString(),
+    //     event.params.targetRarity.toString(),
+    //     attempt.success ? 'true' : 'false'
+    // ])
 }
