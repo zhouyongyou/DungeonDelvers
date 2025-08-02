@@ -1,7 +1,7 @@
 // src/utils/subgraphHealthCheck.ts - 子圖健康檢查工具
 
 import { logger } from './logger';
-import { getApiKey } from '../config/subgraph';
+// import { getApiKey } from '../config/subgraph'; // 已移除，URL 中包含 API Key
 
 interface SubgraphHealthStatus {
   isHealthy: boolean;
@@ -56,15 +56,12 @@ export async function checkSubgraphHealth(): Promise<SubgraphHealthStatus> {
       }
     `;
 
-    const apiKey = getApiKey();
+    // The Graph 去中心化端點已在 URL 中包含 API Key，不需要額外的 Authorization header
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     };
     
-    // 如果有 API key，添加到 Authorization header
-    if (apiKey) {
-      headers['Authorization'] = `Bearer ${apiKey}`;
-    }
+    // 注意：不添加 Authorization header，避免與 URL 中的 API Key 衝突
 
     const subgraphResponse = await fetch('https://gateway.thegraph.com/api/f6c1aba78203cfdf0cc732eafe677bdd/subgraphs/id/Hmwr7XYgzVzsUb9dw95gSGJ1Vof6qYypuvCxynzinCjs', {
       method: 'POST',
