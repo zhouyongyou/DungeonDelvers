@@ -107,8 +107,8 @@ export async function generateOptimizedMetadata(
 ): Promise<any> {
     const {
         baseUrl = 'https://www.dungeondelvers.xyz',
-        includeAnimation = true,
-        marketOptimized = 'general'
+        _includeAnimation = true,
+        _marketOptimized = 'general'
     } = options;
     
     // 1. 獲取 NFT 數據

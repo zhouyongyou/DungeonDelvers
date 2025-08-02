@@ -65,17 +65,16 @@
 
 ## 💡 封存建議總結
 
-### 🟢 **可以立即安全封存**:
-1. `MarketplacePage.tsx`
-2. `CodegenTestPage.tsx`
-3. `CreateListingPage.tsx`
-4. `LeaderboardTestPage.tsx`
-5. `AltarPage-debug.tsx`
-6. `AltarPage-fix.tsx`
-
-### 🟡 **需要決策的項目**:
-1. `CodexPage.tsx` - 功能已停用，但可能未來重啟
-2. `RouteManager.tsx` + `useResourcePreloader.ts` - 整個備用路由系統
+### ✅ **已成功封存**:
+1. `MarketplacePage.tsx` → `archived/unused-test-pages/`
+2. `CodegenTestPage.tsx` → `archived/unused-test-pages/`
+3. `CreateListingPage.tsx` → `archived/unused-test-pages/`
+4. `LeaderboardTestPage.tsx` → `archived/unused-test-pages/`
+5. `AltarPage-debug.tsx` → `archived/unused-test-pages/`
+6. `AltarPage-fix.tsx` → `archived/unused-test-pages/`
+7. `CodexPage.tsx` → `archived/unused-test-pages/` (功能已停用)
+8. `RouteManager.tsx` → `archived/unused-route-system/` (整個備用路由系統)
+9. `useResourcePreloader.ts` → `archived/unused-route-system/`
 
 ### 🔴 **絕對不能封存**:
 1. `AdminPage.tsx` - 被 AdminPageFixed.tsx 使用

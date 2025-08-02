@@ -783,7 +783,7 @@ class AutoDebugDeploy {
           });
         }
       }
-    } catch (error) {
+    } catch (_error) {
       this.results[2].issues.push({
         severity: 'critical',
         type: 'Missing Schema',
@@ -809,7 +809,7 @@ class AutoDebugDeploy {
           });
         }
       }
-    } catch (error) {
+    } catch (_error) {
       this.results[2].issues.push({
         severity: 'critical',
         type: 'Missing Mappings',
@@ -848,7 +848,7 @@ class AutoDebugDeploy {
           suggestion: '在 subgraph.yaml 中配置數據源地址'
         });
       }
-    } catch (error) {
+    } catch (_error) {
       this.results[2].issues.push({
         severity: 'critical',
         type: 'Missing Config',
