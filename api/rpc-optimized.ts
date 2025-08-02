@@ -192,7 +192,7 @@ class ApiKeyManager {
   }
   
   getStats() {
-    const stats = Array.from(this.keyStats.entries()).map(([key, data], index) => ({
+    const stats = Array.from(this.keyStats.entries()).map(([_key, data], index) => ({
       index: index + 1,
       requests: data.requests,
       errors: data.errors,

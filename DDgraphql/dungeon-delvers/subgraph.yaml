@@ -1,5 +1,5 @@
-# 輕量版子圖 - 只包含核心遊戲功能
-# 移除市場系統以提升同步速度
+# Generated from v25-config.js on 2025-08-02T15:03:09.416Z
+# V25 Production Deployment
 specVersion: 0.0.4
 schema:
   file: ./schema.graphql

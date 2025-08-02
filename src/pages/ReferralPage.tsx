@@ -18,6 +18,8 @@ import { logger } from '../utils/logger';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import { formatLargeNumber } from '../utils/formatters';
 import { CommissionManager } from '../components/referral/CommissionManager';
+import { MobileAddress } from '../components/mobile/MobileAddress';
+import { MobileDataCard } from '../components/mobile/MobileDataCard';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取 Hook
@@ -428,9 +430,13 @@ ${referralLink}
                         <div className="card-bg p-6 rounded-2xl mb-8 text-center max-w-md mx-auto">
                             <h3 className="text-lg font-bold text-yellow-400 mb-4">您的推薦人</h3>
                             <div className="space-y-3">
-                                <p className="font-mono text-sm text-gray-400 break-all">
-                                    {urlRefParam}
-                                </p>
+                                <div>
+                                    <MobileAddress 
+                                        address={urlRefParam}
+                                        className="text-sm text-gray-400"
+                                        showCopyButton={false}
+                                    />
+                                </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="bg-black/20 p-3 rounded-lg">
                                         <p className="text-gray-400 text-sm">擁有英雄</p>
@@ -602,9 +608,11 @@ ${referralLink}
                                         <div key={inviteeAddress} className="flex items-center justify-between p-2 bg-gray-800/50 rounded text-xs">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-blue-400">#{index + 1}</span>
-                                                <span className="font-mono text-gray-300">
-                                                    {inviteeAddress.slice(0, 6)}...{inviteeAddress.slice(-4)}
-                                                </span>
+                                                <MobileAddress 
+                                                    address={inviteeAddress}
+                                                    className="text-gray-300"
+                                                    showCopyButton={false}
+                                                />
                                             </div>
                                         </div>
                                     ))}
@@ -679,7 +687,13 @@ ${referralLink}
                             <div>
                                 <h4 className="font-semibold text-purple-400 mb-2">檢測到推薦關係</h4>
                                 <p className="text-sm text-gray-300 mb-3">您通過推薦連結進入，以下地址將成為您的邀請人：</p>
-                                <p className="font-mono text-xs text-gray-400 bg-black/30 p-2 rounded break-all mb-3">{urlRefParam}</p>
+                                <div className="bg-black/30 p-3 rounded mb-3">
+                                    <MobileAddress 
+                                        address={urlRefParam} 
+                                        className="text-gray-400"
+                                        showCopyButton={true}
+                                    />
+                                </div>
                             </div>
                         </div>
                         
@@ -709,8 +723,14 @@ ${referralLink}
                         hasReferrer ? (
                             <div className="bg-green-900/20 p-4 rounded-lg border border-green-500/30">
                                 <p className="text-green-400 font-medium mb-2">✓ 您已成功綁定邀請人</p>
-                                <p className="text-gray-400">您的邀請人:</p>
-                                <p className="font-mono text-lg text-green-400 bg-black/20 p-2 rounded break-all">{currentReferrer}</p>
+                                <p className="text-gray-400 mb-2">您的邀請人:</p>
+                                <div className="bg-black/20 p-3 rounded-lg">
+                                    <MobileAddress 
+                                        address={currentReferrer} 
+                                        className="text-lg text-green-400"
+                                        showCopyButton={true}
+                                    />
+                                </div>
                                 <p className="text-xs text-gray-500 mt-2">邀請關係已建立，您的邀請人將持續獲得您提領時的佣金分成。</p>
                             </div>
                         ) : (

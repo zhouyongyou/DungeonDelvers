@@ -3,7 +3,6 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs/promises';
-import * as path from 'path';
 
 const execAsync = promisify(exec);
 
@@ -110,7 +109,7 @@ class ContractAnalyzer extends BaseAgent {
     }
   }
 
-  private async runSlitherAnalysis(contractPath: string): Promise<any> {
+  private async runSlitherAnalysis(_contractPath: string): Promise<any> {
     // 實際實現會調用 Slither
     return {
       highSeverity: [],
@@ -119,7 +118,7 @@ class ContractAnalyzer extends BaseAgent {
     };
   }
 
-  private async analyzeGasUsage(contractPath: string): Promise<any> {
+  private async analyzeGasUsage(_contractPath: string): Promise<any> {
     // 分析 gas 使用模式
     return {
       estimatedGas: {
@@ -134,7 +133,7 @@ class ContractAnalyzer extends BaseAgent {
     };
   }
 
-  private async checkUpgradeability(contractPath: string): Promise<any> {
+  private async checkUpgradeability(_contractPath: string): Promise<any> {
     return {
       isUpgradeable: false,
       recommendations: ['Consider implementing proxy pattern for future upgrades']
@@ -166,7 +165,7 @@ class FrontendSyncer extends BaseAgent {
     );
   }
 
-  async execute(task: Task): Promise<TaskResult> {
+  async execute(_task: Task): Promise<TaskResult> {
     console.log(`🔄 ${this.name} 正在同步前端...`);
     
     try {
@@ -284,7 +283,7 @@ class PerformanceTester extends BaseAgent {
     );
   }
 
-  async execute(task: Task): Promise<TaskResult> {
+  async execute(_task: Task): Promise<TaskResult> {
     console.log(`⚡ ${this.name} 正在進行性能測試...`);
     
     try {

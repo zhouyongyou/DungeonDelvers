@@ -225,34 +225,42 @@ export async function preloadNftImagesByRarity(type: 'hero' | 'relic', rarities:
  */
 export function setupSmartPreloading() {
   let preloadTimer: NodeJS.Timeout | null = null;
+  let lastHash = '';
   
-  // 監聽路由變化，預加載相關圖片（使用防抖）
+  // 監聽路由變化，預加載相關圖片（使用防抖和去重）
   window.addEventListener('hashchange', () => {
+    const currentHash = window.location.hash;
+    
+    // 避免重複處理相同的路由
+    if (currentHash === lastHash) {
+      return;
+    }
+    
     if (preloadTimer) {
       clearTimeout(preloadTimer);
     }
     
     preloadTimer = setTimeout(() => {
-      const hash = window.location.hash;
+      lastHash = currentHash;
       
-      if (hash.includes('mint')) {
-        // 預加載鑄造頁面相關圖片
-        preloadNftImagesByRarity('hero', [1, 2, 3]).catch(err => 
+      if (currentHash.includes('mint')) {
+        // 預加載鑄造頁面相關圖片（減少稀有度數量）
+        preloadNftImagesByRarity('hero', [1, 2]).catch(err => 
           logger.warn('Mint page preload failed', err)
         );
-        preloadNftImagesByRarity('relic', [1, 2, 3]).catch(err => 
+        preloadNftImagesByRarity('relic', [1, 2]).catch(err => 
           logger.warn('Mint page relic preload failed', err)
         );
-      } else if (hash.includes('party')) {
-        // 預加載隊伍頁面相關圖片
-        preloadNftImagesByRarity('hero', [1, 2, 3, 4, 5]).catch(err => 
+      } else if (currentHash.includes('party')) {
+        // 預加載隊伍頁面相關圖片（減少稀有度數量）
+        preloadNftImagesByRarity('hero', [1, 2, 3]).catch(err => 
           logger.warn('Party page hero preload failed', err)
         );
-        preloadNftImagesByRarity('relic', [1, 2, 3, 4, 5]).catch(err => 
+        preloadNftImagesByRarity('relic', [1, 2, 3]).catch(err => 
           logger.warn('Party page relic preload failed', err)
         );
       }
-    }, 300); // 300ms 防抖延遲
+    }, 500); // 增加防抖延遲到500ms
   });
 
   // 使用 Intersection Observer 預加載即將進入視窗的圖片

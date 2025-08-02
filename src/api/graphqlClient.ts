@@ -3,6 +3,7 @@ import type { NormalizedCacheObject } from '@apollo/client';
 import { onError } from '@apollo/client/link/error';
 import { graphqlPersistentCache } from '../cache/persistentCache';
 import { logger } from '../utils/logger';
+import { subgraphConfig } from '../config/subgraphConfig';
 
 // GraphQL Fragments for reuse
 export const PLAYER_FRAGMENTS = {
@@ -185,14 +186,58 @@ const performanceLink = new ApolloLink((operation, forward) => {
   });
 });
 
+// 智能端點選擇 Link
+const smartEndpointLink = new ApolloLink((operation, forward) => {
+  return new Observable(observer => {
+    // 每次查詢都動態選擇最佳端點
+    subgraphConfig.getOptimalEndpoint().then(optimalUri => {
+      const start = Date.now();
+      
+      // 設定動態 URI
+      operation.setContext({ uri: optimalUri });
+      
+      // 執行查詢
+      const subscription = forward(operation).subscribe({
+        next: (result) => {
+          const duration = Date.now() - start;
+          const endpointType = optimalUri.includes('studio') ? 'studio' : 'decentralized';
+          
+          logger.debug(`GraphQL query via ${endpointType}: ${duration}ms`, {
+            operation: operation.operationName,
+            endpoint: endpointType,
+            uri: optimalUri
+          });
+          
+          observer.next(result);
+        },
+        error: (error) => {
+          const endpointType = optimalUri.includes('studio') ? 'studio' : 'decentralized';
+          logger.warn(`GraphQL query failed via ${endpointType}:`, {
+            operation: operation.operationName,
+            endpoint: endpointType,
+            error: error.message
+          });
+          observer.error(error);
+        },
+        complete: () => observer.complete()
+      });
+      
+      return () => subscription.unsubscribe();
+    }).catch(error => {
+      logger.error('Failed to get optimal endpoint:', error);
+      observer.error(error);
+    });
+  });
+});
+
 // Create Apollo Client
-export const createApolloClient = (uri: string): ApolloClient<NormalizedCacheObject> => {
+export const createApolloClient = (): ApolloClient<NormalizedCacheObject> => {
   return new ApolloClient({
-    uri,
     cache: cacheConfig,
     link: ApolloLink.from([
       errorLink,
       performanceLink,
+      smartEndpointLink, // 使用智能端點選擇
       cachingLink,
       new ApolloLink((operation, forward) => {
         // Add auth headers if needed
@@ -222,11 +267,7 @@ let apolloClient: ApolloClient<NormalizedCacheObject> | null = null;
 
 export const getApolloClient = (): ApolloClient<NormalizedCacheObject> => {
   if (!apolloClient) {
-    const graphUrl = import.meta.env.VITE_THE_GRAPH_STUDIO_API_URL;
-    if (!graphUrl) {
-      throw new Error('GraphQL API URL not configured');
-    }
-    apolloClient = createApolloClient(graphUrl);
+    apolloClient = createApolloClient();
   }
   return apolloClient;
 };

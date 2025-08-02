@@ -4,7 +4,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // Simple in-memory storage (in production, use Vercel KV or database)
-let listings: any[] = [];
+const listings: MarketListing[] = [];
 
 interface MarketListing {
     id: string;
@@ -51,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 async function handleGetListings(req: VercelRequest, res: VercelResponse) {
     const { status, seller, nftType, limit = '50', offset = '0' } = req.query;
     
-    let filteredListings = [...listings];
+    const filteredListings = [...listings];
     
     // Apply filters
     if (status) {

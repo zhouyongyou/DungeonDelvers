@@ -87,7 +87,7 @@ export class RequestBatcher<TRequest, TResponse> {
     try {
       // Process batch
       const requests = new Map<string, TRequest>();
-      batch.forEach((item, key) => {
+      batch.forEach((item, _key) => {
         // Note: We need the actual request object here
         // This is a simplified version - in real implementation,
         // we'd store the request along with the promise handlers
@@ -124,7 +124,7 @@ export const nftMetadataBatcher = new RequestBatcher<
     
     // Group by contract address for more efficient fetching
     const byContract = new Map<string, string[]>();
-    requests.forEach((req, key) => {
+    requests.forEach((req, _key) => {
       if (!byContract.has(req.contractAddress)) {
         byContract.set(req.contractAddress, []);
       }

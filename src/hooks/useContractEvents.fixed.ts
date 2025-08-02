@@ -18,10 +18,10 @@ type DecodedLogWithArgs = {
     args: Record<string, unknown>;
 };
 
-// 🔧 修復：減少併發監聽器數量，增加錯誤處理
+// 🔧 修復：進一步減少併發監聽器數量，增加錯誤處理
 const OPTIMIZED_POLLING_INTERVALS = {
-  connected: 45_000,    // 錢包連接時：45秒（避免過於頻繁）
-  background: 120_000,  // 背景模式：2分鐘
+  connected: 60_000,    // 錢包連接時：60秒（進一步減少頻率）
+  background: 180_000,  // 背景模式：3分鐘（減少背景請求）
 } as const;
 
 // 🔧 修復：統一的錯誤處理機制
@@ -129,14 +129,22 @@ export const useContractEventsFixed = () => {
     // 🔧 修復：只在有錢包連接且在正確網路時啟用
     const isEnabled = chainId === bsc.id && !!address && !!publicClient;
     
-    // 🔧 修復：節流處理，避免過於頻繁的查詢刷新
+    // 🔧 修復：強化節流處理，避免過於頻繁的查詢刷新
     const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const throttledRefresh = useCallback((queryKeys: string[][], delay: number = 2000) => {
+    const lastRefreshTime = useRef<number>(0);
+    const throttledRefresh = useCallback((queryKeys: string[][], delay: number = 3000) => {
+        const now = Date.now();
+        // 如果距離上次刷新少於5秒，跳過此次刷新
+        if (now - lastRefreshTime.current < 5000) {
+            return;
+        }
+        
         if (refreshTimeoutRef.current) {
             clearTimeout(refreshTimeoutRef.current);
         }
         
         refreshTimeoutRef.current = setTimeout(() => {
+            lastRefreshTime.current = Date.now();
             Promise.all(
                 queryKeys.map(key => queryClient.invalidateQueries({ queryKey: key }))
             ).catch(error => {
@@ -145,9 +153,15 @@ export const useContractEventsFixed = () => {
         }, delay);
     }, [queryClient]);
     
-    // 精簡的刷新函數
+    // 精簡的刷新函數（增加防重複調用）
+    const lastToastTime = useRef<number>(0);
     const invalidateNftsAndBalance = useCallback(() => {
-        showToast('🔄 資產數據更新中...', 'info');
+        const now = Date.now();
+        // 避免短時間內重複顯示Toast
+        if (now - lastToastTime.current > 10000) {
+            showToast('🔄 資產數據更新中...', 'info');
+            lastToastTime.current = now;
+        }
         throttledRefresh([
             ['ownedNfts', address, chainId],
             ['balance', address, chainId]

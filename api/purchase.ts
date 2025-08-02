@@ -4,7 +4,22 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // In production, this would be shared with listings.ts or use a database
-let listings: any[] = [];
+interface MarketListing {
+    id: string;
+    seller: string;
+    nftType: 'hero' | 'relic' | 'party';
+    tokenId: string;
+    contractAddress: string;
+    price: bigint;
+    status: 'active' | 'sold' | 'cancelled';
+    createdAt: number;
+    updatedAt: number;
+    buyer?: string;
+    soldAt?: number;
+    txHash?: string;
+}
+
+const listings: MarketListing[] = [];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Enable CORS

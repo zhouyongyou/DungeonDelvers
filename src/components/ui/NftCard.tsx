@@ -7,7 +7,7 @@ import { bsc } from 'wagmi/chains';
 import type { AnyNft, HeroNft, RelicNft, PartyNft, VipNft } from '../../types/nft';
 import { getRarityChineseName, getRarityColor as getRarityColorUtil } from '../../utils/rarityConverter';
 import ImageWithFallback from './ImageWithFallback';
-import { LazyImage } from './LazyImage';
+import { EnhancedLazyImage } from './EnhancedLazyImage';
 import { safeBigintToString, getNftIdSafe, getPartyPowerSafe, getPartyCapacitySafe } from '../../utils/typeGuards';
 import { useNftDisplayMode } from '../../hooks/useNftDisplayMode';
 import { useImageOptimization } from '../../hooks/useImageOptimization';
@@ -144,7 +144,7 @@ const NftCard: React.FC<NftCardProps> = memo(({
       <div className="relative w-full h-full overflow-hidden rounded-lg">
         {renderSyncStatus()}
         {/* 總是使用 PNG 圖片，不使用 SVG */}
-        <LazyImage
+        <EnhancedLazyImage
           src={optimizeImageUrl(nft.image, { width: 400, height: 400 })}
           alt={nft.name || `${nft.type} #${nft.id}`}
           className={baseImageClass}

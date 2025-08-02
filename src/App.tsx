@@ -17,20 +17,25 @@ import { usePrefetchOnHover } from './hooks/usePagePrefetch';
 import { MobileNavigation } from './components/mobile/MobileNavigation';
 import { useMobileOptimization } from './hooks/useMobileOptimization';
 // import { RpcStatusMonitor } from './components/debug/RpcStatusMonitor'; // Removed RPC monitoring
-import PerformanceDashboard from './components/debug/PerformanceDashboard';
+// import PerformanceDashboard from './components/debug/PerformanceDashboard';
 import { preloadCriticalImages, setupSmartPreloading } from './utils/imagePreloadStrategy';
-import { usePagePerformance } from './utils/performanceMonitor';
+// import { usePagePerformance } from './utils/performanceMonitor';
 import { quickDiagnose } from './utils/simpleDiagnostics';
 import { isValidPitchPath } from './utils/pitchAccess';
-import { PageTransition, usePagePreload } from './components/ui/PageTransition';
+import { PageTransition } from './components/ui/PageTransition';
 import { useSmartPreloader } from './hooks/useSmartPreloader';
 import { NftDisplayProvider } from './hooks/useNftDisplayPreference';
-import { getDomainBasedRoute, isPitchDomain, redirectToDomainRoute } from './utils/domainRouter';
+import { isPitchDomain } from './utils/domainRouter';
 // import { WebSocketIndicator } from './components/WebSocketIndicator'; // 移除，因為不再使用 Apollo
 import { useKeyboardShortcuts, KeyboardShortcutsHelp } from './hooks/useKeyboardShortcuts';
 import { CommandPalette } from './components/ui/CommandPalette';
 import { SystemHealthMonitor } from './components/dev/SystemHealthMonitor';
 import { SubgraphDiagnostics } from './components/dev/SubgraphDiagnostics';
+import { EndpointMonitor } from './components/dev/EndpointMonitor';
+// 開發環境自動測試智能端點
+if (import.meta.env.DEV) {
+  import('./utils/testSmartEndpoint');
+}
 
 // 動態導入所有頁面
 const OverviewPage = lazy(() => import('./pages/OverviewPage'));
@@ -124,7 +129,16 @@ function App() {
   // }
 
   useEffect(() => {
-    const handleHashChange = () => setActivePage(getPageFromHash());
+    // 節流化的路由變更處理，減少狀態更新頻率
+    let routeTimer: NodeJS.Timeout | null = null;
+    const handleHashChange = () => {
+      if (routeTimer) return;
+      routeTimer = setTimeout(() => {
+        setActivePage(getPageFromHash());
+        routeTimer = null;
+      }, 100); // 100ms節流，防止快速切換
+    };
+    
     window.addEventListener('hashchange', handleHashChange);
     
     // 延遲初始化圖片預加載，避免阻塞首次渲染
@@ -140,7 +154,10 @@ function App() {
       }, 2000);
     }
     
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    return () => {
+      if (routeTimer) clearTimeout(routeTimer);
+      window.removeEventListener('hashchange', handleHashChange);
+    };
   }, []);
 
   // 預取鉤子
@@ -253,6 +270,8 @@ function App() {
             <SystemHealthMonitor />
             {/* 子圖診斷工具（開發環境） */}
             {import.meta.env.DEV && <SubgraphDiagnostics />}
+            {/* GraphQL 端點監控（開發環境） */}
+            <EndpointMonitor />
             {/* 移動端底部安全區域 */}
             {isMobile && <div className="h-16" />}
           </div>

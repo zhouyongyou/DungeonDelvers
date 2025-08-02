@@ -37,6 +37,12 @@ class SubgraphConfigManager {
     decentralized: string;
   } | null = null;
   private hasLoggedConfig = false;
+  
+  // 端點性能快取
+  private performanceCache = {
+    studio: { responseTime: 0, lastCheck: 0, isHealthy: true },
+    decentralized: { responseTime: 0, lastCheck: 0, isHealthy: true }
+  };
 
   // 獲取配置（帶緩存）
   private async getConfig() {
@@ -131,6 +137,132 @@ class SubgraphConfigManager {
     this.config = null;
     await configLoader.reload();
     await this.getConfig();
+  }
+
+  // 新增：獲取最佳端點（智能選擇）
+  async getOptimalEndpoint(feature: string = 'default'): Promise<string> {
+    const checkInterval = 2 * 60 * 1000; // 2分鐘檢查一次
+    const now = Date.now();
+    
+    // 檢查是否需要更新性能指標
+    if (now - this.performanceCache.studio.lastCheck > checkInterval) {
+      await this.updatePerformanceMetrics();
+    }
+    
+    const studio = this.performanceCache.studio;
+    const decentralized = this.performanceCache.decentralized;
+    
+    // 健康狀況優先：如果一個不健康，選擇健康的
+    if (!studio.isHealthy && decentralized.isHealthy) {
+      logger.info('Using decentralized endpoint (studio unhealthy)');
+      return await this.getDecentralizedUrl();
+    }
+    if (!decentralized.isHealthy && studio.isHealthy) {
+      logger.info('Using studio endpoint (decentralized unhealthy)');
+      return await this.getStudioUrl();
+    }
+    
+    // 都健康的話選擇更快的
+    const chosenEndpoint = studio.responseTime <= decentralized.responseTime ? 'studio' : 'decentralized';
+    
+    logger.info(`Optimal endpoint selected: ${chosenEndpoint}`, {
+      studioTime: `${studio.responseTime}ms`,
+      decentralizedTime: `${decentralized.responseTime}ms`
+    });
+    
+    return chosenEndpoint === 'studio' ? 
+      await this.getStudioUrl() : 
+      await this.getDecentralizedUrl();
+  }
+
+  // 更新端點性能指標
+  private async updatePerformanceMetrics() {
+    try {
+      const studioUrl = await this.getStudioUrl();
+      const decentralizedUrl = await this.getDecentralizedUrl();
+      
+      const [studioResult, decentralizedResult] = await Promise.allSettled([
+        this.pingEndpoint(studioUrl),
+        this.pingEndpoint(decentralizedUrl)
+      ]);
+      
+      // 更新 Studio 指標
+      this.performanceCache.studio = {
+        responseTime: studioResult.status === 'fulfilled' ? studioResult.value : 9999,
+        isHealthy: studioResult.status === 'fulfilled',
+        lastCheck: Date.now()
+      };
+      
+      // 更新 Decentralized 指標
+      this.performanceCache.decentralized = {
+        responseTime: decentralizedResult.status === 'fulfilled' ? decentralizedResult.value : 9999,
+        isHealthy: decentralizedResult.status === 'fulfilled',
+        lastCheck: Date.now()
+      };
+      
+      logger.debug('Endpoint performance updated:', {
+        studio: `${this.performanceCache.studio.responseTime}ms (${this.performanceCache.studio.isHealthy ? '健康' : '異常'})`,
+        decentralized: `${this.performanceCache.decentralized.responseTime}ms (${this.performanceCache.decentralized.isHealthy ? '健康' : '異常'})`
+      });
+      
+    } catch (error) {
+      logger.warn('Failed to update performance metrics:', error);
+    }
+  }
+
+  // 端點健康檢查
+  private async pingEndpoint(url: string): Promise<number> {
+    const start = Date.now();
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超時
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          query: '{ _meta { block { number } } }'
+        }),
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      if (data.errors && data.errors.length > 0) {
+        throw new Error(`GraphQL Error: ${data.errors[0].message}`);
+      }
+      
+      return Date.now() - start;
+    } catch (error) {
+      logger.warn(`Endpoint ping failed: ${url}`, error);
+      return 9999; // 返回很高的延遲表示不可用
+    }
+  }
+
+  // 獲取端點性能狀態（用於監控）
+  getPerformanceStatus() {
+    return {
+      studio: {
+        ...this.performanceCache.studio,
+        status: this.performanceCache.studio.isHealthy ? 'healthy' : 'unhealthy'
+      },
+      decentralized: {
+        ...this.performanceCache.decentralized,
+        status: this.performanceCache.decentralized.isHealthy ? 'healthy' : 'unhealthy'
+      },
+      lastUpdated: Math.max(
+        this.performanceCache.studio.lastCheck,
+        this.performanceCache.decentralized.lastCheck
+      )
+    };
   }
 }
 

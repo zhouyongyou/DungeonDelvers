@@ -35,6 +35,7 @@ import { useSoulPrice } from '../hooks/useSoulPrice';
 import { SkeletonStats, SkeletonCard } from '../components/ui/SkeletonLoader';
 import { usePlayerVaultV4 } from '../hooks/usePlayerVaultV4';
 import { GameInfoSection } from '../components/GameInfoSection';
+import { usePlayerVaultBatch } from '../hooks/usePlayerVaultBatch';
 
 // 延遲載入大型組件
 const AnalyticsDashboard = lazy(() => import('../components/analytics/AnalyticsDashboard'));
@@ -210,58 +211,21 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     // 使用合約讀取的 VIP 等級，而非子圖的 tier
     const vipTier = vipLevel || 0;
     
-    // 從合約讀取真實的稅率參數
-    const { data: contractStandardRate } = useReadContract({
-        address: playerVaultContract?.address,
-        abi: playerVaultContract?.abi,
-        functionName: 'standardInitialRate',
-        chainId: bsc.id,
-    });
-    
-    const { data: contractLargeRate } = useReadContract({
-        address: playerVaultContract?.address,
-        abi: playerVaultContract?.abi,
-        functionName: 'largeWithdrawInitialRate',
-        chainId: bsc.id,
-    });
-    
-    const { data: freeWithdrawThresholdUsd } = useReadContract({
-        address: playerVaultContract?.address,
-        abi: playerVaultContract?.abi,
-        functionName: 'freeWithdrawThresholdUSD',
-        chainId: bsc.id,
-    });
-    
-    const { data: largeWithdrawThresholdUsd } = useReadContract({
-        address: playerVaultContract?.address,
-        abi: playerVaultContract?.abi,
-        functionName: 'largeWithdrawThresholdUSD',
-        chainId: bsc.id,
-    });
-    
-    // 獲取玩家資訊（包含 lastWithdrawTimestamp）
-    const { data: playerInfo } = useReadContract({
-        address: playerVaultContract?.address,
-        abi: playerVaultContract?.abi,
-        functionName: 'playerInfo',
-        args: [address],
-        chainId: bsc.id,
-    });
-    
-    // 獲取時間減免參數
-    const { data: decreaseRatePerPeriod } = useReadContract({
-        address: playerVaultContract?.address,
-        abi: playerVaultContract?.abi,
-        functionName: 'decreaseRatePerPeriod',
-        chainId: bsc.id,
-    });
-    
-    const { data: periodDuration } = useReadContract({
-        address: playerVaultContract?.address,
-        abi: playerVaultContract?.abi,
-        functionName: 'periodDuration',
-        chainId: bsc.id,
-    });
+    // 使用批次 RPC 調用優化性能 - 將 7 個獨立調用合併為 1 個
+    const { 
+        data: vaultBatchData, 
+        taxRates: batchTaxRates,
+        freeThresholdUSD: freeWithdrawThresholdUsd,
+        largeThresholdUSD: largeWithdrawThresholdUsd,
+        isLoading: isBatchLoading 
+    } = usePlayerVaultBatch();
+
+    // 從批次數據中提取值
+    const contractStandardRate = vaultBatchData.standardInitialRate;
+    const contractLargeRate = vaultBatchData.largeWithdrawInitialRate;
+    const playerInfo = vaultBatchData.playerInfo;
+    const decreaseRatePerPeriod = vaultBatchData.decreaseRatePerPeriod;
+    const periodDuration = vaultBatchData.periodDuration;
     
     // 計算實際稅率（包含時間衰減）
     const standardBaseTaxRate = contractStandardRate ? Number(contractStandardRate) / 100 : 25; // 一般金額基礎稅率（百分比）

@@ -653,9 +653,20 @@ const MarketplacePage: React.FC = () => {
             loadListings();
         };
         
-        window.addEventListener('marketplaceUpdate', handleStorageUpdate);
+        // 節流化的事件監聽器，避免過多的RPC請求
+        let throttleTimer: NodeJS.Timeout | null = null;
+        const throttledHandler = () => {
+            if (throttleTimer) return;
+            throttleTimer = setTimeout(() => {
+                handleStorageUpdate();
+                throttleTimer = null;
+            }, 2000); // 2秒節流
+        };
+        
+        window.addEventListener('marketplaceUpdate', throttledHandler);
         return () => {
-            window.removeEventListener('marketplaceUpdate', handleStorageUpdate);
+            if (throttleTimer) clearTimeout(throttleTimer);
+            window.removeEventListener('marketplaceUpdate', throttledHandler);
         };
     }, []);
     
@@ -683,8 +694,20 @@ const MarketplacePage: React.FC = () => {
             });
         }
         
-        // 按戰力範圍篩選 (需要異步獲取戰力數據，這裡先跳過)
-        // TODO: 實現戰力篩選邏輯
+        // 按戰力範圍篩選
+        if (filters.powerRange.min > 0 || filters.powerRange.max < 10000) {
+            filtered = filtered.filter(listing => {
+                let power = 0;
+                if (listing.nft) {
+                    if (listing.nftType === 'hero' && 'power' in listing.nft) {
+                        power = listing.nft.power || 0;
+                    } else if (listing.nftType === 'party' && 'totalPower' in listing.nft) {
+                        power = Number(listing.nft.totalPower) || 0;
+                    }
+                }
+                return power >= filters.powerRange.min && power <= filters.powerRange.max;
+            });
+        }
         
         // 按搜尋詞篩選
         if (filters.searchTerm.trim()) {
@@ -716,8 +739,19 @@ const MarketplacePage: React.FC = () => {
                 case 'newest':
                     return filters.sortOrder === 'asc' ? a.createdAt - b.createdAt : b.createdAt - a.createdAt;
                 case 'power':
-                    // TODO: 實現戰力排序，需要異步獲取戰力數據
-                    return 0;
+                    const getPower = (listing: MarketListingType) => {
+                        if (!listing.nft) return 0;
+                        if (listing.nftType === 'hero' && 'power' in listing.nft) {
+                            return listing.nft.power || 0;
+                        }
+                        if (listing.nftType === 'party' && 'totalPower' in listing.nft) {
+                            return Number(listing.nft.totalPower) || 0;
+                        }
+                        return 0;
+                    };
+                    const powerA = getPower(a);
+                    const powerB = getPower(b);
+                    return filters.sortOrder === 'asc' ? powerA - powerB : powerB - powerA;
                 default:
                     return 0;
             }

@@ -4,7 +4,7 @@ import React, { useState, useMemo, useCallback, memo } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import { useContractBatchRead } from '../hooks/useContractBatchRead';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNfts } from '../stores/useNftStore';
+import { useEnhancedNfts } from '../hooks/useEnhancedNfts';
 import { NftCard } from '../components/ui/NftCard';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -91,7 +91,10 @@ const MyAssetsPageEnhanced: React.FC = () => {
     const quickActions = usePageQuickActions();
     
     // Fetch owned NFTs - use global store
-    const { nfts: nftsData, isLoading: isLoadingNfts, refetch: refetchNfts } = useNfts(address, chainId || 56);
+    const { data: nftsData, isLoading: isLoadingNfts, refetch: refetchNfts } = useEnhancedNfts({
+        owner: address,
+        chainId: chainId || 56
+    });
     
     // 市場功能已移至獨立頁面，可從主導航訪問
     
