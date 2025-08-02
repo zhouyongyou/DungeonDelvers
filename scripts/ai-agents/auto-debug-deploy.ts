@@ -750,7 +750,7 @@ class AutoDebugDeploy {
           });
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // 忽略
     }
   }
