@@ -1,6 +1,6 @@
 // src/pages/OverviewPage.tsx
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import ProjectIntroduction from '../components/ProjectIntroduction';
 import { useQuery } from '@tanstack/react-query';
@@ -24,7 +24,7 @@ import { generateProfileSVG, type ProfileData } from '../utils/svgGenerators';
 import { logger } from '../utils/logger';
 import { usePlayerOverview } from '../hooks/usePlayerOverview';
 import { useVipStatus } from '../hooks/useVipStatus';
-import { WithdrawalHistoryButton } from '../components/ui/WithdrawalHistory';
+import { WithdrawalHistorySubgraphButton } from '../components/ui/WithdrawalHistorySubgraph';
 import { useTransactionHistory, createTransactionRecord } from '../stores/useTransactionPersistence';
 import { TaxRateModal } from '../components/ui/TaxRateModal';
 import { Modal } from '../components/ui/Modal';
@@ -276,24 +276,26 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     const actualTaxRate = Math.max(0, standardBaseTaxRate - totalDiscount); // 百分比格式 (0-100)
     const actualLargeTaxRate = Math.max(0, largeBaseTaxRate - totalDiscount); // 百分比格式 (0-100)
     
-    // Debug 日誌 - 幫助追蹤稅率計算問題
-    if (import.meta.env.DEV) {
-        console.log('🧮 稅率計算 Debug:', {
-            lastWithdrawTimestamp,
-            currentTime,
-            timePassed,
-            periodsPassed,
-            '基礎稅率': standardBaseTaxRate + '%',
-            'VIP減免': vipDiscount + '%',
-            '等級減免': levelDiscount + '%',
-            '時間衰減': timeDecay + '%',
-            '總減免': totalDiscount + '%',
-            '最終稅率': actualTaxRate + '%',
-            'playerInfo': playerInfo,
-            'VIP等級': vipTier,
-            '玩家等級': level
-        });
-    }
+    // Debug 日誌 - 只在關鍵數據變化時記錄
+    useEffect(() => {
+        if (import.meta.env.DEV && playerInfo !== undefined) {
+            console.log('🧮 稅率計算 Debug:', {
+                lastWithdrawTimestamp,
+                currentTime,
+                timePassed,
+                periodsPassed,
+                '基礎稅率': standardBaseTaxRate + '%',
+                'VIP減免': vipDiscount + '%',
+                '等級減免': levelDiscount + '%',
+                '時間衰減': timeDecay + '%',
+                '總減免': totalDiscount + '%',
+                '最終稅率': actualTaxRate + '%',
+                'playerInfo': playerInfo,
+                'VIP等級': vipTier,
+                '玩家等級': level
+            });
+        }
+    }, [lastWithdrawTimestamp, vipTier, level]); // 只在這些關鍵值變化時記錄
     
     // 顯示稅率說明模態框
     const showTaxInfo = () => {
@@ -426,9 +428,15 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     }, [player?.parties]);
     
     // Profile data for SVG
-    // 根據合約邏輯計算經驗值：Level = sqrt(exp / 100) + 1
-    // 反推每個等級需要的經驗值：Level N 需要 (N-1)² × 100 總經驗
-    const currentExp = BigInt(player?.profile?.experience || 0);
+    // 根據合約邏輯計算經驗值：
+    // - 如果 exp < 100，則 level = 1
+    // - 否則 level = sqrt(exp / 100) + 1
+    // 反推每個等級需要的經驗值：
+    // - Level 1: 0 經驗（0-99）
+    // - Level 2: 100 經驗起（需要 (2-1)² × 100 = 100）
+    // - Level 3: 400 經驗起（需要 (3-1)² × 100 = 400）
+    // - Level N: (N-1)² × 100 經驗起
+    const currentExp = BigInt(playerProfile?.experience || 0);
     const getRequiredExpForLevel = (targetLevel: number): bigint => {
         if (targetLevel <= 1) return BigInt(0);
         return BigInt(Math.pow(targetLevel - 1, 2) * 100);
@@ -436,9 +444,14 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     
     const currentLevelRequiredExp = getRequiredExpForLevel(level); // 達到當前等級需要的總經驗
     const nextLevelRequiredExp = getRequiredExpForLevel(level + 1); // 達到下一等級需要的總經驗
-    const progress = Number(currentExp) < 100 ? 
-        Math.floor((Number(currentExp) / 100) * 100) : // Level 1 的進度
-        Math.floor((Number(currentExp) / Number(nextLevelRequiredExp)) * 100); // 其他等級的進度
+    
+    // 計算當前等級的進度（當前等級獲得的經驗 / 升到下一級需要的經驗）
+    const currentLevelExp = Math.max(0, Number(currentExp) - Number(currentLevelRequiredExp)); // 當前等級已獲得的經驗（不能為負）
+    const expNeededForNextLevel = Number(nextLevelRequiredExp) - Number(currentLevelRequiredExp); // 升到下一級需要的經驗
+    const progress = expNeededForNextLevel > 0 
+        ? Math.min(Math.floor((currentLevelExp / expNeededForNextLevel) * 100), 100)
+        : 0;
+    
     
     const profileData: ProfileData = {
         address: address || '0x0000000000000000000000000000000000000000',
@@ -624,9 +637,30 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         icon={<Icons.TrendingUp className="h-5 w-5" />}
                         description={
                             <>
-                                <div>透過挑戰地城獲得經驗值提升等級</div>
-                                <div className="text-green-400 mt-1">
-                                    稅率減免: {Math.floor(level / 10)}% (每 10 級 -1%)
+                                <div className="text-xs space-y-1">
+                                    {/* 經驗值詳細信息 */}
+                                    {playerProfile && (
+                                        <div className="bg-gray-800/50 rounded p-2 mb-2">
+                                            <p className="text-yellow-400 font-medium">
+                                                Progress: {progress}%
+                                            </p>
+                                            <p className="text-gray-300">
+                                                {currentLevelExp} / {expNeededForNextLevel} EXP
+                                            </p>
+                                            <p className="text-gray-500 text-[10px]">
+                                                Total: {playerProfile.experience} EXP
+                                            </p>
+                                        </div>
+                                    )}
+                                    <p className="text-gray-400">透過挑戰地城獲得經驗值提升等級</p>
+                                    <div className="text-green-400">
+                                        <p>🎯 稅率減免: -{Math.floor(level / 10)}% (每 10 級 -1%)</p>
+                                    </div>
+                                    <div className="text-blue-400 text-[10px] mt-1">
+                                        <p>升級獎勵：</p>
+                                        <p>• 每 10 級減少 1% 提款稅率</p>
+                                        <p>• 解鎖更高級地城</p>
+                                    </div>
                                 </div>
                             </>
                         }
@@ -636,7 +670,18 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         title="英雄數量"
                         value={displayHeroCount}
                         icon={<Icons.Users className="h-5 w-5" />}
-                        description={isLoadingAssets ? "載入中..." : `未分配到隊伍的英雄`}
+                        description={
+                            isLoadingAssets ? "載入中..." : (
+                                <div className="text-xs space-y-1">
+                                    <p className="text-gray-400">未分配到隊伍的英雄</p>
+                                    {player?.parties?.length > 0 && (
+                                        <p className="text-yellow-400">
+                                            已組隊: {player.parties.reduce((total, party) => total + (party.heroIds?.length || 0), 0)} 個
+                                        </p>
+                                    )}
+                                </div>
+                            )
+                        }
                         action={
                             <ActionButton
                                 onClick={() => setActivePage('mint')}
@@ -651,7 +696,22 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         title="聖物數量"
                         value={displayRelicCount}
                         icon={<Icons.Shield className="h-5 w-5" />}
-                        description={isLoadingAssets ? "載入中..." : `可用聖物`}
+                        description={
+                            isLoadingAssets ? "載入中..." : (
+                                <div className="text-xs space-y-1">
+                                    <p className="text-gray-400">可用聖物</p>
+                                    {player?.parties?.length > 0 && (
+                                        <p className="text-yellow-400">
+                                            已組隊: {player.parties.reduce((total, party) => {
+                                                // 檢查 party 的 relics 或 relicIds
+                                                const relicCount = party.relics?.length || party.relicIds?.length || 0;
+                                                return total + relicCount;
+                                            }, 0)} 個
+                                        </p>
+                                    )}
+                                </div>
+                            )
+                        }
                         action={
                             <ActionButton
                                 onClick={() => setActivePage('mint')}
@@ -666,6 +726,29 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         title="隊伍數量"
                         value={displayPartyCount}
                         icon={<Icons.Users className="h-5 w-5" />}
+                        description={
+                            player?.parties?.length > 0 ? (
+                                <div className="text-xs space-y-1">
+                                    <p className="text-gray-400">已組成的隊伍</p>
+                                    <div className="space-y-0.5">
+                                        {player.parties.slice(0, 3).map((party, index) => {
+                                            // 提取隊伍編號（移除地址部分）
+                                            const partyNumber = party.id.split('-').pop() || party.id;
+                                            return (
+                                                <p key={party.id} className="text-yellow-400">
+                                                    隊伍 #{partyNumber} - 戰力: {party.totalPower || 0}
+                                                </p>
+                                            );
+                                        })}
+                                        {player.parties.length > 3 && (
+                                            <p className="text-gray-500">...還有 {player.parties.length - 3} 個隊伍</p>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-xs text-gray-400">尚未組成任何隊伍</p>
+                            )
+                        }
                         action={
                             <ActionButton
                                 onClick={() => setActivePage('myAssets')}
@@ -683,6 +766,17 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         description={
                             <div className="space-y-1">
                                 <p className="text-xs text-gray-500">≈ ${formatSoulToUsd(pendingVaultRewards)} USD</p>
+                                
+                                {/* 上次提領時間顯示 */}
+                                {!isFirstWithdraw && lastWithdrawTimestamp > 0 && (
+                                    <div className="text-[10px] text-gray-400 bg-gray-800/50 p-1.5 rounded">
+                                        <p>上次提領：{Math.floor((currentTime - lastWithdrawTimestamp) / 3600) >= 24 
+                                            ? `${Math.floor((currentTime - lastWithdrawTimestamp) / 86400)}天前`
+                                            : `${Math.floor((currentTime - lastWithdrawTimestamp) / 3600)}小時前`
+                                        }</p>
+                                        <p className="text-gray-500">已累積 {timeDecay.toFixed(1)}% 時間減免</p>
+                                    </div>
+                                )}
                                 
                                 {/* 首次提領免稅提示 */}
                                 {(isFirstWithdraw || actualTaxRate === 0) && (
@@ -742,6 +836,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                             </div>
                         }
                         action={
+                            <>
                             <div className="flex gap-1">
                                 <ActionButton
                                     onClick={handleWithdrawClick}
@@ -758,8 +853,9 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                 >
                                     稅率
                                 </ActionButton>
-                                <WithdrawalHistoryButton userAddress={address} />
+                                <WithdrawalHistorySubgraphButton userAddress={address} />
                             </div>
+                            </>
                         }
                     />
                     
@@ -786,8 +882,19 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                             <p>• 祭壇升星: +{vipTier}% (每級 +1%)</p>
                                         </div>
                                         <div className="text-yellow-400 text-xs mt-1">
-                                            已質押 {(Number(stakedAmount || 0n) / 1e18).toFixed(0)} SOUL
+                                            <p>已質押 {(Number(stakedAmount || 0n) / 1e18).toFixed(0)} SOUL</p>
+                                            {priceInUsd && (
+                                                <p className="text-gray-500">≈ ${((Number(stakedAmount || 0n) / 1e18) * priceInUsd).toFixed(2)} USD</p>
+                                            )}
                                         </div>
+                                        {/* 下一級需求 */}
+                                        {vipTier < 50 && priceInUsd && (
+                                            <div className="text-blue-400 text-[10px] mt-2 bg-blue-900/20 p-2 rounded">
+                                                <p>升至 VIP {vipTier + 1}：</p>
+                                                <p>需再質押 {Math.max(0, ((vipTier + 1) * 1000000) - (Number(stakedAmount || 0n) / 1e18)).toFixed(0)} SOUL</p>
+                                                <p className="text-gray-500">≈ ${(Math.max(0, ((vipTier + 1) * 1000000) - (Number(stakedAmount || 0n) / 1e18)) * priceInUsd).toFixed(2)} USD</p>
+                                            </div>
+                                        )}
                                     </div>
                                 ) 
                                 : stakedAmount && stakedAmount > 0n
@@ -1156,7 +1263,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                 playerLevel={level}
                 levelDiscount={levelDiscount}
                 vaultBalance={pendingVaultRewards}
-                lastFreeWithdrawTime={player?.lastFreeWithdrawTimestamp || 0}
+                lastFreeWithdrawTime={lastWithdrawTimestamp || 0}  // 改為使用 lastWithdrawTimestamp 判斷是否首次提領
                 freeWithdrawThresholdUsd={freeWithdrawThresholdUsd ? Number(freeWithdrawThresholdUsd) / 10**18 : 20}
                 largeWithdrawThresholdUsd={largeWithdrawThresholdUsd ? Number(largeWithdrawThresholdUsd) / 10**18 : 1000}
             />

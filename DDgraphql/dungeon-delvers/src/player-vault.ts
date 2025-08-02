@@ -9,7 +9,7 @@ import {
     VirtualTaxCollected,
     ReferralSet
 } from "../generated/PlayerVault/PlayerVault"
-import { PlayerVault, PlayerProfile, VirtualTaxRecord, TaxStatistics } from "../generated/schema"
+import { PlayerVault, PlayerProfile, VirtualTaxRecord, TaxStatistics, WithdrawalEvent } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 
 function getOrCreatePlayerVault(playerAddress: Address): PlayerVault {
@@ -49,6 +49,27 @@ export function handleWithdrawn(event: Withdrawn): void {
     vault.lastClaimedAt = event.block.timestamp
     vault.lastUpdatedAt = event.block.timestamp
     vault.save()
+    
+    // 創建 WithdrawalEvent 記錄
+    const withdrawalEventId = event.transaction.hash.toHex() + "-" + event.logIndex.toString()
+    const withdrawalEvent = new WithdrawalEvent(withdrawalEventId)
+    withdrawalEvent.player = event.params.player
+    withdrawalEvent.amount = totalAmount // 總金額（包含稅）
+    withdrawalEvent.taxAmount = event.params.taxAmount
+    withdrawalEvent.netAmount = event.params.amount // 實際收到的金額
+    withdrawalEvent.freeWithdraw = event.params.taxAmount.equals(BigInt.fromI32(0))
+    
+    // 計算稅率百分比
+    let taxRate = 0
+    if (totalAmount.gt(BigInt.fromI32(0))) {
+        taxRate = event.params.taxAmount.times(BigInt.fromI32(100)).div(totalAmount).toI32()
+    }
+    withdrawalEvent.taxRate = taxRate
+    
+    withdrawalEvent.txHash = event.transaction.hash
+    withdrawalEvent.blockNumber = event.block.number
+    withdrawalEvent.timestamp = event.block.timestamp
+    withdrawalEvent.save()
 }
 
 export function handleCommissionPaid(event: CommissionPaid): void {

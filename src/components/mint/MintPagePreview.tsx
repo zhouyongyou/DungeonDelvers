@@ -495,11 +495,6 @@ export const MintPagePreview: React.FC = () => {
         </div>
       </div>
 
-      {/* 精選NFT展示 */}
-      <div className="mt-12">
-        <FeaturedNftsGallery />
-      </div>
-
       {/* 底部備註 */}
       <PreviewFooterNote />
     </div>

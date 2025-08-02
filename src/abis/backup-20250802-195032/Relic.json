@@ -151,6 +151,17 @@
     "type": "error"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "SafeERC20FailedOperation",
+    "type": "error"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {
@@ -204,6 +215,19 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AscensionAltarSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": false,
         "internalType": "string",
         "name": "newBaseURI",
@@ -211,6 +235,68 @@
       }
     ],
     "name": "BaseURISet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "quantity",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "maxRarity",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256[]",
+        "name": "tokenIds",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "BatchMintCompleted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "tierId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "minQuantity",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "maxRarity",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "tierName",
+        "type": "string"
+      }
+    ],
+    "name": "BatchTierSet",
     "type": "event"
   },
   {
@@ -232,29 +318,30 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "player",
+        "name": "core",
         "type": "address"
       },
       {
         "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "ContractsSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "newTotalExperience",
+        "name": "newSeed",
         "type": "uint256"
       }
     ],
-    "name": "ExperienceAdded",
+    "name": "DynamicSeedUpdated",
     "type": "event"
   },
   {
@@ -294,18 +381,61 @@
     "inputs": [
       {
         "indexed": true,
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
         "internalType": "address",
-        "name": "player",
+        "name": "owner",
         "type": "address"
       },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "rarity",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "capacity",
+        "type": "uint8"
+      }
+    ],
+    "name": "RelicBurned",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
       {
         "indexed": true,
         "internalType": "uint256",
         "name": "tokenId",
         "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "rarity",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "capacity",
+        "type": "uint8"
       }
     ],
-    "name": "ProfileCreated",
+    "name": "RelicMinted",
     "type": "event"
   },
   {
@@ -350,36 +480,31 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_player",
+        "name": "to",
         "type": "address"
       },
       {
         "internalType": "uint256",
-        "name": "_amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "addExperience",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
+        "name": "tokenId",
         "type": "uint256"
       }
     ],
     "name": "approve",
     "outputs": [],
-    "stateMutability": "pure",
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "ascensionAltarAddress",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -415,6 +540,48 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "batchTiers",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "minQuantity",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "maxRarity",
+        "type": "uint8"
+      },
+      {
+        "internalType": "string",
+        "name": "tierName",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "burnFromAltar",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "contractURI",
     "outputs": [
@@ -435,6 +602,49 @@
         "internalType": "contract IDungeonCore",
         "name": "",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "dynamicSeed",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getAllBatchTiers",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "minQuantity",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "maxRarity",
+            "type": "uint8"
+          },
+          {
+            "internalType": "string",
+            "name": "tierName",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct Relic.BatchTier[]",
+        "name": "",
+        "type": "tuple[]"
       }
     ],
     "stateMutability": "view",
@@ -462,16 +672,31 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "_player",
-        "type": "address"
+        "internalType": "uint256",
+        "name": "_quantity",
+        "type": "uint256"
       }
     ],
-    "name": "getExperience",
+    "name": "getBatchTierInfo",
     "outputs": [
       {
+        "internalType": "uint8",
+        "name": "maxRarity",
+        "type": "uint8"
+      },
+      {
+        "internalType": "string",
+        "name": "tierName",
+        "type": "string"
+      },
+      {
         "internalType": "uint256",
-        "name": "",
+        "name": "exactTierQuantity",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalCost",
         "type": "uint256"
       }
     ],
@@ -481,12 +706,60 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "_player",
-        "type": "address"
+        "internalType": "uint256",
+        "name": "_quantity",
+        "type": "uint256"
       }
     ],
-    "name": "getLevel",
+    "name": "getMaxRarityForQuantity",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "maxRarity",
+        "type": "uint8"
+      },
+      {
+        "internalType": "string",
+        "name": "tierName",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getRelicProperties",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "rarity",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "capacity",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_quantity",
+        "type": "uint256"
+      }
+    ],
+    "name": "getRequiredSoulShardAmount",
     "outputs": [
       {
         "internalType": "uint256",
@@ -525,11 +798,21 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_player",
+        "name": "_to",
         "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "_rarity",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "_capacity",
+        "type": "uint8"
       }
     ],
-    "name": "mintProfile",
+    "name": "mintFromAltar",
     "outputs": [
       {
         "internalType": "uint256",
@@ -538,6 +821,45 @@
       }
     ],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_quantity",
+        "type": "uint256"
+      }
+    ],
+    "name": "mintFromVault",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_quantity",
+        "type": "uint256"
+      }
+    ],
+    "name": "mintFromWallet",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "mintPriceUSD",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -606,18 +928,12 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "profileData",
+    "inputs": [],
+    "name": "platformFee",
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "experience",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -627,17 +943,22 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "profileTokenOf",
-    "outputs": [
-      {
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "name": "relicData",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "rarity",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "capacity",
+        "type": "uint8"
       }
     ],
     "stateMutability": "view",
@@ -677,46 +998,59 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "",
+        "name": "from",
         "type": "address"
       },
       {
         "internalType": "address",
-        "name": "",
+        "name": "to",
         "type": "address"
       },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "tokenId",
         "type": "uint256"
       },
       {
         "internalType": "bytes",
-        "name": "",
+        "name": "data",
         "type": "bytes"
       }
     ],
     "name": "safeTransferFrom",
     "outputs": [],
-    "stateMutability": "pure",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [
       {
         "internalType": "address",
-        "name": "",
+        "name": "operator",
         "type": "address"
       },
       {
         "internalType": "bool",
-        "name": "",
+        "name": "approved",
         "type": "bool"
       }
     ],
     "name": "setApprovalForAll",
     "outputs": [],
-    "stateMutability": "pure",
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_address",
+        "type": "address"
+      }
+    ],
+    "name": "setAscensionAltarAddress",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -728,6 +1062,34 @@
       }
     ],
     "name": "setBaseURI",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_tierId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_minQuantity",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "_maxRarity",
+        "type": "uint8"
+      },
+      {
+        "internalType": "string",
+        "name": "_tierName",
+        "type": "string"
+      }
+    ],
+    "name": "setBatchTier",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -756,6 +1118,58 @@
     "name": "setDungeonCore",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_newPrice",
+        "type": "uint256"
+      }
+    ],
+    "name": "setMintPriceUSD",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_newFee",
+        "type": "uint256"
+      }
+    ],
+    "name": "setPlatformFee",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_address",
+        "type": "address"
+      }
+    ],
+    "name": "setSoulShardToken",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "soulShardToken",
+    "outputs": [
+      {
+        "internalType": "contract IERC20",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -791,10 +1205,23 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "tierCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "_tokenId",
+        "name": "tokenId",
         "type": "uint256"
       }
     ],
@@ -813,23 +1240,23 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "",
+        "name": "from",
         "type": "address"
       },
       {
         "internalType": "address",
-        "name": "",
+        "name": "to",
         "type": "address"
       },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "tokenId",
         "type": "uint256"
       }
     ],
     "name": "transferFrom",
     "outputs": [],
-    "stateMutability": "pure",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -851,5 +1278,23 @@
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "withdrawNativeFunding",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "withdrawSoulShard",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "stateMutability": "payable",
+    "type": "receive"
   }
 ]

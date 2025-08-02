@@ -1,10 +1,11 @@
 // DDgraphql/dungeondelvers/src/relic.ts (修復版)
-import { RelicMinted, Transfer, RelicBurned, BatchMintCompleted } from "../generated/Relic/Relic"
+import { RelicMinted, Transfer, RelicBurned, BatchMintCompleted, Paused, Unpaused } from "../generated/Relic/Relic"
 import { Relic, RelicUpgrade } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
-import { log } from "@graphprotocol/graph-ts"
+import { log, ethereum } from "@graphprotocol/graph-ts"
 import { createEntityId } from "./config"
 import { updateGlobalStats, updatePlayerStats, TOTAL_RELICS, TOTAL_RELICS_MINTED } from "./stats"
+import { createPausedEvent, createUnpausedEvent } from "./pausable-handler"
 
 export function handleRelicMinted(event: RelicMinted): void {
     // 參數驗證
@@ -126,4 +127,13 @@ export function handleBatchMintCompleted(event: BatchMintCompleted): void {
     
     // 可以選擇性地更新玩家統計或創建批量鑄造記錄
     // 但為了避免重複計算，我們不在這裡更新聖物數量統計
+}
+
+// ===== 處理合約暫停事件 =====
+export function handlePaused(event: Paused): void {
+    createPausedEvent(event.params.account, event, "Relic")
+}
+
+export function handleUnpaused(event: Unpaused): void {
+    createUnpausedEvent(event.params.account, event, "Relic")
 }

@@ -232,29 +232,43 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "player",
+        "name": "newAddress",
+        "type": "address"
+      }
+    ],
+    "name": "DungeonCoreSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newAddress",
+        "type": "address"
+      }
+    ],
+    "name": "HeroContractSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "operator",
         "type": "address"
       },
       {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
         "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "newTotalExperience",
-        "type": "uint256"
+        "internalType": "bool",
+        "name": "approved",
+        "type": "bool"
       }
     ],
-    "name": "ExperienceAdded",
+    "name": "OperatorApprovalSet",
     "type": "event"
   },
   {
@@ -280,6 +294,149 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "partyId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256[]",
+        "name": "heroIds",
+        "type": "uint256[]"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256[]",
+        "name": "relicIds",
+        "type": "uint256[]"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "totalPower",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "totalCapacity",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "partyRarity",
+        "type": "uint8"
+      }
+    ],
+    "name": "PartyCreated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "partyId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      }
+    ],
+    "name": "PartyDisbanded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "partyId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "heroId",
+        "type": "uint256"
+      }
+    ],
+    "name": "PartyMemberAdded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "partyId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256[]",
+        "name": "heroIds",
+        "type": "uint256[]"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256[]",
+        "name": "relicIds",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "PartyMemberChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "partyId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "heroId",
+        "type": "uint256"
+      }
+    ],
+    "name": "PartyMemberRemoved",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": false,
         "internalType": "address",
         "name": "account",
@@ -293,19 +450,26 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "player",
-        "type": "address"
-      },
-      {
-        "indexed": true,
+        "indexed": false,
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "newFee",
         "type": "uint256"
       }
     ],
-    "name": "ProfileCreated",
+    "name": "PlatformFeeSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newAddress",
+        "type": "address"
+      }
+    ],
+    "name": "RelicContractSet",
     "type": "event"
   },
   {
@@ -350,36 +514,18 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_player",
+        "name": "to",
         "type": "address"
       },
       {
         "internalType": "uint256",
-        "name": "_amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "addExperience",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
+        "name": "tokenId",
         "type": "uint256"
       }
     ],
     "name": "approve",
     "outputs": [],
-    "stateMutability": "pure",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -428,8 +574,32 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "_heroIds",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_relicIds",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "createParty",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "partyId",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
     "inputs": [],
-    "name": "dungeonCore",
+    "name": "dungeonCoreContract",
     "outputs": [
       {
         "internalType": "contract IDungeonCore",
@@ -462,12 +632,58 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "_player",
-        "type": "address"
+        "internalType": "uint256",
+        "name": "_partyId",
+        "type": "uint256"
       }
     ],
-    "name": "getExperience",
+    "name": "getFullPartyComposition",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256[]",
+            "name": "heroIds",
+            "type": "uint256[]"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "relicIds",
+            "type": "uint256[]"
+          },
+          {
+            "internalType": "uint256",
+            "name": "totalPower",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "totalCapacity",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "partyRarity",
+            "type": "uint8"
+          }
+        ],
+        "internalType": "struct PartyV3.PartyComposition",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_partyId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getPartyCapacityQuick",
     "outputs": [
       {
         "internalType": "uint256",
@@ -481,17 +697,54 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "_player",
-        "type": "address"
+        "internalType": "uint256",
+        "name": "_partyId",
+        "type": "uint256"
       }
     ],
-    "name": "getLevel",
+    "name": "getPartyComposition",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "totalPower",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalCapacity",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_partyId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getPartyPowerQuick",
     "outputs": [
       {
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "heroContract",
+    "outputs": [
+      {
+        "internalType": "contract IHero",
+        "name": "",
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -522,25 +775,6 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_player",
-        "type": "address"
-      }
-    ],
-    "name": "mintProfile",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "name",
     "outputs": [
@@ -551,6 +785,40 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "name": "onERC721Received",
+    "outputs": [
+      {
+        "internalType": "bytes4",
+        "name": "",
+        "type": "bytes4"
+      }
+    ],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -586,6 +854,73 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "partyCapacityDirect",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "partyCompositions",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "totalPower",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalCapacity",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "partyRarity",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "partyPowerDirect",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "pause",
     "outputs": [],
@@ -606,18 +941,12 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "profileData",
+    "inputs": [],
+    "name": "platformFee",
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "experience",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -625,19 +954,13 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "profileTokenOf",
+    "inputs": [],
+    "name": "relicContract",
     "outputs": [
       {
-        "internalType": "uint256",
+        "internalType": "contract IRelic",
         "name": "",
-        "type": "uint256"
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -677,46 +1000,46 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "",
+        "name": "from",
         "type": "address"
       },
       {
         "internalType": "address",
-        "name": "",
+        "name": "to",
         "type": "address"
       },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "tokenId",
         "type": "uint256"
       },
       {
         "internalType": "bytes",
-        "name": "",
+        "name": "data",
         "type": "bytes"
       }
     ],
     "name": "safeTransferFrom",
     "outputs": [],
-    "stateMutability": "pure",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [
       {
         "internalType": "address",
-        "name": "",
+        "name": "operator",
         "type": "address"
       },
       {
         "internalType": "bool",
-        "name": "",
+        "name": "approved",
         "type": "bool"
       }
     ],
     "name": "setApprovalForAll",
     "outputs": [],
-    "stateMutability": "pure",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -749,11 +1072,68 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_address",
+        "name": "_coreAddress",
         "type": "address"
       }
     ],
     "name": "setDungeonCore",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_heroAddress",
+        "type": "address"
+      }
+    ],
+    "name": "setHeroContract",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "approved",
+        "type": "bool"
+      }
+    ],
+    "name": "setOperatorApproval",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_newFee",
+        "type": "uint256"
+      }
+    ],
+    "name": "setPlatformFee",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_relicAddress",
+        "type": "address"
+      }
+    ],
+    "name": "setRelicContract",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -794,7 +1174,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "_tokenId",
+        "name": "tokenId",
         "type": "uint256"
       }
     ],
@@ -813,23 +1193,23 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "",
+        "name": "from",
         "type": "address"
       },
       {
         "internalType": "address",
-        "name": "",
+        "name": "to",
         "type": "address"
       },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "tokenId",
         "type": "uint256"
       }
     ],
     "name": "transferFrom",
     "outputs": [],
-    "stateMutability": "pure",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -851,5 +1231,16 @@
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "withdrawNative",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "stateMutability": "payable",
+    "type": "receive"
   }
 ]

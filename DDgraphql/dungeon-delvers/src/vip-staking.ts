@@ -1,8 +1,9 @@
 // DDgraphql/dungeondelvers/src/vip-staking.ts (SBT 版本)
-import { Staked, UnstakeRequested, UnstakeClaimed, Transfer, Paused, Unpaused } from "../generated/VIPStaking/VIPStaking"
+import { Staked, UnstakeRequested, UnstakeClaimed, Transfer } from "../generated/VIPStaking/VIPStaking"
 import { VIP } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
-import { BigInt, log } from "@graphprotocol/graph-ts"
+import { BigInt, log, ethereum } from "@graphprotocol/graph-ts"
+// import { createPausedEvent, createUnpausedEvent } from "./pausable-handler"
 
 // 注意：VIP 卡現在是 SBT (Soul Bound Token)，不可轉移
 // VIP 等級由前端直接從合約讀取，確保使用動態價格計算
@@ -22,6 +23,8 @@ export function handleStaked(event: Staked): void {
         vip.isUnlocking = false
         vip.createdAt = event.block.timestamp
         vip.hasVIPCard = false  // 初始化 hasVIPCard 標記
+        vip.firstStakedAt = null  // 初始化首次質押時間
+        vip.tokenId = null  // 初始化 tokenId
     }
 
     vip.stakedAmount = vip.stakedAmount.plus(event.params.amount)
@@ -120,12 +123,14 @@ export function handleTransfer(event: Transfer): void {
 }
 
 // ===== 處理合約暫停事件 =====
-export function handlePaused(event: Paused): void {
-    log.info("VIPStaking contract paused at block {}", [event.block.number.toString()])
-    // 可以創建一個 ContractStatus 實體來追蹤暫停狀態
-}
+// 注意：當新版本 VIPStaking 合約部署後，需要在 ABI 中添加 Paused/Unpaused 事件
+// 並在 subgraph.yaml 中配置這些事件處理器
+// 以下函數暫時註釋，等 ABI 更新後啟用
 
-export function handleUnpaused(event: Unpaused): void {
-    log.info("VIPStaking contract unpaused at block {}", [event.block.number.toString()])
-    // 可以更新 ContractStatus 實體
-}
+// export function handlePaused(event: ethereum.Event): void {
+//     createPausedEvent(event.params.account, event, "VIPStaking")
+// }
+
+// export function handleUnpaused(event: ethereum.Event): void {
+//     createUnpausedEvent(event.params.account, event, "VIPStaking")
+// }

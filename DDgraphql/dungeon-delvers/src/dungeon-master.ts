@@ -1,11 +1,12 @@
 // DDgraphql/dungeondelvers/src/dungeon-master.ts (統一配置系統版)
-import { BigInt, log, Address } from "@graphprotocol/graph-ts"
+import { BigInt, log, Address, ethereum } from "@graphprotocol/graph-ts"
 import { ExpeditionFulfilled, RewardsBanked } from "../generated/DungeonMaster/DungeonMaster"
 import { Party, PlayerProfile, Expedition } from "../generated/schema"
 import { calculateLevel } from "./utils"
 import { getOrCreatePlayer } from "./common"
 import { getPartyContractAddress, createEntityId } from "./config"
 import { updatePlayerStats, updatePlayerStatsBigInt, TOTAL_EXPEDITIONS, SUCCESSFUL_EXPEDITIONS } from "./stats"
+// import { createPausedEvent, createUnpausedEvent } from "./pausable-handler"
 
 // 地下城名稱映射
 function getDungeonName(dungeonId: BigInt): string {
@@ -236,3 +237,16 @@ export function handleRewardsBanked(event: RewardsBanked): void {
     log.warning("RewardsBanked for a non-existent party: {}", [partyId])
   }
 }
+
+// ===== 處理合約暫停事件 =====
+// 注意：當新版本 DungeonMaster 合約部署後，需要在 ABI 中添加 Paused/Unpaused 事件
+// 並在 subgraph.yaml 中配置這些事件處理器
+// 以下函數暫時註釋，等 ABI 更新後啟用
+
+// export function handlePaused(event: ethereum.Event): void {
+//     createPausedEvent(event.params.account, event, "DungeonMaster")
+// }
+
+// export function handleUnpaused(event: ethereum.Event): void {
+//     createUnpausedEvent(event.params.account, event, "DungeonMaster")
+// }

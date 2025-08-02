@@ -411,15 +411,22 @@ export function generateProfileSVG(profile: ProfileData): string {
         
         <!-- 進度百分比 -->
         <g transform="translate(200, 240)">
-            <text class="stat-label" text-anchor="middle" y="0" font-size="16" fill="${accentColor}">Progress: ${profile.progress}%</text>
+            <text class="stat-label" text-anchor="middle" y="0" font-size="16" fill="${accentColor}">Progress: ${Math.max(0, profile.progress)}%</text>
         </g>
         
         <!-- 經驗值條 -->
-        <g transform="translate(50, 310)">
+        <g transform="translate(50, 290)">
             <rect x="0" y="0" width="300" height="24" fill="#1e293b" rx="12" />
-            <rect x="0" y="0" width="${profile.progress * 3}" height="24" fill="${primaryColor}" rx="12" class="glow" />
-            <text class="stat-label" x="150" y="45" text-anchor="middle" font-size="12">
-                ${profile.experience.toString()} / ${profile.nextLevelExp.toString()} EXP
+            <rect x="0" y="0" width="${Math.max(0, profile.progress) * 3}" height="24" fill="${primaryColor}" rx="12" class="glow" />
+            <text class="stat-label" x="150" y="35" text-anchor="middle" font-size="12">
+                ${Math.max(0, Number(profile.experience) - Number(profile.currentLevelExp)).toString()} / ${(Number(profile.nextLevelExp) - Number(profile.currentLevelExp)).toString()} EXP
+            </text>
+        </g>
+        
+        <!-- 總經驗值 -->
+        <g transform="translate(200, 340)">
+            <text class="stat-label" text-anchor="middle" y="0" font-size="11" fill="#9ca3af">
+                Total: ${profile.experience.toString()} EXP
             </text>
         </g>
         

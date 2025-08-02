@@ -15,6 +15,7 @@ export function getOrCreatePlayer(address: Address): Player {
     let player = Player.load(address)
     if (!player) {
         player = new Player(address)
+        player.hasVIPCard = false  // 初始化 hasVIPCard 字段
         player.save()
     }
     return player

@@ -1,10 +1,11 @@
 // DDgraphql/dungeondelvers/src/hero.ts (最終加固版)
-import { HeroMinted, Transfer, HeroBurned, BatchMintCompleted } from "../generated/Hero/Hero"
+import { HeroMinted, Transfer, HeroBurned, BatchMintCompleted, Paused, Unpaused } from "../generated/Hero/Hero"
 import { Hero, HeroUpgrade } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
-import { log, BigInt } from "@graphprotocol/graph-ts"
+import { log, BigInt, ethereum } from "@graphprotocol/graph-ts"
 import { createEntityId } from "./config"
 import { updateGlobalStats, updatePlayerStats, TOTAL_HEROES, TOTAL_HEROES_MINTED } from "./stats"
+import { createPausedEvent, createUnpausedEvent } from "./pausable-handler"
 
 export function handleHeroMinted(event: HeroMinted): void {
     // 參數驗證
@@ -126,4 +127,13 @@ export function handleBatchMintCompleted(event: BatchMintCompleted): void {
     
     // 可以選擇性地更新玩家統計或創建批量鑄造記錄
     // 但為了避免重複計算，我們不在這裡更新英雄數量統計
+}
+
+// ===== 處理合約暫停事件 =====
+export function handlePaused(event: Paused): void {
+    createPausedEvent(event.params.account, event, "Hero")
+}
+
+export function handleUnpaused(event: Unpaused): void {
+    createUnpausedEvent(event.params.account, event, "Hero")
 }

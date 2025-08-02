@@ -1,6 +1,7 @@
 // DungeonDelvers Marketplace V2 Configuration
 // 統一的 Marketplace 配置管理
 // ⚠️ IMPORTANT: 使用與主配置一致的 V25 NFT 合約地址
+// Last synced: 2025-08-02T12:24:50.439Z
 // Last synced: 2025-08-01T13:56:00.000Z
 
 export const MARKETPLACE_V2_CONFIG = {

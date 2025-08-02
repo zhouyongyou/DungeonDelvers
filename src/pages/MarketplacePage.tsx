@@ -20,7 +20,7 @@ import { PurchaseModalV2 } from '../components/marketplace/PurchaseModalV2';
 import { TokenBalanceDisplay } from '../components/marketplace/TokenBalanceDisplay';
 import { useEnhancedNfts } from '../hooks/useEnhancedNfts';
 import { getLocalListings, type MarketListing as MarketListingType } from '../hooks/useMarketplace';
-import { useHeroPower, usePartyPower, useHeroDetails, useRelicDetails, usePartyDetails, getElementName, getClassName, getRelicCategoryName } from '../hooks/useNftPower';
+import { useHeroPower, usePartyPower, useHeroDetails, useRelicDetails, usePartyDetails } from '../hooks/useNftPower';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { MarketStats } from '../components/marketplace/MarketStats';
 import { MarketplaceDevTools } from '../components/marketplace/MarketplaceDevTools';
@@ -79,13 +79,10 @@ const GET_MARKET_LISTINGS_QUERY = `
         id
         tokenId
         power
-        element
-        class
       }
       relic {
         id
         tokenId
-        category
         capacity
       }
       party {
@@ -469,14 +466,6 @@ const ListingCard: React.FC<{
                             <span className="text-white">Lv.{heroDetails.details.level}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-gray-400">職業</span>
-                            <span className="text-white">{getClassName(heroDetails.details.heroClass)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-400">元素</span>
-                            <span className="text-white">{getElementName(heroDetails.details.element)}</span>
-                        </div>
-                        <div className="flex justify-between">
                             <span className="text-gray-400">品階</span>
                             <span className="text-white">T{heroDetails.details.tier || heroDetails.details.rarity || 1}</span>
                         </div>
@@ -485,10 +474,6 @@ const ListingCard: React.FC<{
                 
                 {listing.nftType === 'relic' && relicDetails.details && (
                     <div className="text-xs space-y-1">
-                        <div className="flex justify-between">
-                            <span className="text-gray-400">類別</span>
-                            <span className="text-white">{getRelicCategoryName(relicDetails.details.category)}</span>
-                        </div>
                         <div className="flex justify-between">
                             <span className="text-gray-400">品階</span>
                             <span className="text-white">T{relicDetails.details.tier || relicDetails.details.rarity || 1}</span>
@@ -831,6 +816,41 @@ const MarketplacePage: React.FC = () => {
                             <Icons.Plus className="h-4 w-4 mr-2" />
                             創建掛單
                         </ActionButton>
+                        <div className="relative group">
+                            <ActionButton
+                                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500"
+                            >
+                                <Icons.ExternalLink className="h-4 w-4 mr-2" />
+                                OKX 市場
+                                <Icons.ChevronDown className="h-3 w-3 ml-1" />
+                            </ActionButton>
+                            <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                                <a
+                                    href="https://web3.okx.com/zh-hant/nft/collection/bsc/0x20E0db8EFCC7608fCFFBbF2f95A86824b034D1e7"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded-t-lg transition-colors"
+                                >
+                                    🦸 英雄 (Heroes)
+                                </a>
+                                <a
+                                    href="https://web3.okx.com/zh-hant/nft/collection/bsc/0x3c8F1b4172a076D31f0F8fa981E166aDA92C2B79"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                                >
+                                    🔮 聖物 (Relics)
+                                </a>
+                                <a
+                                    href="https://web3.okx.com/zh-hant/nft/collection/bsc/dungeon-delvers-party-14"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded-b-lg transition-colors"
+                                >
+                                    👥 隊伍 (Party)
+                                </a>
+                            </div>
+                        </div>
                     </div>
                     
                     {/* 手機版按鈕 - 緊湊排列 */}
@@ -850,6 +870,13 @@ const MarketplacePage: React.FC = () => {
                             >
                                 <Icons.DollarSign className="h-3 w-3 mr-1" />
                                 出價
+                            </ActionButton>
+                            <ActionButton
+                                className="px-2 py-1 text-xs bg-gradient-to-r from-purple-600 to-indigo-600"
+                                onClick={() => window.open('https://web3.okx.com/zh-hant/nft/collection/bsc/dungeon-delvers-party-14', '_blank')}
+                            >
+                                <Icons.ExternalLink className="h-3 w-3 mr-1" />
+                                OKX
                             </ActionButton>
                         </div>
                         

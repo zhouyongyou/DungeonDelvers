@@ -1,4 +1,4 @@
-# Generated from v25-config.js on 2025-08-01T19:01:01.513Z
+# Generated from v25-config.js on 2025-08-02T12:33:19.758Z
 # V25 Production Deployment
 specVersion: 0.0.4
 schema:
@@ -8,7 +8,7 @@ dataSources:
     name: Hero
     network: bsc
     source:
-      address: '0x20E0db8EFCC7608fCFFBbF2f95A86824b034D1e7'
+      address: '0x5d71d62fAFd07C92ec677C3Ae57984576f5955f0'
       abi: Hero
       startBlock: 55808316
     mapping:
@@ -30,12 +30,16 @@ dataSources:
           handler: handleBatchMintCompleted
         - event: HeroBurned(indexed uint256,indexed address,uint8,uint256)
           handler: handleHeroBurned
+        - event: Paused(address)
+          handler: handlePaused
+        - event: Unpaused(address)
+          handler: handleUnpaused
       file: ./src/hero.ts
   - kind: ethereum/contract
     name: Relic
     network: bsc
     source:
-      address: '0x3c8F1b4172a076D31f0F8fa981E166aDA92C2B79'
+      address: '0x5f93fCdb2ecd1A0eB758E554bfeB3A2B95581366'
       abi: Relic
       startBlock: 55808316
     mapping:
@@ -57,12 +61,16 @@ dataSources:
           handler: handleBatchMintCompleted
         - event: RelicBurned(indexed uint256,indexed address,uint8,uint8)
           handler: handleRelicBurned
+        - event: Paused(address)
+          handler: handlePaused
+        - event: Unpaused(address)
+          handler: handleUnpaused
       file: ./src/relic.ts
   - kind: ethereum/contract
     name: PartyV3
     network: bsc
     source:
-      address: '0x1f21fE51c039321246b219B9F659eaCA9a53176F'
+      address: '0x6B32c2EEaB24C04bF97A022B1e55943FE1E772a5'
       abi: PartyV3
       startBlock: 55808316
     mapping:
@@ -82,12 +90,16 @@ dataSources:
           handler: handlePartyCreated
         - event: PartyMemberChanged(indexed uint256,uint256[],uint256[])
           handler: handlePartyMemberChanged
+        - event: Paused(address)
+          handler: handlePaused
+        - event: Unpaused(address)
+          handler: handleUnpaused
       file: ./src/party.ts
   - kind: ethereum/contract
     name: VIPStaking
     network: bsc
     source:
-      address: '0xa55fee3ba652e6Ff42ac12C8598C5fDfC26EE4Bf'
+      address: '0x186a89e5418645459ed0a469FF97C9d4B2ca5355'
       abi: VIPStaking
       startBlock: 55808316
     mapping:
@@ -114,7 +126,7 @@ dataSources:
     name: PlayerProfile
     network: bsc
     source:
-      address: '0xB203a1e73500E40A1eeb1D6A51cDDbf2fEb227a2'
+      address: '0xCf352E394fD2Ff27D65bB525C032a2c03Bd79AC7'
       abi: PlayerProfile
       startBlock: 55808316
     mapping:
@@ -139,7 +151,7 @@ dataSources:
     name: AltarOfAscension
     network: bsc
     source:
-      address: '0x167F42bcC21a5ab5319b787F8C2e045f9Aeaa4dD'
+      address: '0xaA4f3D3ed21599F501773F83a1A2B4d65b1d0AE3'
       abi: AltarOfAscensionV2Fixed
       startBlock: 55808316
     mapping:
@@ -159,7 +171,7 @@ dataSources:
     name: DungeonMaster
     network: bsc
     source:
-      address: '0x913E5c5c6d844630fd01CbDed82F029f356f1809'
+      address: '0x446f80c6562a9b0A33b48F74F7Dbf10b53Fe2703'
       abi: DungeonMaster
       startBlock: 55808316
     mapping:
@@ -182,7 +194,7 @@ dataSources:
     name: PlayerVault
     network: bsc
     source:
-      address: '0x913E5c5c6d844630fd01CbDed82F029f356f1809'
+      address: '0x446f80c6562a9b0A33b48F74F7Dbf10b53Fe2703'
       abi: PlayerVault
       startBlock: 55808316
     mapping:

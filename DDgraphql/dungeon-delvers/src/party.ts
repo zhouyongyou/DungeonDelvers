@@ -1,9 +1,10 @@
-import { PartyCreated, Transfer, PartyMemberChanged } from "../generated/PartyV3/PartyV3"
+import { PartyCreated, Transfer, PartyMemberChanged, Paused, Unpaused } from "../generated/PartyV3/PartyV3"
 import { Party, Hero, Relic, PartyMemberChange } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { log } from "@graphprotocol/graph-ts"
 import { getHeroContractAddress, getRelicContractAddress, createEntityId } from "./config"
 import { updateGlobalStats, updatePlayerStats, TOTAL_PARTIES, TOTAL_PARTIES_CREATED } from "./stats"
+import { createPausedEvent, createUnpausedEvent } from "./pausable-handler"
 export { handlePartyMemberChanged } from "./party-member-changed"
 
 export function handlePartyCreated(event: PartyCreated): void {
@@ -202,4 +203,13 @@ export function handleTransfer(event: Transfer): void {
     } else {
         log.warning("Transfer event for Party that doesn't exist in subgraph: {}", [partyId])
     }
+}
+
+// ===== 處理合約暫停事件 =====
+export function handlePaused(event: Paused): void {
+    createPausedEvent(event.params.account, event, "PartyV3")
+}
+
+export function handleUnpaused(event: Unpaused): void {
+    createUnpausedEvent(event.params.account, event, "PartyV3")
 }

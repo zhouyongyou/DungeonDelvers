@@ -32,6 +32,7 @@ export const WithdrawalHistory: React.FC<WithdrawalHistoryProps> = ({
 }) => {
   const [page, setPage] = useState(0);
   const [withdrawalRecords, setWithdrawalRecords] = useState<WithdrawalRecord[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const pageSize = 10;
 
   // 從交易持久化系統獲取提取記錄
@@ -39,22 +40,36 @@ export const WithdrawalHistory: React.FC<WithdrawalHistoryProps> = ({
 
   useEffect(() => {
     if (isOpen && userAddress) {
-      // 獲取所有 'claim' 類型的交易（金庫提取）
-      const claimTransactions = getTransactionsByType('claim', userAddress);
-      
-      // 轉換為提取記錄格式
-      const records: WithdrawalRecord[] = claimTransactions
-        .filter(tx => tx.description.includes('金庫') || tx.description.includes('獎勵'))
-        .map(tx => ({
-          id: tx.id,
-          amount: tx.relatedData?.amount || '0',
-          timestamp: tx.createdAt,
-          txHash: tx.hash || '',
-          status: tx.status
-        }))
-        .sort((a, b) => b.timestamp - a.timestamp);
+      // 立即獲取一次數據
+      const fetchRecords = () => {
+        // 獲取所有 'claim' 類型的交易（金庫提取）
+        const claimTransactions = getTransactionsByType('claim', userAddress);
+        
+        // 轉換為提取記錄格式
+        const records: WithdrawalRecord[] = claimTransactions
+          .filter(tx => tx.description.includes('金庫') || tx.description.includes('獎勵'))
+          .map(tx => ({
+            id: tx.id,
+            amount: tx.relatedData?.amount || '0',
+            timestamp: tx.createdAt,
+            txHash: tx.hash || '',
+            status: tx.status
+          }))
+          .sort((a, b) => b.timestamp - a.timestamp);
 
-      setWithdrawalRecords(records);
+        setWithdrawalRecords(records);
+      };
+
+      fetchRecords();
+
+      // 每5秒刷新一次數據，直到關閉
+      const interval = setInterval(() => {
+        setIsRefreshing(true);
+        fetchRecords();
+        setTimeout(() => setIsRefreshing(false), 1000);
+      }, 5000);
+
+      return () => clearInterval(interval);
     }
   }, [isOpen, userAddress, getTransactionsByType]);
 
@@ -90,13 +105,24 @@ export const WithdrawalHistory: React.FC<WithdrawalHistoryProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="📋 提取歷史"
+      title={
+        <div className="flex items-center gap-2">
+          <span>📋 提取歷史</span>
+          {isRefreshing && (
+            <span className="text-xs text-gray-400 animate-pulse">刷新中...</span>
+          )}
+        </div>
+      }
       onConfirm={onClose}
       confirmText="關閉"
       maxWidth="4xl"
       showCloseButton={false}
     >
       <div className="space-y-6">
+        {/* 更新提示 */}
+        <div className="text-xs text-gray-500 text-center bg-gray-800/50 rounded p-2">
+          <p>💡 數據每 5 秒自動刷新，區塊鏈數據可能需要 1-2 分鐘才會完全同步</p>
+        </div>
           {paginatedRecords.length === 0 ? (
             <EmptyState 
               message="尚無提取記錄" 
@@ -216,7 +242,7 @@ export const WithdrawalHistoryButton: React.FC<WithdrawalHistoryButtonProps> = (
       <ActionButton
         onClick={() => setIsOpen(true)}
         className={`text-xs px-2 py-1 ${className}`}
-        title="查看提取歷史"
+        title="查看提取歷史（數據更新可能需要 1-2 分鐘）"
       >
         <Icons.History className="h-3 w-3 mr-1" />
         歷史

@@ -244,6 +244,8 @@ type Player @entity(immutable: false) {
   stats: PlayerStats @derivedFrom(field: "player")
   " 玩家的所有出征紀錄 "
   expeditions: [Expedition!] @derivedFrom(field: "player")
+  " 是否擁有 VIP 卡 (SBT) "
+  hasVIPCard: Boolean!
 }
 
 type Hero @entity(immutable: false) {
@@ -389,6 +391,12 @@ type VIP @entity(immutable: false) {
   createdAt: BigInt!
   " 最後更新時間戳 "
   lastUpdatedAt: BigInt
+  " 是否擁有 VIP 卡 (SBT) "
+  hasVIPCard: Boolean!
+  " 首次質押時間戳 "
+  firstStakedAt: BigInt
+  " VIP NFT Token ID "
+  tokenId: BigInt
 }
 
 type PlayerVault @entity(immutable: false) {
@@ -444,6 +452,32 @@ type UpgradeAttempt @entity(immutable: true) {
   " V5 Optimized new fields "
   vipLevel: Int
   totalVipBonus: Int
+}
+
+# =================================================================
+# Withdrawal Event - 提領事件追蹤
+# =================================================================
+type WithdrawalEvent @entity(immutable: true) {
+  " 使用 `txHash-logIndex` 作為唯一 ID "
+  id: ID!
+  " 提領的玩家 "
+  player: Player!
+  " 提領金額 (包含稅前) "
+  amount: BigInt!
+  " 稅收金額 "
+  taxAmount: BigInt!
+  " 實際收到金額 (amount - taxAmount) "
+  netAmount: BigInt!
+  " 是否為免稅提領 "
+  freeWithdraw: Boolean!
+  " 提領時的稅率百分比 "
+  taxRate: Int!
+  " 交易哈希 "
+  txHash: Bytes!
+  " 區塊編號 "
+  blockNumber: BigInt!
+  " 時間戳 "
+  timestamp: BigInt!
 }
 
 type GlobalStats @entity(immutable: false) {
@@ -734,4 +768,26 @@ enum OfferStatus {
   DECLINED
   CANCELLED
   EXPIRED
+}
+
+# =================================================================
+# Pausable Events - 合約暫停事件追蹤
+# =================================================================
+type PausableEvent @entity(immutable: true) {
+  " 使用 `txHash-logIndex-contractAddress` 作為唯一 ID "
+  id: ID!
+  " 合約地址 "
+  contractAddress: Bytes!
+  " 合約名稱 "
+  contractName: String!
+  " 事件類型 (paused/unpaused) "
+  eventType: String!
+  " 執行暫停/恢復的帳戶 "
+  account: Bytes!
+  " 交易哈希 "
+  txHash: Bytes!
+  " 區塊編號 "
+  blockNumber: BigInt!
+  " 時間戳 "
+  timestamp: BigInt!
 }
