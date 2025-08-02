@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { usePlayerAnalytics } from '../../hooks/usePlayerAnalytics';
+// 🔥 優化：保持原有導入，依賴 Tree Shaking
 import { 
   LineChart, Line, AreaChart, Area, BarChart, Bar, 
   PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, 
