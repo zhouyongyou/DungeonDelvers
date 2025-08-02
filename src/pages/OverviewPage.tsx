@@ -637,30 +637,52 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         icon={<Icons.TrendingUp className="h-5 w-5" />}
                         description={
                             <>
-                                <div className="text-xs space-y-1">
-                                    {/* 經驗值詳細信息 */}
+                                <div className="text-xs space-y-2">
+                                    {/* 經驗值進度條 - 更清晰的設計 */}
                                     {playerProfile && (
-                                        <div className="bg-gray-800/50 rounded p-2 mb-2">
-                                            <p className="text-yellow-400 font-medium">
-                                                Progress: {progress}%
-                                            </p>
-                                            <p className="text-gray-300">
-                                                {currentLevelExp} / {expNeededForNextLevel} EXP
-                                            </p>
-                                            <p className="text-gray-500 text-[10px]">
-                                                Total: {playerProfile.experience} EXP
-                                            </p>
+                                        <div className="bg-gray-800/50 rounded p-2">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <p className="text-white font-medium text-sm">
+                                                    邁向 LV {level + 1}
+                                                </p>
+                                                <p className="text-yellow-400 font-bold">
+                                                    {progress}%
+                                                </p>
+                                            </div>
+                                            
+                                            {/* 進度條 */}
+                                            <div className="w-full bg-gray-700 rounded-full h-2 mb-2">
+                                                <div 
+                                                    className="bg-gradient-to-r from-yellow-400 to-orange-400 h-2 rounded-full transition-all duration-300"
+                                                    style={{ width: `${progress}%` }}
+                                                />
+                                            </div>
+                                            
+                                            <div className="flex justify-between text-xs">
+                                                <span className="text-gray-300">
+                                                    {currentLevelExp} / {expNeededForNextLevel} EXP
+                                                </span>
+                                                <span className="text-gray-500">
+                                                    總計: {playerProfile.experience}
+                                                </span>
+                                            </div>
                                         </div>
                                     )}
+                                    
                                     <p className="text-gray-400">透過挑戰地城獲得經驗值提升等級</p>
-                                    <div className="text-green-400">
-                                        <p>🎯 稅率減免: -{Math.floor(level / 10)}% (每 10 級 -1%)</p>
-                                    </div>
-                                    <div className="text-blue-400 text-[10px] mt-1">
-                                        <p>升級獎勵：</p>
-                                        <p>• 每 10 級減少 1% 提款稅率</p>
-                                        <p>• 解鎖更高級地城</p>
-                                    </div>
+                                    
+                                    {/* 等級獎勵 - 收折設計 */}
+                                    <details className="group">
+                                        <summary className="text-green-400 cursor-pointer hover:text-green-300 flex items-center gap-1">
+                                            <span>🎯 等級獎勵 ({Math.floor(level / 10)}% 稅率減免)</span>
+                                            <span className="group-open:rotate-180 transition-transform">▼</span>
+                                        </summary>
+                                        <div className="text-blue-400 text-[10px] mt-1 ml-4 space-y-0.5">
+                                            <p>• 每 10 級減少 1% 提款稅率</p>
+                                            <p>• 解鎖更高級地城</p>
+                                            <p>• 增強角色基礎能力</p>
+                                        </div>
+                                    </details>
                                 </div>
                             </>
                         }
@@ -671,12 +693,26 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         value={displayHeroCount}
                         icon={<Icons.Users className="h-5 w-5" />}
                         description={
-                            isLoadingAssets ? "載入中..." : (
+                            isLoadingAssets ? (
+                                <div className="flex items-center gap-2 text-xs text-gray-400">
+                                    <div className="animate-spin h-3 w-3 border border-gray-400 border-t-transparent rounded-full" />
+                                    <span>載入中...</span>
+                                </div>
+                            ) : (
                                 <div className="text-xs space-y-1">
-                                    <p className="text-gray-400">未分配到隊伍的英雄</p>
+                                    <p className="text-gray-400">
+                                        {assetData?.unassignedHeroes !== undefined 
+                                            ? "未分配到隊伍的英雄" 
+                                            : "總英雄數量"}
+                                    </p>
                                     {player?.parties?.length > 0 && (
                                         <p className="text-yellow-400">
                                             已組隊: {player.parties.reduce((total, party) => total + (party.heroIds?.length || 0), 0)} 個
+                                        </p>
+                                    )}
+                                    {assetData?.unassignedHeroes !== undefined && (
+                                        <p className="text-blue-400 text-[10px]">
+                                            ✓ 即時鏈上數據
                                         </p>
                                     )}
                                 </div>
@@ -697,16 +733,29 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         value={displayRelicCount}
                         icon={<Icons.Shield className="h-5 w-5" />}
                         description={
-                            isLoadingAssets ? "載入中..." : (
+                            isLoadingAssets ? (
+                                <div className="flex items-center gap-2 text-xs text-gray-400">
+                                    <div className="animate-spin h-3 w-3 border border-gray-400 border-t-transparent rounded-full" />
+                                    <span>載入中...</span>
+                                </div>
+                            ) : (
                                 <div className="text-xs space-y-1">
-                                    <p className="text-gray-400">可用聖物</p>
+                                    <p className="text-gray-400">
+                                        {assetData?.unassignedRelics !== undefined 
+                                            ? "可用聖物" 
+                                            : "總聖物數量"}
+                                    </p>
                                     {player?.parties?.length > 0 && (
                                         <p className="text-yellow-400">
                                             已組隊: {player.parties.reduce((total, party) => {
-                                                // 檢查 party 的 relics 或 relicIds
                                                 const relicCount = party.relics?.length || party.relicIds?.length || 0;
                                                 return total + relicCount;
                                             }, 0)} 個
+                                        </p>
+                                    )}
+                                    {assetData?.unassignedRelics !== undefined && (
+                                        <p className="text-blue-400 text-[10px]">
+                                            ✓ 即時鏈上數據
                                         </p>
                                     )}
                                 </div>

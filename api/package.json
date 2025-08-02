@@ -1,6 +1,7 @@
 {
   "name": "dungeon-delvers-api",
   "version": "1.0.0",
+  "type": "module",
   "description": "Dynamic NFT metadata API for Dungeon Delvers",
   "dependencies": {
     "@vercel/node": "^5.3.5",
