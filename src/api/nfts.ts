@@ -156,7 +156,7 @@ export async function fetchMetadata(
             try {
 
                 metadata = await fetchFromLocalAPI(nftType, tokenId, timeout);
-                const loadTime = Date.now() - startTime;
+                const _loadTime = Date.now() - startTime;
 
                 // 成功後立即緩存
                 await nftMetadataPersistentCache.set(cacheKey, metadata);
@@ -170,7 +170,7 @@ export async function fetchMetadata(
         try {
 
             metadata = await fetchFromCDN(nftType, tokenId, timeout);
-            const loadTime = Date.now() - startTime;
+            const _loadTime = Date.now() - startTime;
 
             await nftMetadataPersistentCache.set(cacheKey, metadata);
             return { ...metadata, source: 'cdn' };
@@ -204,7 +204,7 @@ export async function fetchMetadata(
             metadata = await fetchWithTimeout(uri, timeout);
         }
         
-        const loadTime = Date.now() - startTime;
+        const _loadTime = Date.now() - startTime;
 
         // 驗證 metadata 格式
         const validationResult = validateNftMetadata(metadata, nftType as 'hero' | 'relic' | 'party' | 'vip');
@@ -418,7 +418,7 @@ async function fetchWithTimeout(url: string, timeout: number): Promise<Omit<Base
 // 🔥 新增：本地 API 載入函數
 async function fetchFromLocalAPI(nftType: string, tokenId: string, timeout: number): Promise<Omit<BaseNft, 'id' | 'contractAddress' | 'type'>> {
     // 使用 CDN 配置來獲取資源
-    const { getMetadataUrl, loadResourceWithFallback } = await import('../config/cdn');
+    const { _getMetadataUrl, loadResourceWithFallback } = await import('../config/cdn');
     
     try {
         // 構建資源路徑
@@ -443,7 +443,7 @@ async function fetchFromLocalAPI(nftType: string, tokenId: string, timeout: numb
             'api',
             (response) => response.json()
         );
-    } catch (error) {
+    } catch (_error) {
         // 如果 CDN 配置載入失敗，使用相對路徑
         let apiPath = '';
         
@@ -489,7 +489,7 @@ async function fetchFromCDN(nftType: string, tokenId: string, timeout: number): 
     for (const url of cdnUrls) {
         try {
             return await fetchWithTimeout(url, Math.min(timeout, 2000)); // CDN 最多2秒超時
-        } catch (error) {
+        } catch (_error) {
 
             continue;
         }
@@ -503,7 +503,7 @@ async function fetchFromCDN(nftType: string, tokenId: string, timeout: number): 
 // =================================================================
 
 // 批量處理工具函數 - 限制並發請求數量
-async function batchProcess<T, R>(
+async function _batchProcess<T, R>(
     items: T[],
     processor: (item: T) => Promise<R>,
     batchSize: number = 5
@@ -530,17 +530,17 @@ interface AssetWithTokenId {
     [key: string]: unknown;
 }
 
-interface HeroAsset extends AssetWithTokenId {
+interface _HeroAsset extends AssetWithTokenId {
     power: string | number | bigint;
     rarity: string | number | bigint;
 }
 
-interface RelicAsset extends AssetWithTokenId {
+interface _RelicAsset extends AssetWithTokenId {
     capacity: string | number | bigint;
     rarity: string | number | bigint;
 }
 
-interface PartyAsset extends AssetWithTokenId {
+interface _PartyAsset extends AssetWithTokenId {
     totalPower: string | number | bigint;
     totalCapacity: string | number | bigint;
     partyRarity: string | number | bigint;
@@ -548,7 +548,7 @@ interface PartyAsset extends AssetWithTokenId {
     relicIds?: Array<string | number | bigint>;
 }
 
-interface VipAsset extends AssetWithTokenId {
+interface _VipAsset extends AssetWithTokenId {
     stakedAmount?: string | number | bigint;
     stakedValueUSD?: string | number | bigint;
     // 注意：tier 已從子圖移除，level 將通過合約調用獲取
@@ -559,7 +559,7 @@ async function parseNfts<T extends AssetWithTokenId>(
     assets: T[],
     type: NftType,
     chainId: SupportedChainId,
-    client: ReturnType<typeof getClient>
+    _client: ReturnType<typeof getClient>
 ): Promise<Array<HeroNft | RelicNft | PartyNft | VipNft>> {
     if (!assets || assets.length === 0) return [];
 

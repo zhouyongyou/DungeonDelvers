@@ -144,19 +144,19 @@ export async function generateMetadataWithGraph(
     const nftData = await fetchNftDataFromGraph(contractAddress, tokenId);
     
     // 2. 生成 SVG
-    let svg: string;
+    let _svg: string;
     switch (nftData.type) {
       case 'hero':
-        svg = generateHeroSVG(nftData);
+        _svg = generateHeroSVG(nftData);
         break;
       case 'relic':
-        svg = generateRelicSVG(nftData);
+        _svg = generateRelicSVG(nftData);
         break;
       case 'party':
-        svg = generatePartySVG(nftData);
+        _svg = generatePartySVG(nftData);
         break;
       case 'vip':
-        svg = generateVipSVG(nftData);
+        _svg = generateVipSVG(nftData);
         break;
       default:
         throw new Error(`Unknown NFT type: ${nftData.type}`);
