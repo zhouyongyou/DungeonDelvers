@@ -208,6 +208,8 @@ dataSources:
           handler: handleVirtualCommissionAdded
         - event: VirtualTaxCollected(uint256)
           handler: handleVirtualTaxCollected
+        - event: ReferralSet(indexed address,indexed address)
+          handler: handleReferralSet
       file: ./src/player-vault.ts
   - kind: ethereum/contract
     name: DungeonMarketplaceV2

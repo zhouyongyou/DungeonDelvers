@@ -1,6 +1,6 @@
 import React, { createContext, useState, useCallback, useContext, type ReactNode } from 'react';
 
-type ToastType = 'success' | 'error' | 'info';
+type ToastType = 'success' | 'error' | 'info' | 'warning';
 interface Toast { id: string; text: string; type: ToastType; }
 interface ToastContextValue { showToast: (text: string, type?: ToastType) => void; }
 
@@ -30,6 +30,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     success: '#10b981',
     error: '#ef4444',
     info: '#3b82f6',
+    warning: '#f59e0b',
   };
   
   return (
@@ -58,7 +59,8 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
               fontSize: '14px',
               lineHeight: '1.4',
               backgroundColor: toastColors[toast.type],
-              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
               animation: 'slideIn 0.3s ease-out forwards',
               wordWrap: 'break-word',
               wordBreak: 'break-word',

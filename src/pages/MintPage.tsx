@@ -267,20 +267,22 @@ const RarityProbabilities = memo<{ quantity: number }>(({ quantity }) => {
                 {RARITY_LABELS.map((label, index) => {
                     const probability = currentTier.probabilities[index];
                     const isDisabled = probability === 0;
+                    const [name, stars] = label.split(' ');
                     
                     return (
                         <div 
                             key={index}
-                            className={`p-2 rounded transition-all ${
+                            className={`p-2 rounded transition-all overflow-hidden ${
                                 isDisabled 
                                     ? 'bg-gray-800/30 opacity-40' 
                                     : 'bg-black/40 border border-gray-600/50'
                             }`}
                         >
                             <div className={`text-xs ${isDisabled ? 'text-gray-600' : RARITY_COLORS[index]}`}>
-                                {label}
+                                <div className="truncate">{name}</div>
+                                <div className="text-[10px] leading-tight break-all">{stars}</div>
                             </div>
-                            <div className={`font-bold ${isDisabled ? 'text-gray-600' : 'text-white'}`}>
+                            <div className={`font-bold text-sm mt-1 ${isDisabled ? 'text-gray-600' : 'text-white'}`}>
                                 {probability}%
                             </div>
                             {isDisabled && (
@@ -896,31 +898,28 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                 </div>)}
             </div>
             {actionButton}
-            <div className="text-xs text-gray-400 mt-2 text-center">
-                <span className="inline-flex items-center gap-1">
-                    <span>💡</span>
-                    <span>價格基於 Oracle 即時匯率計算</span>
-                </span>
-            </div>
-            <div className="flex flex-col sm:flex-row items-center gap-2 mt-2">
-                <a href="/#/marketplace" className="text-xs text-indigo-500 dark:text-indigo-400 hover:underline">
-                    🏠 內部市場交易
-                </a>
-                <span className="text-xs text-gray-600 hidden sm:inline">•</span>
-                <a href={contractConfig.address ? `https://www.okx.com/web3/nft/markets/collection/bscn/${contractConfig.address}` : '#'} target="_blank" rel="noopener noreferrer" className="text-xs text-orange-500 dark:text-orange-400 hover:underline">
+            <div className="flex items-center justify-center gap-2 mt-4">
+                <a href={contractConfig.address ? `https://web3.okx.com/zh-hant/nft/collection/bsc/${contractConfig.address}` : '#'} target="_blank" rel="noopener noreferrer" className="text-xs text-orange-500 dark:text-orange-400 hover:underline">
                     🌐 OKX 市場
                 </a>
             </div>
             {contractConfig.address && (
-                <p className="text-xs text-gray-500 mt-1">
-                    {type === 'hero' ? '英雄' : '聖物'}合約地址: 
-                    <a href={`https://bscscan.com/address/${contractConfig.address}`} 
-                       target="_blank" 
-                       rel="noopener noreferrer"
-                       className="ml-1 hover:text-gray-400 font-mono">
-                        {contractConfig.address.slice(0, 6)}...{contractConfig.address.slice(-4)}
-                    </a>
-                </p>
+                <div className="text-xs text-gray-500 mt-1 flex items-center justify-center gap-2">
+                    <span>{type === 'hero' ? '英雄' : '聖物'}合約地址:</span>
+                    <button
+                        onClick={() => {
+                            navigator.clipboard.writeText(contractConfig.address);
+                            showToast('地址已複製！', 'success');
+                        }}
+                        className="hover:text-gray-400 font-mono flex items-center gap-1 group transition-colors"
+                        title="點擊複製地址"
+                    >
+                        <span>{contractConfig.address.slice(0, 6)}...{contractConfig.address.slice(-4)}</span>
+                        <svg className="w-3 h-3 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                    </button>
+                </div>
             )}
             <RarityProbabilities quantity={quantity} />
         </div>
@@ -958,15 +957,11 @@ const MintPage: React.FC = memo(() => {
             
             {/* 收益最大化建議 */}
             <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-3 sm:p-4 mt-6 sm:mt-8 mb-4 sm:mb-6 max-w-4xl mx-auto">
-                <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center mt-0.5">
-                        <span className="text-white text-sm">💡</span>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        <p className="text-xs sm:text-sm text-purple-300 font-semibold">
-                            收益最大化策略
-                        </p>
-                        <ul className="text-xs text-gray-300 space-y-1 list-disc list-inside">
+                <div className="flex flex-col gap-2">
+                    <p className="text-xs sm:text-sm text-purple-300 font-semibold">
+                        收益最大化策略
+                    </p>
+                    <ul className="text-xs text-gray-300 space-y-1 list-disc list-inside">
                             <li>專注培養 <strong className="text-purple-200">精華隊伍</strong>（可以是一個或多個）</li>
                             <li>隊伍戰力應達到 <strong className="text-purple-200">3000 以上</strong>，以挑戰較高收益的「混沌深淵」地下城</li>
                             <li>一般需要鑄造約 <strong className="text-purple-200">100 個聖物</strong> 和 <strong className="text-purple-200">200 個英雄</strong>，才能組建出幾個強力隊伍</li>
@@ -974,7 +969,6 @@ const MintPage: React.FC = memo(() => {
                             <li>記得：品質優於數量，一個強力隊伍勝過多個弱隊</li>
                             <li className="text-orange-300">⚠️ <strong>技術限制</strong>：為確保系統穩定性，建議單一地址擁有的英雄和聖物數量各不超過 1000 個</li>
                         </ul>
-                    </div>
                 </div>
             </div>
             

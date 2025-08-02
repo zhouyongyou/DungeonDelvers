@@ -297,12 +297,12 @@ export const MarketplacePreview: React.FC = () => {
                         {NFT_TYPE_LABELS[sale.nftType as NftType]} #{sale.tokenId}
                         {sale.hero && (
                           <span className="text-sm text-gray-400 ml-2">
-                            ({ELEMENT_LABELS[sale.hero.element]} {CLASS_LABELS[sale.hero.class]} | {sale.hero.power}⚔️)
+                            ({sale.hero.power}⚔️)
                           </span>
                         )}
                         {sale.relic && (
                           <span className="text-sm text-gray-400 ml-2">
-                            ({sale.relic.category} | {sale.relic.capacity}📦)
+                            ({sale.relic.capacity}📦)
                           </span>
                         )}
                       </span>
@@ -341,9 +341,6 @@ export const MarketplacePreview: React.FC = () => {
                     
                     {listing.hero && (
                       <div className="space-y-1">
-                        <div className="text-sm text-gray-300">
-                          🔥 {ELEMENT_LABELS[listing.hero.element]} {CLASS_LABELS[listing.hero.class]}
-                        </div>
                         <div className="text-sm text-orange-400">
                           ⚔️ 戰力: {listing.hero.power}
                         </div>
@@ -352,9 +349,6 @@ export const MarketplacePreview: React.FC = () => {
                     
                     {listing.relic && (
                       <div className="space-y-1">
-                        <div className="text-sm text-gray-300">
-                          📿 {listing.relic.category}
-                        </div>
                         <div className="text-sm text-blue-400">
                           📦 容量: {listing.relic.capacity}
                         </div>

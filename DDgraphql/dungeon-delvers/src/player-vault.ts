@@ -6,7 +6,8 @@ import {
     CommissionPaid,
     VirtualGameSpending,
     VirtualCommissionAdded,
-    VirtualTaxCollected
+    VirtualTaxCollected,
+    ReferralSet
 } from "../generated/PlayerVault/PlayerVault"
 import { PlayerVault, PlayerProfile, VirtualTaxRecord, TaxStatistics } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
@@ -118,4 +119,32 @@ export function handleVirtualTaxCollected(event: VirtualTaxCollected): void {
     stats.totalTaxRecords = stats.totalTaxRecords.plus(BigInt.fromI32(1))
     stats.lastUpdated = event.block.timestamp
     stats.save()
+}
+
+export function handleReferralSet(event: ReferralSet): void {
+    // 獲取或創建推薦人的 PlayerProfile
+    const referrerPlayer = getOrCreatePlayer(event.params.referrer)
+    if (referrerPlayer.profile) {
+        const referrerProfile = PlayerProfile.load(referrerPlayer.profile!)
+        if (referrerProfile) {
+            // 將新用戶添加到推薦人的 invitees 列表
+            const invitees = referrerProfile.invitees
+            invitees.push(event.params.user)
+            referrerProfile.invitees = invitees
+            referrerProfile.lastUpdatedAt = event.block.timestamp
+            referrerProfile.save()
+        }
+    }
+    
+    // 獲取或創建被推薦人的 PlayerProfile
+    const userPlayer = getOrCreatePlayer(event.params.user)
+    if (userPlayer.profile) {
+        const userProfile = PlayerProfile.load(userPlayer.profile!)
+        if (userProfile) {
+            // 設置被推薦人的 inviter
+            userProfile.inviter = event.params.referrer
+            userProfile.lastUpdatedAt = event.block.timestamp
+            userProfile.save()
+        }
+    }
 }

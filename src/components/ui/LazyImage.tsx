@@ -78,10 +78,25 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     };
 
     img.onerror = () => {
-      setImageSrc(fallback);
-      setIsLoading(false);
-      setHasError(true);
-      onError?.();
+      if (fallback) {
+        // 如果有 fallback，嘗試載入 fallback 圖片
+        const fallbackImg = new Image();
+        fallbackImg.onload = () => {
+          setImageSrc(fallback);
+          setIsLoading(false);
+          setHasError(false);
+        };
+        fallbackImg.onerror = () => {
+          setIsLoading(false);
+          setHasError(true);
+          onError?.();
+        };
+        fallbackImg.src = fallback;
+      } else {
+        setIsLoading(false);
+        setHasError(true);
+        onError?.();
+      }
     };
 
     // 開始加載

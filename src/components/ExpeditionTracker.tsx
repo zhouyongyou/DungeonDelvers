@@ -25,7 +25,7 @@ interface ExpeditionTrackerProps {
     onNewResult?: (result: ExpeditionResult) => void;
 }
 
-const MAX_RESULTS = 5;
+const MAX_RESULTS = 20; // 增加顯示數量以避免遺漏最新紀錄
 import { THE_GRAPH_API_URL } from '../config/graphConfig';
 
 const GRAPHQL_URL = THE_GRAPH_API_URL;
@@ -63,7 +63,7 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
     const dungeonMasterContract = getContractWithABI('DUNGEONMASTER');
 
     // Fetch recent expeditions from subgraph with caching
-    const { data: graphResults, refetch } = useQuery({
+    const { data: graphResults, refetch, isFetching } = useQuery({
         queryKey: ['recentExpeditions', address],
         queryFn: async () => {
             if (!address) return [];
@@ -131,13 +131,28 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
             }
         },
         enabled: !!address && chainId === bsc.id,
-        refetchInterval: 60000, // Increase to 60 seconds
-        staleTime: 50000, // Consider data stale after 50 seconds
-        retry: 2, // Reduce retries
-        retryDelay: (attemptIndex) => Math.min(10000 * 2 ** attemptIndex, 60000),
+        refetchInterval: 20000, // 每 20 秒更新一次
+        staleTime: 15000, // 15 秒後認為資料過期
+        retry: 3, // 增加重試次數
+        retryDelay: (attemptIndex) => Math.min(5000 * 2 ** attemptIndex, 30000),
+        refetchOnWindowFocus: true, // 當視窗獲得焦點時重新獲取
+        refetchOnReconnect: true // 重新連接時刷新
     });
 
     const recentResults = graphResults || [];
+    
+    // 當資料為空且不是在載入中時，自動嘗試刷新
+    useEffect(() => {
+        if (!address || recentResults.length > 0) return;
+        
+        // 延遲 5 秒後自動刷新一次
+        const timer = setTimeout(() => {
+            logger.info('No expedition results found, attempting refresh...');
+            refetch();
+        }, 5000);
+        
+        return () => clearTimeout(timer);
+    }, [address, recentResults.length, refetch]);
 
     // 使用事件輪詢替代 useWatchContractEvent
     useEffect(() => {
@@ -145,8 +160,18 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
 
         const handleExpeditionLogs = (logs: any[]) => {
             logs.forEach((log) => {
-                const { args } = log;
-                if (!args) return;
+                try {
+                    const { args } = log;
+                    if (!args) {
+                        logger.warn('Expedition log missing args:', log);
+                        return;
+                    }
+
+                // 確保 args 包含所需的屬性
+                if (!args || args.partyId === undefined) {
+                    logger.error('Invalid expedition log args:', { args });
+                    return;
+                }
 
                 const result: ExpeditionResult = {
                     partyId: args.partyId,
@@ -166,7 +191,7 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
                 });
 
                 logger.info('New expedition result:', {
-                    partyId: result.partyId.toString(),
+                    partyId: result.partyId?.toString() || 'Unknown',
                     success: result.success,
                     reward: formatEther(result.reward),
                     expGained: result.expGained,
@@ -191,13 +216,26 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
                 
                 // Refetch from subgraph after a short delay to ensure it's indexed
                 // But also schedule more frequent refetches for better sync
-                setTimeout(() => refetch(), 2000);  // First check after 2s
+                logger.info('🔄 Scheduling refetch after new expedition event');
+                setTimeout(() => {
+                    // 清除本地快取
+                    if (address) {
+                        const cacheKey = `expeditions_${address}`;
+                        localStorage.removeItem(cacheKey);
+                    }
+                    refetch();
+                }, 2000);  // First check after 2s
                 setTimeout(() => refetch(), 10000); // Second check after 10s
                 setTimeout(() => refetch(), 30000); // Final check after 30s
 
                 // Call callback if provided
                 if (onNewResult) {
                     onNewResult(result);
+                }
+                } catch (error) {
+                    logger.error('Error processing expedition log:', error, { log });
+                    // 即使發生錯誤也嘗試刷新資料
+                    setTimeout(() => refetch(), 1000);
                 }
             });
         };
@@ -263,14 +301,55 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
 
     // Recent results widget (for sidebar or dedicated section)
     const [isExpanded, setIsExpanded] = React.useState(false);
-    const displayLimit = isExpanded ? 10 : 3; // 預設顯示3筆，展開顯示10筆
+    const [isRefreshing, setIsRefreshing] = React.useState(false);
+    const displayLimit = isExpanded ? 20 : 5; // 預設顯示5筆，展開顯示20筆
+    
+    const handleManualRefresh = async () => {
+        setIsRefreshing(true);
+        logger.info('🔄 Manual refresh triggered by user');
+        
+        // 清除本地快取以獲取最新資料
+        if (address) {
+            const cacheKey = `expeditions_${address}`;
+            localStorage.removeItem(cacheKey);
+        }
+        
+        await refetch();
+        setTimeout(() => setIsRefreshing(false), 1000);
+    };
     
     if (recentResults.length > 0) {
         return (
             <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
                 <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-sm font-semibold text-gray-300">最近的遠征結果</h4>
-                    {recentResults.length > 3 && (
+                    <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-semibold text-gray-300">最近的遠征結果</h4>
+                        <button
+                            onClick={handleManualRefresh}
+                            disabled={isRefreshing}
+                            className="text-gray-400 hover:text-white transition-colors"
+                            title="手動刷新"
+                        >
+                            <svg 
+                                className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} 
+                                fill="none" 
+                                viewBox="0 0 24 24" 
+                                stroke="currentColor"
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                        </button>
+                        {isFetching && (
+                            <div className="flex items-center gap-1 text-xs text-blue-400">
+                                <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                                <span>同步中...</span>
+                            </div>
+                        )}
+                    </div>
+                    {recentResults.length > 5 && (
                         <button
                             onClick={() => setIsExpanded(!isExpanded)}
                             className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
@@ -318,6 +397,12 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
                         </div>
                     ))}
                 </div>
+                {/* 提示文字 */}
+                <div className="mt-3 pt-3 border-t border-gray-700">
+                    <p className="text-gray-400 text-xs text-center">
+                        💡 沒看到最新紀錄？點擊右上角 <span className="text-blue-400">⟳</span> 按鈕手動刷新
+                    </p>
+                </div>
             </div>
         );
     }
@@ -325,7 +410,35 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
     // Show placeholder when no results
     return (
         <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-            <h4 className="text-sm font-semibold text-gray-300 mb-3">最近的遠征結果</h4>
+            <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-semibold text-gray-300">最近的遠征結果</h4>
+                    {isFetching && (
+                        <div className="flex items-center gap-1 text-xs text-blue-400">
+                            <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            <span>同步中...</span>
+                        </div>
+                    )}
+                </div>
+                <button
+                    onClick={handleManualRefresh}
+                    disabled={isRefreshing}
+                    className="text-gray-400 hover:text-white transition-colors"
+                    title="手動刷新"
+                >
+                    <svg 
+                        className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                    >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
+            </div>
             <div className="text-center py-8">
                 <div className="text-4xl mb-2">🏴‍☠️</div>
                 <p className="text-gray-500 text-sm">暫無出征紀錄</p>
@@ -338,6 +451,11 @@ export const ExpeditionTracker: React.FC<ExpeditionTrackerProps> = ({ onNewResul
                     </p>
                     <p className="text-blue-300 text-xs mt-1">
                         需要先在「資產管理」組建隊伍，然後到「地城」選擇適合的挑戰
+                    </p>
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-700">
+                    <p className="text-gray-400 text-xs text-center">
+                        💡 提示：點擊右上角 <span className="text-blue-400">⟳</span> 按鈕可手動刷新戰鬥紀錄
                     </p>
                 </div>
             </div>

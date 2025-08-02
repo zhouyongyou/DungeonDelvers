@@ -1,5 +1,5 @@
 // TeamBuilder component extracted from MyAssetsPage
-import React, { useState, useEffect, useMemo, memo } from 'react';
+import React, { useState, useEffect, useMemo, memo, useRef } from 'react';
 import type { HeroNft, RelicNft } from '../types/nft';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { logger } from '../utils/logger';
@@ -46,6 +46,9 @@ export const TeamBuilder = memo<TeamBuilderProps>(({
     const [currentStep, setCurrentStep] = useState<'select-relic' | 'select-hero' | 'ready'>('select-relic');
     const [hasJustAuthorized, setHasJustAuthorized] = useState(false);
     const { showToast } = useAppToast();
+    
+    // 添加英雄選擇區域的 ref
+    const heroSectionRef = useRef<HTMLDivElement>(null);
     
     // 追蹤授權狀態變化
     useEffect(() => {
@@ -115,10 +118,31 @@ export const TeamBuilder = memo<TeamBuilderProps>(({
             if (list.includes(id)) {
                 setList(list.filter(i => i !== id));
             } else if (list.length < limit) {
-                setList([...list, id]);
+                const newList = [...list, id];
+                setList(newList);
                 // 當選擇了聖物後，自動進入下一步
                 if (list.length === 0) {
                     setCurrentStep('select-hero');
+                }
+                
+                // 當選滿 5 個聖物時，自動滾動到英雄選擇區域
+                if (newList.length === 5) {
+                    // 添加小延遲，讓用戶看到選擇效果
+                    setTimeout(() => {
+                        if (heroSectionRef.current) {
+                            // 計算頂部偏移量（考慮固定頭部）
+                            const yOffset = -100; // 負值會讓目標元素離頂部有一定距離
+                            const y = heroSectionRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                            
+                            window.scrollTo({
+                                top: y,
+                                behavior: 'smooth'
+                            });
+                            
+                            // 顯示提示
+                            showToast('聖物已選滿，請繼續選擇英雄', 'info');
+                        }
+                    }, 300);
                 }
             } else {
                 showToast(`最多只能選擇 ${limit} 個聖物`, 'error');
@@ -357,7 +381,7 @@ export const TeamBuilder = memo<TeamBuilderProps>(({
             </div>
 
             {/* 英雄選擇區 */}
-            <div className="space-y-4">
+            <div ref={heroSectionRef} className="space-y-4">
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold flex items-center gap-2">
                         英雄選擇 
@@ -520,11 +544,16 @@ export const TeamBuilder = memo<TeamBuilderProps>(({
                                     <ActionButton
                                         onClick={handleBatchAuthorize}
                                         variant="primary"
-                                        className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500"
+                                        className={`flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 ${isAuthorizing ? 'auth-progress' : ''}`}
                                         disabled={isAuthorizing}
                                         isLoading={isAuthorizing}
                                     >
-                                        {isAuthorizing ? '授權中...' : '一鍵授權所有'}
+                                        {isAuthorizing ? (
+                                            <span className="flex items-center justify-center gap-2">
+                                                <span className="animate-pulse">授權處理中</span>
+                                                <span className="text-xs text-purple-200">(約15-30秒)</span>
+                                            </span>
+                                        ) : '一鍵授權所有'}
                                     </ActionButton>
                                 )}
                                 
@@ -533,11 +562,16 @@ export const TeamBuilder = memo<TeamBuilderProps>(({
                                     <ActionButton
                                         onClick={onAuthorizeHero}
                                         variant="secondary"
-                                        className="flex-1"
+                                        className={`flex-1 ${isAuthorizing ? 'auth-progress' : ''}`}
                                         disabled={isAuthorizing}
                                         isLoading={isAuthorizing}
                                     >
-                                        授權英雄 NFT
+                                        {isAuthorizing ? (
+                                            <span className="flex items-center justify-center gap-2">
+                                                <span className="animate-pulse">處理中</span>
+                                                <span className="text-xs">(15-30秒)</span>
+                                            </span>
+                                        ) : '授權英雄 NFT'}
                                     </ActionButton>
                                 )}
                                 
@@ -545,11 +579,16 @@ export const TeamBuilder = memo<TeamBuilderProps>(({
                                     <ActionButton
                                         onClick={onAuthorizeRelic}
                                         variant="secondary"
-                                        className="flex-1"
+                                        className={`flex-1 ${isAuthorizing ? 'auth-progress' : ''}`}
                                         disabled={isAuthorizing}
                                         isLoading={isAuthorizing}
                                     >
-                                        授權聖物 NFT
+                                        {isAuthorizing ? (
+                                            <span className="flex items-center justify-center gap-2">
+                                                <span className="animate-pulse">處理中</span>
+                                                <span className="text-xs">(15-30秒)</span>
+                                            </span>
+                                        ) : '授權聖物 NFT'}
                                     </ActionButton>
                                 )}
                             </>

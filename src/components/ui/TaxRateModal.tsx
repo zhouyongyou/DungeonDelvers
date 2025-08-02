@@ -33,6 +33,8 @@ export const TaxRateModal: React.FC<TaxRateModalProps> = ({
     freeWithdrawThresholdUsd = 20,
     largeWithdrawThresholdUsd = 1000
 }) => {
+    // 判斷是否為首次提領（沒有提領記錄）
+    const isFirstWithdraw = lastFreeWithdrawTime === 0;
     // 懶加載：只有當 Modal 開啟時才獲取價格和計算
     const { priceInUsd } = useSoulPrice({ enabled: isOpen });
     
@@ -58,6 +60,17 @@ export const TaxRateModal: React.FC<TaxRateModalProps> = ({
                     usdValue,
                     type: '免稅',
                     note: '每日一次免稅提領'
+                };
+            }
+            
+            // 首次提領免稅
+            if (isFirstWithdraw) {
+                return {
+                    received: soulAmount,
+                    taxRate: 0,
+                    usdValue,
+                    type: '首次免稅',
+                    note: '首次提領優惠'
                 };
             }
             
@@ -125,6 +138,14 @@ export const TaxRateModal: React.FC<TaxRateModalProps> = ({
             showCloseButton={false}
         >
             <div className="space-y-6">
+                {/* 首次提領優惠提示 */}
+                {isFirstWithdraw && (
+                    <div className="bg-gradient-to-r from-green-900/40 to-emerald-900/40 border border-green-500/50 rounded-xl p-4 text-center animate-pulse">
+                        <p className="text-green-300 font-bold text-lg mb-1">✨ 首次提領免稅優惠生效中 ✨</p>
+                        <p className="text-green-200 text-sm">您的首次提領將享受 0% 稅率，無論金額大小</p>
+                    </div>
+                )}
+                
                 {/* 當前稅率展示 - 分級顯示 */}
                 <div className="bg-gradient-to-r from-blue-900/30 to-indigo-900/30 border border-blue-500/30 rounded-xl p-6">
                     <p className="text-sm text-blue-300 mb-4 text-center">您當前的提款稅率</p>
@@ -132,30 +153,41 @@ export const TaxRateModal: React.FC<TaxRateModalProps> = ({
                         <div className="text-center">
                             <p className="text-xs text-gray-400 mb-1">一般金額 (&lt;$1000)</p>
                             <div className="flex items-baseline justify-center gap-1">
-                                <span className="text-3xl font-bold text-white">{actualTaxRate.toFixed(1)}</span>
-                                <span className="text-lg text-blue-300">%</span>
+                                <span className={`text-3xl font-bold ${isFirstWithdraw ? 'text-green-400' : 'text-white'}`}>
+                                    {isFirstWithdraw ? '0.0' : actualTaxRate.toFixed(1)}
+                                </span>
+                                <span className={`text-lg ${isFirstWithdraw ? 'text-green-300' : 'text-blue-300'}`}>%</span>
                             </div>
                         </div>
                         <div className="text-center">
                             <p className="text-xs text-gray-400 mb-1">大額金額 (≥$1000)</p>
                             <div className="flex items-baseline justify-center gap-1">
-                                <span className="text-3xl font-bold text-orange-300">{(actualLargeTaxRate || (actualTaxRate + 15)).toFixed(1)}</span>
-                                <span className="text-lg text-orange-300">%</span>
+                                <span className={`text-3xl font-bold ${isFirstWithdraw ? 'text-green-400' : 'text-orange-300'}`}>
+                                    {isFirstWithdraw ? '0.0' : (actualLargeTaxRate || (actualTaxRate + 15)).toFixed(1)}
+                                </span>
+                                <span className={`text-lg ${isFirstWithdraw ? 'text-green-300' : 'text-orange-300'}`}>%</span>
                             </div>
                         </div>
                     </div>
-                    <div className="mt-3 space-y-2">
-                        {vipTier > 0 && (
-                            <div className="px-3 py-1 bg-purple-600/20 border border-purple-400/30 rounded-full inline-block mx-1">
-                                <p className="text-sm text-purple-300">
+                    <div className="mt-3 flex flex-col items-center space-y-2">
+                        {vipTier > 0 && !isFirstWithdraw && (
+                            <div className="px-3 py-1 bg-purple-600/20 border border-purple-400/30 rounded-full">
+                                <p className="text-sm text-purple-300 text-center">
                                     VIP {vipTier} 已為您節省 {vipDiscount.toFixed(1)}% 稅率 ✨
                                 </p>
                             </div>
                         )}
-                        {levelDiscount > 0 && (
-                            <div className="px-3 py-1 bg-green-600/20 border border-green-400/30 rounded-full inline-block mx-1">
-                                <p className="text-sm text-green-300">
+                        {levelDiscount > 0 && !isFirstWithdraw && (
+                            <div className="px-3 py-1 bg-green-600/20 border border-green-400/30 rounded-full">
+                                <p className="text-sm text-green-300 text-center">
                                     Lv.{playerLevel} 已為您節省 {levelDiscount}% 稅率 🎆
+                                </p>
+                            </div>
+                        )}
+                        {isFirstWithdraw && (
+                            <div className="px-3 py-1 bg-green-600/30 border border-green-400/40 rounded-full">
+                                <p className="text-sm text-green-300 text-center">
+                                    首次提領優惠覆蓋所有其他稅率 🎁
                                 </p>
                             </div>
                         )}
@@ -184,7 +216,7 @@ export const TaxRateModal: React.FC<TaxRateModalProps> = ({
                                         <div className="text-xs text-gray-500">
                                             ≈ ${withdrawal.usdValue.toFixed(2)} USD · 
                                             <span className={
-                                                withdrawal.type === '免稅' ? 'text-green-400' :
+                                                withdrawal.type === '免稅' || withdrawal.type === '首次免稅' ? 'text-green-400' :
                                                 withdrawal.type === '大額' ? 'text-orange-400' : 'text-blue-400'
                                             }>
                                                 {withdrawal.type}
@@ -196,7 +228,7 @@ export const TaxRateModal: React.FC<TaxRateModalProps> = ({
                                     </div>
                                     <div className="text-right">
                                         <span className={`font-semibold ${
-                                            withdrawal.type === '免稅' ? 'text-green-400' :
+                                            withdrawal.type === '免稅' || withdrawal.type === '首次免稅' ? 'text-green-400' :
                                             withdrawal.type === '大額' ? 'text-orange-400' : 'text-blue-400'
                                         }`}>
                                             實收 {withdrawal.received.toLocaleString()}
@@ -215,29 +247,25 @@ export const TaxRateModal: React.FC<TaxRateModalProps> = ({
                         )}
                     </div>
                     <div className="mt-3 space-y-2">
-                        <div className="p-3 bg-gradient-to-r from-green-900/20 to-emerald-900/20 border border-green-500/30 rounded-lg">
-                            <p className="text-xs text-green-400 flex items-center gap-1 mb-2">
-                                <span>🎉</span>
-                                <span className="font-medium">首次提領優惠：0% 稅率</span>
-                            </p>
-                            <p className="text-xs text-green-300 pl-4 mb-2">
-                                ✨ 由於時間衰減機制，首次提領的用戶通常可以享受 0% 稅率
-                            </p>
-                            <hr className="border-green-600/30 my-2" />
-                            <p className="text-xs text-green-400 flex items-center gap-1 mb-1">
-                                <span>🎁</span>
-                                <span>每日免稅提領（≤$20 USD）</span>
-                            </p>
-                            <p className="text-xs text-yellow-400 pl-4">
-                                ⚠️ 重要：任何提領（包括免稅）都會重置稅率計算，每日5%降低會重新開始
-                            </p>
-                        </div>
-                        <div className="p-2 bg-blue-900/20 border border-blue-600/30 rounded-lg">
-                            <p className="text-xs text-blue-400">一般提現（$20-$1,000 USD）- 基礎稅率 25%</p>
-                        </div>
-                        <div className="p-2 bg-orange-900/20 border border-orange-600/30 rounded-lg">
-                            <p className="text-xs text-orange-400">大額提現（≥$1,000 USD）- 基礎稅率 40%</p>
-                        </div>
+                        {!isFirstWithdraw && (
+                            <>
+                                <div className="p-3 bg-gradient-to-r from-green-900/20 to-emerald-900/20 border border-green-500/30 rounded-lg">
+                                    <p className="text-xs text-green-400 flex items-center gap-1 mb-1">
+                                        <span>🎁</span>
+                                        <span>每日免稅提領（≤$20 USD）</span>
+                                    </p>
+                                    <p className="text-xs text-yellow-400 pl-4">
+                                        ⚠️ 重要：任何提領（包括免稅）都會重置稅率計算，每日5%降低會重新開始
+                                    </p>
+                                </div>
+                                <div className="p-2 bg-blue-900/20 border border-blue-600/30 rounded-lg">
+                                    <p className="text-xs text-blue-400">一般提現（$20-$1,000 USD）- 基礎稅率 25%</p>
+                                </div>
+                                <div className="p-2 bg-orange-900/20 border border-orange-600/30 rounded-lg">
+                                    <p className="text-xs text-orange-400">大額提現（≥$1,000 USD）- 基礎稅率 40%</p>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
 

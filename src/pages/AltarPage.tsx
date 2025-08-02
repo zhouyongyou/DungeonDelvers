@@ -708,6 +708,8 @@ const AltarPage = memo(() => {
     useEffect(() => {
         resetSelections();
         setRitualStage('idle');
+        // 切換 NFT 類型時重置樂觀授權狀態
+        setOptimisticApproval(false);
     }, [nftType, rarity]);
 
     // 更新儀式階段
@@ -721,27 +723,45 @@ const AltarPage = memo(() => {
         }
     }, [selectedNfts, currentRule]);
 
+    // 使用樂觀更新處理授權狀態
+    const [optimisticApproval, setOptimisticApproval] = useState(false);
+    
     const handleApproval = async () => {
         if (!currentNftContract || !altarContract || !address) return;
         
         try {
             showToast('正在授權祭壇合約...', 'info');
             
-            await writeContract({
+            // 立即樂觀更新授權狀態
+            setOptimisticApproval(true);
+            
+            const hash = await writeContract({
                 address: currentNftContract.address as `0x${string}`,
                 abi: currentNftContract.abi,
                 functionName: 'setApprovalForAll',
                 args: [altarContract.address, true],
             });
             
-            showToast('授權交易已發送，請等待確認', 'success');
+            showToast('授權交易已發送，正在確認...', 'success');
             
-            // 等待一段時間後刷新授權狀態
-            setTimeout(() => {
-                refetchApproval();
-                showToast('授權完成！如未看到變化，請手動刷新頁面', 'info');
-            }, 3000);
+            // 監聽交易確認
+            if (publicClient) {
+                publicClient.waitForTransactionReceipt({ hash })
+                    .then(() => {
+                        // 交易確認後刷新真實狀態
+                        refetchApproval();
+                        showToast('✅ 授權成功！現在可以開始升星儀式了', 'success');
+                    })
+                    .catch((error) => {
+                        // 如果失敗，回滾樂觀更新
+                        setOptimisticApproval(false);
+                        logger.error('授權確認失敗:', error);
+                        showToast('授權確認失敗，請重試', 'error');
+                    });
+            }
         } catch (error) {
+            // 用戶拒絕或其他錯誤，立即回滾
+            setOptimisticApproval(false);
             logger.error('授權失敗:', error);
             showToast('授權失敗，請重試', 'error');
         }
@@ -754,8 +774,9 @@ const AltarPage = memo(() => {
         const tokenContract = nftType === 'hero' ? heroContract : relicContract;
         if (!tokenContract) return showToast('合約地址未設定', 'error');
 
-        // 檢查授權狀態
-        if (!isApprovedForAll) {
+        // 檢查授權狀態（包含樂觀更新）
+        const effectiveApproval = isApprovedForAll || optimisticApproval;
+        if (!effectiveApproval) {
             showToast('請先授權祭壇合約', 'error');
             return;
         }
@@ -842,7 +863,7 @@ const AltarPage = memo(() => {
                     isOpen={showConfirmModal} 
                     onClose={() => setShowConfirmModal(false)}
                     title="確認神秘儀式"
-                    onConfirm={isApprovedForAll ? () => {
+                    onConfirm={(isApprovedForAll || optimisticApproval) ? () => {
                         setShowConfirmModal(false);
                         handleUpgrade();
                     } : undefined}
@@ -914,7 +935,7 @@ const AltarPage = memo(() => {
                         )}
                         
                         {/* 授權狀態提示 */}
-                        {!isApprovedForAll && (
+                        {!isApprovedForAll && !optimisticApproval && (
                             <div className="bg-gradient-to-br from-yellow-900/40 to-orange-900/40 backdrop-blur-md 
                                             border border-yellow-600/50 rounded-lg p-4 space-y-3">
                                 <h3 className="text-sm font-bold text-yellow-300 flex items-center gap-2">
@@ -1042,7 +1063,7 @@ const AltarPage = memo(() => {
 
 
                         {/* 授權檢查 */}
-                        {!isApprovedForAll && currentRule && (
+                        {!isApprovedForAll && !optimisticApproval && currentRule && (
                             <div className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border border-yellow-500/30 rounded-xl p-4">
                                 <div className="flex items-center gap-3 mb-3">
                                     <div className="text-2xl">⚠️</div>
@@ -1098,7 +1119,7 @@ const AltarPage = memo(() => {
                         <ActionButton 
                             onClick={() => setShowConfirmModal(true)} 
                             isLoading={isTxPending} 
-                            disabled={isTxPending || !currentRule || !currentRule.isActive || selectedNfts.length !== currentRule.materialsRequired || !isApprovedForAll || remainingCooldown > 0} 
+                            disabled={isTxPending || !currentRule || !currentRule.isActive || selectedNfts.length !== currentRule.materialsRequired || (!isApprovedForAll && !optimisticApproval) || remainingCooldown > 0} 
                             className="w-full h-12 text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:from-gray-600 disabled:to-gray-700 shadow-xl"
                         >
                             {!currentRule?.isActive ? '升星功能已停用' : remainingCooldown > 0 ? '冷卻中...' : isTxPending ? '神秘儀式進行中...' : '開始升星儀式'}
@@ -1120,9 +1141,14 @@ const AltarPage = memo(() => {
                                 <div className="flex justify-between items-center mb-3 sm:mb-4 md:mb-6">
                                     <h3 className="text-sm sm:text-base md:text-lg font-semibold text-white flex items-center gap-1 sm:gap-2">
                                         <span className="hidden sm:inline">🎴 </span>選擇祭品
-                                        {!isApprovedForAll && (
+                                        {!isApprovedForAll && !optimisticApproval && (
                                             <span className="ml-2 px-2 py-1 bg-yellow-600/20 border border-yellow-500/30 rounded-lg text-xs text-yellow-400">
                                                 需要授權
+                                            </span>
+                                        )}
+                                        {optimisticApproval && !isApprovedForAll && (
+                                            <span className="ml-2 px-2 py-1 bg-green-600/20 border border-green-500/30 rounded-lg text-xs text-green-400 animate-pulse">
+                                                授權確認中...
                                             </span>
                                         )}
                                     </h3>
@@ -1134,7 +1160,7 @@ const AltarPage = memo(() => {
                                 </div>
                                 
                                 {/* 授權狀態提示區域 */}
-                                {!isApprovedForAll && (
+                                {!isApprovedForAll && !optimisticApproval && (
                                     <div className="mb-4 p-3 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border border-yellow-600/40 rounded-lg">
                                         <div className="flex items-center justify-between gap-3">
                                             <div className="flex-1">

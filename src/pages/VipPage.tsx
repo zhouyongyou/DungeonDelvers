@@ -588,7 +588,7 @@ const VipPageContent: React.FC = () => {
                                     {pendingUnstakeAmount > 0n ? '💰' : '💫'} 待領取請求
                                 </h4>
                                 <p className="text-lg sm:text-2xl font-mono text-white mb-2">
-                                    {formatEther(pendingUnstakeAmount)} $SoulShard
+                                    {parseFloat(formatEther(pendingUnstakeAmount)).toFixed(2)} $SoulShard
                                 </p>
                                 
                                 {/* 領取按鈕 */}
@@ -638,7 +638,7 @@ const VipPageContent: React.FC = () => {
                                     
                                     {pendingUnstakeAmount === 0n && (
                                         <p className="text-xs text-gray-600 mt-2">
-                                            ℹ️ 提示：使用上方「贖回」功能請求贖回後，需等待冷却期結束才能領取
+                                            ℹ️ 提示：使用下方「贖回」功能申請贖回後，需等待冷卻期結束才能領取。等待期間無法質押更多代幣
                                         </p>
                                     )}
                                     

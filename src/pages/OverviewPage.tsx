@@ -264,12 +264,15 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     // 時間衰減計算 - 與合約邏輯保持一致
     const lastWithdrawTimestamp = playerInfo ? Number(playerInfo[1]) : 0;
     const currentTime = Math.floor(Date.now() / 1000);
-    // 注意：當 lastWithdrawTimestamp = 0 時，合約會計算從 Unix 紀元開始的時間
-    const timePassed = currentTime - lastWithdrawTimestamp;
-    const periodsPassed = Math.floor(timePassed / (periodDuration ? Number(periodDuration) : 24 * 60 * 60));
-    const timeDecay = periodsPassed * (decreaseRatePerPeriod ? Number(decreaseRatePerPeriod) / 100 : 5); // 每天 5%
     
-    const totalDiscount = vipDiscount + levelDiscount + timeDecay;
+    // 判斷是否為首次提領或超過 10 天
+    const isFirstWithdraw = lastWithdrawTimestamp === 0;
+    const timePassed = isFirstWithdraw ? 0 : (currentTime - lastWithdrawTimestamp);
+    const periodsPassed = Math.floor(timePassed / (periodDuration ? Number(periodDuration) : 24 * 60 * 60));
+    const timeDecay = Math.min(periodsPassed * (decreaseRatePerPeriod ? Number(decreaseRatePerPeriod) / 100 : 5), 100); // 每天 5%，最高 100%
+    
+    // 總減免最高不超過 100%
+    const totalDiscount = Math.min(vipDiscount + levelDiscount + timeDecay, 100);
     const actualTaxRate = Math.max(0, standardBaseTaxRate - totalDiscount); // 百分比格式 (0-100)
     const actualLargeTaxRate = Math.max(0, largeBaseTaxRate - totalDiscount); // 百分比格式 (0-100)
     
@@ -682,13 +685,13 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                 <p className="text-xs text-gray-500">≈ ${formatSoulToUsd(pendingVaultRewards)} USD</p>
                                 
                                 {/* 首次提領免稅提示 */}
-                                {player?.lastWithdrawTimestamp === 0 && (
+                                {(isFirstWithdraw || actualTaxRate === 0) && (
                                     <div className="text-xs text-green-400 bg-green-900/20 p-2 rounded border border-green-600/30 mb-1">
                                         <p className="font-medium flex items-center gap-1">
                                             <span>🎉</span>
-                                            <span>首次提領免稅優惠！</span>
+                                            <span>{isFirstWithdraw ? '首次提領免稅優惠！' : '稅率已降至 0%！'}</span>
                                         </p>
-                                        <p className="text-[10px] text-green-300 mt-0.5">您的首次提領將享受 0% 稅率</p>
+                                        <p className="text-[10px] text-green-300 mt-0.5">您的提領將享受 0% 稅率</p>
                                     </div>
                                 )}
                                 
@@ -712,8 +715,11 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                                 {levelDiscount > 0 && (
                                                     <p>等級 {level} 減免：-{levelDiscount.toFixed(1)}% (每10級-1%)</p>
                                                 )}
-                                                {timeDecay > 0 && (
-                                                    <p>時間衰減：-{timeDecay.toFixed(1)}%</p>
+                                                {timeDecay > 0 && !isFirstWithdraw && (
+                                                    <p>時間衰減：-{timeDecay.toFixed(1)}% ({periodsPassed} 天)</p>
+                                                )}
+                                                {isFirstWithdraw && (
+                                                    <p className="text-green-300">首次提領免稅：-100%</p>
                                                 )}
                                                 <p className="text-green-300 font-medium">
                                                     最終稅率：{actualTaxRate.toFixed(1)}% / {actualLargeTaxRate.toFixed(1)}%
@@ -727,9 +733,9 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                     </div>
                                     
                                     {/* 首次提領備註 */}
-                                    {lastWithdrawTimestamp === 0 && (
+                                    {isFirstWithdraw && (
                                         <div className="text-xs text-green-400 bg-green-900/20 p-2 rounded border border-green-600/30 mt-2">
-                                            🎉 首次提領免稅優惠！時間衰減使稅率為 0%
+                                            🎉 首次提領免稅優惠！
                                         </div>
                                     )}
                                 </div>
@@ -1188,9 +1194,13 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                             </p>
                             {Number(pendingVaultRewards) > 0 ? (
                                 <div className="space-y-1">
-                                    {lastWithdrawTimestamp === 0 ? (
+                                    {isFirstWithdraw ? (
                                         <p className="text-green-400 text-xs">
-                                            🎉 首次提領免稅優惠！時間衰減使稅率為 0%
+                                            🎉 首次提領免稅優惠！
+                                        </p>
+                                    ) : periodsPassed >= 10 ? (
+                                        <p className="text-green-400 text-xs">
+                                            🎉 超過 {periodsPassed} 天未提領，享受 0% 稅率！
                                         </p>
                                     ) : (
                                         <p className="text-yellow-400 text-xs">
@@ -1248,10 +1258,8 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                     const usdValue = parseFloat(formatSoulToUsd(pendingVaultRewards));
                                     const canUseFree = usdValue <= 20;
                                     const isLarge = usdValue >= 1000;
-                                    const isFirstWithdraw = lastWithdrawTimestamp === 0;
-                                    
-                                    // 特殊情況：首次提領通常免稅（時間衰減過大）
-                                    const taxRate = isFirstWithdraw ? 0 : 
+                                    // 特殊情況：首次提領或超過 10 天免稅
+                                    const taxRate = (isFirstWithdraw || periodsPassed >= 10) ? 0 : 
                                         (canUseFree ? 0 : (isLarge ? actualLargeTaxRate : actualTaxRate));
                                     
                                     const soulAmount = parseFloat(pendingVaultRewards);
@@ -1283,9 +1291,13 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                                     {received.toLocaleString()} SOUL
                                                 </span>
                                             </p>
-                                            {(isFirstWithdraw || canUseFree) && (
+                                            {(isFirstWithdraw || canUseFree || periodsPassed >= 10) && (
                                                 <p className="text-green-400">
-                                                    🎁 {isFirstWithdraw ? '首次提領免稅優惠！' : '每日免稅機會！'}
+                                                    🎁 {
+                                                        isFirstWithdraw ? '首次提領免稅優惠！' : 
+                                                        periodsPassed >= 10 ? `超過 ${periodsPassed} 天免稅！` :
+                                                        '每日免稅機會！'
+                                                    }
                                                 </p>
                                             )}
                                         </div>
@@ -1309,9 +1321,11 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         <p className="text-red-300 text-xs">
                             任何提領（包括$19免稅）都會重置稅率計算，每日5%降低會重新開始。
                         </p>
-                        <p className="text-orange-300 text-xs mt-1">
-                            📅 稅率減免機制：今日率 {actualTaxRate.toFixed(1)}%，已過 {periodsPassed} 天（減免 {timeDecay.toFixed(1)}%）
-                        </p>
+                        {!isFirstWithdraw && (
+                            <p className="text-orange-300 text-xs mt-1">
+                                📅 稅率減免機制：今日率 {actualTaxRate.toFixed(1)}%，已過 {periodsPassed} 天（減免 {timeDecay.toFixed(1)}%）
+                            </p>
+                        )}
                         <p className="text-gray-400 text-xs mt-1">
                             ℹ️ 每24小時自動降低5%，直至最低0%
                         </p>
@@ -1349,10 +1363,8 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                     const usdValue = parseFloat(withdrawUsdAmount);
                                     const canUseFree = usdValue <= 20;
                                     const isLarge = usdValue >= 1000;
-                                    const isFirstWithdraw = lastWithdrawTimestamp === 0;
-                                    
-                                    // 特殊情況：首次提領通常免稅（時間衰減過大）
-                                    const taxRate = isFirstWithdraw ? 0 : 
+                                    // 特殊情況：首次提領或超過 10 天免稅
+                                    const taxRate = (isFirstWithdraw || periodsPassed >= 10) ? 0 : 
                                         (canUseFree ? 0 : (isLarge ? actualLargeTaxRate : actualTaxRate));
                                     
                                     const soulAmount = Number(calculateSoulAmount(withdrawUsdAmount)) / 1e18;
@@ -1387,9 +1399,12 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                                     {received.toLocaleString()} SOUL
                                                 </span>
                                             </p>
-                                            {canUseFree && (
+                                            {(canUseFree || periodsPassed >= 10) && (
                                                 <p className="text-green-400 text-xs">
-                                                    🎁 每日一次免稅提領機會！
+                                                    🎁 {
+                                                        periodsPassed >= 10 ? `超過 ${periodsPassed} 天免稅！` :
+                                                        '每日一次免稅提領機會！'
+                                                    }
                                                 </p>
                                             )}
                                         </>

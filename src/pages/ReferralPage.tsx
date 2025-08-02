@@ -180,9 +180,8 @@ const useReferralData = () => {
         return {
             inviter: finalReferrer,
             commissionEarned: finalCommission,
-            invitees: finalInvitees, // 直接使用 GraphQL 數據
+            invitees: finalInvitees, // 直接使用 GraphQL 數據（地址數組）
             referralCount: finalReferralCount,
-            inviteesDetails: finalInvitees, // GraphQL 的 invitees 數組
             // 數據來源標記（用於調試）
             dataSource: {
                 referrer: validContractReferrer ? 'contract' : (graphqlProfile?.inviter ? 'graphql' : 'none'),
@@ -595,30 +594,24 @@ ${referralLink}
                         
                         
                         {/* 邀請人詳細列表 */}
-                        {referralData?.inviteesDetails && referralData.inviteesDetails.length > 0 && (
+                        {referralData?.invitees && referralData.invitees.length > 0 && (
                             <div className="mt-4 pt-3 border-t border-gray-600">
                                 <h5 className="text-sm font-semibold text-gray-300 mb-3">📋 我的邀請列表</h5>
                                 <div className="space-y-2 max-h-32 overflow-y-auto">
-                                    {referralData.inviteesDetails.map((invitee, index) => (
-                                        <div key={invitee.address} className="flex items-center justify-between p-2 bg-gray-800/50 rounded text-xs">
+                                    {referralData.invitees.slice(0, 10).map((inviteeAddress, index) => (
+                                        <div key={inviteeAddress} className="flex items-center justify-between p-2 bg-gray-800/50 rounded text-xs">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-blue-400">#{index + 1}</span>
                                                 <span className="font-mono text-gray-300">
-                                                    {invitee.address.slice(0, 6)}...{invitee.address.slice(-4)}
+                                                    {inviteeAddress.slice(0, 6)}...{inviteeAddress.slice(-4)}
                                                 </span>
-                                            </div>
-                                            <div className="text-gray-400">
-                                                {new Date(invitee.timestamp * 1000).toLocaleDateString('zh-TW', {
-                                                    month: 'short',
-                                                    day: 'numeric'
-                                                })}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
-                                {referralData.inviteesDetails.length > 3 && (
+                                {referralData.invitees.length > 10 && (
                                     <p className="text-xs text-gray-500 text-center mt-2">
-                                        顯示最近 {Math.min(referralData.inviteesDetails.length, 10)} 位邀請人
+                                        顯示最近 10 位邀請人（共 {referralData.invitees.length} 位）
                                     </p>
                                 )}
                             </div>

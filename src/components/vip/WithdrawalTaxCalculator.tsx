@@ -501,19 +501,20 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
               </p>
             )}
             
+            {/* 首次提領免稅提示 - 移到折疊區域外面 */}
+            {playerInfo && Number(playerInfo[1]) === 0 && withdrawAmount && parseFloat(withdrawAmount) > 0 && (
+              <div className="p-3 bg-gradient-to-r from-green-900/20 to-emerald-900/20 border border-green-500/30 rounded-lg">
+                <p className="text-green-400 font-medium text-sm mb-1">
+                  🎉 首次提領免稅優惠
+                </p>
+                <p className="text-green-300 text-xs">
+                  由於您從未提領過，時間衰減非常大，通常可以享受 0% 稅率
+                </p>
+              </div>
+            )}
+            
             {showDetails && withdrawAmount && parseFloat(withdrawAmount) > 0 && taxBreakdown && (
               <div className="space-y-3 p-4 bg-gray-800/50 rounded-lg text-sm">
-                {/* 首次提領免稅提示 */}
-                {playerInfo && Number(playerInfo[1]) === 0 && (
-                  <div className="p-3 bg-gradient-to-r from-green-900/20 to-emerald-900/20 border border-green-500/30 rounded-lg mb-3">
-                    <p className="text-green-400 font-medium text-sm mb-1">
-                      🎉 首次提領免稅優惠
-                    </p>
-                    <p className="text-green-300 text-xs">
-                      由於您從未提領過，時間衰減非常大，通常可以享受 0% 稅率
-                    </p>
-                  </div>
-                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <h5 className="font-medium text-gray-300">基礎稅率</h5>

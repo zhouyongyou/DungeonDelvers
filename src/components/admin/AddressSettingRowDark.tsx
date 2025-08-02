@@ -4,6 +4,8 @@ import React from 'react';
 import type { Address } from 'viem';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ActionButton } from '../ui/ActionButton';
+import { useAppToast } from '../../hooks/useAppToast';
+import { Icons } from '../ui/icons';
 
 interface AddressSettingRowProps {
   title: string;
@@ -32,11 +34,22 @@ const AddressSettingRow: React.FC<AddressSettingRowProps> = ({
   onSet,
   isSetting
 }) => {
+  const { showToast } = useAppToast();
+  
   const isConfigured = currentAddress && currentAddress !== '0x0000000000000000000000000000000000000000';
   const isEnvSet = envAddress && 
                    envAddress !== '0x0000000000000000000000000000000000000000' && 
                    envAddress.trim() !== '';
   const isMatched = isConfigured && isEnvSet && currentAddress?.toLowerCase() === envAddress?.toLowerCase();
+  
+  const handleCopyAddress = async (address: string) => {
+    try {
+      await navigator.clipboard.writeText(address);
+      showToast('地址已複製到剪貼簿', 'success');
+    } catch (error) {
+      showToast('複製失敗，請手動複製', 'error');
+    }
+  };
 
   return (
     <div className="p-4 bg-gray-800 rounded-lg border border-gray-700 space-y-2">
@@ -48,9 +61,22 @@ const AddressSettingRow: React.FC<AddressSettingRowProps> = ({
       <div className="text-xs font-mono grid grid-cols-[90px_1fr_20px] items-center gap-x-2">
         <span className="text-gray-500">配置文件:</span>
         {isEnvSet ? (
-          <span className="text-blue-400 truncate" title={envAddress}>
-            {envContractName} ({envAddress})
-          </span>
+          <div className="flex items-center gap-1 min-w-0">
+            <span 
+              className="text-blue-400 truncate cursor-pointer hover:text-blue-300 transition-colors" 
+              title={`點擊複製: ${envAddress}`}
+              onClick={() => handleCopyAddress(envAddress!)}
+            >
+              {envContractName} ({envAddress})
+            </span>
+            <button
+              onClick={() => handleCopyAddress(envAddress!)}
+              className="flex-shrink-0 text-gray-400 hover:text-gray-200 transition-colors"
+              title="複製地址"
+            >
+              <Icons.Copy className="h-3 w-3" />
+            </button>
+          </div>
         ) : (
           <span className="text-gray-400">
             {envContractName && envAddress ? `${envContractName} (${envAddress})` : '未設置'}
@@ -66,14 +92,26 @@ const AddressSettingRow: React.FC<AddressSettingRowProps> = ({
           <LoadingSpinner size="h-3 w-3" />
         ) : (
           <>
-            <span
-              className={`${
-                isConfigured ? 'text-green-400' : 'text-yellow-400'
-              } truncate`}
-              title={currentAddress}
-            >
-              {currentAddress || '尚未設定'}
-            </span>
+            <div className="flex items-center gap-1 min-w-0">
+              <span
+                className={`${
+                  isConfigured ? 'text-green-400' : 'text-yellow-400'
+                } truncate cursor-pointer hover:opacity-80 transition-opacity`}
+                title={`點擊複製: ${currentAddress}`}
+                onClick={() => currentAddress && handleCopyAddress(currentAddress)}
+              >
+                {currentAddress || '尚未設定'}
+              </span>
+              {isConfigured && (
+                <button
+                  onClick={() => currentAddress && handleCopyAddress(currentAddress)}
+                  className="flex-shrink-0 text-gray-400 hover:text-gray-200 transition-colors"
+                  title="複製地址"
+                >
+                  <Icons.Copy className="h-3 w-3" />
+                </button>
+              )}
+            </div>
             {isEnvSet && isConfigured && (
               isMatched ? (
                 <span title="匹配" className="text-green-400">✅</span>

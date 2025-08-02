@@ -166,13 +166,74 @@ export function useTransactionWithProgress(options?: UseTransactionWithProgressO
     } catch (error: any) {
       const errorMessage = error.shortMessage || error.message || '交易失敗';
       
+      // 開發環境下記錄完整錯誤訊息，幫助識別新的錢包格式
+      if (import.meta.env.DEV) {
+        console.log('🔴 交易錯誤詳情:', {
+          errorMessage,
+          shortMessage: error.shortMessage,
+          message: error.message,
+          code: error.code,
+          cause: error.cause,
+          fullError: error
+        });
+      }
+      
       setProgress({
         status: 'error',
         confirmations: 0,
         error,
       });
       
-      if (!errorMessage.includes('User rejected')) {
+      // 檢查是否為用戶取消 - 優化版本
+      let isUserRejection = false;
+      
+      // 1. 先檢查標準錯誤碼（最可靠且最快的方式）
+      if (error.code === 4001 || 
+          error.code === 'ACTION_REJECTED' ||
+          error.cause?.code === 4001 ||
+          errorMessage.includes('4001')) {
+        isUserRejection = true;
+      } else {
+        // 2. 使用正則表達式進行高效匹配
+        const errorMessageLower = errorMessage.toLowerCase();
+        
+        // 用戶取消的關鍵詞模式
+        const rejectionPatterns = [
+          /user\s*(rejected|denied|cancel|canceled|cancelled|refused|disapproved)/i,
+          /transaction\s*(rejected|declined|cancelled|denied)/i,
+          /(reject|cancel|decline|deny|refuse|abort|disapprov).*(?:by\s*)?(?:the\s*)?user/i,
+          /用[户戶]\s*取消/,  // 中文：用户取消 / 用戶取消
+          /拒[绝絕]/,         // 中文：拒绝 / 拒絕
+          /取消/              // 中文：取消
+        ];
+        
+        // 3. 檢查是否匹配任一模式
+        const hasRejectionMessage = rejectionPatterns.some(pattern => pattern.test(errorMessage));
+        
+        // 4. 額外檢查一些不適合正則的特殊情況
+        const hasSpecialCase = 
+          errorMessage === 'cancel' || // 某些錢包只返回 "cancel"
+          errorMessage === 'User cancel' ||
+          errorMessageLower === 'cancelled' ||
+          errorMessageLower === 'user denied';
+        
+        isUserRejection = hasRejectionMessage || hasSpecialCase;
+      }
+      
+      if (isUserRejection) {
+        // 用戶取消交易 - 重置所有狀態並關閉 Modal
+        logger.info('用戶取消了交易');
+        showToast('交易已取消', 'info');
+        
+        // 立即關閉進度 Modal
+        setShowProgress(false);
+        
+        // 重置進度狀態為 idle
+        setProgress({
+          status: 'idle',
+          confirmations: 0,
+        });
+      } else {
         // 🎯 智能錯誤提示 - 直接在現有邏輯中改進
         let userFriendlyMessage = options?.errorMessage || errorMessage;
         

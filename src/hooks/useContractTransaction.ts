@@ -80,16 +80,72 @@ export function useContractTransaction() {
         description,
       });
 
-      // 只在用戶沒有拒絕交易時顯示錯誤
-      if (!e.message?.includes('User rejected')) {
-        showToast(e.shortMessage || errorMessage, 'error');
+      // 開發環境下記錄完整錯誤訊息
+      if (import.meta.env.DEV) {
+        console.log('🔴 合約交易錯誤詳情:', {
+          errorMessage: e.message || e.shortMessage,
+          shortMessage: e.shortMessage,
+          message: e.message,
+          code: e.code,
+          cause: e.cause,
+          fullError: e
+        });
       }
 
-      // 執行錯誤回調
-      try {
-        onError?.(e as Error);
-      } catch (callbackError) {
-        logger.error('Transaction error callback failed:', callbackError);
+      // 檢查是否為用戶取消 - 優化版本
+      const errorMessage = e.message || e.shortMessage || '';
+      let isUserRejection = false;
+      
+      // 1. 先檢查標準錯誤碼（最可靠且最快的方式）
+      if (e.code === 4001 || 
+          e.code === 'ACTION_REJECTED' ||
+          e.cause?.code === 4001 ||
+          errorMessage.includes('4001')) {
+        isUserRejection = true;
+      } else {
+        // 2. 使用正則表達式進行高效匹配
+        const errorMessageLower = errorMessage.toLowerCase();
+        
+        // 用戶取消的關鍵詞模式
+        const rejectionPatterns = [
+          /user\s*(rejected|denied|cancel|canceled|cancelled|refused|disapproved)/i,
+          /transaction\s*(rejected|declined|cancelled|denied)/i,
+          /(reject|cancel|decline|deny|refuse|abort|disapprov).*(?:by\s*)?(?:the\s*)?user/i,
+          /用[户戶]\s*取消/,  // 中文：用户取消 / 用戶取消
+          /拒[绝絕]/,         // 中文：拒绝 / 拒絕
+          /取消/              // 中文：取消
+        ];
+        
+        // 3. 檢查是否匹配任一模式
+        const hasRejectionMessage = rejectionPatterns.some(pattern => pattern.test(errorMessage));
+        
+        // 4. 額外檢查一些不適合正則的特殊情況
+        const hasSpecialCase = 
+          errorMessage === 'cancel' || // 某些錢包只返回 "cancel"
+          errorMessage === 'User cancel' ||
+          errorMessageLower === 'cancelled' ||
+          errorMessageLower === 'user denied';
+        
+        isUserRejection = hasRejectionMessage || hasSpecialCase;
+      }
+      
+      if (isUserRejection) {
+        // 用戶取消交易 - 顯示友好提示
+        logger.info('用戶取消了交易');
+        showToast('交易已取消', 'info');
+        
+        // 不執行錯誤回調，避免觸發重試邏輯
+        return null;
+      } else {
+        // 真正的錯誤 - 顯示錯誤消息
+        showToast(e.shortMessage || errorMessage, 'error');
+        
+        // 執行錯誤回調
+        try {
+          onError?.(e as Error);
+        } catch (callbackError) {
+          logger.error('Transaction error callback failed:', callbackError);
+        }
       }
 
       return null;

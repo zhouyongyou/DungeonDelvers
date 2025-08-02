@@ -162,12 +162,12 @@ const NftCard: React.FC<NftCardProps> = ({ nft, type }) => {
       <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <radialGradient id="bg" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" style="stop-color:${colors[hero.element as keyof typeof colors]};stop-opacity:0.3"/>
+            <stop offset="0%" style="stop-color:#4c1d95;stop-opacity:0.3"/>
             <stop offset="100%" style="stop-color:#000000;stop-opacity:0.8"/>
           </radialGradient>
         </defs>
         <rect width="400" height="400" fill="url(#bg)"/>
-        <circle cx="200" cy="180" r="60" fill="${colors[hero.element as keyof typeof colors]}" opacity="0.8"/>
+        <circle cx="200" cy="180" r="60" fill="#4c1d95" opacity="0.8"/>
         <text x="200" y="330" text-anchor="middle" fill="#fbbf24" font-size="18" font-family="Arial">
           ⚔️ ${hero.power}
         </text>
@@ -190,12 +190,12 @@ const NftCard: React.FC<NftCardProps> = ({ nft, type }) => {
       <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <radialGradient id="bg" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" style="stop-color:${colors[relic.category as keyof typeof colors]};stop-opacity:0.3"/>
+            <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:0.3"/>
             <stop offset="100%" style="stop-color:#000000;stop-opacity:0.8"/>
           </radialGradient>
         </defs>
         <rect width="400" height="400" fill="url(#bg)"/>
-        <rect x="150" y="150" width="100" height="100" fill="${colors[relic.category as keyof typeof colors]}" opacity="0.8" rx="10"/>
+        <rect x="150" y="150" width="100" height="100" fill="#3b82f6" opacity="0.8" rx="10"/>
         <text x="200" y="330" text-anchor="middle" fill="#3b82f6" font-size="18" font-family="Arial">
           📦 ${relic.capacity}
         </text>
