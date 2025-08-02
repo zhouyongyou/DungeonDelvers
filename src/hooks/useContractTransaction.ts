@@ -4,6 +4,60 @@ import { useAppToast } from './useAppToast';
 import { logger } from '../utils/logger';
 // import { useGlobalLoading } from '../components/core/GlobalLoadingProvider'; // 移除未使用的 Provider
 
+// SBT 錯誤檢查函數
+function checkSbtError(errorMessage: string): { isSbtError: boolean; friendlyMessage: string } {
+  const normalizedError = errorMessage.toLowerCase();
+  
+  // SBT 相關錯誤模式
+  const sbtErrorPatterns = [
+    {
+      pattern: /sbt.*cannot.*transfer/i,
+      message: '🔒 SBT (靈魂綁定代幣) 不可轉移，它與您的錢包地址永久綁定'
+    },
+    {
+      pattern: /cannot.*transfer.*sbt/i,
+      message: '🔒 SBT (靈魂綁定代幣) 不可轉移，它與您的錢包地址永久綁定'
+    },
+    {
+      pattern: /sbt.*cannot.*approv/i,
+      message: '🔒 SBT (靈魂綁定代幣) 不可授權，無法委託給其他地址'
+    },
+    {
+      pattern: /cannot.*approv.*sbt/i,
+      message: '🔒 SBT (靈魂綁定代幣) 不可授權，無法委託給其他地址'
+    },
+    {
+      pattern: /playerprofile.*cannot.*transfer/i,
+      message: '🔒 玩家檔案是 SBT，不可轉移，它記錄您在遊戲中的身份和成就'
+    },
+    {
+      pattern: /playerprofile.*cannot.*approv/i,
+      message: '🔒 玩家檔案是 SBT，不可授權，無法委託給其他地址'
+    },
+    {
+      pattern: /vipstaking.*cannot.*transfer/i,
+      message: '🔒 VIP 卡是 SBT，不可轉移，它與您的錢包地址永久綁定'
+    },
+    {
+      pattern: /vipstaking.*cannot.*approv/i,
+      message: '🔒 VIP 卡是 SBT，不可授權，無法委託給其他地址'
+    },
+    {
+      pattern: /soul.*bound.*token/i,
+      message: '🔒 這是靈魂綁定代幣 (SBT)，與您的身份永久綁定，不可轉移或授權'
+    }
+  ];
+  
+  // 檢查是否匹配任何 SBT 錯誤模式
+  for (const { pattern, message } of sbtErrorPatterns) {
+    if (pattern.test(errorMessage)) {
+      return { isSbtError: true, friendlyMessage: message };
+    }
+  }
+  
+  return { isSbtError: false, friendlyMessage: errorMessage };
+}
+
 export interface ContractTransactionConfig {
   contractCall: {
     address: `0x${string}`;
@@ -137,8 +191,16 @@ export function useContractTransaction() {
         // 不執行錯誤回調，避免觸發重試邏輯
         return null;
       } else {
-        // 真正的錯誤 - 顯示錯誤消息
-        showToast(e.shortMessage || errorMessage, 'error');
+        // 檢查是否為 SBT 相關錯誤
+        const isSbtError = checkSbtError(errorMessage);
+        
+        if (isSbtError.isSbtError) {
+          // SBT 錯誤 - 顯示特殊說明
+          showToast(isSbtError.friendlyMessage, 'warning');
+        } else {
+          // 其他真正的錯誤 - 顯示錯誤消息
+          showToast(e.shortMessage || errorMessage, 'error');
+        }
         
         // 執行錯誤回調
         try {

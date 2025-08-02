@@ -13,6 +13,151 @@ interface VipSettingsManagerProps {
   chainId: number;
 }
 
+// VIP 合約暫停管理子組件
+const VipPauseManager: React.FC<{ chainId: number }> = ({ chainId }) => {
+  const { showToast } = useAppToast();
+  const { addTransaction } = useTransactionStore();
+  const { writeContractAsync } = useWriteContract();
+  
+  const vipContract = getContractWithABI('VIPSTAKING');
+  
+  // 檢查合約暫停狀態
+  const { data: isPaused, isLoading: isPauseLoading, refetch: refetchPauseStatus } = useReadContract({
+    address: vipContract?.address as `0x${string}`,
+    abi: vipContract?.abi,
+    functionName: 'paused',
+    query: {
+      enabled: !!vipContract,
+      staleTime: 1000 * 30,
+    }
+  });
+  
+  // 暫停合約
+  const handlePause = async () => {
+    if (!vipContract) {
+      showToast('VIP 合約配置未找到', 'error');
+      return;
+    }
+    
+    try {
+      const hash = await writeContractAsync({
+        address: vipContract.address as `0x${string}`,
+        abi: vipContract.abi,
+        functionName: 'pause'
+      });
+      
+      addTransaction({ 
+        hash, 
+        description: 'VIP 質押合約暫停' 
+      });
+      showToast('VIP 質押合約已暫停', 'success');
+      
+      // 刷新狀態
+      setTimeout(() => refetchPauseStatus(), 2000);
+    } catch (e: any) {
+      if (!e.message?.includes('User rejected')) {
+        showToast(`暫停失敗: ${e.shortMessage || e.message}`, 'error');
+      }
+    }
+  };
+  
+  // 恢復合約
+  const handleUnpause = async () => {
+    if (!vipContract) {
+      showToast('VIP 合約配置未找到', 'error');
+      return;
+    }
+    
+    try {
+      const hash = await writeContractAsync({
+        address: vipContract.address as `0x${string}`,
+        abi: vipContract.abi,
+        functionName: 'unpause'
+      });
+      
+      addTransaction({ 
+        hash, 
+        description: 'VIP 質押合約恢復' 
+      });
+      showToast('VIP 質押合約已恢復', 'success');
+      
+      // 刷新狀態
+      setTimeout(() => refetchPauseStatus(), 2000);
+    } catch (e: any) {
+      if (!e.message?.includes('User rejected')) {
+        showToast(`恢復失敗: ${e.shortMessage || e.message}`, 'error');
+      }
+    }
+  };
+  
+  return (
+    <div className="p-4 bg-gray-800 rounded-lg">
+      <h5 className="font-medium text-gray-200 mb-3 flex items-center gap-2">
+        🔒 VIP 合約暫停控制
+      </h5>
+      
+      <div className="space-y-3">
+        {/* 當前狀態顯示 */}
+        <div className="p-3 rounded-lg bg-gray-700">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-300">合約狀態：</span>
+            <div className="flex items-center gap-2">
+              {isPauseLoading ? (
+                <LoadingSpinner />
+              ) : (
+                <>
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    isPaused 
+                      ? 'bg-red-100 text-red-800 border border-red-200' 
+                      : 'bg-green-100 text-green-800 border border-green-200'
+                  }`}>
+                    {isPaused ? '🚫 已暫停' : '✅ 運行中'}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+          
+          {isPaused && (
+            <div className="mt-2 p-2 bg-red-900/30 border border-red-600/50 rounded text-xs text-red-300">
+              ⚠️ 警告：合約已暫停，所有質押和贖回操作將無法執行
+            </div>
+          )}
+        </div>
+        
+        {/* 控制按鈕 */}
+        <div className="flex gap-2">
+          <ActionButton
+            onClick={handlePause}
+            disabled={Boolean(isPaused) || isPauseLoading}
+            className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50"
+          >
+            🚫 暫停合約
+          </ActionButton>
+          
+          <ActionButton
+            onClick={handleUnpause}
+            disabled={!isPaused || isPauseLoading}
+            className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50"
+          >
+            ✅ 恢復合約
+          </ActionButton>
+        </div>
+        
+        <div className="text-xs text-gray-500">
+          <p>⚠️ <strong>注意事項：</strong></p>
+          <ul className="mt-1 ml-4 space-y-1">
+            <li>• 暫停會立即阻止所有新的質押和贖回請求</li>
+            <li>• 已存在的待領取請求仍可正常領取</li>
+            <li>• 暫停不會影響現有的質押記錄和 VIP 卡</li>
+            <li>• 僅限管理員操作，請謹慎使用</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // 祭壇 VIP 加成管理子組件
 const AltarVipBonusManager: React.FC<{ chainId: number }> = ({ chainId }) => {
   const { showToast } = useAppToast();
@@ -403,6 +548,9 @@ const VipSettingsManager: React.FC<VipSettingsManagerProps> = ({ chainId }) => {
 
   return (
     <div className="space-y-4">
+      {/* VIP 合約暫停控制 */}
+      <VipPauseManager chainId={chainId} />
+      
       {/* 冷卻期設定 */}
       <div className="p-4 bg-gray-800 rounded-lg">
         <h5 className="font-medium text-gray-200 mb-3">質押冷卻期設定</h5>

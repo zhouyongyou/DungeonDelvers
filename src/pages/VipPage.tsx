@@ -68,6 +68,25 @@ const VipBenefitsCollapsible: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => 
                         </div>
                     </div>
                 </div>
+                
+                {/* SBT 說明區塊 */}
+                <div className="mt-4 bg-gradient-to-r from-amber-900/20 to-yellow-900/20 p-4 rounded-xl border border-amber-500/30">
+                    <div className="flex items-start gap-3">
+                        <div className="text-2xl">🔒</div>
+                        <div>
+                            <h3 className="font-bold text-amber-300 mb-1">靈魂綁定代幣 (SBT)</h3>
+                            <p className="text-sm text-gray-300">
+                                VIP 卡是 <strong className="text-amber-300">靈魂綁定代幣 (Soul Bound Token)</strong>，具有以下特性：
+                            </p>
+                            <ul className="text-xs text-gray-400 mt-2 space-y-1 ml-4">
+                                <li>• <strong>不可轉移</strong>：VIP 卡與您的錢包地址永久綁定</li>
+                                <li>• <strong>永久保留</strong>：即使完全贖回質押，VIP 卡仍然保留</li>
+                                <li>• <strong>身份證明</strong>：代表您在 DungeonDelvers 生態中的身份和貢獻</li>
+                                <li>• <strong>歷史記錄</strong>：記錄您的 VIP 等級進度和質押歷史</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -264,7 +283,7 @@ const VipPageContent: React.FC = () => {
         soulShardBalance, stakedAmount, stakedValueUSD,
         tokenId, vipLevel, taxReduction,
         pendingUnstakeAmount, unstakeAvailableAt, isCooldownOver, countdown, cooldownProgress, allowance, 
-        cooldownDays, cooldownFormatted, cooldownPeriod, refetchAll, startPollingRefresh
+        cooldownDays, cooldownFormatted, cooldownPeriod, isPaused, refetchAll, startPollingRefresh
     } = useVipStatus();
 
     const { executeTransaction, isPending: isTxPending } = useContractTransaction();
@@ -430,13 +449,29 @@ const VipPageContent: React.FC = () => {
 
     // 檢查是否有待處理的 unstake 請求
     const hasPendingUnstake = pendingUnstakeAmount > 0n;
-    const canStake = !hasPendingUnstake;
-    const canUnstake = stakedAmount > 0n && !hasPendingUnstake;
+    const canStake = !hasPendingUnstake && !isPaused;
+    const canUnstake = stakedAmount > 0n && !hasPendingUnstake && !isPaused;
     
     const renderActionPanel = () => (
         <div className="space-y-3 sm:space-y-4">
+            {/* 合約暫停狀態警告 */}
+            {isPaused && (
+                <div className="p-4 bg-red-900/50 border border-red-500/50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                        <div className="text-2xl">🚫</div>
+                        <div>
+                            <p className="font-bold text-red-300 mb-1">合約維護中</p>
+                            <p className="text-sm text-red-200">
+                                VIP 質押功能暫時暫停，所有質押和贖回操作將無法執行。
+                                請等待維護完成後再試。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
             {/* 如果有待處理的 unstake，顯示警告 */}
-            {hasPendingUnstake && (
+            {hasPendingUnstake && !isPaused && (
                 <div className="p-3 bg-yellow-900/50 border border-yellow-600/50 rounded-lg">
                     <p className="text-sm text-yellow-200">
                         ⚠️ 你有待領取的贖回請求，需要先領取才能繼續質押或贖回。
@@ -449,7 +484,7 @@ const VipPageContent: React.FC = () => {
                     onClick={() => { setMode('stake'); setAmount(''); }} 
                     className={`w-full py-2 text-xs sm:text-sm font-medium rounded-md transition ${mode === 'stake' ? 'bg-indigo-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'} ${!canStake ? 'opacity-50 cursor-not-allowed' : ''}`}
                     disabled={!canStake}
-                    title={!canStake ? '有待領取的贖回請求，需要先領取' : '質押 SoulShard 代幣'}
+                    title={isPaused ? '合約維護中，暫停所有操作' : !canStake ? '有待領取的贖回請求，需要先領取' : '質押 SoulShard 代幣'}
                 >
                     質押
                 </button>
@@ -457,7 +492,7 @@ const VipPageContent: React.FC = () => {
                     onClick={() => { setMode('unstake'); setAmount(''); }} 
                     className={`w-full py-2 text-xs sm:text-sm font-medium rounded-md transition ${mode === 'unstake' ? 'bg-red-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700/50'} ${!canUnstake ? 'opacity-50 cursor-not-allowed' : ''}`} 
                     disabled={!canUnstake}
-                    title={!canUnstake ? (stakedAmount === 0n ? '沒有可贖回的質押金額' : '有待領取的贖回請求，需要先領取') : '請求贖回質押的代幣'}
+                    title={isPaused ? '合約維護中，暫停所有操作' : !canUnstake ? (stakedAmount === 0n ? '沒有可贖回的質押金額' : '有待領取的贖回請求，需要先領取') : '請求贖回質押的代幣'}
                 >
                     贖回
                 </button>
@@ -500,14 +535,16 @@ const VipPageContent: React.FC = () => {
             <ActionButton 
                 onClick={handleMainAction} 
                 isLoading={isTxPending || isAwaitingStakeAfterApproval} 
-                disabled={!amount || Number(amount) <= 0 || isAwaitingStakeAfterApproval || (mode === 'stake' && !canStake) || (mode === 'unstake' && !canUnstake)} 
+                disabled={isPaused || !amount || Number(amount) <= 0 || isAwaitingStakeAfterApproval || (mode === 'stake' && !canStake) || (mode === 'unstake' && !canUnstake)} 
                 className="w-full h-12"
             >
-                {isTxPending 
-                    ? '請在錢包確認...' 
-                    : isAwaitingStakeAfterApproval 
-                        ? '授權完成，準備質押...'
-                        : (needsApproval ? '授權' : (mode === 'stake' ? '質押' : '請求贖回'))
+                {isPaused 
+                    ? '🚫 合約維護中'
+                    : isTxPending 
+                        ? '請在錢包確認...' 
+                        : isAwaitingStakeAfterApproval 
+                            ? '授權完成，準備質押...'
+                            : (needsApproval ? '授權' : (mode === 'stake' ? '質押' : '請求贖回'))
                 }
             </ActionButton>
         </div>
@@ -627,6 +664,7 @@ const VipPageContent: React.FC = () => {
                                                     ? 'bg-green-600 hover:bg-green-700 animate-pulse' 
                                                     : 'bg-yellow-600 hover:bg-yellow-700 cursor-not-allowed'
                                         }`}
+                                        title={isPaused ? '注意：合約維護中，但領取功能仍可使用' : undefined}
                                     >
                                         {pendingUnstakeAmount === 0n 
                                             ? '💫 沒有待領取的請求' 

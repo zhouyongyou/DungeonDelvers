@@ -161,6 +161,12 @@ export const useVipStatus = () => {
                     abi: vipStakingContract.abi,
                     functionName: 'unstakeCooldown',
                     args: []
+                },
+                { 
+                    address: vipStakingContract.address as `0x${string}`,
+                    abi: vipStakingContract.abi,
+                    functionName: 'paused',
+                    args: []
                 }
             ];
             
@@ -203,10 +209,11 @@ export const useVipStatus = () => {
         allowance,
         contractVipLevel,
         contractTaxReduction,
-        cooldownPeriod
+        cooldownPeriod,
+        isPaused
     ] = useMemo(() => {
         if (!vipData || !Array.isArray(vipData)) {
-            return [undefined, undefined, undefined, undefined, undefined, undefined];
+            return [undefined, undefined, undefined, undefined, undefined, undefined, undefined];
         }
         return vipData.map(d => d?.result);
     }, [vipData]);
@@ -440,6 +447,7 @@ export const useVipStatus = () => {
         cooldownPeriod: cooldownPeriod as bigint | undefined,
         cooldownDays: cooldownPeriod ? Number(cooldownPeriod) / 86400 : 7,
         cooldownFormatted: formatCooldownPeriod(cooldownPeriod),
+        isPaused: Boolean(isPaused),  // 添加暫停狀態
         refetchAll,
         startPollingRefresh,
         // 調試信息
