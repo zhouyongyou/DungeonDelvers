@@ -51,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 async function handleGetListings(req: VercelRequest, res: VercelResponse) {
     const { status, seller, nftType, limit = '50', offset = '0' } = req.query;
     
-    const filteredListings = [...listings];
+    let filteredListings = [...listings];
     
     // Apply filters
     if (status) {
