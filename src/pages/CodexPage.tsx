@@ -9,6 +9,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import type { AnyNft, HeroNft, RelicNft } from '../types/nft';
 import { ActionButton } from '../components/ui/ActionButton';
 import { bsc } from 'wagmi/chains';
+import { graphQLRateLimiter } from '../utils/rateLimiter';
 
 // =================================================================
 // Section: 數據獲取 Hooks
@@ -79,7 +80,6 @@ const useOwnedCodexIdentifiers = () => {
             }
             
             // 使用限流器來避免 429 錯誤
-            const { graphQLRateLimiter } = await import('../utils/rateLimiter');
             
             const response = await graphQLRateLimiter.execute(async () => {
                 return fetch(THE_GRAPH_API_URL, {

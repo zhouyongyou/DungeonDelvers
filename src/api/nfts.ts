@@ -8,6 +8,7 @@ import { CONTRACT_ADDRESSES } from '../config/contracts.js';
 import { nftMetadataCache } from '../cache/nftMetadataCache.js';
 import { nftMetadataPersistentCache } from '../cache/persistentCache';
 import { nftMetadataBatcher } from '../utils/requestBatcher';
+import { graphQLRateLimiter } from '../utils/rateLimiter';
 import { getQueryConfig, queryKeys } from '../config/queryConfig';
 import { dedupeNFTMetadata, dedupeGraphQLQuery } from '../utils/requestDeduper';
 import { validateNftMetadata } from '../utils/validateMetadata';
@@ -765,7 +766,6 @@ export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promis
                     const timeoutId = setTimeout(() => controller.abort(), 15000); // 增加超時時間
                     
                     // 使用限流器來避免 429 錯誤
-                    const { graphQLRateLimiter } = await import('../utils/rateLimiter');
                     
                     const response = await graphQLRateLimiter.execute(async () => {
                         return fetch(THE_GRAPH_API_URL, {

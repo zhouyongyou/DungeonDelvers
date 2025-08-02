@@ -1,6 +1,6 @@
 // src/pages/OverviewPage.tsx
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import ProjectIntroduction from '../components/ProjectIntroduction';
 import { useQuery } from '@tanstack/react-query';
@@ -29,13 +29,15 @@ import { useTransactionHistory, createTransactionRecord } from '../stores/useTra
 import { TaxRateModal } from '../components/ui/TaxRateModal';
 import { Modal } from '../components/ui/Modal';
 import { useUnassignedAssets } from '../hooks/useUnassignedAssets';
-import { LeaderboardSystem } from '../components/leaderboard/LeaderboardSystem';
-import { AnalyticsDashboard } from '../components/analytics/AnalyticsDashboard';
 import { SkeletonLoader } from '../components/ui/SkeletonLoader';
 import { useSoulPrice } from '../hooks/useSoulPrice';
 import { SkeletonStats, SkeletonCard } from '../components/ui/SkeletonLoader';
 import { usePlayerVaultV4 } from '../hooks/usePlayerVaultV4';
 import { GameInfoSection } from '../components/GameInfoSection';
+
+// 延遲載入大型組件
+const AnalyticsDashboard = lazy(() => import('../components/analytics/AnalyticsDashboard'));
+const LeaderboardSystem = lazy(() => import('../components/leaderboard/LeaderboardSystem'));
 
 // =================================================================
 // Section: Components
@@ -679,8 +681,8 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                         </summary>
                                         <div className="text-blue-400 text-[10px] mt-1 ml-4 space-y-0.5">
                                             <p>• 每 10 級減少 1% 提款稅率</p>
-                                            <p>• 解鎖更高級地城</p>
-                                            <p>• 增強角色基礎能力</p>
+                                            <p className="text-gray-500">• 解鎖更高級地城 <span className="text-orange-400">(開發中)</span></p>
+                                            <p className="text-gray-500">• 增強角色基礎能力 <span className="text-orange-400">(開發中)</span></p>
                                         </div>
                                     </details>
                                 </div>
@@ -994,7 +996,14 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         </ActionButton>
                     </div>
                     {showAnalytics ? (
-                        <AnalyticsDashboard />
+                        <Suspense fallback={
+                            <div className="flex items-center justify-center py-8">
+                                <LoadingSpinner />
+                                <span className="ml-2 text-gray-400">載入分析面板...</span>
+                            </div>
+                        }>
+                            <AnalyticsDashboard />
+                        </Suspense>
                     ) : (
                         <div className="text-center py-8">
                             <button

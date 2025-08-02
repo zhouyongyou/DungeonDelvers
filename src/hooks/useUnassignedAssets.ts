@@ -28,6 +28,7 @@ const GET_UNASSIGNED_ASSETS_QUERY = `
         id
         tokenId
         heroIds
+        relicIds
       }
     }
   }
@@ -87,16 +88,32 @@ export const useUnassignedAssets = (address?: Address) => {
           }
         });
         
+        // 收集所有已分配到隊伍的聖物 ID
+        const assignedRelicIds = new Set<string>();
+        parties.forEach((party: any) => {
+          if (party.relicIds && Array.isArray(party.relicIds)) {
+            party.relicIds.forEach((relicId: string) => {
+              assignedRelicIds.add(relicId);
+            });
+          }
+        });
+        
         // 計算未分配的英雄數量
         const unassignedHeroes = heros.filter((hero: any) => 
           !assignedHeroIds.has(hero.id)
         ).length;
         
+        // 計算未分配的聖物數量
+        const unassignedRelics = relics.filter((relic: any) => 
+          !assignedRelicIds.has(relic.id)
+        ).length;
+        
         logger.debug(`Asset calculation - Total heroes: ${heros.length}, Assigned: ${assignedHeroIds.size}, Unassigned: ${unassignedHeroes}`);
+        logger.debug(`Asset calculation - Total relics: ${relics.length}, Assigned: ${assignedRelicIds.size}, Unassigned: ${unassignedRelics}`);
         
         return {
           unassignedHeroes,
-          unassignedRelics: relics.length, // 聖物目前不會被"分配"，所以全部都是未分配的
+          unassignedRelics,
           totalHeroes: heros.length,
           totalRelics: relics.length,
           totalParties: parties.length

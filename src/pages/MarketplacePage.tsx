@@ -1,7 +1,7 @@
 // src/pages/MarketplacePage.tsx
 // P2P 內部市場頁面
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, lazy, Suspense } from 'react';
 import { useAccount } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
 import { formatEther } from 'viem';
@@ -15,20 +15,21 @@ import type { HeroNft, RelicNft, PartyNft, NftType } from '../types/nft';
 import { THE_GRAPH_API_URL } from '../config/graphConfig';
 import { graphQLRateLimiter } from '../utils/rateLimiter';
 import { logger } from '../utils/logger';
-import { CreateListingTab } from '../components/marketplace/CreateListingTab';
-import { PurchaseModalV2 } from '../components/marketplace/PurchaseModalV2';
 import { TokenBalanceDisplay } from '../components/marketplace/TokenBalanceDisplay';
 import { useEnhancedNfts } from '../hooks/useEnhancedNfts';
 import { getLocalListings, type MarketListing as MarketListingType } from '../hooks/useMarketplace';
 import { useHeroPower, usePartyPower, useHeroDetails, useRelicDetails, usePartyDetails } from '../hooks/useNftPower';
 import { useAppToast } from '../contexts/SimpleToastContext';
-import { MarketStats } from '../components/marketplace/MarketStats';
-import { MarketplaceDevTools } from '../components/marketplace/MarketplaceDevTools';
-import { MarketplaceNotifications } from '../components/marketplace/MarketplaceNotifications';
-// import { BatchOperations } from '../components/marketplace/BatchOperations'; // 已整合到 CreateListingModalV2
-import { MakeOfferModal } from '../components/marketplace/MakeOfferModal';
-import { OffersPanel } from '../components/marketplace/OffersPanel';
 import { MarketplacePreview } from '../components/marketplace/MarketplacePreviewNoData';
+
+// 延遲載入大型市場組件
+const CreateListingTab = lazy(() => import('../components/marketplace/CreateListingTab'));
+const PurchaseModalV2 = lazy(() => import('../components/marketplace/PurchaseModalV2'));
+const MarketStats = lazy(() => import('../components/marketplace/MarketStats'));
+const MarketplaceDevTools = lazy(() => import('../components/marketplace/MarketplaceDevTools'));
+const MarketplaceNotifications = lazy(() => import('../components/marketplace/MarketplaceNotifications'));
+const MakeOfferModal = lazy(() => import('../components/marketplace/MakeOfferModal'));
+const OffersPanel = lazy(() => import('../components/marketplace/OffersPanel'));
 // import { NftDisplayToggleMini } from '../components/ui/NftDisplayToggle'; // 已移除，使用 PNG 圖片
 
 // =================================================================
@@ -907,12 +908,16 @@ const MarketplacePage: React.FC = () => {
                 
                 {/* Market Statistics */}
                 {showStats && (
-                    <MarketStats className="mb-6" />
+                    <Suspense fallback={<div className="bg-gray-800 rounded-lg p-4 mb-6 animate-pulse h-32" />}>
+                        <MarketStats className="mb-6" />
+                    </Suspense>
                 )}
                 
                 {/* Offers Panel */}
                 {showOffers && (
-                    <OffersPanel className="mb-6" />
+                    <Suspense fallback={<div className="bg-gray-800 rounded-lg p-4 mb-6 animate-pulse h-32" />}>
+                        <OffersPanel className="mb-6" />
+                    </Suspense>
                 )}
                 
                 {/* Stats Summary */}
@@ -1044,39 +1049,60 @@ const MarketplacePage: React.FC = () => {
                                 返回市場
                             </ActionButton>
                         </div>
-                        <CreateListingTab />
+                        <Suspense fallback={
+                            <div className="bg-gray-800 rounded-lg p-6 animate-pulse">
+                                <div className="h-8 bg-gray-700 rounded w-1/3 mb-4"></div>
+                                <div className="space-y-3">
+                                    <div className="h-4 bg-gray-700 rounded w-3/4"></div>
+                                    <div className="h-4 bg-gray-700 rounded w-1/2"></div>
+                                    <div className="h-32 bg-gray-700 rounded"></div>
+                                </div>
+                            </div>
+                        }>
+                            <CreateListingTab />
+                        </Suspense>
                     </div>
                 )}
                 
                 {/* Purchase Modal */}
-                <PurchaseModalV2
-                    isOpen={showPurchaseModal}
-                    onClose={() => {
-                        setShowPurchaseModal(false);
-                        setSelectedListing(null);
-                    }}
-                    listing={selectedListing}
-                    onPurchaseComplete={handlePurchaseComplete}
-                />
+                {showPurchaseModal && (
+                    <Suspense fallback={null}>
+                        <PurchaseModalV2
+                            isOpen={showPurchaseModal}
+                            onClose={() => {
+                                setShowPurchaseModal(false);
+                                setSelectedListing(null);
+                            }}
+                            listing={selectedListing}
+                            onPurchaseComplete={handlePurchaseComplete}
+                        />
+                    </Suspense>
+                )}
                 
                 {/* Batch Operations Modal - 已整合到 CreateListingModalV2 */}
 
                 {/* Make Offer Modal */}
-                <MakeOfferModal
-                    isOpen={showMakeOffer}
-                    onClose={() => {
-                        setShowMakeOffer(false);
-                        setSelectedOfferListing(null);
-                    }}
-                    listing={selectedOfferListing}
-                    onOfferSubmitted={() => {
-                        // Refresh offers in OffersPanel
-                        window.dispatchEvent(new Event('offersUpdate'));
-                    }}
-                />
+                {showMakeOffer && (
+                    <Suspense fallback={null}>
+                        <MakeOfferModal
+                            isOpen={showMakeOffer}
+                            onClose={() => {
+                                setShowMakeOffer(false);
+                                setSelectedOfferListing(null);
+                            }}
+                            listing={selectedOfferListing}
+                            onOfferSubmitted={() => {
+                                // Refresh offers in OffersPanel
+                                window.dispatchEvent(new Event('offersUpdate'));
+                            }}
+                        />
+                    </Suspense>
+                )}
 
                 {/* Development Tools */}
-                <MarketplaceDevTools />
+                <Suspense fallback={null}>
+                    <MarketplaceDevTools />
+                </Suspense>
             </div>
         </ErrorBoundary>
     );

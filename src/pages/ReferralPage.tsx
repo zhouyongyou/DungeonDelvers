@@ -13,6 +13,7 @@ import { isAddress, formatEther } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Icons } from '../components/ui/icons';
+import { graphQLRateLimiter } from '../utils/rateLimiter';
 import { logger } from '../utils/logger';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import { formatLargeNumber } from '../utils/formatters';
@@ -101,7 +102,6 @@ const useReferralData = () => {
             }
             
             // 使用限流器來避免 429 錯誤
-            const { graphQLRateLimiter } = await import('../utils/rateLimiter');
             
             const response = await graphQLRateLimiter.execute(async () => {
                 return fetch(THE_GRAPH_API_URL, {
