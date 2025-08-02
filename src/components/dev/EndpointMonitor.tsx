@@ -23,8 +23,12 @@ export const EndpointMonitor: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // 只在開發環境或 debug 模式下顯示
-    const shouldShow = import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEBUG === 'true';
+    // 只在開發環境或明確啟用 debug 模式下顯示
+    const isDevMode = import.meta.env.DEV;
+    const isDebugEnabled = import.meta.env.VITE_ENABLE_DEBUG === 'true';
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    
+    const shouldShow = isDevMode && isLocalhost;
     setIsVisible(shouldShow);
 
     if (!shouldShow) return;

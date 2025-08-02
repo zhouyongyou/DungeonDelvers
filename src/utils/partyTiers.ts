@@ -171,7 +171,7 @@ export function getPartyTier(totalPower: number): PartyTier {
   // 確保 totalPower 是有效數字
   const power = Number(totalPower) || 0;
   
-  // 首先嘗試從詳細分級中查找（300-4199 範圍）
+  // 優先使用詳細分級（300-4199 範圍）
   const detailedTier = DETAILED_PARTY_TIERS.find(tier => 
     power >= tier.minPower && power <= tier.maxPower
   );
@@ -180,10 +180,18 @@ export function getPartyTier(totalPower: number): PartyTier {
     return detailedTier;
   }
   
-  // 如果不在詳細分級範圍內，使用大範圍分級
-  return PARTY_TIERS.find(tier => 
-    power >= tier.minPower && power <= tier.maxPower
-  ) || PARTY_TIERS[0]; // 默認返回初級隊伍
+  // 智能 fallback：使用最接近的戰力等級圖片
+  if (power < 300) {
+    // 戰力太低，使用最低等級圖片
+    return { ...DETAILED_PARTY_TIERS[0], displayName: `初級隊伍 (${power})` };
+  } else if (power > 4199) {
+    // 戰力太高，使用最高等級圖片
+    const highestTier = DETAILED_PARTY_TIERS[DETAILED_PARTY_TIERS.length - 1];
+    return { ...highestTier, displayName: `高級隊伍 (${power})` };
+  }
+  
+  // 默認返回初級隊伍（不應該到達這裡）
+  return DETAILED_PARTY_TIERS[0];
 }
 
 /**

@@ -210,12 +210,21 @@ class SubgraphConfigManager {
     }
   }
 
-  // 端點健康檢查
+  // 端點健康檢查（包含資料可用性）
   private async pingEndpoint(url: string): Promise<number> {
     const start = Date.now();
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超時
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8秒超時
+      
+      // 使用更全面的查詢來檢查資料可用性
+      const testQuery = `{
+        _meta { 
+          block { number } 
+          hasIndexingErrors
+        }
+        players(first: 1) { id }
+      }`;
       
       const response = await fetch(url, {
         method: 'POST',
@@ -223,9 +232,7 @@ class SubgraphConfigManager {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({
-          query: '{ _meta { block { number } } }'
-        }),
+        body: JSON.stringify({ query: testQuery }),
         signal: controller.signal
       });
       
@@ -240,11 +247,57 @@ class SubgraphConfigManager {
         throw new Error(`GraphQL Error: ${data.errors[0].message}`);
       }
       
-      return Date.now() - start;
+      // 檢查是否有索引錯誤
+      if (data.data?._meta?.hasIndexingErrors) {
+        logger.warn(`Endpoint has indexing errors: ${url}`);
+        return 8000; // 有錯誤但可用，給較高延遲
+      }
+      
+      // 檢查資料可用性和新鮮度
+      const hasData = data.data?.players && Array.isArray(data.data.players);
+      const blockNumber = data.data?._meta?.block?.number || 0;
+      const responseTime = Date.now() - start;
+      
+      if (!hasData || blockNumber === 0) {
+        logger.warn(`Endpoint has no data: ${url} (block: ${blockNumber})`);
+        return 9999; // 沒資料視為不可用
+      }
+      
+      // 檢查資料是否太舊（如果區塊號明顯落後）
+      // 這裡可以根據需要調整閾值
+      const endpointType = url.includes('studio') ? 'studio' : 'decentralized';
+      if (endpointType === 'decentralized' && this.isBlockTooOld(blockNumber)) {
+        logger.warn(`Decentralized endpoint data too old: ${url} (block: ${blockNumber})`);
+        return responseTime + 8000; // 資料太舊，大幅增加延遲
+      }
+      
+      return responseTime;
     } catch (error) {
       logger.warn(`Endpoint ping failed: ${url}`, error);
       return 9999; // 返回很高的延遲表示不可用
     }
+  }
+
+  // 檢查區塊是否太舊（用於判斷重新部署情況）
+  private isBlockTooOld(blockNumber: number): boolean {
+    // 可以通過比較 Studio 和 Decentralized 的區塊高度
+    // 或者設定一個絕對閾值
+    const studioBlock = this.getLastKnownBlock('studio');
+    const decentralizedBlock = this.getLastKnownBlock('decentralized');
+    
+    // 如果去中心化版本的區塊明顯低於 Studio，可能是重新部署
+    if (studioBlock > 0 && blockNumber < studioBlock - 1000) {
+      return true; // 落後超過 1000 個區塊（約 50 分鐘）
+    }
+    
+    return false;
+  }
+
+  // 獲取已知的最後區塊號
+  private getLastKnownBlock(type: 'studio' | 'decentralized'): number {
+    // 這裡可以實施更複雜的邏輯來追蹤歷史區塊高度
+    // 暫時返回 0，表示沒有歷史數據
+    return 0;
   }
 
   // 獲取端點性能狀態（用於監控）

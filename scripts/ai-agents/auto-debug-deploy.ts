@@ -207,7 +207,7 @@ class AutoDebugDeploy {
   
   async checkEnvVariables() {
     const envPath = path.join(this.frontendPath, '.env');
-    const envExamplePath = path.join(this.frontendPath, '.env.example');
+    const _envExamplePath = path.join(this.frontendPath, '.env.example');
     
     try {
       const envContent = await fs.readFile(envPath, 'utf-8');
@@ -264,7 +264,7 @@ class AutoDebugDeploy {
 
   async crossCheckAddresses() {
     // 讀取各處的地址並比對
-    const sources = {
+    const _sources = {
       frontend: path.join(this.frontendPath, 'src/config/contracts.ts'),
       backend: path.join(this.backendPath, '.env'),
       subgraph: path.join(this.subgraphPath, 'subgraph.yaml')
@@ -865,8 +865,8 @@ class AutoDebugDeploy {
 
 // 主函數
 async function main() {
-  const debugger = new AutoDebugDeploy();
-  await debugger.run();
+  const debugInstance = new AutoDebugDeploy();
+  await debugInstance.run();
 }
 
 // 執行

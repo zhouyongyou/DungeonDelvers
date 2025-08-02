@@ -239,6 +239,7 @@ export async function handleMetadataRequest(request: Request): Promise<Response>
             });
         }
     } catch (error) {
+        console.error('Metadata generation failed:', error);
         return new Response(JSON.stringify({ error: 'Failed to generate metadata' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }

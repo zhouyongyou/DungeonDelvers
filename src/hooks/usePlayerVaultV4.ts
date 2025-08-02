@@ -40,17 +40,15 @@ export const usePlayerVaultV4 = () => {
     query: { enabled: !!address }
   });
 
-  // Create a function to get tax rate for specific amount
-  const createTaxRateQuery = (amount: bigint) => {
-    return useReadContract({
-      address: playerVaultContract?.address,
-      abi: playerVaultContract?.abi,
-      functionName: 'getTaxRateForAmount',
-      args: address && amount > 0n ? [address, amount] : undefined,
-      chainId: bsc.id,
-      query: { enabled: !!address && amount > 0n }
-    });
-  };
+  // Create configuration for tax rate queries (不直接調用Hook)
+  const createTaxRateQueryConfig = (amount: bigint) => ({
+    address: playerVaultContract?.address,
+    abi: playerVaultContract?.abi,
+    functionName: 'getTaxRateForAmount' as const,
+    args: address && amount > 0n ? [address, amount] : undefined,
+    chainId: bsc.id,
+    query: { enabled: !!address && amount > 0n }
+  });
 
   // Parse player info
   const parsedPlayerInfo = useMemo(() => {
@@ -87,7 +85,7 @@ export const usePlayerVaultV4 = () => {
     isCommissionLoading,
     
     // Functions
-    createTaxRateQuery,
+    createTaxRateQueryConfig,
     refetchAll,
     refetchPlayerInfo,
     refetchCommission,

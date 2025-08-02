@@ -34,7 +34,10 @@ import { SubgraphDiagnostics } from './components/dev/SubgraphDiagnostics';
 import { EndpointMonitor } from './components/dev/EndpointMonitor';
 // 開發環境自動測試智能端點
 if (import.meta.env.DEV) {
-  import('./utils/testSmartEndpoint');
+  import('./utils/endpointTestSuite');
+  import('./utils/testRedeployScenario');
+  import('./utils/expeditionGasDebugger');
+  import('./utils/contractConfigDebugger');
 }
 
 // 動態導入所有頁面

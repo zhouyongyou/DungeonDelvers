@@ -216,7 +216,7 @@ class TypeScriptAnyFixer {
     return suggestions[context.type] || { type: 'unknown', autoFixable: true };
   }
 
-  private inferTypeFromUsage(param: ts.ParameterDeclaration, sourceFile: ts.SourceFile): string | null {
+  private inferTypeFromUsage(param: ts.ParameterDeclaration, _sourceFile: ts.SourceFile): string | null {
     // This is a simplified version - a real implementation would need more sophisticated analysis
     const paramName = param.name.getText();
     const functionNode = param.parent;

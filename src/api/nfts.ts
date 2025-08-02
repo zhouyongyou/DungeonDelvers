@@ -5,11 +5,8 @@ import { bsc } from 'wagmi/chains';
 import { Buffer } from 'buffer';
 import { getContractWithABI } from '../config/contractsWithABI.js';
 import { CONTRACT_ADDRESSES } from '../config/contracts.js';
-import { nftMetadataCache } from '../cache/nftMetadataCache.js';
 import { nftMetadataPersistentCache } from '../cache/persistentCache';
-import { nftMetadataBatcher } from '../utils/requestBatcher';
 import { graphQLRateLimiter } from '../utils/rateLimiter';
-import { getQueryConfig, queryKeys } from '../config/queryConfig';
 import { dedupeNFTMetadata, dedupeGraphQLQuery } from '../utils/requestDeduper';
 import { validateNftMetadata } from '../utils/validateMetadata';
 import type { 
@@ -23,7 +20,7 @@ import type {
     NftType
 } from '../types/nft';
 import { logger } from '../utils/logger';
-import { safeNumberConversion, safeBigintToString } from '../utils/typeGuards';
+import { safeNumberConversion } from '../utils/typeGuards';
 import { getPartyImagePath, getPartyTier } from '../utils/partyTiers';
 import { getRarityAbbreviation, getPartyPowerRangePrefix } from '../utils/rarityConverter';
 

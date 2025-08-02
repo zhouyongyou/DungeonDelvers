@@ -63,8 +63,48 @@ export function useTransactionWithProgress(options?: UseTransactionWithProgressO
       setProgress({ status: 'signing', confirmations: 0 });
       logger.info('請求用戶簽名交易', { description });
       
-      // 2. 發送交易（讓錢包自動處理 gas 估算）
-      const hash = await writeContractAsync(config);
+      // 2. Gas 估算和優化
+      let optimizedConfig = { ...config };
+      
+      if (publicClient) {
+        try {
+          // 估算 Gas Limit
+          const estimatedGas = await publicClient.estimateContractGas(config);
+          // 增加 20% buffer 防止 Gas 不足
+          const gasLimit = estimatedGas + (estimatedGas * 20n) / 100n;
+          
+          // 獲取當前 Gas Price
+          const gasPrice = await publicClient.getGasPrice();
+          // 確保最低 Gas Price（BSC 建議 3 Gwei）
+          const minGasPrice = 3000000000n; // 3 Gwei
+          const optimalGasPrice = gasPrice > minGasPrice ? gasPrice : minGasPrice;
+          
+          optimizedConfig = {
+            ...config,
+            gas: gasLimit,
+            gasPrice: optimalGasPrice
+          };
+          
+          logger.info('Gas 優化完成', {
+            estimatedGas: estimatedGas.toString(),
+            gasLimit: gasLimit.toString(),
+            gasPrice: optimalGasPrice.toString(),
+            description
+          });
+          
+        } catch (gasError) {
+          logger.warn('Gas 估算失敗，使用默認設定', gasError);
+          // 遠征交易的安全默認值
+          optimizedConfig = {
+            ...config,
+            gas: 400000n, // 400k Gas Limit
+            gasPrice: 5000000000n // 5 Gwei
+          };
+        }
+      }
+      
+      // 3. 發送交易（使用優化後的 Gas 設定）
+      const hash = await writeContractAsync(optimizedConfig);
       
       setProgress({ 
         hash, 

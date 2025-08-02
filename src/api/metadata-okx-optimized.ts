@@ -275,7 +275,7 @@ function generateOkxOptimizedAttributes(nftData: any): any[] {
 }
 
 // Element 詳細屬性
-function generateDetailedAttributes(nftData: any): any[] {
+function _generateDetailedAttributes(nftData: any): any[] {
     const attributes = generateOkxOptimizedAttributes(nftData);
     
     // 添加更多詳細信息
@@ -298,7 +298,7 @@ function generateDetailedAttributes(nftData: any): any[] {
 }
 
 // 標準屬性
-function generateStandardAttributes(nftData: any): any[] {
+function _generateStandardAttributes(nftData: any): any[] {
     return generateOkxOptimizedAttributes(nftData);
 }
 

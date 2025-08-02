@@ -16,6 +16,7 @@ interface EnhancedLazyImageProps {
   width?: number;
   height?: number;
   aspectRatio?: string;
+  objectFit?: 'contain' | 'cover' | 'fill' | 'scale-down' | 'none';
   // 新的優化選項
   enableWebP?: boolean;
   enablePreload?: boolean;
@@ -35,6 +36,7 @@ export const EnhancedLazyImage: React.FC<EnhancedLazyImageProps> = ({
   width,
   height,
   aspectRatio = '1/1',
+  objectFit = 'contain',
   enableWebP = true,
   enablePreload = true,
   quality = 80,
@@ -162,29 +164,19 @@ export const EnhancedLazyImage: React.FC<EnhancedLazyImageProps> = ({
 
   // 渲染占位符
   const renderPlaceholder = () => {
-    const style = {
-      aspectRatio,
-      width: width ? `${width}px` : '100%',
-      height: height ? `${height}px` : 'auto',
-    };
+    const baseClasses = "w-full h-full flex items-center justify-center";
 
     switch (placeholder) {
       case 'blur':
         return (
-          <div 
-            className={`bg-gray-200 animate-pulse flex items-center justify-center ${className}`}
-            style={style}
-          >
+          <div className={`bg-gray-200 animate-pulse ${baseClasses} ${className}`}>
             <div className="w-8 h-8 bg-gray-300 rounded"></div>
           </div>
         );
       
       case 'spinner':
         return (
-          <div 
-            className={`bg-gray-800 flex items-center justify-center ${className}`}
-            style={style}
-          >
+          <div className={`bg-gray-800 ${baseClasses} ${className}`}>
             <LoadingSpinner size="h-8 w-8" />
           </div>
         );
@@ -192,10 +184,7 @@ export const EnhancedLazyImage: React.FC<EnhancedLazyImageProps> = ({
       case 'skeleton':
       default:
         return (
-          <div 
-            className={`bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 animate-pulse ${className}`}
-            style={style}
-          >
+          <div className={`bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 animate-pulse ${baseClasses} ${className}`}>
             <div className="w-full h-full bg-gray-600 opacity-50"></div>
           </div>
         );
@@ -223,9 +212,13 @@ export const EnhancedLazyImage: React.FC<EnhancedLazyImageProps> = ({
   }
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative w-full h-full flex items-center justify-center">
       {/* 占位符 */}
-      {showPlaceholder && renderPlaceholder()}
+      {showPlaceholder && (
+        <div className="absolute inset-0">
+          {renderPlaceholder()}
+        </div>
+      )}
       
       {/* 實際圖片 */}
       {imageSrc && (
@@ -233,13 +226,16 @@ export const EnhancedLazyImage: React.FC<EnhancedLazyImageProps> = ({
           src={imageSrc}
           alt={alt}
           className={`transition-opacity duration-300 ${
-            showPlaceholder ? 'absolute inset-0 opacity-0' : 'opacity-100'
+            showPlaceholder ? 'opacity-0' : 'opacity-100'
           } ${className}`}
           style={{
             aspectRatio,
-            width: width ? `${width}px` : '100%',
-            height: height ? `${height}px` : 'auto',
-            objectFit: 'cover',
+            width: '100%',
+            height: '100%',
+            objectFit: objectFit,
+            objectPosition: 'center center',
+            maxWidth: '100%',
+            maxHeight: '100%',
           }}
           loading={eager ? 'eager' : 'lazy'}
           decoding={priority === 'high' ? 'sync' : 'async'}

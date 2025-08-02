@@ -1,7 +1,6 @@
 // 診斷版 App - 用於逐個測試問題組件
 import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import type { Page } from './types/page';
 
 // 逐個導入可能有問題的組件和 hooks
 import { useMobileOptimization } from './hooks/useMobileOptimization';
@@ -38,31 +37,34 @@ function DiagnosticApp() {
     setComponentStatuses(prev => ({ ...prev, [name]: { status, error: error?.toString() } }));
   };
 
-  // 測試 useMobileOptimization
-  const testMobileOptimization = () => {
-    try {
-      if (enabledComponents.useMobileOptimization) {
-        updateStatus('useMobileOptimization', 'loading');
-        const { isMobile } = useMobileOptimization();
-        updateStatus('useMobileOptimization', `success - isMobile: ${isMobile}`);
-      }
-    } catch (error) {
-      updateStatus('useMobileOptimization', 'error', error?.toString());
-    }
-  };
+  // 始終調用 Hooks（React 規則要求）
+  let mobileData = null;
+  let prefetchData = null;
+  
+  try {
+    mobileData = useMobileOptimization();
+  } catch (error) {
+    console.warn('useMobileOptimization error:', error);
+  }
+  
+  try {
+    prefetchData = usePrefetchOnHover();
+  } catch (error) {
+    console.warn('usePrefetchOnHover error:', error);
+  }
 
-  // 測試 usePrefetchOnHover
-  const testPrefetchOnHover = () => {
-    try {
-      if (enabledComponents.usePrefetchOnHover) {
-        updateStatus('usePrefetchOnHover', 'loading');
-        const { prefetchNftData, prefetchPlayerData } = usePrefetchOnHover();
-        updateStatus('usePrefetchOnHover', 'success');
-      }
-    } catch (error) {
-      updateStatus('usePrefetchOnHover', 'error', error?.toString());
-    }
-  };
+  // 根據啟用狀態處理結果
+  const mobileOptimizationResult = enabledComponents.useMobileOptimization && mobileData
+    ? `success - isMobile: ${mobileData.isMobile}`
+    : enabledComponents.useMobileOptimization
+    ? 'error: Hook failed'
+    : null;
+
+  const prefetchResult = enabledComponents.usePrefetchOnHover && prefetchData
+    ? 'success'
+    : enabledComponents.usePrefetchOnHover
+    ? 'error: Hook failed'
+    : null;
 
   // 測試圖片預加載
   const testImagePreloading = () => {

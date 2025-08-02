@@ -1,5 +1,6 @@
 // src/hooks/usePlayerOverview.ts
 // 共用的 Hook 來獲取玩家總覽數據，避免重複代碼
+// TODO: 考慮遷移到新的 Apollo Client 智能端點系統以獲得更好的性能
 
 import { useQuery } from '@tanstack/react-query';
 import { type Address } from 'viem';
@@ -132,10 +133,10 @@ export const usePlayerOverview = (address?: Address) => {
             }
         },
         enabled: !!address && !!THE_GRAPH_API_URL,
-        staleTime: 5 * 1000, // 進一步降低到5秒
+        staleTime: 30 * 1000, // 30秒快取，減少查詢頻率
         gcTime: 5 * 60 * 1000,
-        refetchInterval: 8 * 1000, // 每8秒刷新
-        refetchOnWindowFocus: true, // 視窗焦點時刷新
+        refetchInterval: 60 * 1000, // 改為每60秒刷新，減少速率限制
+        refetchOnWindowFocus: false, // 關閉視窗焦點刷新，避免過度查詢
     });
 
     return { data, isLoading, isError, refetch };

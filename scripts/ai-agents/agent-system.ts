@@ -55,8 +55,8 @@ abstract class BaseAgent implements Agent {
       const { stdout, stderr } = await execAsync(command);
       if (stderr) console.warn(`Warning in ${this.name}:`, stderr);
       return stdout;
-    } catch (error) {
-      throw new Error(`Command failed: ${error.message}`);
+    } catch (_error) {
+      throw new Error(`Command failed: ${_error.message}`);
     }
   }
 
@@ -101,10 +101,10 @@ class ContractAnalyzer extends BaseAgent {
         },
         suggestions: this.generateSuggestions(slitherResult, gasAnalysis)
       };
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
-        error: error.message
+        error: _error.message
       };
     }
   }
@@ -188,18 +188,18 @@ class FrontendSyncer extends BaseAgent {
           ]
         }
       };
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
-        error: error.message
+        error: _error.message
       };
     }
   }
 
   private async syncContractABIs(): Promise<void> {
     // 從 artifacts 複製 ABI 到前端
-    const contractsPath = '/Users/sotadic/Documents/DungeonDelversContracts/artifacts/contracts';
-    const frontendAbiPath = '/Users/sotadic/Documents/GitHub/DungeonDelvers/src/abi';
+    const _contractsPath = '/Users/sotadic/Documents/DungeonDelversContracts/artifacts/contracts';
+    const _frontendAbiPath = '/Users/sotadic/Documents/GitHub/DungeonDelvers/src/abi';
     
     // 實際實現會遍歷並複製所有 ABI
     console.log('✅ ABI 同步完成');
@@ -247,15 +247,15 @@ class SubgraphAgent extends BaseAgent {
           version: deployResult.version
         }
       };
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
-        error: error.message
+        error: _error.message
       };
     }
   }
 
-  private async updateSchema(newEntities: any[]): Promise<void> {
+  private async updateSchema(_newEntities: any[]): Promise<void> {
     console.log('✅ Schema 更新完成');
   }
 
@@ -302,10 +302,10 @@ class PerformanceTester extends BaseAgent {
         },
         suggestions: this.analyzeBottlenecks(results)
       };
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
-        error: error.message
+        error: _error.message
       };
     }
   }
@@ -336,7 +336,7 @@ class PerformanceTester extends BaseAgent {
     };
   }
 
-  private analyzeBottlenecks(results: any[]): string[] {
+  private analyzeBottlenecks(_results: any[]): string[] {
     return [
       '建議優化首頁加載時間',
       '考慮實施請求緩存策略'
@@ -379,7 +379,7 @@ class AICoordinator {
     const dependentTasks = this.taskQueue.filter(t => t.dependencies && t.dependencies.length > 0);
     
     // 執行獨立任務
-    const independentResults = await Promise.all(
+    const _independentResults = await Promise.all(
       independentTasks.map(task => this.executeTask(task))
     );
     

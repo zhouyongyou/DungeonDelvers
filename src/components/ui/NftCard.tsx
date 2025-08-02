@@ -51,7 +51,7 @@ const VipImage: React.FC<{ nft: VipNft; fallbackImage: string }> = memo(({ nft, 
       <ImageWithFallback
         src={fallbackImage} 
         alt={nft.name || `VIP #${getNftIdSafe(nft)}`} 
-        className="w-full h-full object-cover bg-gray-700"
+        className="w-full h-full object-contain object-center bg-gray-700"
         nftType="vip"
         rarity={1}
         lazy={true}
@@ -123,7 +123,10 @@ const NftCard: React.FC<NftCardProps> = memo(({
     }
 
     // 其他類型NFT的通用處理 - 使用增強的圖片組件
-    const baseImageClass = "w-full h-full object-cover rounded-lg";
+    // Party 類型使用 cover 模式以匹配 dungeon 頁面的顯示效果
+    const baseImageClass = nft.type === 'party' 
+      ? "w-full h-full object-cover object-center rounded-lg"
+      : "w-full h-full object-contain object-center rounded-lg";
     
     // 獲取 NFT 稀有度用於智能回退 - 修正稀有度獲取邏輯
     let rarity: number = 1;
@@ -140,6 +143,44 @@ const NftCard: React.FC<NftCardProps> = memo(({
 
     const imageDirName = getImageDirName(nft.type);
     
+    // Party 類型需要特殊的圖片路徑處理 - 直接使用 DungeonPage 的成功邏輯
+    const getPartyImagePath = (power: number): string => {
+      if (power >= 3900) return '/images/party/300-4199/3900-4199.png';
+      if (power >= 3600) return '/images/party/300-4199/3600-3899.png';
+      if (power >= 3300) return '/images/party/300-4199/3300-3599.png';
+      if (power >= 3000) return '/images/party/300-4199/3000-3299.png';
+      if (power >= 2700) return '/images/party/300-4199/2700-2999.png';
+      if (power >= 2400) return '/images/party/300-4199/2400-2699.png';
+      if (power >= 2100) return '/images/party/300-4199/2100-2399.png';
+      if (power >= 1800) return '/images/party/300-4199/1800-2099.png';
+      if (power >= 1500) return '/images/party/300-4199/1500-1799.png';
+      if (power >= 1200) return '/images/party/300-4199/1200-1499.png';
+      if (power >= 900) return '/images/party/300-4199/900-1199.png';
+      if (power >= 600) return '/images/party/300-4199/600-899.png';
+      if (power >= 300) return '/images/party/300-4199/300-599.png';
+      return '/images/party/party-placeholder.png';
+    };
+
+    const getImageSrcAndFallback = () => {
+      if (nft.type === 'party') {
+        // Party 類型直接計算圖片路徑，不依賴 NFT 對象的 image 屬性
+        const partyNft = nft as PartyNft;
+        const totalPower = Number(partyNft.totalPower || 0);
+        const imagePath = getPartyImagePath(totalPower);
+        return {
+          src: imagePath,
+          fallback: '/images/party/party-placeholder.png'
+        };
+      }
+      // 其他類型使用原有邏輯
+      return {
+        src: optimizeImageUrl(nft.image, { width: 400, height: 400 }),
+        fallback: `/images/${imageDirName}/${imageDirName}-${rarity}.png`
+      };
+    };
+
+    const { src: imageSrc, fallback: fallbackPath } = getImageSrcAndFallback();
+    
     return (
       <div className="relative w-full h-full overflow-hidden rounded-lg">
         {renderSyncStatus()}
@@ -148,11 +189,12 @@ const NftCard: React.FC<NftCardProps> = memo(({
           src={optimizeImageUrl(nft.image, { width: 400, height: 400 })}
           alt={nft.name || `${nft.type} #${nft.id}`}
           className={baseImageClass}
-          fallback={`/images/${imageDirName}/${imageDirName}-${rarity}.png`}
+          fallback={getFallbackPath()}
           placeholder="skeleton"
           width={400}
           height={400}
           aspectRatio="1/1"
+          objectFit={nft.type === 'party' ? 'cover' : 'contain'}
           />
         {/* 只在圖片上顯示最重要的資訊 */}
         {showDetails && (
