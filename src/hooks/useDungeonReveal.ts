@@ -144,7 +144,7 @@ export function useDungeonReveal(
     } finally {
       setIsRevealing(false);
     }
-  }, [canForceReveal, dungeonMasterContract, writeContract]);
+  }, [canForceReveal, dungeonMasterContract, writeContract, showToast]);
 
   // Reveal for someone else
   const revealFor = useCallback(async (targetAddress: Address) => {
@@ -171,7 +171,7 @@ export function useDungeonReveal(
     } finally {
       setIsRevealing(false);
     }
-  }, [dungeonMasterContract, writeContract]);
+  }, [dungeonMasterContract, writeContract, showToast]);
 
   return {
     commitment: commitment as ExpeditionCommitment | null,
