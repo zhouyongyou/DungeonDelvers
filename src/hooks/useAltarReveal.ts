@@ -115,7 +115,7 @@ export function useAltarReveal(
     } finally {
       setIsRevealing(false);
     }
-  }, [address, canReveal, altarContract, writeContract]);
+  }, [address, canReveal, altarContract, writeContract, showToast]);
 
   // Force reveal function (for expired upgrades)
   const forceReveal = useCallback(async (targetAddress: Address) => {
@@ -135,15 +135,15 @@ export function useAltarReveal(
         args: [targetAddress],
       });
 
-      toast.success('正在強制揭示過期的升級...');
+      showToast('正在強制揭示過期的升級...', 'success');
     } catch (err) {
       const error = err as Error;
       setError(error);
-      toast.error(`強制揭示失敗: ${error.message}`);
+      showToast(`強制揭示失敗: ${error.message}`, 'error');
     } finally {
       setIsRevealing(false);
     }
-  }, [canForceReveal, altarContract, writeContract]);
+  }, [canForceReveal, altarContract, writeContract, showToast]);
 
   return {
     commitment: commitment as UpgradeCommitment | null,
