@@ -62,12 +62,7 @@
     "tailwind-merge": "^3.3.1",
     "viem": "^2.7.9",
     "wagmi": "^2.5.7",
-    "zustand": "^5.0.3"
-  },
-  "resolutions": {
-    "zustand": "^5.0.3",
-    "graphql-request": "^7.2.0",
-    "graphql": "^16.8.1"
+    "zustand": "^4.4.7"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^5.0.7",
