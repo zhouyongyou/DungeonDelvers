@@ -1,4 +1,4 @@
-# Generated from v25-config.js on 2025-08-03T11:07:19.322Z
+# Generated from v25-config.js on 2025-08-03T11:30:11.984Z
 # V25 Production Deployment
 specVersion: 0.0.4
 schema:
@@ -10,7 +10,7 @@ dataSources:
     source:
       address: '0x001b7462B0f1Ab832c017a6f09133932Be140b18'
       abi: Hero
-      startBlock: 56291866
+      startBlock: 56184733
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -30,6 +30,14 @@ dataSources:
           handler: handleBatchMintCompleted
         - event: HeroBurned(indexed uint256,indexed address,uint8,uint256)
           handler: handleHeroBurned
+        - event: MintCommitted(indexed address,uint256,uint256,bool)
+          handler: handleMintCommitted
+        - event: HeroRevealed(indexed uint256,indexed address,uint8,uint256)
+          handler: handleHeroRevealed
+        - event: ForcedRevealExecuted(indexed address,indexed address,uint256)
+          handler: handleForcedRevealExecuted
+        - event: RevealedByProxy(indexed address,indexed address)
+          handler: handleRevealedByProxy
         - event: Paused(address)
           handler: handlePaused
         - event: Unpaused(address)
@@ -41,7 +49,7 @@ dataSources:
     source:
       address: '0xdd8E52cD1d248D04C306c038780315a03866B402'
       abi: Relic
-      startBlock: 56291866
+      startBlock: 56184733
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -61,6 +69,14 @@ dataSources:
           handler: handleBatchMintCompleted
         - event: RelicBurned(indexed uint256,indexed address,uint8,uint8)
           handler: handleRelicBurned
+        - event: MintCommitted(indexed address,uint256,uint256,bool)
+          handler: handleMintCommitted
+        - event: RelicRevealed(indexed uint256,indexed address,uint8,uint8)
+          handler: handleRelicRevealed
+        - event: ForcedRevealExecuted(indexed address,indexed address,uint256)
+          handler: handleForcedRevealExecuted
+        - event: RevealedByProxy(indexed address,indexed address)
+          handler: handleRevealedByProxy
         - event: Paused(address)
           handler: handlePaused
         - event: Unpaused(address)
@@ -72,7 +88,7 @@ dataSources:
     source:
       address: '0x382024850E08AB37E290315fc5f3692b8D6646EB'
       abi: PartyV3
-      startBlock: 56291866
+      startBlock: 56184733
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -101,7 +117,7 @@ dataSources:
     source:
       address: '0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C'
       abi: VIPStaking
-      startBlock: 56291866
+      startBlock: 56184733
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -128,7 +144,7 @@ dataSources:
     source:
       address: '0x481ABDF19E41Bf2cE84075174675626aa027fE82'
       abi: PlayerProfile
-      startBlock: 56291866
+      startBlock: 56184733
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -153,7 +169,7 @@ dataSources:
     source:
       address: '0x9e17c01A610618223d49D64E322DC1b6360E4E8D'
       abi: DungeonMaster
-      startBlock: 56291866
+      startBlock: 56184733
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -176,7 +192,7 @@ dataSources:
     source:
       address: '0x9e17c01A610618223d49D64E322DC1b6360E4E8D'
       abi: PlayerVault
-      startBlock: 56291866
+      startBlock: 56184733
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -209,7 +225,7 @@ dataSources:
     source:
       address: '0xB102a57eD4697f7A721541fd7B0bba8D6bdF63a5'
       abi: AltarOfAscensionV2Fixed
-      startBlock: 56291866
+      startBlock: 56184733
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6

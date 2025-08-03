@@ -1,6 +1,6 @@
 // DDgraphql/dungeondelvers/src/hero.ts (最終加固版)
-import { HeroMinted, Transfer, HeroBurned, BatchMintCompleted, Paused, Unpaused } from "../generated/Hero/Hero"
-import { Hero, HeroUpgrade } from "../generated/schema"
+import { HeroMinted, Transfer, HeroBurned, BatchMintCompleted, Paused, Unpaused, MintCommitted, HeroRevealed, ForcedRevealExecuted, RevealedByProxy } from "../generated/Hero/Hero"
+import { Hero, HeroUpgrade, MintCommitment, RevealEvent } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { log, BigInt, ethereum } from "@graphprotocol/graph-ts"
 import { createEntityId } from "./config"
@@ -136,4 +136,71 @@ export function handlePaused(event: Paused): void {
 
 export function handleUnpaused(event: Unpaused): void {
     createUnpausedEvent(event.params.account, event, "Hero")
+}
+
+// ===== Commit-Reveal 事件處理器 =====
+export function handleMintCommitted(event: MintCommitted): void {
+    const player = getOrCreatePlayer(event.params.player)
+    const commitmentId = createEntityId(event.address.toHexString(), event.params.player.toHexString() + "-" + event.params.blockNumber.toString())
+    
+    const commitment = new MintCommitment(commitmentId)
+    commitment.player = player.id
+    commitment.quantity = event.params.quantity
+    commitment.blockNumber = event.params.blockNumber
+    commitment.fromVault = event.params.fromVault
+    commitment.maxRarity = 5 // 默認最大稀有度，ABI 中沒有此字段
+    commitment.payment = BigInt.zero() // 默認支付金額，ABI 中沒有此字段
+    commitment.isRevealed = false
+    commitment.isForcedReveal = false
+    commitment.nftType = "Hero"
+    commitment.contractAddress = event.address
+    commitment.createdAt = event.block.timestamp
+    commitment.lastUpdatedAt = event.block.timestamp
+    commitment.revealedTokens = []
+    commitment.save()
+}
+
+export function handleHeroRevealed(event: HeroRevealed): void {
+    const revealEventId = createEntityId(event.address.toHexString(), event.transaction.hash.toHexString() + "-" + event.logIndex.toString())
+    
+    const revealEvent = new RevealEvent(revealEventId)
+    revealEvent.tokenId = event.params.tokenId
+    revealEvent.owner = getOrCreatePlayer(event.params.owner).id
+    revealEvent.nftType = "Hero"
+    revealEvent.rarity = event.params.rarity
+    revealEvent.powerOrCapacity = event.params.power
+    revealEvent.mintCommitment = "" // 由於 ABI 中沒有 commitBlockNumber，先設為空
+    revealEvent.isProxyReveal = false
+    revealEvent.transactionHash = event.transaction.hash
+    revealEvent.blockNumber = event.block.number
+    revealEvent.timestamp = event.block.timestamp
+    revealEvent.save()
+    
+    // 更新 Hero 實體的 isRevealed 狀態
+    const heroId = createEntityId(event.address.toHexString(), event.params.tokenId.toString())
+    const hero = Hero.load(heroId)
+    if (hero) {
+        hero.isRevealed = true
+        hero.revealedAt = event.block.timestamp
+        hero.save()
+    }
+}
+
+export function handleForcedRevealExecuted(event: ForcedRevealExecuted): void {
+    // 根據 ABI，事件參數為 user, executor, quantity
+    // 記錄強制揭示事件
+    log.info('ForcedRevealExecuted: User {} by executor {} for {} NFTs', [
+        event.params.user.toHexString(),
+        event.params.executor.toHexString(),
+        event.params.quantity.toString()
+    ])
+}
+
+export function handleRevealedByProxy(event: RevealedByProxy): void {
+    // 根據 ABI，事件參數為 user, proxy
+    // 記錄代理揭示事件
+    log.info('RevealedByProxy: User {} by proxy {}', [
+        event.params.user.toHexString(),
+        event.params.proxy.toHexString()
+    ])
 }
