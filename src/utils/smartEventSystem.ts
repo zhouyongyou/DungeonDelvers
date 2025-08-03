@@ -2,13 +2,13 @@
 // 根據 RPC 節點能力自動選擇 Filter 或輪詢模式
 
 import { createPublicClient, http, parseAbiItem } from 'viem';
-import type { Log, Address } from 'viem';
+import type { Log } from 'viem';
 import { bsc } from 'viem/chains';
 import { logger } from './logger';
 import { getRpcEndpoint, markRpcOptimizedFailed } from './rpcOptimizedMigration';
 
 interface EventConfig {
-  address: Address;
+  address: `0x${string}`;
   event: string;
   callback: (logs: Log[]) => void;
   enabled: boolean;
@@ -123,7 +123,7 @@ class SmartEventSystem {
    */
   async registerEvent(
     eventId: string,
-    address: Address,
+    address: `0x${string}`,
     eventSignature: string,
     callback: (logs: Log[]) => void
   ) {
@@ -474,7 +474,7 @@ export const smartEventSystem = new SmartEventSystem();
  */
 export function useSmartEventListener(
   eventId: string,
-  address: Address,
+  address: `0x${string}`,
   eventSignature: string,
   callback: (logs: Log[]) => void,
   enabled: boolean = true

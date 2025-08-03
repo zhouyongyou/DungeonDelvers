@@ -1,6 +1,6 @@
 import { useReadContracts } from 'wagmi';
 import { useMemo } from 'react';
-import type { Address, Abi } from 'viem';
+import type { Abi } from 'viem';
 import { getContractWithABI } from '../config/contractsWithABI';
 import type { ContractName } from '../config/contracts';
 import type { SupportedChainId } from '../types';
@@ -42,7 +42,7 @@ export function useContractBatchRead<T extends readonly unknown[]>({
       }
       
       return {
-        address: contract.address as Address,
+        address: contract.address as `0x${string}`,
         abi: contract.abi as Abi,
         functionName: read.functionName,
         args: read.args,
@@ -98,7 +98,7 @@ export function useContractBatchRead<T extends readonly unknown[]>({
 export function useERC20BatchRead(
   chainId: SupportedChainId,
   tokenName: ContractName,
-  addresses: readonly Address[]
+  addresses: readonly `0x${string}`[]
 ) {
   const reads = useMemo(() => {
     const baseReads: ContractRead[] = [

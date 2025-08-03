@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
-import { parseEther, type Address } from 'viem';
+import { parseEther } from 'viem';
 import { useQueryClient } from '@tanstack/react-query';
 import { getContractWithABI } from '../config/contractsWithABI';
 import { useTransactionWithProgress } from './useTransactionWithProgress';
@@ -17,9 +17,9 @@ import { logger } from '../utils/logger';
 
 export interface MarketListing {
     id: string;
-    seller: Address;
+    seller: `0x${string}`;
     nftType: NftType;
-    contractAddress: Address;
+    contractAddress: `0x${string}`;
     tokenId: bigint;
     price: bigint;
     status: 'active' | 'sold' | 'cancelled';
@@ -42,7 +42,7 @@ export const useApproveNFT = () => {
     const partyContract = getContractWithABI('PARTY');
     
     // 檢查授權狀態
-    const checkApproval = async (nftType: NftType, spender: Address): Promise<boolean> => {
+    const checkApproval = async (nftType: NftType, spender: `0x${string}`): Promise<boolean> => {
         if (!address) return false;
         
         try {
@@ -93,7 +93,7 @@ export const useApproveNFT = () => {
         }
     });
     
-    const executeApproval = async (nftType: NftType, spender: Address) => {
+    const executeApproval = async (nftType: NftType, spender: `0x${string}`) => {
         let contract;
         switch (nftType) {
             case 'hero':
@@ -144,7 +144,7 @@ export const useCreateListing = () => {
     const createListing = async (
         nft: HeroNft | RelicNft | PartyNft,
         price: bigint,
-        marketplaceAddress: Address
+        marketplaceAddress: `0x${string}`
     ): Promise<MarketListing> => {
         if (!address) {
             throw new Error('請先連接錢包');
@@ -257,7 +257,7 @@ export const usePurchaseItem = () => {
 // Section: Helper Functions
 // =================================================================
 
-const getContractAddress = (nftType: NftType): Address => {
+const getContractAddress = (nftType: NftType): `0x${string}` => {
     switch (nftType) {
         case 'hero':
             return getContractWithABI('HERO')?.address as Address;

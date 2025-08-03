@@ -3,7 +3,7 @@
 
 import { useState, useCallback } from 'react';
 import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
-import { parseUnits, type Address } from 'viem';
+import { parseUnits } from 'viem';
 import { useAppToast } from '../contexts/SimpleToastContext';
 // ✅ V25 Marketplace V2 restored with deployed contract addresses
 import { HERO, RELIC, PARTY } from '../config/contracts';
@@ -87,8 +87,8 @@ export function useMarketplaceV2() {
 
   // Check if NFT is approved for marketplace
   const checkNFTApproval = useCallback(async (
-    nftContract: Address,
-    owner: Address
+    nftContract: `0x${string}`,
+    owner: `0x${string}`
   ): Promise<boolean> => {
     if (!publicClient) {
       console.error('Public client not available');
@@ -110,9 +110,9 @@ export function useMarketplaceV2() {
 
   // Check token allowance
   const checkTokenAllowance = useCallback(async (
-    tokenAddress: Address,
-    owner: Address,
-    spender: Address
+    tokenAddress: `0x${string}`,
+    owner: `0x${string}`,
+    spender: `0x${string}`
   ): Promise<bigint> => {
     if (!publicClient) {
       console.error('Public client not available');
@@ -134,8 +134,8 @@ export function useMarketplaceV2() {
 
   // Check token balance
   const checkTokenBalance = useCallback(async (
-    tokenAddress: Address,
-    owner: Address
+    tokenAddress: `0x${string}`,
+    owner: `0x${string}`
   ): Promise<bigint> => {
     if (!publicClient) {
       console.error('Public client not available');
@@ -156,7 +156,7 @@ export function useMarketplaceV2() {
   }, [publicClient]);
 
   // Approve NFT for marketplace
-  const approveNFT = useCallback(async (nftContract: Address) => {
+  const approveNFT = useCallback(async (nftContract: `0x${string}`) => {
     if (!address) {
       showToast('請先連接錢包', 'error');
       return false;
@@ -197,7 +197,7 @@ export function useMarketplaceV2() {
 
   // Approve token for spending
   const approveToken = useCallback(async (
-    tokenAddress: Address,
+    tokenAddress: `0x${string}`,
     amount: bigint
   ) => {
     if (!address) {

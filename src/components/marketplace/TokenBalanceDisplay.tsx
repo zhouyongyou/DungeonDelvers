@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { useAccount, useReadContract } from 'wagmi';
-import { formatUnits, type Address } from 'viem';
+import { formatUnits } from 'viem';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { SUPPORTED_STABLECOINS } from '../../config/marketplace';
 import type { StablecoinSymbol } from '../../hooks/useMarketplaceV2Contract';
@@ -58,7 +58,7 @@ export const TokenBalanceDisplay: React.FC<TokenBalanceDisplayProps> = ({
 };
 
 // 默認視圖
-const DefaultBalanceView: React.FC<{ address: Address; tokens: StablecoinSymbol[] }> = ({
+const DefaultBalanceView: React.FC<{ address: `0x${string}`; tokens: StablecoinSymbol[] }> = ({
     address,
     tokens
 }) => {
@@ -73,7 +73,7 @@ const DefaultBalanceView: React.FC<{ address: Address; tokens: StablecoinSymbol[
 };
 
 // 緊湊視圖
-const CompactBalanceView: React.FC<{ address: Address; tokens: StablecoinSymbol[] }> = ({
+const CompactBalanceView: React.FC<{ address: `0x${string}`; tokens: StablecoinSymbol[] }> = ({
     address,
     tokens
 }) => {
@@ -87,7 +87,7 @@ const CompactBalanceView: React.FC<{ address: Address; tokens: StablecoinSymbol[
 };
 
 // 詳細視圖
-const DetailedBalanceView: React.FC<{ address: Address; tokens: StablecoinSymbol[] }> = ({
+const DetailedBalanceView: React.FC<{ address: `0x${string}`; tokens: StablecoinSymbol[] }> = ({
     address,
     tokens
 }) => {
@@ -107,7 +107,7 @@ const DetailedBalanceView: React.FC<{ address: Address; tokens: StablecoinSymbol
 };
 
 // 單個代幣餘額項目（默認）
-const TokenBalanceItem: React.FC<{ address: Address; symbol: StablecoinSymbol }> = ({
+const TokenBalanceItem: React.FC<{ address: `0x${string}`; symbol: StablecoinSymbol }> = ({
     address,
     symbol
 }) => {
@@ -167,7 +167,7 @@ const TokenBalanceItem: React.FC<{ address: Address; symbol: StablecoinSymbol }>
 };
 
 // 緊湊版代幣餘額
-const CompactTokenBalance: React.FC<{ address: Address; symbol: StablecoinSymbol }> = ({
+const CompactTokenBalance: React.FC<{ address: `0x${string}`; symbol: StablecoinSymbol }> = ({
     address,
     symbol
 }) => {
@@ -211,7 +211,7 @@ const CompactTokenBalance: React.FC<{ address: Address; symbol: StablecoinSymbol
 };
 
 // 詳細版代幣餘額
-const DetailedTokenBalance: React.FC<{ address: Address; symbol: StablecoinSymbol }> = ({
+const DetailedTokenBalance: React.FC<{ address: `0x${string}`; symbol: StablecoinSymbol }> = ({
     address,
     symbol
 }) => {
@@ -289,7 +289,7 @@ const DetailedTokenBalance: React.FC<{ address: Address; symbol: StablecoinSymbo
 };
 
 // 導出 Hook 用於單個代幣餘額查詢
-export const useTokenBalance = (tokenSymbol: StablecoinSymbol, userAddress?: Address) => {
+export const useTokenBalance = (tokenSymbol: StablecoinSymbol, userAddress?: `0x${string}`) => {
     const { address } = useAccount();
     const targetAddress = userAddress || address;
     const tokenInfo = SUPPORTED_STABLECOINS[tokenSymbol];

@@ -37,6 +37,7 @@ import { AltarNftAuthManager } from '../components/altar/AltarNftAuthManager';
 import { AltarNftSelector } from '../components/altar/AltarNftSelector';
 import { useVipStatus } from '../hooks/useVipStatus';
 import { AltarPagePreview } from '../components/altar/AltarPagePreview';
+import { AltarRevealStatus } from '../components/altar/AltarRevealStatus';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取 Hooks

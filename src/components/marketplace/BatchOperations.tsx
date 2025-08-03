@@ -4,7 +4,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAccount } from 'wagmi';
-import type { Address } from 'viem';
 import { Icons } from '../ui/icons';
 import { ActionButton } from '../ui/ActionButton';
 import { LoadingSpinner } from '../ui/LoadingSpinner';

@@ -10,7 +10,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ActionButton } from '../components/ui/ActionButton';
 import type { Page } from '../types/page';
 import { bsc } from 'wagmi/chains';
-import { isAddress, type Address } from 'viem';
+import { isAddress } from 'viem';
 import { logger } from '../utils/logger';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import { generateProfileSVG, type ProfileData } from '../utils/svgGenerators';
@@ -66,7 +66,7 @@ const useTargetAddress = () => {
 };
 
 // ★ 核心改造：新的 Hook，用於獲取玩家檔案數據
-const usePlayerProfile = (targetAddress: Address | undefined) => {
+const usePlayerProfile = (targetAddress: `0x${string}` | undefined) => {
     const { chainId } = useAccount();
     const playerProfileContract = getContract('PLAYERPROFILE');
 

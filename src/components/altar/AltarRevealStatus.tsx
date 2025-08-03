@@ -1,11 +1,10 @@
 import React from 'react';
-import { Address } from 'viem';
 import { useAltarReveal } from '../../hooks/useAltarReveal';
 import { useCountdown } from '../../hooks/useCountdown';
 import { ActionButton } from '../ui/ActionButton';
 
 interface AltarRevealStatusProps {
-  userAddress?: Address;
+  userAddress?: `0x${string}`;
   className?: string;
 }
 

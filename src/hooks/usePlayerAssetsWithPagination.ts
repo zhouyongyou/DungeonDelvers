@@ -2,7 +2,6 @@
 // 支援分頁查詢的玩家資產 Hook
 
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-import { type Address } from 'viem';
 import { THE_GRAPH_API_URL } from '../config/graphConfig';
 import { graphQLRateLimiter } from '../utils/rateLimiter';
 import { logger } from '../utils/logger';
@@ -97,7 +96,7 @@ interface AssetStats {
 /**
  * 獲取玩家資產統計數據
  */
-export const usePlayerAssetStats = (address?: Address) => {
+export const usePlayerAssetStats = (address?: `0x${string}`) => {
   return useQuery({
     queryKey: ['playerAssetStats', address],
     queryFn: async () => {
@@ -176,7 +175,7 @@ async function fetchAllAssets<T>(
 /**
  * 獲取玩家的所有英雄（支援超過 100 個）
  */
-export const useAllPlayerHeroes = (address?: Address) => {
+export const useAllPlayerHeroes = (address?: `0x${string}`) => {
   return useQuery({
     queryKey: ['allPlayerHeroes', address],
     queryFn: async () => {
@@ -191,7 +190,7 @@ export const useAllPlayerHeroes = (address?: Address) => {
 /**
  * 獲取玩家的所有聖物（支援超過 100 個）
  */
-export const useAllPlayerRelics = (address?: Address) => {
+export const useAllPlayerRelics = (address?: `0x${string}`) => {
   return useQuery({
     queryKey: ['allPlayerRelics', address],
     queryFn: async () => {
@@ -206,7 +205,7 @@ export const useAllPlayerRelics = (address?: Address) => {
 /**
  * 獲取玩家的所有隊伍（支援超過 100 個）
  */
-export const useAllPlayerParties = (address?: Address) => {
+export const useAllPlayerParties = (address?: `0x${string}`) => {
   return useQuery({
     queryKey: ['allPlayerParties', address],
     queryFn: async () => {
@@ -222,7 +221,7 @@ export const useAllPlayerParties = (address?: Address) => {
  * 使用無限查詢來實現虛擬滾動（適用於 UI 展示）
  */
 export const useInfinitePlayerAssets = (
-  address?: Address,
+  address?: `0x${string}`,
   assetType: 'heros' | 'relics' | 'parties' = 'heros'
 ) => {
   const queryMap = {

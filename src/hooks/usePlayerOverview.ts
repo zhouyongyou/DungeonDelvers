@@ -3,7 +3,6 @@
 // TODO: 考慮遷移到新的 Apollo Client 智能端點系統以獲得更好的性能
 
 import { useQuery } from '@tanstack/react-query';
-import { type Address } from 'viem';
 import { THE_GRAPH_API_URL } from '../config/graphConfig';
 import { graphQLRateLimiter } from '../utils/rateLimiter';
 import { logger } from '../utils/logger';
@@ -86,7 +85,7 @@ const GET_PLAYER_OVERVIEW_QUERY = `
   }
 `;
 
-export const usePlayerOverview = (address?: Address) => {
+export const usePlayerOverview = (address?: `0x${string}`) => {
     const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ['playerOverview', address],
         queryFn: async () => {

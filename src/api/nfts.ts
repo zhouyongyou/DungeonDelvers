@@ -1,6 +1,6 @@
 // src/api/nfts.ts (TypeScript 錯誤修正版)
 
-import { createPublicClient, http, type Address } from 'viem';
+import { createPublicClient, http } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { Buffer } from 'buffer';
 import { getContractWithABI } from '../config/contractsWithABI.js';
@@ -735,7 +735,7 @@ async function parseNfts<T extends AssetWithTokenId>(
     return results.filter(Boolean) as Array<HeroNft | RelicNft | PartyNft | VipNft>;
 }
 
-export async function fetchAllOwnedNfts(owner: Address, chainId: number): Promise<AllNftCollections> {
+export async function fetchAllOwnedNfts(owner: `0x${string}`, chainId: number): Promise<AllNftCollections> {
     const emptyResult: AllNftCollections = { heros: [], relics: [], parties: [], vipCards: [] };
     
     if (!isSupportedChain(chainId)) {

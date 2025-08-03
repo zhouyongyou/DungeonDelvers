@@ -6,7 +6,6 @@ import { useQuery } from '@tanstack/react-query';
 import { getContractWithABI } from '../config/contractsWithABI';
 import { bsc } from 'wagmi/chains';
 import type { HeroNft, RelicNft, PartyNft, NftType } from '../types/nft';
-import { type Address } from 'viem';
 
 // =================================================================
 // Section: NFT Power Hooks
@@ -17,7 +16,7 @@ export const useHeroPower = (tokenId: bigint) => {
     const heroContract = getContractWithABI('HERO');
     
     const { data, isLoading, isError } = useReadContract({
-        address: heroContract?.address as Address,
+        address: heroContract?.address as `0x${string}`,
         abi: heroContract?.abi,
         functionName: 'getHeroPower',
         args: [tokenId],
@@ -40,7 +39,7 @@ export const usePartyPower = (tokenId: bigint) => {
     const partyContract = getContractWithABI('PARTY');
     
     const { data, isLoading, isError } = useReadContract({
-        address: partyContract?.address as Address,
+        address: partyContract?.address as `0x${string}`,
         abi: partyContract?.abi,
         functionName: 'getPartyPower',
         args: [tokenId],
@@ -65,35 +64,35 @@ export const useHeroDetails = (tokenId: bigint) => {
     const { data, isLoading, isError } = useReadContracts({
         contracts: [
             {
-                address: heroContract?.address as Address,
+                address: heroContract?.address as `0x${string}`,
                 abi: heroContract?.abi,
                 functionName: 'getHeroPower',
                 args: [tokenId],
                 chainId: bsc.id,
             },
             {
-                address: heroContract?.address as Address,
+                address: heroContract?.address as `0x${string}`,
                 abi: heroContract?.abi,
                 functionName: 'getTier',
                 args: [tokenId],
                 chainId: bsc.id,
             },
             {
-                address: heroContract?.address as Address,
+                address: heroContract?.address as `0x${string}`,
                 abi: heroContract?.abi,
                 functionName: 'getLevel',
                 args: [tokenId],
                 chainId: bsc.id,
             },
             {
-                address: heroContract?.address as Address,
+                address: heroContract?.address as `0x${string}`,
                 abi: heroContract?.abi,
                 functionName: 'getElement',
                 args: [tokenId],
                 chainId: bsc.id,
             },
             {
-                address: heroContract?.address as Address,
+                address: heroContract?.address as `0x${string}`,
                 abi: heroContract?.abi,
                 functionName: 'getClass',
                 args: [tokenId],
@@ -171,21 +170,21 @@ export const usePartyDetails = (tokenId: bigint) => {
     const { data, isLoading, isError } = useReadContracts({
         contracts: [
             {
-                address: partyContract?.address as Address,
+                address: partyContract?.address as `0x${string}`,
                 abi: partyContract?.abi,
                 functionName: 'getPartyPower',
                 args: [tokenId],
                 chainId: bsc.id,
             },
             {
-                address: partyContract?.address as Address,
+                address: partyContract?.address as `0x${string}`,
                 abi: partyContract?.abi,
                 functionName: 'getPartyHeroes',
                 args: [tokenId],
                 chainId: bsc.id,
             },
             {
-                address: partyContract?.address as Address,
+                address: partyContract?.address as `0x${string}`,
                 abi: partyContract?.abi,
                 functionName: 'getPartyRelics',
                 args: [tokenId],

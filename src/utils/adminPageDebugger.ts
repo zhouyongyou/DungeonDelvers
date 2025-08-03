@@ -3,7 +3,6 @@
 import { logger } from './logger';
 import { getContract } from '../config/contracts';
 import { bsc } from 'wagmi/chains';
-import type { Address } from 'viem';
 
 export class AdminPageDebugger {
   // 診斷合約配置
@@ -167,7 +166,7 @@ export class AdminPageDebugger {
   }
   
   // 診斷權限問題
-  static async diagnosePermissions(address: Address | undefined, ownerAddress: Address | undefined) {
+  static async diagnosePermissions(address: `0x${string}` | undefined, ownerAddress: `0x${string}` | undefined) {
     logger.info('=== 診斷權限 ===');
     
     if (!address) {
@@ -238,8 +237,8 @@ export class AdminPageDebugger {
   static runFullDiagnostics(
     chainId: number | undefined,
     contractsToRead: any[],
-    address: Address | undefined,
-    ownerAddress: Address | undefined
+    address: `0x${string}` | undefined,
+    ownerAddress: `0x${string}` | undefined
   ) {
     logger.info('');
     logger.info('========================================');

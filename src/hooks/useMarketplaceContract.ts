@@ -3,7 +3,7 @@
 
 import { useState, useCallback } from 'react';
 import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from 'wagmi';
-import { parseEther, type Address } from 'viem';
+import { parseEther } from 'viem';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { DUNGEONMARKETPLACE, OFFERSYSTEM, SOULSHARD } from '../config/contracts';
 import type { HeroNft, RelicNft, PartyNft, NftType } from '../types/nft';
@@ -171,14 +171,14 @@ const NFT_ABI = [
 ] as const;
 
 // Helper function to get NFT contract address
-function getNftContractAddress(nftType: NftType): Address {
+function getNftContractAddress(nftType: NftType): `0x${string}` {
     switch (nftType) {
         case 'hero':
-            return (getContractWithABI('HERO')?.address || '') as Address;
+            return (getContractWithABI('HERO')?.address || '') as `0x${string}`;
         case 'relic':
-            return (getContractWithABI('RELIC')?.address || '') as Address;
+            return (getContractWithABI('RELIC')?.address || '') as `0x${string}`;
         case 'party':
-            return (getContractWithABI('PARTY')?.address || '') as Address;
+            return (getContractWithABI('PARTY')?.address || '') as `0x${string}`;
         default:
             throw new Error(`Unknown NFT type: ${nftType}`);
     }
@@ -219,7 +219,7 @@ export const useMarketplaceContract = () => {
 
         try {
             await writeContract({
-                address: DUNGEONMARKETPLACE as Address,
+                address: DUNGEONMARKETPLACE as `0x${string}`,
                 abi: MARKETPLACE_ABI,
                 functionName: 'createListing',
                 args: [nftTypeEnum, nftContract, nft.tokenId, price],
@@ -236,7 +236,7 @@ export const useMarketplaceContract = () => {
 
         try {
             await writeContract({
-                address: DUNGEONMARKETPLACE as Address,
+                address: DUNGEONMARKETPLACE as `0x${string}`,
                 abi: MARKETPLACE_ABI,
                 functionName: 'purchaseNFT',
                 args: [listingId],
@@ -253,7 +253,7 @@ export const useMarketplaceContract = () => {
 
         try {
             await writeContract({
-                address: DUNGEONMARKETPLACE as Address,
+                address: DUNGEONMARKETPLACE as `0x${string}`,
                 abi: MARKETPLACE_ABI,
                 functionName: 'cancelListing',
                 args: [listingId],
@@ -270,7 +270,7 @@ export const useMarketplaceContract = () => {
 
         try {
             await writeContract({
-                address: DUNGEONMARKETPLACE as Address,
+                address: DUNGEONMARKETPLACE as `0x${string}`,
                 abi: MARKETPLACE_ABI,
                 functionName: 'updateListingPrice',
                 args: [listingId, newPrice],
@@ -304,7 +304,7 @@ export const useOfferSystemContract = () => {
 
     // Make offer
     const makeOffer = useCallback(async (
-        seller: Address,
+        seller: `0x${string}`,
         nftType: NftType,
         tokenId: bigint,
         amount: bigint,

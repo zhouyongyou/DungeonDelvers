@@ -1,11 +1,10 @@
 import React from 'react';
-import { Address } from 'viem';
 import { useDungeonReveal } from '../../hooks/useDungeonReveal';
 import { useCountdown } from '../../hooks/useCountdown';
 import { ActionButton } from '../ui/ActionButton';
 
 interface DungeonRevealStatusProps {
-  userAddress?: Address;
+  userAddress?: `0x${string}`;
   className?: string;
 }
 

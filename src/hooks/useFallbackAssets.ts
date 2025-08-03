@@ -1,12 +1,11 @@
 // 備用直接合約查詢，當子圖延遲時使用
 import { useReadContracts } from 'wagmi';
-import { type Address } from 'viem';
 import { getContractWithABI } from '../config/contractsWithABI';
 import { bsc } from 'wagmi/chains';
 
 // 🔒 管理員專用：智能備用策略，只在子圖數據過期時使用
 // ⚠️ 警告：此 Hook 僅供技術人員使用，不應暴露給一般用戶
-export const useFallbackAssets = (address?: Address, shouldUseFallback = false) => {
+export const useFallbackAssets = (address?: `0x${string}`, shouldUseFallback = false) => {
   const heroContract = getContractWithABI('HERO');
   const relicContract = getContractWithABI('RELIC');
   const partyContract = getContractWithABI('PARTY');

@@ -93,7 +93,7 @@ export function useMarketplaceV2Fixed() {
 
   // Safe contract read helper
   const safeReadContract = useCallback(async <T,>(
-    contractAddress: Address,
+    contractAddress: `0x${string}`,
     abi: any,
     functionName: string,
     args?: any[]
@@ -119,8 +119,8 @@ export function useMarketplaceV2Fixed() {
 
   // Check if NFT is approved for marketplace
   const checkNFTApproval = useCallback(async (
-    nftContract: Address,
-    owner: Address
+    nftContract: `0x${string}`,
+    owner: `0x${string}`
   ): Promise<boolean> => {
     const result = await safeReadContract<boolean>(
       nftContract,
@@ -133,9 +133,9 @@ export function useMarketplaceV2Fixed() {
 
   // Check token allowance
   const checkTokenAllowance = useCallback(async (
-    tokenAddress: Address,
-    owner: Address,
-    spender: Address
+    tokenAddress: `0x${string}`,
+    owner: `0x${string}`,
+    spender: `0x${string}`
   ): Promise<bigint> => {
     const result = await safeReadContract<bigint>(
       tokenAddress,
@@ -148,8 +148,8 @@ export function useMarketplaceV2Fixed() {
 
   // Check token balance
   const checkTokenBalance = useCallback(async (
-    tokenAddress: Address,
-    owner: Address
+    tokenAddress: `0x${string}`,
+    owner: `0x${string}`
   ): Promise<bigint> => {
     const result = await safeReadContract<bigint>(
       tokenAddress,
@@ -179,7 +179,7 @@ export function useMarketplaceV2Fixed() {
   }, [publicClient]);
 
   // Approve NFT for marketplace
-  const approveNFT = useCallback(async (nftContract: Address) => {
+  const approveNFT = useCallback(async (nftContract: `0x${string}`) => {
     if (!address) {
       showToast('請先連接錢包', 'error');
       return false;
@@ -216,7 +216,7 @@ export function useMarketplaceV2Fixed() {
 
   // Approve token for spending
   const approveToken = useCallback(async (
-    tokenAddress: Address,
+    tokenAddress: `0x${string}`,
     amount: bigint
   ) => {
     if (!address) {

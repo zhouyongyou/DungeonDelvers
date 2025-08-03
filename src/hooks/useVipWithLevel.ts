@@ -2,12 +2,11 @@
 // 混合數據源獲取 VIP 信息：子圖 + 合約
 
 import { useReadContract } from 'wagmi';
-import type { Address } from 'viem';
 import { getContractWithABI } from '../config/contractsWithABI';
 import type { VipNft } from '../types/nft';
 
 interface UseVipWithLevelProps {
-  address?: Address;
+  address?: `0x${string}`;
   vipData?: VipNft; // 來自子圖的基本 VIP 數據
   chainId?: number;
 }
@@ -36,7 +35,7 @@ export function useVipWithLevel({
     isLoading: isLevelLoading, 
     error: levelError 
   } = useReadContract({
-    address: vipContract?.address as Address,
+    address: vipContract?.address as `0x${string}`,
     abi: vipContract?.abi,
     functionName: 'getVipLevel',
     args: address ? [address] : undefined,
@@ -80,7 +79,7 @@ export function useVipWithLevel({
  */
 export function useMultipleVipWithLevel(
   vipNfts: VipNft[], 
-  ownerAddress?: Address
+  ownerAddress?: `0x${string}`
 ): VipWithLevel[] {
   // 對於多個 VIP（理論上每個用戶只有一個），可以考慮批量調用
   // 但目前簡化為單個處理

@@ -1,5 +1,4 @@
 import React from 'react';
-import type { Address } from 'viem';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ActionButton } from '../ui/ActionButton';
 
@@ -7,8 +6,8 @@ interface AddressSettingRowProps {
   title: string;
   description: string;
   readSource: string;
-  currentAddress?: Address;
-  envAddress?: Address;
+  currentAddress?: `0x${string}`;
+  envAddress?: `0x${string}`;
   envContractName?: string;
   isLoading: boolean;
   inputValue: string;

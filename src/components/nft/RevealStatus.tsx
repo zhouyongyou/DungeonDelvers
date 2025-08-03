@@ -1,12 +1,11 @@
 import React from 'react';
-import { Address } from 'viem';
 import { useCommitReveal } from '../../hooks/useCommitReveal';
 import { useCountdown } from '../../hooks/useCountdown';
 import { ActionButton } from '../ui/ActionButton';
 
 interface RevealStatusProps {
   contractType: 'hero' | 'relic';
-  userAddress?: Address;
+  userAddress?: `0x${string}`;
   className?: string;
 }
 

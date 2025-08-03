@@ -2,7 +2,6 @@
 // 獲取未分配到隊伍的英雄和聖物數量
 
 import { useQuery } from '@tanstack/react-query';
-import { type Address } from 'viem';
 import { THE_GRAPH_API_URL } from '../config/graphConfig';
 import { graphQLRateLimiter } from '../utils/rateLimiter';
 import { logger } from '../utils/logger';
@@ -45,7 +44,7 @@ interface UnassignedAssets {
 /**
  * 計算未分配到隊伍的資產數量
  */
-export const useUnassignedAssets = (address?: Address) => {
+export const useUnassignedAssets = (address?: `0x${string}`) => {
   return useQuery({
     queryKey: ['unassignedAssets', address],
     queryFn: async (): Promise<UnassignedAssets> => {

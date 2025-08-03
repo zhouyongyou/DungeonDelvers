@@ -1,7 +1,6 @@
 // AddressSettingRowDark.tsx - 深色模式版本
 
 import React from 'react';
-import type { Address } from 'viem';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ActionButton } from '../ui/ActionButton';
 import { useAppToast } from '../../hooks/useAppToast';
@@ -11,8 +10,8 @@ interface AddressSettingRowProps {
   title: string;
   description: string;
   readSource: string;
-  currentAddress?: Address;
-  envAddress?: Address;
+  currentAddress?: `0x${string}`;
+  envAddress?: `0x${string}`;
   envContractName?: string;
   isLoading: boolean;
   inputValue: string;

@@ -1,6 +1,6 @@
 // src/utils/vipTesting.ts - VIP功能測試工具
 
-import { createPublicClient, http, type Address } from 'viem';
+import { createPublicClient, http } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { getContractWithABI } from '../config/contractsWithABI';
 import { logger } from './logger';
@@ -32,7 +32,7 @@ export class VipTester {
             const userStakes = await this.client.readContract({
                 ...vipContract,
                 functionName: 'userStakes',
-                args: [address as Address]
+                args: [address as `0x${string}`]
             });
 
             // 3. 測試 getVipLevel 函數
@@ -40,7 +40,7 @@ export class VipTester {
             const vipLevel = await this.client.readContract({
                 ...vipContract,
                 functionName: 'getVipLevel',
-                args: [address as Address]
+                args: [address as `0x${string}`]
             });
 
             // 4. 測試 getVipTaxReduction 函數
@@ -48,7 +48,7 @@ export class VipTester {
             const taxReduction = await this.client.readContract({
                 ...vipContract,
                 functionName: 'getVipTaxReduction',
-                args: [address as Address]
+                args: [address as `0x${string}`]
             });
 
             // 5. 測試 unstakeQueue 函數
@@ -56,7 +56,7 @@ export class VipTester {
             const unstakeQueue = await this.client.readContract({
                 ...vipContract,
                 functionName: 'unstakeQueue',
-                args: [address as Address]
+                args: [address as `0x${string}`]
             });
 
             const result = {
@@ -99,7 +99,7 @@ export class VipTester {
             const balance = await this.client.readContract({
                 ...soulShardContract,
                 functionName: 'balanceOf',
-                args: [address as Address]
+                args: [address as `0x${string}`]
             });
 
             return balance;

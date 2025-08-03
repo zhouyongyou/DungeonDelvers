@@ -2,7 +2,6 @@
 // 增強版 NFT 數據獲取，整合子圖和合約數據
 
 import { useMemo } from 'react';
-import type { Address } from 'viem';
 import { useReadContract } from 'wagmi';
 import { fetchAllOwnedNfts } from '../api/nfts';
 import { useVipWithLevel } from './useVipWithLevel';
@@ -12,7 +11,7 @@ import { getContractWithABI } from '../config/contractsWithABI';
 import type { AllNftCollections, VipNft } from '../types/nft';
 
 interface UseEnhancedNftsProps {
-  owner?: Address;
+  owner?: `0x${string}`;
   chainId?: number;
 }
 
@@ -80,7 +79,7 @@ export function useEnhancedNfts({ owner, chainId }: UseEnhancedNftsProps) {
 /**
  * 簡化版本：只獲取 VIP 等級（用於其他組件）
  */
-export function useVipLevel(address?: Address) {
+export function useVipLevel(address?: `0x${string}`) {
   const vipContract = useReadContract({
     address: getContractWithABI('VIPSTAKING')?.address as Address,
     abi: getContractWithABI('VIPSTAKING')?.abi,

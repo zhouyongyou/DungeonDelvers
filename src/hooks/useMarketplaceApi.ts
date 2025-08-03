@@ -4,7 +4,7 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAccount } from 'wagmi';
-import { parseEther, type Address } from 'viem';
+import { parseEther } from 'viem';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { marketplaceApi, type ApiMarketListing, type CreateListingRequest } from '../services/marketplaceApi';
 import type { HeroNft, RelicNft, PartyNft, NftType } from '../types/nft';
@@ -69,7 +69,7 @@ export const useCreateListingApi = () => {
     const createListing = useCallback(async (
         nft: HeroNft | RelicNft | PartyNft,
         price: bigint,
-        marketplaceAddress: Address
+        marketplaceAddress: `0x${string}`
     ) => {
         if (!address) throw new Error('Wallet not connected');
         

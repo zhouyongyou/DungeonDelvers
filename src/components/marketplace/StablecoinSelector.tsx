@@ -7,13 +7,12 @@ import type { StablecoinSymbol } from '../../hooks/useMarketplaceV2Contract';
 import { useReadContract } from 'wagmi';
 import { formatUnits } from 'viem';
 import erc20Abi from '../../abis/ERC20.json';
-import type { Address } from 'viem';
 
 interface StablecoinSelectorProps {
   selectedTokens: StablecoinSymbol[];
   onToggle: (token: StablecoinSymbol) => void;
   mode: 'single' | 'multiple'; // single: 購買時選擇, multiple: 掛單時多選
-  address?: Address;
+  address?: `0x${string}`;
   disabled?: boolean;
 }
 
@@ -58,7 +57,7 @@ interface StablecoinOptionProps {
   selected: boolean;
   onToggle: (token: StablecoinSymbol) => void;
   mode: 'single' | 'multiple';
-  address?: Address;
+  address?: `0x${string}`;
   disabled?: boolean;
 }
 

@@ -1,7 +1,7 @@
 // src/utils/eventPolling.ts - 替代 Filter 的事件輪詢系統
 
 import { createPublicClient, http, parseAbiItem } from 'viem';
-import type { Log, Address } from 'viem';
+import type { Log } from 'viem';
 import { bsc } from 'viem/chains';
 import { logger } from './logger';
 import { getRpcEndpoint } from './rpcOptimizedMigration';
@@ -36,7 +36,7 @@ function parseEventSignature(eventString: string) {
 
 // 事件監聽配置
 interface EventConfig {
-  address: Address;
+  address: `0x${string}`;
   event: string;
   callback: (logs: Log[]) => void;
   enabled: boolean;
@@ -71,7 +71,7 @@ class EventPollingService {
    */
   registerEvent(
     eventId: string,
-    address: Address,
+    address: `0x${string}`,
     eventSignature: string,
     callback: (logs: Log[]) => void
   ) {
@@ -217,7 +217,7 @@ export const eventPollingService = new EventPollingService();
  */
 export function useEventPolling(
   eventId: string,
-  address: Address,
+  address: `0x${string}`,
   eventSignature: string,
   callback: (logs: Log[]) => void,
   enabled: boolean = true

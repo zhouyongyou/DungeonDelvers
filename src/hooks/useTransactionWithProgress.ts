@@ -5,10 +5,10 @@ import { useWriteContract, usePublicClient } from 'wagmi';
 import { useAppToast } from './useAppToast';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { logger } from '../utils/logger';
-import type { Abi, Address } from 'viem';
+import type { Abi } from 'viem';
 
 interface TransactionConfig {
-  address: Address;
+  address: `0x${string}`;
   abi: Abi;
   functionName: string;
   args?: any[];

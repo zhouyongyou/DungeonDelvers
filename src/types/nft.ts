@@ -5,7 +5,6 @@
  * 為不同種類的 NFT 提供強型別支援，讓前端程式碼更安全、更易於維護。
  */
 
-import { type Address } from 'viem';
 
 // 所有 NFT 的元數據中，屬性陣列的單個物件格式
 export interface NftAttribute {
@@ -21,7 +20,7 @@ export interface BaseNft {
   description: string;
   image: string;
   attributes: NftAttribute[];
-  contractAddress: Address;
+  contractAddress: `0x${string}`;
   /**
    * 資料來源：subgraph | metadata | fallback
    */

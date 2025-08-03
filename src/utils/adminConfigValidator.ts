@@ -1,6 +1,5 @@
 // src/utils/adminConfigValidator.ts - 管理員配置驗證器
 
-import { type Address } from 'viem';
 import { getContractWithABI } from '../config/contractsWithABI';
 import { logger } from './logger';
 

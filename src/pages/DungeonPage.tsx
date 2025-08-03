@@ -42,6 +42,7 @@ import { generatePartySVG } from '../utils/svgGenerators';
 import { useNftDisplayPreference } from '../hooks/useNftDisplayPreference';
 import { LazyImage } from '../components/ui/LazyImage';
 import { usePlayerVaultV4 } from '../hooks/usePlayerVaultV4';
+import { DungeonRevealStatus } from '../components/dungeon/DungeonRevealStatus';
 
 // RewardClaimButton 已移至統一的 RewardClaimSection 組件
 

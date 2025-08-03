@@ -5,7 +5,6 @@ import { useMemo } from 'react';
 import { useReadContracts, useAccount } from 'wagmi';
 import { getContractWithABI } from '../config/contractsWithABI';
 import { bsc } from 'wagmi/chains';
-import type { Address } from 'viem';
 
 interface PlayerVaultBatchData {
   standardInitialRate: bigint;
@@ -26,7 +25,7 @@ export function usePlayerVaultBatch() {
     if (!playerVaultContract || !address) return [];
 
     const baseContract = {
-      address: playerVaultContract.address as Address,
+      address: playerVaultContract.address as `0x${string}`,
       abi: playerVaultContract.abi,
       chainId: bsc.id,
     };
