@@ -94,7 +94,7 @@ export function useDungeonReveal(
   // Reveal function
   const reveal = useCallback(async () => {
     if (!address || !canReveal || !dungeonMasterContract) {
-      toast.error('無法揭示探險結果。請等待所需區塊。');
+      showToast('無法揭示探險結果。請等待所需區塊。', 'error');
       return;
     }
 
@@ -108,20 +108,20 @@ export function useDungeonReveal(
         functionName: 'revealExpedition',
       });
 
-      toast.success('正在揭示探險結果...');
+      showToast('正在揭示探險結果...', 'success');
     } catch (err) {
       const error = err as Error;
       setError(error);
-      toast.error(`揭示失敗: ${error.message}`);
+      showToast(`揭示失敗: ${error.message}`, 'error');
     } finally {
       setIsRevealing(false);
     }
-  }, [address, canReveal, dungeonMasterContract, writeContract]);
+  }, [address, canReveal, dungeonMasterContract, writeContract, showToast]);
 
   // Force reveal function (for expired expeditions)
   const forceReveal = useCallback(async (targetAddress: Address) => {
     if (!canForceReveal || !dungeonMasterContract) {
-      toast.error('無法強制揭示。揭示視窗尚未過期。');
+      showToast('無法強制揭示。揭示視窗尚未過期。', 'error');
       return;
     }
 
@@ -136,11 +136,11 @@ export function useDungeonReveal(
         args: [targetAddress],
       });
 
-      toast.success('正在強制揭示過期的探險...');
+      showToast('正在強制揭示過期的探險...', 'success');
     } catch (err) {
       const error = err as Error;
       setError(error);
-      toast.error(`強制揭示失敗: ${error.message}`);
+      showToast(`強制揭示失敗: ${error.message}`, 'error');
     } finally {
       setIsRevealing(false);
     }
@@ -163,11 +163,11 @@ export function useDungeonReveal(
         args: [targetAddress],
       });
 
-      toast.success('正在為用戶揭示探險結果...');
+      showToast('正在為用戶揭示探險結果...', 'success');
     } catch (err) {
       const error = err as Error;
       setError(error);
-      toast.error(`揭示失敗: ${error.message}`);
+      showToast(`揭示失敗: ${error.message}`, 'error');
     } finally {
       setIsRevealing(false);
     }
