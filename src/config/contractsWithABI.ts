@@ -1,5 +1,5 @@
 // V25 Contract Configuration with ABI
-// Generated on 2025-08-03T10:51:40.802Z
+// Generated on 2025-08-03T11:07:19.316Z
 // DO NOT EDIT MANUALLY - Use v25-sync-all.js to update
 
 import HeroABI from '../abis/Hero.json';
@@ -24,49 +24,49 @@ export const CONTRACTS_WITH_ABI = {
   56: { // BSC Mainnet
     // NFT Contracts
     HERO: {
-      address: '0x5d71d62fAFd07C92ec677C3Ae57984576f5955f0',
+      address: '0x001b7462B0f1Ab832c017a6f09133932Be140b18',
       abi: HeroABI
     },
     RELIC: {
-      address: '0x5f93fCdb2ecd1A0eB758E554bfeB3A2B95581366',
+      address: '0xdd8E52cD1d248D04C306c038780315a03866B402',
       abi: RelicABI
     },
     PARTY: {
-      address: '0x6B32c2EEaB24C04bF97A022B1e55943FE1E772a5',
+      address: '0x382024850E08AB37E290315fc5f3692b8D6646EB',
       abi: PartyABI
     },
     
     // Core Contracts
     DUNGEONCORE: {
-      address: '0x8a2D2b1961135127228EdD71Ff98d6B097915a13',
+      address: '0x2953ed03825b40e9c1EBa1cAe5FBD47f20A4823d',
       abi: DungeonCoreABI
     },
     DUNGEONMASTER: {
-      address: '0x446f80c6562a9b0A33b48F74F7Dbf10b53Fe2703',
+      address: '0x9e17c01A610618223d49D64E322DC1b6360E4E8D',
       abi: DungeonMasterABI
     },
     PLAYERPROFILE: {
-      address: '0xCf352E394fD2Ff27D65bB525C032a2c03Bd79AC7',
+      address: '0x481ABDF19E41Bf2cE84075174675626aa027fE82',
       abi: PlayerProfileABI
     },
     VIPSTAKING: {
-      address: '0x186a89e5418645459ed0a469FF97C9d4B2ca5355',
+      address: '0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C',
       abi: VIPStakingABI
     },
     ORACLE: {
-      address: '0x67989939163bCFC57302767722E1988FFac46d64',
+      address: '0xdbf49cd5708C56b8b0848233b754b418806D7018',
       abi: OracleABI
     },
     ALTAROFASCENSION: {
-      address: '0xaA4f3D3ed21599F501773F83a1A2B4d65b1d0AE3',
+      address: '0xB102a57eD4697f7A721541fd7B0bba8D6bdF63a5',
       abi: AltarOfAscensionABI
     },
     PLAYERVAULT: {
-      address: '0x39523e8eeB6c54fCe65D62ec696cA5ad888eF25c',
+      address: '0x7085b353f553225B6001Ba23ECCb39611fBa31Bf',
       abi: PlayerVaultABI
     },
     DUNGEONSTORAGE: {
-      address: '0x88EF98E7F9095610d7762C30165854f271525B97',
+      address: '0x22bbcF5411c991A5DE7774Ace435DcBF69EF0a8a',
       abi: DungeonStorageABI
     },
     
@@ -145,5 +145,5 @@ export const CONTRACT_INFO = {
   version: CONTRACT_VERSION,
   network: "BSC Mainnet",
   deploymentBlock: 56184733,
-  lastUpdated: "2025-08-03T10:51:40.802Z"
+  lastUpdated: "2025-08-03T11:07:19.316Z"
 };

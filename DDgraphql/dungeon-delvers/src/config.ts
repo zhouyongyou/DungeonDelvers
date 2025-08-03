@@ -2,7 +2,7 @@
 // 🎯 單一來源配置管理 - 只依賴 subgraph.yaml
 // ⚠️ 此文件由腳本自動生成，請勿手動編輯！
 // 🔄 更新方式：修改 subgraph.yaml 後運行 npm run sync-addresses
-// 🤖 最後同步: 2025/8/3 下午6:51:40
+// 🤖 最後同步: 2025/8/3 下午7:07:19
 
 import { dataSource } from "@graphprotocol/graph-ts"
 
@@ -14,16 +14,16 @@ import { dataSource } from "@graphprotocol/graph-ts"
  * 2. 運行 v25-sync-all.js 腳本自動同步
  * 
  * 📋 地址來源：V25 配置文件
- * 🕒 最後同步時間：2025/8/3 下午6:51:40
+ * 🕒 最後同步時間：2025/8/3 下午7:07:19
  */
 
 // 合約地址常量 (自動從 V25 配置同步)
-const HERO_ADDRESS = "0x5d71d62fAFd07C92ec677C3Ae57984576f5955f0"
-const RELIC_ADDRESS = "0x5f93fCdb2ecd1A0eB758E554bfeB3A2B95581366"
-const PARTY_V3_ADDRESS = "0x6B32c2EEaB24C04bF97A022B1e55943FE1E772a5"
-const V_I_P_STAKING_ADDRESS = "0x186a89e5418645459ed0a469FF97C9d4B2ca5355"
-const PLAYER_PROFILE_ADDRESS = "0xCf352E394fD2Ff27D65bB525C032a2c03Bd79AC7"
-const ALTAR_OF_ASCENSION_ADDRESS = "0xaA4f3D3ed21599F501773F83a1A2B4d65b1d0AE3"
+const HERO_ADDRESS = "0x001b7462B0f1Ab832c017a6f09133932Be140b18"
+const RELIC_ADDRESS = "0xdd8E52cD1d248D04C306c038780315a03866B402"
+const PARTY_V3_ADDRESS = "0x382024850E08AB37E290315fc5f3692b8D6646EB"
+const V_I_P_STAKING_ADDRESS = "0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C"
+const PLAYER_PROFILE_ADDRESS = "0x481ABDF19E41Bf2cE84075174675626aa027fE82"
+const ALTAR_OF_ASCENSION_ADDRESS = "0xB102a57eD4697f7A721541fd7B0bba8D6bdF63a5"
 
 // 導出函數來獲取各種合約地址
 export function getHeroContractAddress(): string {
