@@ -51,20 +51,48 @@ const RpcMonitoringPanel: React.FC = () => {
     try {
       // 根據環境決定 API 端點
       const isProduction = window.location.hostname !== 'localhost';
-      const apiUrl = isProduction 
-        ? '/api/rpc-optimized?health=true'
-        : 'https://dungeon-delvers.vercel.app/api/rpc-optimized?health=true';
       
+      // 本地開發時返回模擬數據
+      if (!isProduction) {
+        setHealthData({
+          status: 'development',
+          timestamp: new Date().toISOString(),
+          stats: {
+            cache: {
+              hits: 0,
+              misses: 0,
+              hitRate: '0%',
+              size: 0
+            },
+            rateLimiter: {
+              activeClients: 0
+            },
+            keyManager: {
+              totalKeys: 3,
+              keys: [
+                { index: 0, requests: 0, errors: 0, errorRate: '0%' },
+                { index: 1, requests: 0, errors: 0, errorRate: '0%' },
+                { index: 2, requests: 0, errors: 0, errorRate: '0%' }
+              ]
+            }
+          },
+          debug: {
+            url: 'localhost:5173',
+            method: 'LOCAL',
+            hasKeys: true
+          }
+        });
+        showToast('本地開發模式 - 顯示模擬數據', 'info');
+        return;
+      }
+      
+      const apiUrl = '/api/rpc-optimized?health=true';
       const response = await fetch(apiUrl);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       const data = await response.json();
       setHealthData(data);
-      
-      if (!isProduction) {
-        showToast('本地開發：已從 Vercel 生產環境獲取數據', 'info');
-      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '未知錯誤';
       setError(errorMessage);
@@ -88,9 +116,15 @@ const RpcMonitoringPanel: React.FC = () => {
     setIsLoading(true);
     try {
       const isProduction = window.location.hostname !== 'localhost';
-      const apiUrl = isProduction 
-        ? '/api/rpc-optimized'
-        : 'https://dungeon-delvers.vercel.app/api/rpc-optimized';
+      
+      // 本地開發時跳過 RPC 測試
+      if (!isProduction) {
+        showToast('本地開發模式 - RPC 測試已禁用', 'info');
+        setIsLoading(false);
+        return;
+      }
+      
+      const apiUrl = '/api/rpc-optimized';
       
       const startTime = Date.now();
       const response = await fetch(apiUrl, {
