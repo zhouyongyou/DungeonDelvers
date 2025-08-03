@@ -93,7 +93,7 @@ export function useAltarReveal(
   // Reveal function
   const reveal = useCallback(async () => {
     if (!address || !canReveal || !altarContract) {
-      toast.error('無法揭示升級結果。請等待所需區塊。');
+      showToast('無法揭示升級結果。請等待所需區塊。', 'error');
       return;
     }
 
@@ -107,11 +107,11 @@ export function useAltarReveal(
         functionName: 'revealUpgrade',
       });
 
-      toast.success('正在揭示升級結果...');
+      showToast('正在揭示升級結果...', 'success');
     } catch (err) {
       const error = err as Error;
       setError(error);
-      toast.error(`揭示失敗: ${error.message}`);
+      showToast(`揭示失敗: ${error.message}`, 'error');
     } finally {
       setIsRevealing(false);
     }
@@ -120,7 +120,7 @@ export function useAltarReveal(
   // Force reveal function (for expired upgrades)
   const forceReveal = useCallback(async (targetAddress: Address) => {
     if (!canForceReveal || !altarContract) {
-      toast.error('無法強制揭示。揭示視窗尚未過期。');
+      showToast('無法強制揭示。揭示視窗尚未過期。', 'error');
       return;
     }
 
