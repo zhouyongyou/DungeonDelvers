@@ -77,40 +77,59 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
     }));
   };
 
+  const validateRule = (inputs: any) => {
+    const totalChance = Number(inputs.greatSuccessChance) + 
+                       Number(inputs.successChance) + 
+                       Number(inputs.partialFailChance);
+    
+    if (totalChance > 100) {
+      throw new Error(`總機率不能超過 100%（當前：${totalChance}%）`);
+    }
+    
+    if (Number(inputs.materialsRequired) < 1) {
+      throw new Error('材料數量必須至少為 1');
+    }
+    
+    if (Number(inputs.nativeFee) < 0) {
+      throw new Error('費用不能為負數');
+    }
+    
+    if (Number(inputs.cooldownTime) < 0) {
+      throw new Error('冷卻時間不能為負數');
+    }
+  };
+
   const updateRule = async (id: number) => {
     const inputs = ruleInputs[id];
     if (!inputs || !altarContract) return;
 
-    const totalChance = Number(inputs.greatSuccessChance) + Number(inputs.successChance) + Number(inputs.partialFailChance);
-    if (totalChance >= 100) {
-      showToast('總機率必須小於 100%', 'error');
-      return;
-    }
-
     setPendingRule(id);
     try {
+      // 驗證輸入參數
+      validateRule(inputs);
+      
+      // V25 新的函數簽名：8 個獨立參數
       await writeContractAsync({
         ...altarContract,
         functionName: 'setUpgradeRule',
         args: [
-          id,
-          {
-            materialsRequired: Number(inputs.materialsRequired),
-            nativeFee: parseEther(inputs.nativeFee),
-            greatSuccessChance: Number(inputs.greatSuccessChance),
-            successChance: Number(inputs.successChance),
-            partialFailChance: Number(inputs.partialFailChance),
-            cooldownTime: BigInt(inputs.cooldownTime || '0'),
-            isActive: inputs.isActive
-          }
+          id,                                           // _rarity
+          Number(inputs.materialsRequired),             // _materialsRequired
+          parseEther(inputs.nativeFee),                // _nativeFee
+          Number(inputs.greatSuccessChance),           // _greatSuccessChance
+          Number(inputs.successChance),                // _successChance
+          Number(inputs.partialFailChance),            // _partialFailChance
+          BigInt(Number(inputs.cooldownTime) || 0),    // _cooldownTime (秒為單位)
+          inputs.isActive                              // _isActive
         ],
       });
       
       showToast(`升星規則 #${id} 更新成功！`, 'success');
       setTimeout(() => refetch(), 2000);
     } catch (e) {
-      const error = e as { shortMessage?: string };
-      showToast(error.shortMessage || `規則 #${id} 更新失敗`, "error");
+      const error = e as { shortMessage?: string; message?: string };
+      const errorMessage = error.shortMessage || error.message || `規則 #${id} 更新失敗`;
+      showToast(errorMessage, "error");
     } finally {
       setPendingRule(null);
     }

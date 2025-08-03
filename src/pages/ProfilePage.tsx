@@ -27,7 +27,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ setActivePage }) => {
         const queryAddress = queryParams.get('address');
         
         if (queryAddress && isAddress(queryAddress)) {
-            return queryAddress as Address;
+            return queryAddress as `0x${string}`;
         }
         return connectedAddress;
     }, [connectedAddress]);
