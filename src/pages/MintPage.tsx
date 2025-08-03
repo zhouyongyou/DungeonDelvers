@@ -23,6 +23,7 @@ import { invalidationStrategies } from '../config/queryConfig';
 import { BATCH_TIERS, RARITY_LABELS, RARITY_COLORS, getBatchTierForQuantity, type BatchTier } from '../utils/batchMintConfig';
 import { MintPagePreview } from '../components/mint/MintPagePreview';
 import { FeaturedNftsGallery } from '../components/mint/FeaturedNftsGallery';
+import { PendingReveals } from '../components/nft/PendingReveals';
 
 // =================================================================
 // Section: 工具函數
@@ -952,6 +953,9 @@ const MintPage: React.FC = memo(() => {
     return (
         <section>
             <h2 className="page-title">鑄造工坊</h2>
+            
+            {/* Pending Reveals Section */}
+            <PendingReveals className="mb-6" />
             
             {chainId === bsc.id ? <MintingInterface chainId={chainId} /> : <div className="card-bg p-10 rounded-xl text-center text-gray-400"><p>請先連接到支援的網路 (BSC 主網) 以使用鑄造功能。</p></div>}
             

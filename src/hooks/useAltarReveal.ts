@@ -1,0 +1,159 @@
+import { useEffect, useState, useCallback } from 'react';
+import { useAccount, useBlockNumber, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { Address } from 'viem';
+import { toast } from 'react-hot-toast';
+import { getContractWithABI } from '../config/contractsWithABI';
+
+interface UpgradeCommitment {
+  blockNumber: bigint;
+  tokenContract: Address;
+  rarity: number;
+  materialsCount: number;
+  commitment: `0x${string}`;
+  fulfilled: boolean;
+  payment: bigint;
+}
+
+interface AltarRevealState {
+  commitment: UpgradeCommitment | null;
+  canReveal: boolean;
+  canForceReveal: boolean;
+  blocksUntilReveal: number;
+  blocksUntilExpire: number;
+  isLoading: boolean;
+  error: Error | null;
+}
+
+interface UseAltarRevealReturn extends AltarRevealState {
+  refetch: () => void;
+  reveal: () => Promise<void>;
+  forceReveal: (userAddress: Address) => Promise<void>;
+}
+
+const REVEAL_BLOCK_DELAY = 3n;
+const MAX_REVEAL_WINDOW = 255n;
+
+export function useAltarReveal(
+  userAddress?: Address
+): UseAltarRevealReturn {
+  const { address: connectedAddress } = useAccount();
+  const { data: blockNumber } = useBlockNumber({ watch: true });
+  const { writeContract, data: hash, error: writeError } = useWriteContract();
+  const { isLoading: isWaiting } = useWaitForTransactionReceipt({ hash });
+  
+  const [isRevealing, setIsRevealing] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const address = userAddress || connectedAddress;
+  const altarContract = getContractWithABI('ALTAROFASCENSION');
+
+  // Read user commitment
+  const { data: commitment, refetch: refetchCommitment } = useReadContract({
+    address: altarContract?.address as Address,
+    abi: altarContract?.abi,
+    functionName: 'userCommitments',
+    args: address ? [address] : undefined,
+    enabled: !!address && !!altarContract,
+  });
+
+  // Calculate reveal status
+  const canReveal = commitment && blockNumber && 
+    (commitment as UpgradeCommitment).blockNumber > 0n &&
+    !(commitment as UpgradeCommitment).fulfilled &&
+    blockNumber >= (commitment as UpgradeCommitment).blockNumber + REVEAL_BLOCK_DELAY &&
+    blockNumber <= (commitment as UpgradeCommitment).blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW;
+
+  const canForceReveal = commitment && blockNumber &&
+    (commitment as UpgradeCommitment).blockNumber > 0n &&
+    !(commitment as UpgradeCommitment).fulfilled &&
+    blockNumber > (commitment as UpgradeCommitment).blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW;
+
+  // Calculate blocks remaining
+  const blocksUntilReveal = commitment && blockNumber && (commitment as UpgradeCommitment).blockNumber > 0n
+    ? Math.max(0, Number((commitment as UpgradeCommitment).blockNumber + REVEAL_BLOCK_DELAY - blockNumber))
+    : 0;
+
+  const blocksUntilExpire = commitment && blockNumber && (commitment as UpgradeCommitment).blockNumber > 0n
+    ? Math.max(0, Number((commitment as UpgradeCommitment).blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW - blockNumber))
+    : 0;
+
+  // Refetch all data
+  const refetch = useCallback(() => {
+    refetchCommitment();
+  }, [refetchCommitment]);
+
+  // Auto-refetch when transaction completes
+  useEffect(() => {
+    if (hash && !isWaiting) {
+      refetch();
+    }
+  }, [hash, isWaiting, refetch]);
+
+  // Reveal function
+  const reveal = useCallback(async () => {
+    if (!address || !canReveal || !altarContract) {
+      toast.error('無法揭示升級結果。請等待所需區塊。');
+      return;
+    }
+
+    setIsRevealing(true);
+    setError(null);
+
+    try {
+      await writeContract({
+        address: altarContract.address as Address,
+        abi: altarContract.abi,
+        functionName: 'revealUpgrade',
+      });
+
+      toast.success('正在揭示升級結果...');
+    } catch (err) {
+      const error = err as Error;
+      setError(error);
+      toast.error(`揭示失敗: ${error.message}`);
+    } finally {
+      setIsRevealing(false);
+    }
+  }, [address, canReveal, altarContract, writeContract]);
+
+  // Force reveal function (for expired upgrades)
+  const forceReveal = useCallback(async (targetAddress: Address) => {
+    if (!canForceReveal || !altarContract) {
+      toast.error('無法強制揭示。揭示視窗尚未過期。');
+      return;
+    }
+
+    setIsRevealing(true);
+    setError(null);
+
+    try {
+      await writeContract({
+        address: altarContract.address as Address,
+        abi: altarContract.abi,
+        functionName: 'forceRevealExpiredUpgrade',
+        args: [targetAddress],
+      });
+
+      toast.success('正在強制揭示過期的升級...');
+    } catch (err) {
+      const error = err as Error;
+      setError(error);
+      toast.error(`強制揭示失敗: ${error.message}`);
+    } finally {
+      setIsRevealing(false);
+    }
+  }, [canForceReveal, altarContract, writeContract]);
+
+  return {
+    commitment: commitment as UpgradeCommitment | null,
+    canReveal: !!canReveal,
+    canForceReveal: !!canForceReveal,
+    blocksUntilReveal,
+    blocksUntilExpire,
+    isLoading: isRevealing || isWaiting,
+    error: error || writeError,
+    refetch,
+    reveal,
+    forceReveal,
+  };
+}

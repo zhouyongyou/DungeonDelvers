@@ -37,6 +37,7 @@ export interface HeroNft extends BaseNft {
   type: 'hero';
   power: number;
   rarity: string | number; // 支持字符串和數字格式
+  isRevealed?: boolean; // 是否已揭示
 }
 
 // 聖物 NFT 的獨有屬性
@@ -44,6 +45,7 @@ export interface RelicNft extends BaseNft {
   type: 'relic';
   capacity: number;
   rarity: string | number; // 支持字符串和數字格式
+  isRevealed?: boolean; // 是否已揭示
 }
 
 // 隊伍 NFT 的獨有屬性

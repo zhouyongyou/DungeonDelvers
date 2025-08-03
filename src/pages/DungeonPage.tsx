@@ -1117,6 +1117,9 @@ const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => 
 
             {/* 已移除儲備購買 Modal */}
             <div>
+                {/* Pending Dungeon Reveals */}
+                <DungeonRevealStatus className="mb-6" />
+                
                 <PageActionBar
                     title="遠征指揮中心"
                     actions={[

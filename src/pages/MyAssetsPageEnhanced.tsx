@@ -29,6 +29,7 @@ import { PagePreview } from '../components/common/PagePreview';
 
 // Import TeamBuilder from components
 import { TeamBuilder } from '../components/TeamBuilder';
+import { MyAssetsRevealSection } from './components/MyAssetsRevealSection';
 
 // =================================================================
 // Section: 移除了市場瀏覽相關的 GraphQL 查詢和 Hooks
@@ -607,6 +608,9 @@ const MyAssetsPageEnhanced: React.FC = () => {
                     showRefresh={true}
                     onRefresh={() => refetchNfts()}
                 />
+                
+                {/* Pending Reveals Section */}
+                <MyAssetsRevealSection />
                 
                 {/* NFT 顯示模式切換 - 暫時隱藏 */}
                 {/* <div className="flex justify-end">
