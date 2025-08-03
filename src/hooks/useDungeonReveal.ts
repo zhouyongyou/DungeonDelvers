@@ -70,16 +70,8 @@ export function useDungeonReveal(
     },
   });
 
-  // 解析合約返回的數組格式數據
-  const parsedCommitment: ExpeditionCommitment | null = commitment && Array.isArray(commitment) && commitment.length >= 7 ? {
-    blockNumber: commitment[0] as bigint,
-    partyId: commitment[1] as bigint,
-    dungeonId: commitment[2] as bigint,
-    player: commitment[3] as `0x${string}`,
-    commitment: commitment[4] as `0x${string}`,
-    fulfilled: commitment[5] as boolean,
-    payment: commitment[6] as bigint,
-  } : null;
+  // 合約返回的是結構體，不是數組
+  const parsedCommitment = commitment as ExpeditionCommitment | null;
 
   // Read can reveal status from contract (like mint page does)
   const { data: canReveal, refetch: refetchCanReveal } = useReadContract({

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAccount } from 'wagmi';
-import { RevealStatus } from './RevealStatus';
+import { UniversalRevealStatus } from '../reveal/UniversalRevealStatus';
 
 interface PendingRevealsProps {
   className?: string;
@@ -22,8 +22,16 @@ export const PendingReveals: React.FC<PendingRevealsProps> = ({
       </h2>
       
       <div className="grid gap-4 md:grid-cols-2">
-        <RevealStatus contractType="hero" userAddress={address} />
-        <RevealStatus contractType="relic" userAddress={address} />
+        <UniversalRevealStatus 
+          revealType="mint" 
+          contractType="hero" 
+          userAddress={address} 
+        />
+        <UniversalRevealStatus 
+          revealType="mint" 
+          contractType="relic" 
+          userAddress={address} 
+        />
       </div>
     </div>
   );

@@ -6,8 +6,8 @@ import { getContractWithABI } from '../config/contractsWithABI';
 interface UpgradeCommitment {
   blockNumber: bigint;
   tokenContract: `0x${string}`;
-  rarity: number;
-  materialsCount: number;
+  baseRarity: number;        // 改為 baseRarity
+  burnedTokenIds: bigint[];  // 改為 burnedTokenIds
   commitment: `0x${string}`;
   fulfilled: boolean;
   payment: bigint;
@@ -60,25 +60,17 @@ export function useAltarReveal(
     args: address ? [address] : undefined,
     enabled: !!address && !!altarContract,
     query: {
-      staleTime: 1000 * 2, // 2秒快取 - 更頻繁更新以匹配鑄造頁面
+      staleTime: 1000 * 10, // 10秒快取 - 與鑄造頁面一致
       gcTime: 1000 * 60 * 5, // 5分鐘垃圾回收
       refetchOnWindowFocus: true, // 視窗聚焦時刷新
-      refetchInterval: 5000, // 每5秒自動刷新，匹配鑄造頁面的 canReveal 檢查頻率
+      refetchInterval: 30000, // 每30秒自動刷新，與鑄造頁面一致
       retry: 3, // 失敗時重試3次
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // 指數退避
     },
   });
 
-  // 解析合約返回的數組格式數據
-  const parsedCommitment: UpgradeCommitment | null = commitment && Array.isArray(commitment) && commitment.length >= 7 ? {
-    blockNumber: commitment[0] as bigint,
-    tokenContract: commitment[1] as `0x${string}`,
-    rarity: Number(commitment[2]),
-    materialsCount: Number(commitment[3]),
-    commitment: commitment[4] as `0x${string}`,
-    fulfilled: commitment[5] as boolean,
-    payment: commitment[6] as bigint,
-  } : null;
+  // 合約返回的是結構體，不是數組
+  const parsedCommitment = commitment as UpgradeCommitment | null;
 
   // Read can reveal status from contract (like mint page does)
   const { data: canReveal, refetch: refetchCanReveal } = useReadContract({

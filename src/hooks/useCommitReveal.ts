@@ -41,7 +41,12 @@ export function useCommitReveal(
   userAddress?: `0x${string}`
 ): UseCommitRevealReturn {
   const { address: connectedAddress } = useAccount();
-  const { data: blockNumber } = useBlockNumber({ watch: true });
+  const { data: blockNumber } = useBlockNumber({ 
+    watch: true,
+    query: {
+      refetchInterval: 3000, // 每3秒更新一次區塊號（BSC 約 3 秒一個區塊）
+    }
+  });
   const { writeContract, data: hash, error: writeError } = useWriteContract();
   const { isLoading: isWaiting } = useWaitForTransactionReceipt({ hash });
   const { showToast } = useAppToast();
@@ -64,7 +69,7 @@ export function useCommitReveal(
       staleTime: 1000 * 10, // 10秒快取 - commitment 狀態更新頻繁
       gcTime: 1000 * 60 * 5, // 5分鐘垃圾回收
       refetchOnWindowFocus: true, // 視窗聚焦時刷新
-      refetchInterval: 30000, // 每30秒自動刷新
+      refetchInterval: 10000, // 每10秒自動刷新 - 鑄造後能更快檢測到新承諾
       retry: 3, // 失敗時重試3次
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // 指數退避
     },
@@ -127,24 +132,22 @@ export function useCommitReveal(
     ? Math.max(0, Number(commitment.blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW - blockNumber))
     : 0;
 
-  // 調試日志 - 幫助診斷 commitment 檢測問題
+  // 調試日志 - 僅在開發環境且有重要變化時記錄
   useEffect(() => {
-    if (commitment && blockNumber) {
-      console.log(`[useCommitReveal] ${contractType} commitment 狀態:`, {
-        hasCommitment: !!commitment,
-        blockNumber: commitment.blockNumber?.toString(),
-        quantity: commitment.quantity?.toString(),
-        fulfilled: commitment.fulfilled,
-        currentBlock: blockNumber?.toString(),
-        blocksUntilReveal,
-        blocksUntilExpire,
-        canReveal,
-        canForceReveal,
-        contractAddress,
-        userAddress: address,
+    if (process.env.NODE_ENV === 'development' && commitment && blockNumber && commitment.blockNumber > 0n) {
+      const elapsedBlocks = Number(blockNumber - commitment.blockNumber);
+      const totalBlocks = Number(REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW);
+      console.log(`[useCommitReveal] ${contractType} 區塊進度:`, {
+        承諾區塊: commitment.blockNumber.toString(),
+        當前區塊: blockNumber.toString(),
+        已過區塊: elapsedBlocks,
+        剩餘揭示: blocksUntilReveal,
+        剩餘過期: blocksUntilExpire,
+        總區塊數: totalBlocks,
+        應顯示: `${blocksUntilExpire}/${totalBlocks}`
       });
     }
-  }, [commitment, blockNumber, contractType, blocksUntilReveal, blocksUntilExpire, canReveal, canForceReveal]);
+  }, [commitment, blockNumber, contractType, blocksUntilReveal, blocksUntilExpire]);
 
   // Refetch all data
   const refetch = useCallback(() => {

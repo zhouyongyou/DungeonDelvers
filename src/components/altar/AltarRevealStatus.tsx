@@ -141,12 +141,12 @@ export const AltarRevealStatus: React.FC<AltarRevealStatusProps> = ({
             {blocksUntilReveal > 0 ? (
               <div 
                 className="bg-yellow-500 h-full transition-all duration-300"
-                style={{ width: `${(1 - blocksUntilReveal / 3) * 100}%` }}
+                style={{ width: `${(1 - blocksUntilReveal / 4) * 100}%` }}
               />
             ) : (
               <div 
                 className="bg-green-500 h-full transition-all duration-300"
-                style={{ width: `${(1 - blocksUntilExpire / 255) * 100}%` }}
+                style={{ width: `${(1 - blocksUntilExpire / 259) * 100}%` }}
               />
             )}
           </div>
