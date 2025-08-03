@@ -1,5 +1,5 @@
 // V25 Contract Configuration with ABI
-// Generated on 2025-08-02T15:03:09.411Z
+// Generated on 2025-08-03T10:51:40.802Z
 // DO NOT EDIT MANUALLY - Use v25-sync-all.js to update
 
 import HeroABI from '../abis/Hero.json';
@@ -145,5 +145,5 @@ export const CONTRACT_INFO = {
   version: CONTRACT_VERSION,
   network: "BSC Mainnet",
   deploymentBlock: 56184733,
-  lastUpdated: "2025-08-02T15:03:09.411Z"
+  lastUpdated: "2025-08-03T10:51:40.802Z"
 };
