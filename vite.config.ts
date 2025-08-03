@@ -44,82 +44,38 @@ export default defineConfig(({ mode }) => ({
           return true; // 如果不能解析，排除它
         }
       }),
-      
-      // 🔥 新增：依賴去重優化
-      onwarn(warning, warn) {
-        // 忽略重複依賴警告，因為 Web3 生態系統中這很常見
-        if (warning.code === 'CIRCULAR_DEPENDENCY') return;
-        if (warning.code === 'PLUGIN_WARNING') return;
-        warn(warning);
-      },
       output: {
-        manualChunks: (id) => {
-          // 🔥 優化：更智能的代碼分割策略
+        manualChunks: {
+          // React 相關 - 核心框架
+          'react-vendor': ['react', 'react-dom'],
           
-          // React 核心
-          if (id.includes('react') || id.includes('react-dom')) {
-            return 'react-vendor';
-          }
+          // Web3 相關 - 區塊鏈交互
+          'web3-vendor': ['wagmi', 'viem', '@tanstack/react-query'],
           
-          // Web3 核心（減少包大小）
-          if (id.includes('wagmi') || id.includes('viem') || id.includes('@tanstack/react-query')) {
-            return 'web3-vendor';
-          }
+          // Apollo 相關 - GraphQL
+          'apollo-vendor': ['@apollo/client', 'graphql'],
           
-          // GraphQL
-          if (id.includes('@apollo/client') || id.includes('graphql')) {
-            return 'apollo-vendor';
-          }
+          // UI 相關 - 狀態管理和工具
+          'ui-vendor': ['zustand'],
           
-          // Wallet Connectors - 分離出來以減少核心包大小
-          if (id.includes('@coinbase/wallet-sdk') || 
-              id.includes('@walletconnect') || 
-              id.includes('@base-org/account') ||
-              id.includes('@reown')) {
-            return 'wallet-connectors';
-          }
-          
-          // 工具庫
-          if (id.includes('zustand') || id.includes('lodash') || id.includes('date-fns')) {
-            return 'ui-vendor';
-          }
-          
-          // 市場相關組件
-          if (id.includes('marketplace') || id.includes('components/marketplace')) {
-            return 'marketplace-components';
-          }
-          
-          // 分析和圖表
-          if (id.includes('analytics') || id.includes('leaderboard') || id.includes('chart')) {
-            return 'analytics-components';
-          }
-          
-          // Admin 和開發工具
-          if (id.includes('admin') || id.includes('components/admin') || id.includes('DevTools')) {
-            return 'admin-tools';
-          }
-          
-          // 保持頁面分割但使用動態檢測
-          if (id.includes('OverviewPage') || id.includes('MintPage') || id.includes('MyAssetsPage')) {
-            return 'pages-core';
-          }
-          if (id.includes('DungeonPage') || id.includes('AltarPage')) {
-            return 'pages-game';
-          }
-          if (id.includes('VipPage') || id.includes('ReferralPage') || id.includes('ProfilePage')) {
-            return 'pages-profile';
-          }
-          if (id.includes('AdminPage') || id.includes('CodexPage') || id.includes('GameDataPage')) {
-            return 'pages-misc';
-          }
-          if (id.includes('MarketplacePage')) {
-            return 'pages-marketplace';
-          }
-          
-          // 其他 node_modules
-          if (id.includes('node_modules')) {
-            return 'vendor';
-          }
+          // 🔥 新增：按頁面功能分割
+          'pages-core': [
+            './src/pages/OverviewPage',
+            './src/pages/MintPage',
+            './src/pages/MyAssetsPageEnhanced'
+          ],
+          'pages-game': [
+            './src/pages/DungeonPage',
+            './src/pages/AltarPage'
+          ],
+          'pages-profile': [
+            './src/pages/VipPage',
+            './src/pages/ReferralPage'
+          ],
+          'pages-misc': [
+            './src/pages/AdminPage',
+            './src/pages/CodexPage'
+          ]
         },
         
         // 🔥 修復：確保正確的模組格式和 MIME 類型
