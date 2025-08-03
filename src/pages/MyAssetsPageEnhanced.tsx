@@ -193,13 +193,22 @@ const MyAssetsPageEnhanced: React.FC = () => {
             setIsRefreshingParties(true);
             
             try {
-                // 立即切換到隊伍分頁並開始更新
+                // 立即切換到隊伍分頁
                 setActiveTab('myParties');
                 
-                // 等待一小段時間讓UI更新
-                await new Promise(resolve => setTimeout(resolve, 500));
+                // 立即強制失效快取並重新獲取，不依賴 staleTime
+                queryClient.invalidateQueries({ queryKey: ['enhanced-nfts', address, chainId] });
+                queryClient.invalidateQueries({ queryKey: ['ownedNfts', address, chainId] });
                 
+                // 立即重新獲取數據
                 await refetchNfts();
+                
+                // 如果第一次沒有看到新隊伍，再試一次
+                setTimeout(async () => {
+                    await queryClient.invalidateQueries({ queryKey: ['enhanced-nfts', address, chainId] });
+                    await refetchNfts();
+                }, 2000); // 2秒後再刷新一次
+                
                 showToast('新隊伍已出現在列表中！', 'success');
             } catch (error) {
                 showToast('更新隊伍列表時發生錯誤', 'error');
@@ -448,6 +457,21 @@ const MyAssetsPageEnhanced: React.FC = () => {
                 );
                 
             case 'myParties':
+                // 如果正在刷新且沒有隊伍數據，顯示骨架載入
+                if (isRefreshingParties && (!parties || parties.length === 0)) {
+                    return (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            {[1, 2, 3, 4].map(i => (
+                                <div key={i} className="bg-gray-800 rounded-lg p-4 animate-pulse">
+                                    <div className="h-40 bg-gray-700 rounded mb-4"></div>
+                                    <div className="h-4 bg-gray-700 rounded w-3/4 mb-2"></div>
+                                    <div className="h-4 bg-gray-700 rounded w-1/2"></div>
+                                </div>
+                            ))}
+                        </div>
+                    );
+                }
+                
                 return !parties || parties.length === 0 ? (
                     <div className="text-center py-12 space-y-6">
                         <div className="text-6xl mb-4">👥</div>

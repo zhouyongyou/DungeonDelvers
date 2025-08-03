@@ -22,8 +22,8 @@ export const PendingReveals: React.FC<PendingRevealsProps> = ({
       </h2>
       
       <div className="grid gap-4 md:grid-cols-2">
-        <RevealStatus contractType="hero" />
-        <RevealStatus contractType="relic" />
+        <RevealStatus contractType="hero" userAddress={address} />
+        <RevealStatus contractType="relic" userAddress={address} />
       </div>
     </div>
   );

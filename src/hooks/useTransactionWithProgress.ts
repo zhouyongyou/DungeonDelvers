@@ -2,7 +2,8 @@
 
 import { useState, useCallback } from 'react';
 import { useWriteContract, usePublicClient } from 'wagmi';
-import { useAppToast } from './useAppToast';
+import { useAppToast } from '../contexts/SimpleToastContext';
+import { useContractError } from './useContractError';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { logger } from '../utils/logger';
 import type { Abi } from 'viem';
@@ -35,6 +36,7 @@ export interface TransactionProgressState {
  */
 export function useTransactionWithProgress(options?: UseTransactionWithProgressOptions) {
   const { showToast } = useAppToast();
+  const { handleError } = useContractError();
   const { addTransaction } = useTransactionStore();
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
@@ -63,48 +65,11 @@ export function useTransactionWithProgress(options?: UseTransactionWithProgressO
       setProgress({ status: 'signing', confirmations: 0 });
       logger.info('請求用戶簽名交易', { description });
       
-      // 2. Gas 估算和優化
-      let optimizedConfig = { ...config };
+      // 2. 直接使用默認 Gas 設定，不進行估算
+      // BSC 網路會自動處理 Gas 計算
       
-      if (publicClient) {
-        try {
-          // 估算 Gas Limit
-          const estimatedGas = await publicClient.estimateContractGas(config);
-          // 增加 20% buffer 防止 Gas 不足
-          const gasLimit = estimatedGas + (estimatedGas * 20n) / 100n;
-          
-          // 獲取當前 Gas Price
-          const gasPrice = await publicClient.getGasPrice();
-          // 確保最低 Gas Price（BSC 建議 3 Gwei）
-          const minGasPrice = 3000000000n; // 3 Gwei
-          const optimalGasPrice = gasPrice > minGasPrice ? gasPrice : minGasPrice;
-          
-          optimizedConfig = {
-            ...config,
-            gas: gasLimit,
-            gasPrice: optimalGasPrice
-          };
-          
-          logger.info('Gas 優化完成', {
-            estimatedGas: estimatedGas.toString(),
-            gasLimit: gasLimit.toString(),
-            gasPrice: optimalGasPrice.toString(),
-            description
-          });
-          
-        } catch (gasError) {
-          logger.warn('Gas 估算失敗，使用默認設定', gasError);
-          // 遠征交易的安全默認值
-          optimizedConfig = {
-            ...config,
-            gas: 400000n, // 400k Gas Limit
-            gasPrice: 5000000000n // 5 Gwei
-          };
-        }
-      }
-      
-      // 3. 發送交易（使用優化後的 Gas 設定）
-      const hash = await writeContractAsync(optimizedConfig);
+      // 3. 發送交易
+      const hash = await writeContractAsync(config);
       
       setProgress({ 
         hash, 
@@ -272,35 +237,15 @@ export function useTransactionWithProgress(options?: UseTransactionWithProgressO
           confirmations: 0,
         });
       } else {
-        // 🎯 智能錯誤提示 - 直接在現有邏輯中改進
-        let userFriendlyMessage = options?.errorMessage || errorMessage;
-        
-        if (errorMessage.includes('insufficient funds')) {
-          userFriendlyMessage = 'BNB 餘額不足支付手續費，請充值後重試';
-        } else if (errorMessage.includes('execution reverted')) {
-          if (errorMessage.includes('Not party owner')) {
-            userFriendlyMessage = '您不是該隊伍的擁有者，無法執行此操作';
-          } else if (errorMessage.includes('Insufficient allowance')) {
-            userFriendlyMessage = '請先授權合約使用您的代幣';
-          } else if (errorMessage.includes('Party on cooldown')) {
-            userFriendlyMessage = '隊伍正在冷卻中，請稍後再試';
-          } else {
-            userFriendlyMessage = '操作被智能合約拒絕，請檢查操作條件';
-          }
-        } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
-          userFriendlyMessage = '網路連接問題，請檢查網路後重試';
-        } else if (errorMessage.includes('timeout')) {
-          userFriendlyMessage = '交易確認超時，請查看區塊鏈瀏覽器確認狀態';
-        }
-        
-        showToast(userFriendlyMessage, 'error');
+        // 使用增強的錯誤處理器，能自動識別交易確認錯誤
+        handleError(error, options?.errorMessage);
         options?.onError?.(error);
       }
       
       setShowProgress(false);
       throw error;
     }
-  }, [writeContractAsync, publicClient, showToast, addTransaction, options]);
+  }, [writeContractAsync, publicClient, showToast, handleError, addTransaction, options]);
 
   const reset = useCallback(() => {
     setProgress({

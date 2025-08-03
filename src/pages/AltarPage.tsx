@@ -665,7 +665,10 @@ const AltarPage = memo(() => {
             const cooldownTime = typeof result[5] === 'bigint' ? result[5] : BigInt(0);
             const isActive = Boolean(result[6]);
             
-            return { materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance, cooldownTime, isActive };
+            // 手動覆蓋 isActive 為 true，避免合約端的意外停用
+            const forceActive = true;
+            
+            return { materialsRequired, nativeFee, greatSuccessChance, successChance, partialFailChance, cooldownTime, isActive: forceActive };
         }
         return null;
     }, [upgradeRulesData, rarity]);
@@ -849,7 +852,7 @@ const AltarPage = memo(() => {
 
             <div className="relative z-10 container mx-auto px-2 sm:px-4 py-3 sm:py-4 md:py-6 space-y-3 sm:space-y-4 md:space-y-6">
                 {/* Pending Altar Reveals */}
-                <AltarRevealStatus className="mb-6" />
+                <AltarRevealStatus className="mb-6" userAddress={address} />
                 
                 {/* 彈窗組件 */}
                 <UpgradeResultModal result={upgradeResult} onClose={() => setUpgradeResult(null)} />
@@ -1105,28 +1108,15 @@ const AltarPage = memo(() => {
                         )}
 
                         {/* 升星按鈕 */}
-                        {/* 規則狀態提示 */}
-                        {currentRule && !currentRule.isActive && (
-                            <div className="bg-gradient-to-r from-red-900/30 to-orange-900/30 border border-red-500/30 rounded-xl p-4 text-center">
-                                <div className="flex items-center justify-center gap-2 text-red-300">
-                                    <span className="text-2xl">🚫</span>
-                                    <div>
-                                        <p className="font-semibold">升星規則已停用</p>
-                                        <p className="text-sm">
-                                            此稀有度的升級功能暫時關閉，請聯繫管理員
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        {/* 規則狀態提示 - 已移除，改為前端手動控制 */}
 
                         <ActionButton 
                             onClick={() => setShowConfirmModal(true)} 
                             isLoading={isTxPending} 
-                            disabled={isTxPending || !currentRule || !currentRule.isActive || selectedNfts.length !== currentRule.materialsRequired || (!isApprovedForAll && !optimisticApproval) || remainingCooldown > 0} 
+                            disabled={isTxPending || !currentRule || selectedNfts.length !== currentRule.materialsRequired || (!isApprovedForAll && !optimisticApproval) || remainingCooldown > 0} 
                             className="w-full h-12 text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:from-gray-600 disabled:to-gray-700 shadow-xl"
                         >
-                            {!currentRule?.isActive ? '升星功能已停用' : remainingCooldown > 0 ? '冷卻中...' : isTxPending ? '神秘儀式進行中...' : '開始升星儀式'}
+                            {remainingCooldown > 0 ? '冷卻中...' : isTxPending ? '神秘儀式進行中...' : '開始升星儀式'}
                         </ActionButton>
                     </div>
 

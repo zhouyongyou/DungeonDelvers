@@ -23,8 +23,6 @@ const GET_MINT_STATS_QUERY = `
       id
       tokenId
       power
-      element
-      class
       rarity
       createdAt
     }
@@ -37,7 +35,6 @@ const GET_MINT_STATS_QUERY = `
       id
       tokenId
       capacity
-      category
       rarity
       createdAt
     }
@@ -103,7 +100,7 @@ const MintPreviewCard: React.FC<MintPreviewCardProps> = ({ type, recentItems }) 
       {/* 數量選擇 - 手機版顯示3個選項 */}
       <div className="mb-4 md:mb-6">
         <label className={`block font-medium text-gray-300 mb-2 md:mb-3 ${rc.cardText}`}>
-          選擇數量 (批量越大，稀有度越高)
+          選擇數量 (統一機率分布)
         </label>
         <div className="grid grid-cols-3 md:grid-cols-5 gap-1 md:gap-2">
           {options.map((option, index) => (
@@ -150,20 +147,9 @@ const MintPreviewCard: React.FC<MintPreviewCardProps> = ({ type, recentItems }) 
         </h4>
         
         <div className="grid grid-cols-3 md:grid-cols-5 gap-1 md:gap-2">
-          {(() => {
-            let rates = { 1: 44, 2: 35, 3: 15, 4: 5, 5: 1 };
-            
-            if (selectedQuantity === 1) {
-              rates = { 1: 70, 2: 30, 3: 0, 4: 0, 5: 0 };
-            } else if (selectedQuantity === 5) {
-              rates = { 1: 60, 2: 40, 3: 0, 4: 0, 5: 0 };
-            } else if (selectedQuantity === 10) {
-              rates = { 1: 50, 2: 35, 3: 15, 4: 0, 5: 0 };
-            } else if (selectedQuantity === 20) {
-              rates = { 1: 45, 2: 35, 3: 15, 4: 5, 5: 0 };
-            }
-            
-            return [1, 2, 3, 4, 5].map((rarity, index) => (
+          {[1, 2, 3, 4, 5].map((rarity, index) => {
+            const rates = [44, 35, 15, 5, 1]; // V26: 統一機率
+            return (
               <div 
                 key={rarity} 
                 className={`text-center p-1 md:p-2 bg-gray-900/30 rounded ${
@@ -174,18 +160,16 @@ const MintPreviewCard: React.FC<MintPreviewCardProps> = ({ type, recentItems }) 
                   {RARITY_LABELS[rarity]}
                 </div>
                 <div className="text-xs text-gray-400">
-                  {rates[rarity as keyof typeof rates]}%
+                  {rates[rarity - 1]}%
                 </div>
               </div>
-            ));
-          })()}
+            );
+          })}
         </div>
         
-        {selectedQuantity < 50 && (
-          <p className="text-xs text-yellow-400 text-center mt-2 md:mt-3">
-            💡 批量越大，高稀有度機率越高
-          </p>
-        )}
+        <p className="text-xs text-yellow-400 text-center mt-2 md:mt-3">
+          💡 Commit-Reveal 機制，統一機率分布
+        </p>
       </div>
 
       {/* 行動按鈕 */}
@@ -319,37 +303,22 @@ export const MintPagePreview: React.FC = () => {
 const MechanicsTab: React.FC = () => (
   <div className={rc.spacing}>
     <div className="text-center">
-      <h3 className={`font-semibold text-white mb-2 ${rc.cardTitle}`}>⚙️ 防撞庫機制</h3>
-      <p className={`text-gray-400 ${rc.cardText}`}>批量越大，稀有度越高</p>
-    </div>
-
-    {/* 批量等級說明 - 手機版可橫向滾動 */}
-    <div className="overflow-x-auto">
-      <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-4 min-w-max">
-        {BATCH_TIERS.map((tier, index) => (
-          <div key={index} className={`bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg border border-gray-600 ${rc.padding}`}>
-            <div className="text-center space-y-1 md:space-y-2">
-              <div className={`font-bold text-white ${rc.cardText}`}>{tier.tierName}</div>
-              <div className="text-xs md:text-sm text-gray-400">{tier.minQuantity}個起</div>
-              <div className="text-xs md:text-sm text-yellow-400">最高 {tier.maxRarity}★</div>
-              <div className="text-xs md:text-sm text-green-400">
-                約 ${tier.minQuantity * 2}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <h3 className={`font-semibold text-white mb-2 ${rc.cardTitle}`}>⚙️ Commit-Reveal 機制</h3>
+      <p className={`text-gray-400 ${rc.cardText}`}>統一機率，延遲揭示</p>
     </div>
 
     {/* 機制說明 - 手機版簡化 */}
     <div className={`bg-gradient-to-r from-yellow-900/30 to-orange-900/30 rounded-lg border border-yellow-500/20 ${rc.padding}`}>
-      <h4 className={`font-semibold text-yellow-400 mb-3 ${rc.cardText}`}>🎯 設計理念</h4>
+      <h4 className={`font-semibold text-yellow-400 mb-3 ${rc.cardText}`}>🎯 Commit-Reveal 防撞庫機制</h4>
       <div className="space-y-2">
         <p className={`text-gray-300 ${rc.cardText}`}>
-          • <strong>提高撞庫成本</strong>：大額投入才能獲得高稀有度
+          • <strong>延遲揭示</strong>：鑄造後需等待 3 個區塊才能揭示，使用未來區塊哈希作為隨機來源
         </p>
         <p className={`text-gray-300 ${rc.cardText}`}>
-          • <strong>機率透明化</strong>：每個批量等級的稀有度機率完全公開
+          • <strong>防止操縱</strong>：科學家無法預測未來區塊哈希，無法通過 MEV 或其他手段操縱結果
+        </p>
+        <p className={`text-gray-300 ${rc.cardText}`}>
+          • <strong>公平透明</strong>：所有數量享受相同機率，結果完全隨機且可驗證
         </p>
       </div>
     </div>

@@ -36,7 +36,12 @@ export function useAltarReveal(
   userAddress?: `0x${string}`
 ): UseAltarRevealReturn {
   const { address: connectedAddress } = useAccount();
-  const { data: blockNumber } = useBlockNumber({ watch: true });
+  const { data: blockNumber } = useBlockNumber({ 
+    watch: true,
+    query: {
+      refetchInterval: 3000, // 每3秒檢查新區塊，BSC 平均 3 秒一個區塊
+    }
+  });
   const { writeContract, data: hash, error: writeError } = useWriteContract();
   const { isLoading: isWaiting } = useWaitForTransactionReceipt({ hash });
   const { showToast } = useAppToast();
@@ -54,33 +59,94 @@ export function useAltarReveal(
     functionName: 'userCommitments',
     args: address ? [address] : undefined,
     enabled: !!address && !!altarContract,
+    query: {
+      staleTime: 1000 * 2, // 2秒快取 - 更頻繁更新以匹配鑄造頁面
+      gcTime: 1000 * 60 * 5, // 5分鐘垃圾回收
+      refetchOnWindowFocus: true, // 視窗聚焦時刷新
+      refetchInterval: 5000, // 每5秒自動刷新，匹配鑄造頁面的 canReveal 檢查頻率
+      retry: 3, // 失敗時重試3次
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // 指數退避
+    },
   });
 
-  // Calculate reveal status
-  const canReveal = commitment && blockNumber && 
-    (commitment as UpgradeCommitment).blockNumber > 0n &&
-    !(commitment as UpgradeCommitment).fulfilled &&
-    blockNumber >= (commitment as UpgradeCommitment).blockNumber + REVEAL_BLOCK_DELAY &&
-    blockNumber <= (commitment as UpgradeCommitment).blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW;
+  // 解析合約返回的數組格式數據
+  const parsedCommitment: UpgradeCommitment | null = commitment && Array.isArray(commitment) && commitment.length >= 7 ? {
+    blockNumber: commitment[0] as bigint,
+    tokenContract: commitment[1] as `0x${string}`,
+    rarity: Number(commitment[2]),
+    materialsCount: Number(commitment[3]),
+    commitment: commitment[4] as `0x${string}`,
+    fulfilled: commitment[5] as boolean,
+    payment: commitment[6] as bigint,
+  } : null;
 
-  const canForceReveal = commitment && blockNumber &&
-    (commitment as UpgradeCommitment).blockNumber > 0n &&
-    !(commitment as UpgradeCommitment).fulfilled &&
-    blockNumber > (commitment as UpgradeCommitment).blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW;
+  // Read can reveal status from contract (like mint page does)
+  const { data: canReveal, refetch: refetchCanReveal } = useReadContract({
+    address: altarContract?.address as `0x${string}`,
+    abi: altarContract?.abi,
+    functionName: 'canReveal',
+    args: address ? [address] : undefined,
+    enabled: !!address && !!altarContract,
+    query: {
+      staleTime: 1000 * 5, // 5秒快取
+      gcTime: 1000 * 60 * 5,
+      refetchOnWindowFocus: true,
+      refetchInterval: 15000, // 每15秒檢查
+      retry: 2,
+    },
+  });
+
+  // Read can force reveal status from contract
+  const { data: canForceReveal, refetch: refetchCanForceReveal } = useReadContract({
+    address: altarContract?.address as `0x${string}`,
+    abi: altarContract?.abi,
+    functionName: 'canForceReveal',
+    args: address ? [address] : undefined,
+    enabled: !!address && !!altarContract,
+    query: {
+      staleTime: 1000 * 5,
+      gcTime: 1000 * 60 * 5,
+      refetchOnWindowFocus: true,
+      refetchInterval: 15000,
+      retry: 2,
+    },
+  });
 
   // Calculate blocks remaining
-  const blocksUntilReveal = commitment && blockNumber && (commitment as UpgradeCommitment).blockNumber > 0n
-    ? Math.max(0, Number((commitment as UpgradeCommitment).blockNumber + REVEAL_BLOCK_DELAY - blockNumber))
+  const blocksUntilReveal = parsedCommitment && blockNumber && parsedCommitment.blockNumber > 0n
+    ? Math.max(0, Number(parsedCommitment.blockNumber + REVEAL_BLOCK_DELAY - blockNumber))
     : 0;
 
-  const blocksUntilExpire = commitment && blockNumber && (commitment as UpgradeCommitment).blockNumber > 0n
-    ? Math.max(0, Number((commitment as UpgradeCommitment).blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW - blockNumber))
+  const blocksUntilExpire = parsedCommitment && blockNumber && parsedCommitment.blockNumber > 0n
+    ? Math.max(0, Number(parsedCommitment.blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW - blockNumber))
     : 0;
+
+  // 調試日誌 - 幫助診斷區塊延遲問題
+  useEffect(() => {
+    if (parsedCommitment && blockNumber) {
+      console.log('[useAltarReveal] 升級狀態:', {
+        rawCommitment: commitment,
+        parsedCommitment,
+        commitmentBlock: parsedCommitment.blockNumber?.toString(),
+        currentBlock: blockNumber?.toString(),
+        blocksUntilReveal,
+        blocksUntilExpire,
+        canReveal,
+        canForceReveal,
+        fulfilled: parsedCommitment.fulfilled,
+        rarity: parsedCommitment.rarity,
+        materialsCount: parsedCommitment.materialsCount,
+        address,
+      });
+    }
+  }, [commitment, parsedCommitment, blockNumber, blocksUntilReveal, blocksUntilExpire, canReveal, canForceReveal, address]);
 
   // Refetch all data
   const refetch = useCallback(() => {
     refetchCommitment();
-  }, [refetchCommitment]);
+    refetchCanReveal();
+    refetchCanForceReveal();
+  }, [refetchCommitment, refetchCanReveal, refetchCanForceReveal]);
 
   // Auto-refetch when transaction completes
   useEffect(() => {
@@ -145,7 +211,7 @@ export function useAltarReveal(
   }, [canForceReveal, altarContract, writeContract, showToast]);
 
   return {
-    commitment: commitment as UpgradeCommitment | null,
+    commitment: parsedCommitment,
     canReveal: !!canReveal,
     canForceReveal: !!canForceReveal,
     blocksUntilReveal,

@@ -23,8 +23,6 @@ const GET_MINT_STATS_QUERY = `
       id
       tokenId
       power
-      element
-      class
       rarity
       createdAt
     }
@@ -37,7 +35,6 @@ const GET_MINT_STATS_QUERY = `
       id
       tokenId
       capacity
-      category
       rarity
       createdAt
     }
@@ -125,7 +122,7 @@ const MintPreviewCard: React.FC<MintPreviewCardProps> = ({ type, recentItems }) 
       {/* 數量選擇 */}
       <div className="mb-4 md:mb-6">
         <label className="block text-xs md:text-sm font-medium text-gray-300 mb-2 md:mb-3">
-          選擇數量 (批量越大，稀有度越高)
+          選擇數量
         </label>
         <div className="grid grid-cols-5 gap-2">
           {options.map((option) => (
@@ -157,50 +154,6 @@ const MintPreviewCard: React.FC<MintPreviewCardProps> = ({ type, recentItems }) 
         </div>
       </div>
 
-      {/* 稀有度機率展示 */}
-      <div className="mb-6">
-        <h4 className="text-lg font-semibold text-white mb-3">
-          📊 {type === 'hero' ? '英雄' : '聖物'}稀有度機率
-        </h4>
-        
-        {/* 根據選擇的數量顯示對應的機率 */}
-        <div className="grid grid-cols-5 gap-2">
-          {(() => {
-            // 根據批量大小決定機率分布
-            let rates = { 1: 44, 2: 35, 3: 15, 4: 5, 5: 1 }; // 預設為50個批量
-            
-            if (selectedQuantity === 1) {
-              rates = { 1: 70, 2: 30, 3: 0, 4: 0, 5: 0 };
-            } else if (selectedQuantity === 5) {
-              rates = { 1: 60, 2: 40, 3: 0, 4: 0, 5: 0 };
-            } else if (selectedQuantity === 10) {
-              rates = { 1: 50, 2: 35, 3: 15, 4: 0, 5: 0 };
-            } else if (selectedQuantity === 20) {
-              rates = { 1: 45, 2: 35, 3: 15, 4: 5, 5: 0 };
-            }
-            
-            return [1, 2, 3, 4, 5].map(rarity => (
-              <div key={rarity} className="text-center p-2 bg-gray-900/30 rounded">
-                <div className={`text-sm font-bold ${RARITY_COLORS[rarity]}`}>
-                  {RARITY_LABELS[rarity]}
-                </div>
-                <div className="text-xs text-gray-400">
-                  {rates[rarity as keyof typeof rates]}%
-                </div>
-                {rates[rarity as keyof typeof rates] === 0 && (
-                  <div className="text-xs text-red-500">不可得</div>
-                )}
-              </div>
-            ));
-          })()}
-        </div>
-        
-        {selectedQuantity < 50 && (
-          <p className="text-xs text-yellow-400 text-center mt-3">
-            💡 提示：批量越大，高稀有度機率越高
-          </p>
-        )}
-      </div>
 
       {/* 行動按鈕 */}
       <div className="flex justify-center">
@@ -289,17 +242,16 @@ export const MintPagePreview: React.FC = () => {
         <div className="space-y-6">
           <div className="text-center">
             <h3 className="text-xl font-semibold text-white mb-2">⚙️ 防撞庫機制</h3>
-            <p className="text-gray-400">批量越大，稀有度越高 - 鼓勵大額投入，防止頻繁小額撞庫</p>
+            <p className="text-gray-400">採用 Commit-Reveal 兩步驟機制，使用區塊鏈隨機性確保公平</p>
           </div>
 
-          {/* 批量等級說明 */}
+          {/* 簡化的批量說明 */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {BATCH_TIERS.map((tier, index) => (
               <div key={index} className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg p-4 border border-gray-600">
                 <div className="text-center space-y-2">
                   <div className="text-lg font-bold text-white">{tier.tierName}</div>
                   <div className="text-sm text-gray-400">{tier.minQuantity}個起</div>
-                  <div className="text-sm text-yellow-400">最高 {tier.maxRarity}★</div>
                   <div className="text-sm text-green-400">
                     約 ${tier.minQuantity * 2} USD
                   </div>
@@ -308,54 +260,16 @@ export const MintPagePreview: React.FC = () => {
             ))}
           </div>
 
-          {/* 機制說明 */}
-          <div className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 rounded-lg p-6 border border-yellow-500/20">
-            <h4 className="text-lg font-semibold text-yellow-400 mb-4">🎯 設計理念</h4>
-            <div className="grid md:grid-cols-2 gap-4">
-              <ul className="space-y-2 text-gray-300">
-                <li className="flex items-start">
-                  <span className="text-yellow-400 mr-2">•</span>
-                  <span><strong>提高撞庫成本</strong>：科學家必須投入更多資金才能嘗試獲得高稀有度</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-yellow-400 mr-2">•</span>
-                  <span><strong>鼓勵大額投入</strong>：50個批量享受完整機率，獲得最佳遊戲體驗</span>
-                </li>
-              </ul>
-              <ul className="space-y-2 text-gray-300">
-                <li className="flex items-start">
-                  <span className="text-yellow-400 mr-2">•</span>
-                  <span><strong>機率透明化</strong>：每個批量等級的稀有度機率完全公開</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-yellow-400 mr-2">•</span>
-                  <span><strong>經濟平衡</strong>：防止小額頻繁交易對經濟的影響</span>
-                </li>
-              </ul>
+          {/* 簡化的機制說明 */}
+          <div className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 rounded-lg p-6 border border-purple-500/20">
+            <h4 className="text-lg font-semibold text-purple-400 mb-4">⚡ Commit-Reveal 機制</h4>
+            <div className="space-y-3 text-gray-300">
+              <p><strong>📝 兩步驟鑄造</strong>：先提交承諾，等待 3 個區塊後揭示結果</p>
+              <p><strong>🎲 區塊鏈隨機性</strong>：使用未來區塊 hash 確保結果公平可驗證</p>
+              <p><strong>💰 經濟設計</strong>：防止撞庫行為，維護遊戲經濟平衡</p>
             </div>
           </div>
 
-          {/* 稀有度機率表 */}
-          <div className="bg-gray-800/50 rounded-lg p-6">
-            <h4 className="text-lg font-semibold text-white mb-4">📊 稀有度機率分布</h4>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              {[
-                { rarity: 1, label: '普通', rate: '44%', color: 'text-gray-400' },
-                { rarity: 2, label: '罕見', rate: '35%', color: 'text-green-400' },
-                { rarity: 3, label: '稀有', rate: '15%', color: 'text-blue-400' },
-                { rarity: 4, label: '史詩', rate: '5%', color: 'text-purple-400' },
-                { rarity: 5, label: '傳說', rate: '1%', color: 'text-orange-400' },
-              ].map(item => (
-                <div key={item.rarity} className="text-center p-3 bg-gray-900/30 rounded">
-                  <div className={`text-lg font-bold ${item.color}`}>{item.label}</div>
-                  <div className="text-sm text-gray-400">{item.rate}</div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {item.rarity}★
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       )}
 
@@ -412,7 +326,7 @@ export const MintPagePreview: React.FC = () => {
                 </li>
                 <li className="flex items-start">
                   <span className="text-green-400 mr-2">•</span>
-                  <span><strong>批量優勢</strong>：50個批量享受最高稀有度機率</span>
+                  <span><strong>批量優勢</strong>：50個批量可獲得完整的稀有度範圍</span>
                 </li>
               </ul>
             </div>

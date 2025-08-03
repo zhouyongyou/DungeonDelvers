@@ -41,6 +41,7 @@ import ContractHealthPanel from '../components/admin/ContractHealthPanelDark';
 // import { ContractHealthCheck } from '../components/admin/ContractHealthCheck'; // 移除重複組件
 import { PitchUrlManager } from '../components/admin/PitchUrlManager';
 import RpcMonitoringPanel from '../components/admin/RpcMonitoringPanel';
+import { PausableContractsManager } from '../components/admin/PausableContractsManager';
 import { validateContract, getSafeContract } from '../utils/contractValidator';
 
 type SupportedChainId = typeof bsc.id;
@@ -81,6 +82,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
     rpcMonitor: false, // RPC監控默認不展開
     contractHealth: false, // 合約健康檢查默認不展開
     oracleTest: false, // Oracle測試默認不展開
+    pausableManager: false, // 暫停管理默認不展開
     gameFlowTest: false, // 遊戲流程測試默認不展開
     expeditionTest: false, // 出征測試默認不展開
     pitchManager: false // Pitch頁面管理默認不展開
@@ -772,6 +774,16 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
       >
         {loadedSections.contractHealth && (
           <ContractHealthPanel />
+        )}
+      </AdminSection>
+
+      <AdminSection 
+        title="⏸️ 合約暫停管理" 
+        defaultExpanded={false}
+        onExpand={() => setLoadedSections(prev => ({ ...prev, pausableManager: true }))}
+      >
+        {loadedSections.pausableManager && (
+          <PausableContractsManager />
         )}
       </AdminSection>
       

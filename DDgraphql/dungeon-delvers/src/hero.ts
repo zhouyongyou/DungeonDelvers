@@ -1,6 +1,6 @@
 // DDgraphql/dungeondelvers/src/hero.ts (最終加固版)
 import { HeroMinted, Transfer, HeroBurned, BatchMintCompleted, Paused, Unpaused, MintCommitted, HeroRevealed, ForcedRevealExecuted, RevealedByProxy } from "../generated/Hero/Hero"
-import { Hero, HeroUpgrade, MintCommitment, RevealEvent } from "../generated/schema"
+import { Hero, HeroUpgrade, MintCommitment, RevealEvent, ForcedRevealEvent, ProxyRevealEvent } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { log, BigInt, ethereum } from "@graphprotocol/graph-ts"
 import { createEntityId } from "./config"
@@ -39,6 +39,7 @@ export function handleHeroMinted(event: HeroMinted): void {
     hero.power = event.params.power
     hero.createdAt = event.block.timestamp
     hero.isBurned = false
+    hero.isRevealed = false  // 新鑄造的英雄尚未揭示
     hero.save()
     
     // 更新統計數據
@@ -187,9 +188,22 @@ export function handleHeroRevealed(event: HeroRevealed): void {
 }
 
 export function handleForcedRevealExecuted(event: ForcedRevealExecuted): void {
-    // 根據 ABI，事件參數為 user, executor, quantity
-    // 記錄強制揭示事件
-    log.info('ForcedRevealExecuted: User {} by executor {} for {} NFTs', [
+    // 創建強制揭示事件記錄
+    const eventId = createEntityId(event.transaction.hash.toHexString(), event.logIndex.toString())
+    const forcedRevealEvent = new ForcedRevealEvent(eventId)
+    
+    forcedRevealEvent.user = getOrCreatePlayer(event.params.user).id
+    forcedRevealEvent.executor = event.params.executor
+    forcedRevealEvent.quantity = event.params.quantity
+    forcedRevealEvent.nftType = "hero"
+    forcedRevealEvent.contractAddress = event.address
+    forcedRevealEvent.transactionHash = event.transaction.hash
+    forcedRevealEvent.blockNumber = event.block.number
+    forcedRevealEvent.timestamp = event.block.timestamp
+    forcedRevealEvent.save()
+    
+    // 記錄日誌
+    log.info('ForcedRevealExecuted: User {} by executor {} for {} Heroes', [
         event.params.user.toHexString(),
         event.params.executor.toHexString(),
         event.params.quantity.toString()
@@ -197,9 +211,21 @@ export function handleForcedRevealExecuted(event: ForcedRevealExecuted): void {
 }
 
 export function handleRevealedByProxy(event: RevealedByProxy): void {
-    // 根據 ABI，事件參數為 user, proxy
-    // 記錄代理揭示事件
-    log.info('RevealedByProxy: User {} by proxy {}', [
+    // 創建代理揭示事件記錄
+    const eventId = createEntityId(event.transaction.hash.toHexString(), event.logIndex.toString())
+    const proxyRevealEvent = new ProxyRevealEvent(eventId)
+    
+    proxyRevealEvent.user = getOrCreatePlayer(event.params.user).id
+    proxyRevealEvent.proxy = event.params.proxy
+    proxyRevealEvent.nftType = "hero"
+    proxyRevealEvent.contractAddress = event.address
+    proxyRevealEvent.transactionHash = event.transaction.hash
+    proxyRevealEvent.blockNumber = event.block.number
+    proxyRevealEvent.timestamp = event.block.timestamp
+    proxyRevealEvent.save()
+    
+    // 記錄日誌
+    log.info('RevealedByProxy: User {} by proxy {} for Heroes', [
         event.params.user.toHexString(),
         event.params.proxy.toHexString()
     ])

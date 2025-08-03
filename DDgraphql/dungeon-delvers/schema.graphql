@@ -246,6 +246,10 @@ type Player @entity(immutable: false) {
   expeditions: [Expedition!] @derivedFrom(field: "player")
   " 是否擁有 VIP 卡 (SBT) "
   hasVIPCard: Boolean!
+  " 玩家被強制揭示的記錄 "
+  forcedReveals: [ForcedRevealEvent!] @derivedFrom(field: "user")
+  " 玩家被代理揭示的記錄 "
+  proxyReveals: [ProxyRevealEvent!] @derivedFrom(field: "user")
 }
 
 type Hero @entity(immutable: false) {
@@ -862,6 +866,46 @@ type RevealEvent @entity(immutable: true) {
   isProxyReveal: Boolean!
   " 代理揭示執行者 "
   proxyExecutor: Bytes
+  " 交易哈希 "
+  transactionHash: Bytes!
+  " 區塊號 "
+  blockNumber: BigInt!
+  " 時間戳 "
+  timestamp: BigInt!
+}
+
+type ForcedRevealEvent @entity(immutable: true) {
+  " 唯一 ID：txHash-logIndex "
+  id: ID!
+  " 被強制揭示的用戶 "
+  user: Player!
+  " 執行強制揭示的地址 "
+  executor: Bytes!
+  " 強制揭示的 NFT 數量 "
+  quantity: BigInt!
+  " NFT 類型 (hero/relic) "
+  nftType: String!
+  " 合約地址 "
+  contractAddress: Bytes!
+  " 交易哈希 "
+  transactionHash: Bytes!
+  " 區塊號 "
+  blockNumber: BigInt!
+  " 時間戳 "
+  timestamp: BigInt!
+}
+
+type ProxyRevealEvent @entity(immutable: true) {
+  " 唯一 ID：txHash-logIndex "
+  id: ID!
+  " 被代理揭示的用戶 "
+  user: Player!
+  " 代理執行者 "
+  proxy: Bytes!
+  " NFT 類型 (hero/relic) "
+  nftType: String!
+  " 合約地址 "
+  contractAddress: Bytes!
   " 交易哈希 "
   transactionHash: Bytes!
   " 區塊號 "

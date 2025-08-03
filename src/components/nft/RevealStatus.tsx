@@ -26,11 +26,17 @@ export const RevealStatus: React.FC<RevealStatusProps> = ({
     forceReveal,
   } = useCommitReveal(contractType, userAddress);
 
-  // Use countdown for blocks (assuming 3 seconds per block on BSC)
-  const revealCountdown = useCountdown(blocksUntilReveal * 3);
-  const expireCountdown = useCountdown(blocksUntilExpire * 3);
+  // 修正：BSC 每個區塊約 0.75 秒（不是 3 秒）
+  const BSC_BLOCK_TIME = 0.75; // 秒
+  
+  // 計算絕對時間戳用於倒計時（始終調用 Hook，即使組件可能不渲染）
+  const now = Math.floor(Date.now() / 1000);
+  const revealTargetTime = now + (blocksUntilReveal * BSC_BLOCK_TIME);
+  const expireTargetTime = now + (blocksUntilExpire * BSC_BLOCK_TIME);
+  const revealCountdown = useCountdown(revealTargetTime);
+  const expireCountdown = useCountdown(expireTargetTime);
 
-  // No pending mints
+  // No pending mints - 條件檢查移到 Hook 調用之後
   if (!commitment || commitment.blockNumber === 0n || commitment.fulfilled) {
     return null;
   }
@@ -83,7 +89,16 @@ export const RevealStatus: React.FC<RevealStatusProps> = ({
           <div className="flex justify-between items-center">
             <span className="text-xs text-gray-400">可揭示倒計時</span>
             <span className="text-sm font-medium text-yellow-400">
-              {formatTime(revealCountdown)} ({blocksUntilReveal} 區塊)
+              {revealCountdown.formatted} ({blocksUntilReveal} 區塊)
+            </span>
+          </div>
+        )}
+        
+        {blocksUntilReveal === 0 && !canReveal && (
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-gray-400">狀態</span>
+            <span className="text-sm font-medium text-green-400">
+              可以揭示！
             </span>
           </div>
         )}
@@ -92,7 +107,7 @@ export const RevealStatus: React.FC<RevealStatusProps> = ({
           <div className="flex justify-between items-center">
             <span className="text-xs text-gray-400">過期倒計時</span>
             <span className="text-sm font-medium text-orange-400">
-              {formatTime(expireCountdown)} ({blocksUntilExpire} 區塊)
+              {expireCountdown.formatted} ({blocksUntilExpire} 區塊)
             </span>
           </div>
         )}
@@ -146,7 +161,7 @@ export const RevealStatus: React.FC<RevealStatusProps> = ({
             variant="danger"
             fullWidth
           >
-            ⚠️ 強制揭示（將獲得最低稀有度）
+            ⚠️ 強制揭示（保底稀有度分布）
           </ActionButton>
         )}
 
@@ -156,7 +171,7 @@ export const RevealStatus: React.FC<RevealStatusProps> = ({
               揭示需要等待 {blocksUntilReveal} 個區塊
             </p>
             <p className="text-xs text-gray-500">
-              BSC 約每 3 秒產生一個新區塊
+              BSC 約每 {BSC_BLOCK_TIME} 秒產生一個新區塊
             </p>
           </div>
         )}
@@ -165,10 +180,41 @@ export const RevealStatus: React.FC<RevealStatusProps> = ({
       {/* Warning for force reveal */}
       {canForceReveal && (
         <div className="mt-3 p-2 bg-red-900/20 border border-red-500/30 rounded">
-          <p className="text-xs text-red-400">
-            ⚠️ 注意：強制揭示將獲得最低稀有度作為懲罰。
-            如果您忘記在時限內揭示，任何人都可以幫您強制揭示。
-          </p>
+          <div className="text-xs text-red-400 mb-2">
+            ⚠️ 強制揭示保底分布（{commitment.quantity.toString()} 個）：
+          </div>
+          <div className="text-xs text-gray-300 space-y-1">
+            {commitment.quantity.toString() === '50' ? (
+              <>
+                <div>• 25 個 1星 ⭐</div>
+                <div>• 16 個 2星 ⭐⭐</div>
+                <div>• 8 個 3星 ⭐⭐⭐</div>
+                <div>• 1 個 4星 ⭐⭐⭐⭐</div>
+              </>
+            ) : commitment.quantity.toString() === '20' ? (
+              <>
+                <div>• 11 個 1星 ⭐</div>
+                <div>• 6 個 2星 ⭐⭐</div>
+                <div>• 3 個 3星 ⭐⭐⭐</div>
+              </>
+            ) : commitment.quantity.toString() === '10' ? (
+              <>
+                <div>• 6 個 1星 ⭐</div>
+                <div>• 3 個 2星 ⭐⭐</div>
+                <div>• 1 個 3星 ⭐⭐⭐</div>
+              </>
+            ) : commitment.quantity.toString() === '5' ? (
+              <>
+                <div>• 3 個 1星 ⭐</div>
+                <div>• 2 個 2星 ⭐⭐</div>
+              </>
+            ) : (
+              <div>• 1 個 1星 ⭐</div>
+            )}
+          </div>
+          <div className="text-xs text-red-400 mt-2">
+            任何人都可以幫您強制揭示過期的鑄造。
+          </div>
         </div>
       )}
     </div>

@@ -50,7 +50,7 @@ export function useCommitReveal(
   const [error, setError] = useState<Error | null>(null);
 
   const address = userAddress || connectedAddress;
-  const contractAddress = contractType === 'hero' ? CONTRACTS.HERO_ADDRESS : CONTRACTS.RELIC_ADDRESS;
+  const contractAddress = contractType === 'hero' ? CONTRACTS[56].HERO : CONTRACTS[56].RELIC;
   const abi = contractType === 'hero' ? HERO_ABI : RELIC_ABI;
 
   // Read user commitment
@@ -60,6 +60,14 @@ export function useCommitReveal(
     functionName: 'getUserCommitment',
     args: address ? [address] : undefined,
     enabled: !!address,
+    query: {
+      staleTime: 1000 * 10, // 10秒快取 - commitment 狀態更新頻繁
+      gcTime: 1000 * 60 * 5, // 5分鐘垃圾回收
+      refetchOnWindowFocus: true, // 視窗聚焦時刷新
+      refetchInterval: 30000, // 每30秒自動刷新
+      retry: 3, // 失敗時重試3次
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // 指數退避
+    },
   });
 
   // Read pending tokens
@@ -69,6 +77,13 @@ export function useCommitReveal(
     functionName: 'getUserPendingTokens',
     args: address ? [address] : undefined,
     enabled: !!address,
+    query: {
+      staleTime: 1000 * 15, // 15秒快取
+      gcTime: 1000 * 60 * 5,
+      refetchOnWindowFocus: true,
+      refetchInterval: 30000,
+      retry: 2,
+    },
   });
 
   // Read can reveal status
@@ -78,6 +93,13 @@ export function useCommitReveal(
     functionName: 'canReveal',
     args: address ? [address] : undefined,
     enabled: !!address,
+    query: {
+      staleTime: 1000 * 5, // 5秒快取 - 狀態變化快
+      gcTime: 1000 * 60 * 5,
+      refetchOnWindowFocus: true,
+      refetchInterval: 15000, // 更頻繁檢查
+      retry: 2,
+    },
   });
 
   // Read can force reveal status
@@ -87,6 +109,13 @@ export function useCommitReveal(
     functionName: 'canForceReveal',
     args: address ? [address] : undefined,
     enabled: !!address,
+    query: {
+      staleTime: 1000 * 5, // 5秒快取
+      gcTime: 1000 * 60 * 5,
+      refetchOnWindowFocus: true,
+      refetchInterval: 15000,
+      retry: 2,
+    },
   });
 
   // Calculate blocks remaining
@@ -97,6 +126,25 @@ export function useCommitReveal(
   const blocksUntilExpire = commitment && blockNumber && commitment.blockNumber > 0n
     ? Math.max(0, Number(commitment.blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW - blockNumber))
     : 0;
+
+  // 調試日志 - 幫助診斷 commitment 檢測問題
+  useEffect(() => {
+    if (commitment && blockNumber) {
+      console.log(`[useCommitReveal] ${contractType} commitment 狀態:`, {
+        hasCommitment: !!commitment,
+        blockNumber: commitment.blockNumber?.toString(),
+        quantity: commitment.quantity?.toString(),
+        fulfilled: commitment.fulfilled,
+        currentBlock: blockNumber?.toString(),
+        blocksUntilReveal,
+        blocksUntilExpire,
+        canReveal,
+        canForceReveal,
+        contractAddress,
+        userAddress: address,
+      });
+    }
+  }, [commitment, blockNumber, contractType, blocksUntilReveal, blocksUntilExpire, canReveal, canForceReveal]);
 
   // Refetch all data
   const refetch = useCallback(() => {

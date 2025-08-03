@@ -53,8 +53,8 @@ export const AllPendingReveals: React.FC<AllPendingRevealsProps> = ({
         <div className="mt-6 p-3 bg-blue-900/20 border border-blue-500/30 rounded">
           <h4 className="text-sm font-semibold text-blue-400 mb-2">💡 揭示機制說明</h4>
           <ul className="text-xs text-blue-300 space-y-1">
-            <li>• 提交操作後需等待 3 個區塊（約 9 秒）才能揭示</li>
-            <li>• 必須在 255 個區塊內（約 12.75 分鐘）完成揭示</li>
+            <li>• 提交操作後需等待 3 個區塊（約 2.25 秒）才能揭示</li>
+            <li>• 必須在 255 個區塊內（約 3.2 分鐘）完成揭示</li>
             <li>• 過期未揭示將自動失敗或獲得最低結果</li>
             <li>• 任何人都可以幫助他人揭示，但過期強制揭示會有懲罰</li>
           </ul>

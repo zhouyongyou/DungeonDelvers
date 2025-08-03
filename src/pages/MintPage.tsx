@@ -293,13 +293,6 @@ const RarityProbabilities = memo<{ quantity: number }>(({ quantity }) => {
                     );
                 })}
             </div>
-            {quantity < 50 && (
-                <div className="mt-2 p-2 bg-orange-900/20 border border-orange-500/30 rounded">
-                    <p className="text-xs text-orange-300 text-center">
-                        防撞庫機制啟動 - 數量越多，稀有度上限越高
-                    </p>
-                </div>
-            )}
         </div>
     );
 });
@@ -799,11 +792,6 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                 title={(needsApproval && paymentSource === 'wallet' && !optimisticApprovalGranted) ? '授權進度' : '鑄造進度'}
             />
             <h3 className="section-title">招募{title}</h3>
-            <div className="bg-amber-900/20 border border-amber-600/30 rounded-lg px-2 sm:px-3 py-2 mb-3 mx-2 sm:mx-4">
-                <p className="text-xs text-amber-400 text-center font-medium">
-                    ⚡ 數量越多，稀有度越高！單個最高2★，50個可達5★
-                </p>
-            </div>
             <div className="my-3 sm:my-4">
                 <div className="flex items-center justify-center gap-1 sm:gap-2 mb-2">
                     {options.map(q => {
@@ -976,11 +964,11 @@ const MintPage: React.FC = memo(() => {
                 </div>
             </div>
             
-            {/* 防撞庫機制說明 */}
+            {/* Commit-Reveal 機制說明 */}
             <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/30 rounded-lg p-4 sm:p-5 md:p-6 mb-6 sm:mb-8 max-w-4xl mx-auto">
                 <div>
                     <h3 className="text-base sm:text-lg font-bold text-blue-300 mb-2 sm:mb-3">
-                        防撞庫機制 - 批量越大，稀有度越高
+                        Commit-Reveal 機制 - 統一機率，延遲揭示
                     </h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4">
                             {BATCH_TIERS.map((tier, index) => (
@@ -996,13 +984,13 @@ const MintPage: React.FC = memo(() => {
                                 </div>
                             ))}
                         </div>
-                        <div className="bg-yellow-900/20 border border-yellow-600/50 rounded-lg p-2 sm:p-3">
-                            <h4 className="text-sm sm:text-base text-yellow-300 font-semibold mb-2">設計理念</h4>
+                        <div className="bg-purple-900/20 border border-purple-600/50 rounded-lg p-2 sm:p-3">
+                            <h4 className="text-sm sm:text-base text-purple-300 font-semibold mb-2">⚡ Commit-Reveal 機制</h4>
                             <ul className="text-xs sm:text-sm text-gray-300 space-y-1">
-                                <li>• <strong>提高撞庫成本</strong>：科學家必須投入更多資金才能嘗試獲得高稀有度</li>
-                                <li>• <strong>鼓勵大額投入</strong>：50個批量享受完整機率，獲得最佳遊戲體驗</li>
-                                <li>• <strong>機率透明化</strong>：每個批量等級的稀有度機率完全公開</li>
-                                <li>• <strong>經濟平衡</strong>：防止小額頻繁交易對經濟的影響</li>
+                                <li>• <strong>兩步驟鑄造</strong>：提交承諾後等待 3 個區塊揭示結果</li>
+                                <li>• <strong>區塊鏈隨機性</strong>：使用未來區塊 hash 確保公平性</li>
+                                <li>• <strong>統一機率分布</strong>：所有批量享有相同的稀有度機會</li>
+                                <li>• <strong>防止操縱</strong>：延遲揭示機制有效阻止撞庫行為</li>
                             </ul>
                         </div>
                 </div>

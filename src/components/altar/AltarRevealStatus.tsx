@@ -21,14 +21,40 @@ export const AltarRevealStatus: React.FC<AltarRevealStatusProps> = ({
     isLoading,
     reveal,
     forceReveal,
+    refetch,
   } = useAltarReveal(userAddress);
 
-  // Use countdown for blocks (assuming 3 seconds per block on BSC)
-  const revealCountdown = useCountdown(blocksUntilReveal * 3);
-  const expireCountdown = useCountdown(blocksUntilExpire * 3);
+  // 修正：BSC 每個區塊約 0.75 秒（不是 3 秒）
+  const BSC_BLOCK_TIME = 0.75; // 秒
+  
+  // 計算絕對時間戳用於倒計時（始終調用 Hook，即使組件可能不渲染）
+  const now = Math.floor(Date.now() / 1000);
+  const revealTargetTime = now + (blocksUntilReveal * BSC_BLOCK_TIME);
+  const expireTargetTime = now + (blocksUntilExpire * BSC_BLOCK_TIME);
+  const revealCountdown = useCountdown(revealTargetTime);
+  const expireCountdown = useCountdown(expireTargetTime);
 
-  // No pending upgrades
-  if (!commitment || commitment.blockNumber === 0n || commitment.fulfilled) {
+  // 調試日誌
+  console.log('[AltarRevealStatus] commitment:', commitment);
+  console.log('[AltarRevealStatus] blocksUntilReveal:', blocksUntilReveal);
+  console.log('[AltarRevealStatus] canReveal:', canReveal);
+
+  // 在數據載入期間顯示載入狀態
+  if (!commitment) {
+    // 仍在載入中，顯示骨架載入效果
+    return (
+      <div className={`bg-gray-800 rounded-lg p-4 animate-pulse ${className}`}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="h-4 bg-gray-700 rounded w-24"></div>
+          <div className="h-4 bg-gray-700 rounded w-20"></div>
+        </div>
+        <div className="h-20 bg-gray-700 rounded"></div>
+      </div>
+    );
+  }
+
+  // No pending upgrades - 條件檢查移到 Hook 調用之後
+  if (commitment.blockNumber === 0n || commitment.fulfilled) {
     return null;
   }
 
@@ -84,7 +110,16 @@ export const AltarRevealStatus: React.FC<AltarRevealStatusProps> = ({
           <div className="flex justify-between items-center">
             <span className="text-xs text-gray-400">可揭示倒計時</span>
             <span className="text-sm font-medium text-yellow-400">
-              {formatTime(revealCountdown)} ({blocksUntilReveal} 區塊)
+              {revealCountdown.formatted} ({blocksUntilReveal} 區塊)
+            </span>
+          </div>
+        )}
+        
+        {blocksUntilReveal === 0 && !canReveal && !canForceReveal && (
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-gray-400">狀態</span>
+            <span className="text-sm font-medium text-green-400">
+              可以揭示！
             </span>
           </div>
         )}
@@ -93,7 +128,7 @@ export const AltarRevealStatus: React.FC<AltarRevealStatusProps> = ({
           <div className="flex justify-between items-center">
             <span className="text-xs text-gray-400">過期倒計時</span>
             <span className="text-sm font-medium text-orange-400">
-              {formatTime(expireCountdown)} ({blocksUntilExpire} 區塊)
+              {expireCountdown.formatted} ({blocksUntilExpire} 區塊)
             </span>
           </div>
         )}
@@ -142,15 +177,28 @@ export const AltarRevealStatus: React.FC<AltarRevealStatusProps> = ({
           </ActionButton>
         )}
 
-        {!canReveal && !canForceReveal && (
+        {!canReveal && !canForceReveal && blocksUntilReveal > 0 && (
           <div className="text-center">
             <p className="text-xs text-gray-400 mb-1">
               揭示需要等待 {blocksUntilReveal} 個區塊
             </p>
             <p className="text-xs text-gray-500">
-              BSC 約每 3 秒產生一個新區塊
+              BSC 約每 {BSC_BLOCK_TIME} 秒產生一個新區塊
             </p>
           </div>
+        )}
+        
+        {!canReveal && !canForceReveal && blocksUntilReveal === 0 && (
+          <ActionButton
+            onClick={() => {
+              refetch();
+              window.location.reload(); // 強制刷新頁面以獲取最新狀態
+            }}
+            variant="secondary"
+            fullWidth
+          >
+            🔄 刷新狀態
+          </ActionButton>
         )}
       </div>
 

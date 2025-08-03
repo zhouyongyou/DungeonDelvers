@@ -1,7 +1,7 @@
 // src/hooks/useContractError.ts - 統一的合約錯誤處理
 
 import { useCallback } from 'react';
-import { useAppToast } from './useAppToast';
+import { useAppToast } from '../contexts/SimpleToastContext';
 
 interface ContractError {
   message?: string;
@@ -35,12 +35,35 @@ export function useContractError() {
       e?.details?.message?.includes('User rejected') ||
       e?.details?.message?.includes('user rejected');
 
+    // 檢查是否為交易確認錯誤
+    const isConfirmationError = 
+      e?.message?.includes('Cannot convert undefined to a BigInt') ||
+      e?.message?.includes('waitForTransactionReceipt') ||
+      e?.message?.includes('getTransaction') ||
+      e?.message?.includes('numberToHex');
+
     if (!isUserRejected) {
-      const errorMessage = customMessage || 
-                          e?.shortMessage || 
-                          e?.message || 
-                          '操作失敗';
-      showToast(errorMessage, 'error');
+      if (isConfirmationError) {
+        // 交易確認錯誤 - 提供更友好的提示
+        showToast(
+          '🔄 交易可能已成功，但確認過程中出現問題。建議刷新頁面查看最新狀態。', 
+          'warning'
+        );
+        
+        // 5秒後顯示刷新提示
+        setTimeout(() => {
+          showToast(
+            '💡 如果狀態未更新，請手動刷新頁面 (F5 或 Ctrl+R)', 
+            'info'
+          );
+        }, 5000);
+      } else {
+        const errorMessage = customMessage || 
+                            e?.shortMessage || 
+                            e?.message || 
+                            '操作失敗';
+        showToast(errorMessage, 'error');
+      }
     }
   }, [showToast]);
 
