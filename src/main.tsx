@@ -22,16 +22,10 @@ initializeAppConfig().catch(console.error);
 setupEmergencyRpcHandler();
 
 // 開發環境下檢查 RPC 配置和提供工具
-// 使用條件編譯避免生產環境打包這些文件
 if (import.meta.env.DEV) {
-  // 使用 Promise.all 確保錯誤處理
-  Promise.all([
-    import('./utils/checkRpcConfig'),
-    import('./utils/clearEmergencyMode'),
-    import('./utils/testGraphQL')
-  ]).catch(err => {
-    console.warn('Failed to load dev tools:', err);
-  });
+  import('./utils/checkRpcConfig');
+  import('./utils/clearEmergencyMode');
+  import('./utils/testGraphQL'); // 測試 GraphQL 支援
 }
 
 // 優化後的 React Query 配置

@@ -28,11 +28,6 @@ export default defineConfig(({ mode }) => ({
     },
     // 🔥 優化：代碼分割優化
     rollupOptions: {
-      // 排除開發工具避免 MIME type 錯誤
-      treeshake: {
-        moduleSideEffects: false,
-        propertyReadSideEffects: false
-      },
       // 明確排除 Next.js 相關模組以避免構建錯誤
       external: [
         'next',
