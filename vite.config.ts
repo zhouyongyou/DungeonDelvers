@@ -73,8 +73,7 @@ export default defineConfig(({ mode }) => ({
             './src/pages/ReferralPage'
           ],
           'pages-misc': [
-            './src/pages/AdminPage',
-            './src/pages/CodexPage'
+            './src/pages/AdminPage'
           ]
         },
         
