@@ -3,8 +3,8 @@ import { useAccount, useBlockNumber, useReadContract, useWriteContract, useWaitF
 import { Address } from 'viem';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { CONTRACTS } from '../config/contracts';
-import HERO_ABI from '../abi/Hero.json';
-import RELIC_ABI from '../abi/Relic.json';
+import HERO_ABI from '../abis/Hero.json';
+import RELIC_ABI from '../abis/Relic.json';
 
 interface MintCommitment {
   blockNumber: bigint;
