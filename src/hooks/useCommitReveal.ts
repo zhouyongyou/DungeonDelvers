@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAccount, useBlockNumber, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { Address } from 'viem';
-import { toast } from 'react-hot-toast';
+import { useAppToast } from '../contexts/SimpleToastContext';
 import { CONTRACTS } from '../config/contracts';
 import HERO_ABI from '../abi/Hero.json';
 import RELIC_ABI from '../abi/Relic.json';
@@ -45,6 +45,7 @@ export function useCommitReveal(
   const { data: blockNumber } = useBlockNumber({ watch: true });
   const { writeContract, data: hash, error: writeError } = useWriteContract();
   const { isLoading: isWaiting } = useWaitForTransactionReceipt({ hash });
+  const { showToast } = useAppToast();
   
   const [isRevealing, setIsRevealing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
