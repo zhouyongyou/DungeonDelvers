@@ -1,12 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAccount, useBlockNumber, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { Address } from 'viem';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { getContractWithABI } from '../config/contractsWithABI';
 
 interface UpgradeCommitment {
   blockNumber: bigint;
-  tokenContract: Address;
+  tokenContract: `0x${string}`;
   rarity: number;
   materialsCount: number;
   commitment: `0x${string}`;
@@ -27,14 +26,14 @@ interface AltarRevealState {
 interface UseAltarRevealReturn extends AltarRevealState {
   refetch: () => void;
   reveal: () => Promise<void>;
-  forceReveal: (userAddress: Address) => Promise<void>;
+  forceReveal: (userAddress: `0x${string}`) => Promise<void>;
 }
 
 const REVEAL_BLOCK_DELAY = 3n;
 const MAX_REVEAL_WINDOW = 255n;
 
 export function useAltarReveal(
-  userAddress?: Address
+  userAddress?: `0x${string}`
 ): UseAltarRevealReturn {
   const { address: connectedAddress } = useAccount();
   const { data: blockNumber } = useBlockNumber({ watch: true });
@@ -50,7 +49,7 @@ export function useAltarReveal(
 
   // Read user commitment
   const { data: commitment, refetch: refetchCommitment } = useReadContract({
-    address: altarContract?.address as Address,
+    address: altarContract?.address as `0x${string}`,
     abi: altarContract?.abi,
     functionName: 'userCommitments',
     args: address ? [address] : undefined,
@@ -102,7 +101,7 @@ export function useAltarReveal(
 
     try {
       await writeContract({
-        address: altarContract.address as Address,
+        address: altarContract.address as `0x${string}`,
         abi: altarContract.abi,
         functionName: 'revealUpgrade',
       });
@@ -118,7 +117,7 @@ export function useAltarReveal(
   }, [address, canReveal, altarContract, writeContract, showToast]);
 
   // Force reveal function (for expired upgrades)
-  const forceReveal = useCallback(async (targetAddress: Address) => {
+  const forceReveal = useCallback(async (targetAddress: `0x${string}`) => {
     if (!canForceReveal || !altarContract) {
       showToast('無法強制揭示。揭示視窗尚未過期。', 'error');
       return;
@@ -129,7 +128,7 @@ export function useAltarReveal(
 
     try {
       await writeContract({
-        address: altarContract.address as Address,
+        address: altarContract.address as `0x${string}`,
         abi: altarContract.abi,
         functionName: 'forceRevealExpiredUpgrade',
         args: [targetAddress],

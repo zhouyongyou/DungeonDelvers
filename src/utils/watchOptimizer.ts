@@ -128,7 +128,7 @@ class WatchManager {
       oldestTimestamp: Date.now(),
     };
 
-    for (const [key, watcherData] of this.activeWatchers.entries()) {
+    for (const [_key, watcherData] of this.activeWatchers.entries()) {
       const priority = watcherData.options.priority || 'medium';
       stats.byPriority[priority]++;
       
@@ -222,7 +222,7 @@ class EventFilterOptimizer {
       byPriority: { high: 0, medium: 0, low: 0 },
     };
 
-    for (const [key, filter] of this.activeFilters.entries()) {
+    for (const [_key, filter] of this.activeFilters.entries()) {
       stats.byPriority[filter.priority]++;
     }
 

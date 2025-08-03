@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAccount, useBlockNumber, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { Address } from 'viem';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { CONTRACTS } from '../config/contracts';
 import HERO_ABI from '../abis/Hero.json';
@@ -30,8 +29,8 @@ interface CommitRevealState {
 interface UseCommitRevealReturn extends CommitRevealState {
   refetch: () => void;
   reveal: () => Promise<void>;
-  forceReveal: (userAddress: Address) => Promise<void>;
-  revealFor: (userAddress: Address) => Promise<void>;
+  forceReveal: (userAddress: `0x${string}`) => Promise<void>;
+  revealFor: (userAddress: `0x${string}`) => Promise<void>;
 }
 
 const REVEAL_BLOCK_DELAY = 3n;
@@ -39,7 +38,7 @@ const MAX_REVEAL_WINDOW = 255n;
 
 export function useCommitReveal(
   contractType: 'hero' | 'relic',
-  userAddress?: Address
+  userAddress?: `0x${string}`
 ): UseCommitRevealReturn {
   const { address: connectedAddress } = useAccount();
   const { data: blockNumber } = useBlockNumber({ watch: true });
@@ -56,7 +55,7 @@ export function useCommitReveal(
 
   // Read user commitment
   const { data: commitment, refetch: refetchCommitment } = useReadContract({
-    address: contractAddress as Address,
+    address: contractAddress as `0x${string}`,
     abi,
     functionName: 'getUserCommitment',
     args: address ? [address] : undefined,
@@ -65,7 +64,7 @@ export function useCommitReveal(
 
   // Read pending tokens
   const { data: pendingTokens, refetch: refetchTokens } = useReadContract({
-    address: contractAddress as Address,
+    address: contractAddress as `0x${string}`,
     abi,
     functionName: 'getUserPendingTokens',
     args: address ? [address] : undefined,
@@ -74,7 +73,7 @@ export function useCommitReveal(
 
   // Read can reveal status
   const { data: canReveal, refetch: refetchCanReveal } = useReadContract({
-    address: contractAddress as Address,
+    address: contractAddress as `0x${string}`,
     abi,
     functionName: 'canReveal',
     args: address ? [address] : undefined,
@@ -83,7 +82,7 @@ export function useCommitReveal(
 
   // Read can force reveal status
   const { data: canForceReveal, refetch: refetchCanForceReveal } = useReadContract({
-    address: contractAddress as Address,
+    address: contractAddress as `0x${string}`,
     abi,
     functionName: 'canForceReveal',
     args: address ? [address] : undefined,
@@ -126,7 +125,7 @@ export function useCommitReveal(
 
     try {
       await writeContract({
-        address: contractAddress as Address,
+        address: contractAddress as `0x${string}`,
         abi,
         functionName: 'revealMint',
       });
@@ -142,7 +141,7 @@ export function useCommitReveal(
   }, [address, canReveal, contractAddress, abi, writeContract, showToast]);
 
   // Force reveal function (for expired mints)
-  const forceReveal = useCallback(async (targetAddress: Address) => {
+  const forceReveal = useCallback(async (targetAddress: `0x${string}`) => {
     if (!canForceReveal) {
       showToast('Cannot force reveal yet. The reveal window has not expired.', 'error');
       return;
@@ -153,7 +152,7 @@ export function useCommitReveal(
 
     try {
       await writeContract({
-        address: contractAddress as Address,
+        address: contractAddress as `0x${string}`,
         abi,
         functionName: 'forceRevealExpired',
         args: [targetAddress],
@@ -170,13 +169,13 @@ export function useCommitReveal(
   }, [canForceReveal, contractAddress, abi, writeContract, showToast]);
 
   // Reveal for someone else
-  const revealFor = useCallback(async (targetAddress: Address) => {
+  const revealFor = useCallback(async (targetAddress: `0x${string}`) => {
     setIsRevealing(true);
     setError(null);
 
     try {
       await writeContract({
-        address: contractAddress as Address,
+        address: contractAddress as `0x${string}`,
         abi,
         functionName: 'revealMintFor',
         args: [targetAddress],

@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAccount, useBlockNumber, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { Address } from 'viem';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { getContractWithABI } from '../config/contractsWithABI';
 
@@ -8,7 +7,7 @@ interface ExpeditionCommitment {
   blockNumber: bigint;
   partyId: bigint;
   dungeonId: bigint;
-  player: Address;
+  player: `0x${string}`;
   commitment: `0x${string}`;
   fulfilled: boolean;
   payment: bigint;
@@ -27,15 +26,15 @@ interface DungeonRevealState {
 interface UseDungeonRevealReturn extends DungeonRevealState {
   refetch: () => void;
   reveal: () => Promise<void>;
-  forceReveal: (userAddress: Address) => Promise<void>;
-  revealFor: (userAddress: Address) => Promise<void>;
+  forceReveal: (userAddress: `0x${string}`) => Promise<void>;
+  revealFor: (userAddress: `0x${string}`) => Promise<void>;
 }
 
 const REVEAL_BLOCK_DELAY = 3n;
 const MAX_REVEAL_WINDOW = 255n;
 
 export function useDungeonReveal(
-  userAddress?: Address
+  userAddress?: `0x${string}`
 ): UseDungeonRevealReturn {
   const { address: connectedAddress } = useAccount();
   const { data: blockNumber } = useBlockNumber({ watch: true });
@@ -51,7 +50,7 @@ export function useDungeonReveal(
 
   // Read user commitment
   const { data: commitment, refetch: refetchCommitment } = useReadContract({
-    address: dungeonMasterContract?.address as Address,
+    address: dungeonMasterContract?.address as `0x${string}`,
     abi: dungeonMasterContract?.abi,
     functionName: 'userCommitments',
     args: address ? [address] : undefined,
@@ -103,7 +102,7 @@ export function useDungeonReveal(
 
     try {
       await writeContract({
-        address: dungeonMasterContract.address as Address,
+        address: dungeonMasterContract.address as `0x${string}`,
         abi: dungeonMasterContract.abi,
         functionName: 'revealExpedition',
       });
@@ -119,7 +118,7 @@ export function useDungeonReveal(
   }, [address, canReveal, dungeonMasterContract, writeContract, showToast]);
 
   // Force reveal function (for expired expeditions)
-  const forceReveal = useCallback(async (targetAddress: Address) => {
+  const forceReveal = useCallback(async (targetAddress: `0x${string}`) => {
     if (!canForceReveal || !dungeonMasterContract) {
       showToast('無法強制揭示。揭示視窗尚未過期。', 'error');
       return;
@@ -130,7 +129,7 @@ export function useDungeonReveal(
 
     try {
       await writeContract({
-        address: dungeonMasterContract.address as Address,
+        address: dungeonMasterContract.address as `0x${string}`,
         abi: dungeonMasterContract.abi,
         functionName: 'forceRevealExpiredExpedition',
         args: [targetAddress],
@@ -147,7 +146,7 @@ export function useDungeonReveal(
   }, [canForceReveal, dungeonMasterContract, writeContract, showToast]);
 
   // Reveal for someone else
-  const revealFor = useCallback(async (targetAddress: Address) => {
+  const revealFor = useCallback(async (targetAddress: `0x${string}`) => {
     if (!dungeonMasterContract) {
       return;
     }
@@ -157,7 +156,7 @@ export function useDungeonReveal(
 
     try {
       await writeContract({
-        address: dungeonMasterContract.address as Address,
+        address: dungeonMasterContract.address as `0x${string}`,
         abi: dungeonMasterContract.abi,
         functionName: 'revealExpeditionFor',
         args: [targetAddress],

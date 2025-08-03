@@ -223,7 +223,7 @@ const getPartyEmojis = (rarity: number): { main: string; secondary: string } => 
 
 export function generatePartySVG(party: PartyNft): string {
     const rarityColor = getRarityColor(party.partyRarity);
-    const tierName = ['Standard', 'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond'][Math.min(party.partyRarity, 5)] || 'Standard';
+    const _tierName = ['Standard', 'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond'][Math.min(party.partyRarity, 5)] || 'Standard';
     const emojis = getPartyEmojis(party.partyRarity);
     
     return `${getSVGHeader()}
@@ -304,7 +304,7 @@ export function generateVipSVG(vip: VipNft): string {
         <rect width="400" height="400" rx="20" fill="url(#vip-gradient)"/>
         
         <!-- 動畫星星背景 -->
-        ${Array.from({length: 15}, (_, i) => `
+        ${Array.from({length: 15}, (_, _i) => `
             <circle cx="${Math.random() * 400}" cy="${Math.random() * 400}" r="${1 + Math.random() * 2}" 
                     fill="${tier.color}" opacity="0.3" class="breathe" 
                     style="animation-delay: ${Math.random() * 3}s"/>

@@ -70,7 +70,7 @@ const useUserActivity = () => {
  * 🔥 優化版本：添加了更好的錯誤處理和性能監控
  */
 function createContractEventHandler(
-    contract: ReturnType<typeof getContract>,
+    contract: ReturnType<typeof getContractWithABI>,
     eventName: string,
     userAddress: `0x${string}` | undefined,
     callback: (decodedLog: DecodedLogWithArgs) => void,
