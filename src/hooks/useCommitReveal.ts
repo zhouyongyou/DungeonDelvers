@@ -117,7 +117,7 @@ export function useCommitReveal(
   // Reveal function
   const reveal = useCallback(async () => {
     if (!address || !canReveal) {
-      toast.error('Cannot reveal yet. Please wait for the required blocks.');
+      showToast('Cannot reveal yet. Please wait for the required blocks.', 'error');
       return;
     }
 
@@ -131,20 +131,20 @@ export function useCommitReveal(
         functionName: 'revealMint',
       });
 
-      toast.success('Revealing your NFTs...');
+      showToast('Revealing your NFTs...', 'success');
     } catch (err) {
       const error = err as Error;
       setError(error);
-      toast.error(`Reveal failed: ${error.message}`);
+      showToast(`Reveal failed: ${error.message}`, 'error');
     } finally {
       setIsRevealing(false);
     }
-  }, [address, canReveal, contractAddress, abi, writeContract]);
+  }, [address, canReveal, contractAddress, abi, writeContract, showToast]);
 
   // Force reveal function (for expired mints)
   const forceReveal = useCallback(async (targetAddress: Address) => {
     if (!canForceReveal) {
-      toast.error('Cannot force reveal yet. The reveal window has not expired.');
+      showToast('Cannot force reveal yet. The reveal window has not expired.', 'error');
       return;
     }
 
@@ -159,15 +159,15 @@ export function useCommitReveal(
         args: [targetAddress],
       });
 
-      toast.success('Force revealing expired NFTs...');
+      showToast('Force revealing expired NFTs...', 'success');
     } catch (err) {
       const error = err as Error;
       setError(error);
-      toast.error(`Force reveal failed: ${error.message}`);
+      showToast(`Force reveal failed: ${error.message}`, 'error');
     } finally {
       setIsRevealing(false);
     }
-  }, [canForceReveal, contractAddress, abi, writeContract]);
+  }, [canForceReveal, contractAddress, abi, writeContract, showToast]);
 
   // Reveal for someone else
   const revealFor = useCallback(async (targetAddress: Address) => {
@@ -182,15 +182,15 @@ export function useCommitReveal(
         args: [targetAddress],
       });
 
-      toast.success('Revealing NFTs for user...');
+      showToast('Revealing NFTs for user...', 'success');
     } catch (err) {
       const error = err as Error;
       setError(error);
-      toast.error(`Reveal failed: ${error.message}`);
+      showToast(`Reveal failed: ${error.message}`, 'error');
     } finally {
       setIsRevealing(false);
     }
-  }, [contractAddress, abi, writeContract]);
+  }, [contractAddress, abi, writeContract, showToast]);
 
   return {
     commitment: commitment as MintCommitment | null,
