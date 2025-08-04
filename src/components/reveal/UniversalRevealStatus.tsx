@@ -41,13 +41,29 @@ export const UniversalRevealStatus: React.FC<UniversalRevealStatusProps> = ({
     refetch,
   } = data;
 
-  // 調試日誌 - 僅在開發環境且有重要變化時記錄
-  // if (process.env.NODE_ENV === 'development' && commitment && canReveal) {
-  //   console.log(`[UniversalRevealStatus ${revealType}] Can reveal now!`, {
-  //     commitment,
-  //     canReveal,
-  //   });
-  // }
+  // 調試日誌 - 僅在開發環境且有重要變化時記錄（減少頻率）
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && commitment) {
+      console.log(`[UniversalRevealStatus ${revealType}] Debug Info:`, {
+        commitment,
+        canReveal,
+        canForceReveal,
+        blocksUntilReveal,
+        blocksUntilExpire,
+        userAddress,
+      });
+      
+      // 特別檢查地下城數據
+      if (revealType === 'dungeon') {
+        console.log(`[UniversalRevealStatus dungeon] Detailed commitment:`, {
+          partyId: commitment.partyId,
+          dungeonId: commitment.dungeonId,
+          blockNumber: commitment.blockNumber,
+          fulfilled: commitment.fulfilled,
+        });
+      }
+    }
+  }, [commitment?.blockNumber, canReveal, canForceReveal, revealType]); // 只在這些關鍵值變化時記錄
 
   // BSC block time
   const BSC_BLOCK_TIME = 0.75; // seconds
@@ -85,6 +101,9 @@ export const UniversalRevealStatus: React.FC<UniversalRevealStatusProps> = ({
   if (commitment.blockNumber === 0n || commitment.fulfilled) {
     return null;
   }
+
+  // 移除升星頁面的特殊檢查，因為從數組解析時 burnedTokenIds 總是空的
+  // 只要有 commitment 且未完成就顯示
 
   // Helper functions
   const getStatusColor = () => {
@@ -144,9 +163,9 @@ export const UniversalRevealStatus: React.FC<UniversalRevealStatusProps> = ({
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-400">材料數量</span>
+            <span className="text-xs text-gray-400">升級承諾</span>
             <span className="text-sm font-medium text-white">
-              {altarCommitment.burnedTokenIds?.length || 0} 個
+              已提交
             </span>
           </div>
         </>
@@ -157,18 +176,25 @@ export const UniversalRevealStatus: React.FC<UniversalRevealStatusProps> = ({
     if (revealType === 'dungeon' && commitment) {
       // dungeonData 的 commitment 已經被 useDungeonReveal 解析成對象
       const dungeonCommitment = commitment as any;
+      
+      // 安全的 bigint 轉字符串函數
+      const safeToString = (value: any) => {
+        if (value === null || value === undefined) return 'N/A';
+        return value.toString();
+      };
+      
       return (
         <>
           <div className="flex justify-between items-center">
             <span className="text-xs text-gray-400">隊伍 ID</span>
             <span className="text-sm font-medium text-white">
-              #{dungeonCommitment.partyId?.toString() || 'N/A'}
+              #{safeToString(dungeonCommitment.partyId)}
             </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-xs text-gray-400">地城等級</span>
             <span className="text-sm font-medium text-white">
-              {dungeonCommitment.dungeonId?.toString() || 'N/A'}
+              {safeToString(dungeonCommitment.dungeonId)}
             </span>
           </div>
         </>

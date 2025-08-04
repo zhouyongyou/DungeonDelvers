@@ -69,8 +69,16 @@ export function useAltarReveal(
     },
   });
 
-  // 合約返回的是結構體，不是數組
-  const parsedCommitment = commitment as UpgradeCommitment | null;
+  // 解析合約返回的數組格式數據
+  const parsedCommitment: UpgradeCommitment | null = commitment && Array.isArray(commitment) && commitment.length >= 6 ? {
+    blockNumber: commitment[0] as bigint,
+    tokenContract: commitment[1] as `0x${string}`,
+    baseRarity: Number(commitment[2]),
+    burnedTokenIds: [], // 從數組格式無法獲取，設為空數組
+    commitment: commitment[3] as `0x${string}`,
+    fulfilled: commitment[4] as boolean,
+    payment: commitment[5] as bigint,
+  } : null;
 
   // Read can reveal status from contract (like mint page does)
   const { data: canReveal, refetch: refetchCanReveal } = useReadContract({

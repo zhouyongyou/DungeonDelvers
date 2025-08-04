@@ -70,8 +70,16 @@ export function useDungeonReveal(
     },
   });
 
-  // 合約返回的是結構體，不是數組
-  const parsedCommitment = commitment as ExpeditionCommitment | null;
+  // 解析合約返回的數組格式數據
+  const parsedCommitment: ExpeditionCommitment | null = commitment && Array.isArray(commitment) && commitment.length >= 7 ? {
+    blockNumber: commitment[0] as bigint,
+    partyId: commitment[1] as bigint,
+    dungeonId: commitment[2] as bigint,
+    player: commitment[3] as `0x${string}`,
+    commitment: commitment[4] as `0x${string}`,
+    fulfilled: commitment[5] as boolean,
+    payment: commitment[6] as bigint,
+  } : null;
 
   // Read can reveal status from contract (like mint page does)
   const { data: canReveal, refetch: refetchCanReveal } = useReadContract({
@@ -114,22 +122,27 @@ export function useDungeonReveal(
     ? Math.max(0, Number(parsedCommitment.blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW - blockNumber))
     : 0;
 
-  // 調試日誌 - 幫助診斷區塊延遲問題
+  // 調試日誌 - 幫助診斷數據解析問題
   useEffect(() => {
+    console.log('[useDungeonReveal] Raw data:', {
+      rawCommitment: commitment,
+      isArray: Array.isArray(commitment),
+      length: commitment?.length,
+      parsedCommitment,
+      canReveal,
+      canForceReveal,
+      address,
+    });
+    
     if (parsedCommitment && blockNumber) {
       console.log('[useDungeonReveal] 探險狀態:', {
-        rawCommitment: commitment,
-        parsedCommitment,
         commitmentBlock: parsedCommitment.blockNumber?.toString(),
         currentBlock: blockNumber?.toString(),
         blocksUntilReveal,
         blocksUntilExpire,
-        canReveal,
-        canForceReveal,
         fulfilled: parsedCommitment.fulfilled,
         partyId: parsedCommitment.partyId?.toString(),
         dungeonId: parsedCommitment.dungeonId?.toString(),
-        address,
       });
     }
   }, [commitment, parsedCommitment, blockNumber, blocksUntilReveal, blocksUntilExpire, canReveal, canForceReveal, address]);
@@ -177,6 +190,13 @@ export function useDungeonReveal(
 
   // Force reveal function (for expired expeditions)
   const forceReveal = useCallback(async (targetAddress: `0x${string}`) => {
+    console.log('[useDungeonReveal] Force reveal called:', {
+      targetAddress,
+      canForceReveal,
+      dungeonMasterContract: !!dungeonMasterContract,
+      contractAddress: dungeonMasterContract?.address,
+    });
+
     if (!canForceReveal || !dungeonMasterContract) {
       showToast('無法強制揭示。揭示視窗尚未過期。', 'error');
       return;
@@ -186,16 +206,18 @@ export function useDungeonReveal(
     setError(null);
 
     try {
+      console.log('[useDungeonReveal] Calling forceRevealExpired...');
       await writeContract({
         address: dungeonMasterContract.address as `0x${string}`,
         abi: dungeonMasterContract.abi,
-        functionName: 'forceRevealExpiredExpedition',
+        functionName: 'forceRevealExpired',
         args: [targetAddress],
       });
 
       showToast('正在強制揭示過期的探險...', 'success');
     } catch (err) {
       const error = err as Error;
+      console.error('[useDungeonReveal] Force reveal error:', error);
       setError(error);
       showToast(`強制揭示失敗: ${error.message}`, 'error');
     } finally {
