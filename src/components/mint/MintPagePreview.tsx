@@ -155,21 +155,9 @@ const MintPreviewCard: React.FC<MintPreviewCardProps> = ({ type, recentItems }) 
       </div>
 
 
-      {/* 行動按鈕 */}
-      <div className="flex justify-center">
-        <ActionButton
-          onClick={() => {
-            const connectButton = document.querySelector('[data-testid="rk-connect-button"]') as HTMLButtonElement;
-            if (connectButton) {
-              connectButton.click();
-            } else {
-              alert('請點擊右上角的「連接錢包」按鈕');
-            }
-          }}
-          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 py-3 font-semibold"
-        >
-          🔗 連接錢包開始{type === 'hero' ? '召喚' : '鑄造'}
-        </ActionButton>
+      {/* 統計資訊 */}
+      <div className="text-center text-sm text-gray-400">
+        最近 24 小時已鑄造 {recentItems.length > 0 ? `${recentItems.length}+` : '多個'} {type === 'hero' ? '英雄' : '聖物'}
       </div>
     </div>
   );
@@ -245,28 +233,28 @@ export const MintPagePreview: React.FC = () => {
             <p className="text-gray-400">採用 Commit-Reveal 兩步驟機制，使用區塊鏈隨機性確保公平</p>
           </div>
 
-          {/* 簡化的批量說明 */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {BATCH_TIERS.map((tier, index) => (
-              <div key={index} className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg p-4 border border-gray-600">
-                <div className="text-center space-y-2">
-                  <div className="text-lg font-bold text-white">{tier.tierName}</div>
-                  <div className="text-sm text-gray-400">{tier.minQuantity}個起</div>
-                  <div className="text-sm text-green-400">
-                    約 ${tier.minQuantity * 2} USD
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
 
-          {/* 簡化的機制說明 */}
+          {/* 防撞庫機制詳解 */}
           <div className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 rounded-lg p-6 border border-purple-500/20">
-            <h4 className="text-lg font-semibold text-purple-400 mb-4">⚡ Commit-Reveal 機制</h4>
-            <div className="space-y-3 text-gray-300">
-              <p><strong>📝 兩步驟鑄造</strong>：先提交承諾，等待 3 個區塊後揭示結果</p>
-              <p><strong>🎲 區塊鏈隨機性</strong>：使用未來區塊 hash 確保結果公平可驗證</p>
-              <p><strong>💰 經濟設計</strong>：防止撞庫行為，維護遊戲經濟平衡</p>
+            <h4 className="text-lg font-semibold text-purple-400 mb-4">⚡ Commit-Reveal 防撞庫機制</h4>
+            <div className="space-y-4 text-gray-300">
+              <div>
+                <p className="font-semibold text-purple-300 mb-2">📝 兩步驟鑄造流程</p>
+                <p className="text-sm">先提交承諾（Commit），等待 3 個區塊後揭示結果（Reveal）。這個延遲確保使用的是未來區塊 hash，無法預測。</p>
+              </div>
+              <div>
+                <p className="font-semibold text-purple-300 mb-2">🎲 真正的區塊鏈隨機性</p>
+                <p className="text-sm">使用未來區塊 hash 作為隨機源，確保結果公平可驗證。每個 NFT 的屬性完全由區塊鏈決定。</p>
+              </div>
+              <div>
+                <p className="font-semibold text-purple-300 mb-2">🛡️ 為什麼我們不會被撞庫？</p>
+                <p className="text-sm mb-2">許多項目雖然使用區塊 hash，但會加入其他可變參數（如時間戳、交易索引等），導致每個區塊的結果都不同，給了撞庫者機會。</p>
+                <p className="text-sm"><strong className="text-green-400">我們的優勢</strong>：只使用純粹的區塊 hash + tokenId，同一區塊內所有同類 NFT 的稀有度分布是固定的。撞庫者無法通過重試來改變結果，徹底杜絕了撞庫行為。</p>
+              </div>
+              <div>
+                <p className="font-semibold text-purple-300 mb-2">💰 經濟保護機制</p>
+                <p className="text-sm">防止惡意玩家只挑選高稀有度 NFT，確保遊戲經濟的長期健康和所有玩家的公平性。</p>
+              </div>
             </div>
           </div>
 
@@ -351,7 +339,7 @@ export const MintPagePreview: React.FC = () => {
                 </li>
                 <li className="flex items-start">
                   <span className="text-red-400 mr-2">•</span>
-                  <span>Web3 遊戲存在智能合約風險</span>
+                  <span>價格受市場波動影響，請注意匯率變化</span>
                 </li>
               </ul>
             </div>
@@ -364,7 +352,8 @@ export const MintPagePreview: React.FC = () => {
               <ul className="space-y-3 text-gray-300">
                 <li className="flex items-start">
                   <span className="text-blue-400 mr-2">•</span>
-                  <span><strong>深淵挑戰者</strong>：隊伍戰力 3000+，日收益 $200+</span>
+                  <span><strong>深淵挑戰者</strong>：隊伍戰力 3000+（成本約 $200），日收益 $200+<br/>
+                  <span className="text-sm text-gray-400">高難度副本挑戰成功率約 45%，幸運的話一天即可回本</span></span>
                 </li>
                 <li className="flex items-start">
                   <span className="text-blue-400 mr-2">•</span>
@@ -387,26 +376,14 @@ export const MintPagePreview: React.FC = () => {
       {/* Call to Action */}
       <div className="text-center space-y-4 py-8 bg-gradient-to-r from-indigo-900/20 to-purple-900/20 rounded-lg border border-indigo-500/20">
         <h3 className="text-xl font-semibold text-white">
-          ⚒️ 開始您的鑄造之旅
+          ⚒️ 準備開始您的冒險之旅？
         </h3>
         <p className="text-gray-300 max-w-2xl mx-auto">
           連接錢包即可開始召喚英雄和鑄造聖物，打造屬於您的專屬戰鬥隊伍
         </p>
-        <div className="flex justify-center">
-          <ActionButton
-            onClick={() => {
-              const connectButton = document.querySelector('[data-testid="rk-connect-button"]') as HTMLButtonElement;
-              if (connectButton) {
-                connectButton.click();
-              } else {
-                alert('請點擊右上角的「連接錢包」按鈕');
-              }
-            }}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 px-8 py-3 text-lg font-semibold"
-          >
-            🔗 連接錢包開始鑄造
-          </ActionButton>
-        </div>
+        <p className="text-sm text-gray-400">
+          請點擊右上角的「連接錢包」按鈕開始
+        </p>
       </div>
 
       {/* 底部備註 */}

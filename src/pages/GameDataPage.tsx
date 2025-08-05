@@ -151,7 +151,7 @@ const QuerySection: React.FC<QuerySectionProps> = ({
                         type={inputType}
                         value={inputValue}
                         onChange={e => setInputValue(e.target.value)}
-                        placeholder={inputPlaceholder}
+                        placeholder={inputType === 'text' && title.includes('玩家') ? '0x10925A7138649C7E1794CE646182eeb5BF8ba647' : inputPlaceholder}
                         className="w-full px-2 sm:px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none h-8 sm:h-10 text-sm sm:text-base bg-gray-800 border-gray-600 text-gray-200 placeholder-gray-400"
                         min={inputType === 'number' ? "0" : undefined}
                     />
@@ -194,19 +194,24 @@ const HeroQuery: React.FC = () => {
     });
     
     const renderResult = () => {
-        if (!submittedId) return <p className="text-gray-400">請輸入英雄 ID 進行查詢。</p>;
+        if (!submittedId) return <p className="text-gray-400">請輸入英雄 Token ID 進行查詢。</p>;
         if (isError) return <p className="text-red-500">查詢失敗: {(error as Error).message}</p>;
-        if (!data) return <p className="text-yellow-500">查無此英雄，請確認 ID 是否正確。</p>;
+        if (!data) return (
+            <div className="text-yellow-500">
+                <p>查無此英雄，請確認 ID 是否正確。</p>
+                <p className="text-xs text-gray-500 mt-1">提示：嘗試輸入 1, 10, 100 等數字</p>
+            </div>
+        );
         
         const rarityInfo = convertRarity(data.rarity);
         
         return (
             <div className="space-y-2">
                 <p><span className="text-gray-300">Token ID:</span> <span className="text-white font-medium">{data.tokenId}</span></p>
-                <p className="flex items-center justify-between">
+                <div className="flex items-center justify-between">
                     <span className="text-gray-300">擁有者:</span>
                     <MobileAddress address={data.owner.id} className="text-blue-400" />
-                </p>
+                </div>
                 <p><span className="text-gray-300">稀有度:</span> <span className="text-purple-400 font-medium">{rarityInfo.chineseName} ({rarityInfo.number} ⭐)</span></p>
                 <p><span className="text-gray-300">戰力:</span> <span className="text-green-400 font-medium">{data.power}</span></p>
             </div>
@@ -242,19 +247,24 @@ const RelicQuery: React.FC = () => {
     });
     
     const renderResult = () => {
-        if (!submittedId) return <p className="text-gray-400">請輸入聖物 ID 進行查詢。</p>;
+        if (!submittedId) return <p className="text-gray-400">請輸入聖物 Token ID 進行查詢。</p>;
         if (isError) return <p className="text-red-500">查詢失敗: {(error as Error).message}</p>;
-        if (!data) return <p className="text-yellow-500">查無此聖物，請確認 ID 是否正確。</p>;
+        if (!data) return (
+            <div className="text-yellow-500">
+                <p>查無此聖物，請確認 ID 是否正確。</p>
+                <p className="text-xs text-gray-500 mt-1">提示：嘗試輸入 1, 2, 3 等數字</p>
+            </div>
+        );
         
         const rarityInfo = convertRarity(data.rarity);
         
         return (
             <div className="space-y-2">
                 <p><span className="text-gray-300">Token ID:</span> <span className="text-white font-medium">{data.tokenId}</span></p>
-                <p className="flex items-center justify-between">
+                <div className="flex items-center justify-between">
                     <span className="text-gray-300">擁有者:</span>
                     <MobileAddress address={data.owner.id} className="text-blue-400" />
-                </p>
+                </div>
                 <p><span className="text-gray-300">稀有度:</span> <span className="text-purple-400 font-medium">{rarityInfo.chineseName} ({rarityInfo.number} ⭐)</span></p>
                 <p><span className="text-gray-300">容量:</span> <span className="text-orange-400 font-medium">{data.capacity}</span></p>
             </div>
@@ -290,19 +300,24 @@ const PartyQuery: React.FC = () => {
     });
     
     const renderResult = () => {
-        if (!submittedId) return <p className="text-gray-400">請輸入隊伍 ID 進行查詢。</p>;
+        if (!submittedId) return <p className="text-gray-400">請輸入隊伍 Token ID 進行查詢。</p>;
         if (isError) return <p className="text-red-500">查詢失敗: {(error as Error).message}</p>;
-        if (!data) return <p className="text-yellow-500">查無此隊伍，請確認 ID 是否正確。</p>;
+        if (!data) return (
+            <div className="text-yellow-500">
+                <p>查無此隊伍，請確認 ID 是否正確。</p>
+                <p className="text-xs text-gray-500 mt-1">提示：隊伍數量較少，請嘗試較小的數字</p>
+            </div>
+        );
         
         const rarityInfo = convertRarity(data.partyRarity);
         
         return (
             <div className="space-y-2">
                 <p><span className="text-gray-300">Token ID:</span> <span className="text-white font-medium">{data.tokenId}</span></p>
-                <p className="flex items-center justify-between">
+                <div className="flex items-center justify-between">
                     <span className="text-gray-300">擁有者:</span>
                     <MobileAddress address={data.owner.id} className="text-blue-400" />
-                </p>
+                </div>
                 <p><span className="text-gray-300">隊伍稀有度:</span> <span className="text-purple-400 font-medium">{rarityInfo.chineseName} ({rarityInfo.number} ⭐)</span></p>
                 <p><span className="text-gray-300">總戰力:</span> <span className="text-green-400 font-medium">{data.totalPower}</span></p>
                 <p><span className="text-gray-300">總容量:</span> <span className="text-orange-400 font-medium">{data.totalCapacity}</span></p>
@@ -346,7 +361,12 @@ const PlayerQuery: React.FC = () => {
     };
     
     const renderResult = () => {
-        if (!submittedAddress) return <p className="text-gray-400">請輸入玩家地址進行查詢。</p>;
+        if (!submittedAddress) return (
+            <div className="text-gray-400">
+                <p>請輸入玩家錢包地址進行查詢。</p>
+                <p className="text-xs text-gray-500 mt-1">範例：0x10925A7138649C7E1794CE646182eeb5BF8ba647</p>
+            </div>
+        );
         if (!isAddress(submittedAddress)) return <p className="text-red-500">無效的錢包地址，請重新輸入。</p>;
         if (isError) {
             const errorMessage = (error as Error).message;
@@ -363,9 +383,10 @@ const PlayerQuery: React.FC = () => {
         
         return (
             <div className="space-y-2">
-                <p className="flex items-center justify-between">
+                <div className="flex items-center justify-between">
                     <span className="text-gray-300">地址:</span>
-                    <MobileAddress address={data.id} className="text-blue-400" /></p>
+                    <MobileAddress address={data.id} className="text-blue-400" />
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
                     <div className="bg-gray-800/50 p-2 rounded border border-gray-700/30">
                         <p className="text-gray-300 text-xs">英雄數量</p>
@@ -422,6 +443,12 @@ const GameDataPage: React.FC = () => {
                 <p className="text-gray-400 text-sm md:text-base">
                     查看排行榜、查詢遊戲數據，探索 Dungeon Delvers 的世界
                 </p>
+                <div className="mt-4 flex justify-center">
+                    <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-3 text-xs text-yellow-300 max-w-md text-center">
+                        <span className="mr-1">⚠️</span>
+                        子圖正在同步 V25 版本，暫時顯示舊版本數據。V25 數據同步完成後將自動更新。
+                    </div>
+                </div>
             </div>
             
             {/* 標籤切換 */}

@@ -18,6 +18,7 @@ import { WithdrawalTaxCalculator } from '../components/vip/WithdrawalTaxCalculat
 import { VipLevelConverter } from '../components/vip/VipLevelConverter';
 import { LazyImage } from '../components/ui/LazyImage';
 import { PagePreview } from '../components/common/PagePreview';
+import { EmptyState } from '../components/ui/EmptyState';
 
 // VIP 福利摺疊組件
 const VipBenefitsCollapsible: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
@@ -209,7 +210,7 @@ const VipCardDisplay: React.FC<{ tokenId: bigint | null, chainId: number | undef
 };
 
 const VipPageContent: React.FC = () => {
-    const { chainId, address } = useAccount();
+    const { chainId, address, isConnected } = useAccount();
     const publicClient = usePublicClient();
     const { showToast } = useAppToast();
     const { isAdmin } = useAdminAccess();
@@ -227,6 +228,15 @@ const VipPageContent: React.FC = () => {
         pendingUnstakeAmount, unstakeAvailableAt, isCooldownOver, countdown, cooldownProgress, allowance, 
         cooldownDays, cooldownFormatted, cooldownPeriod, isPaused, refetchAll, startPollingRefresh
     } = useVipStatus();
+    
+    // 如果未連接錢包，顯示提示
+    if (!isConnected || !address) {
+        return (
+            <div className="mt-10">
+                <EmptyState message="請先連接錢包以使用 VIP 功能" />
+            </div>
+        );
+    }
 
     const { executeTransaction, isPending: isTxPending } = useContractTransaction();
     

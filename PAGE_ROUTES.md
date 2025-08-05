@@ -24,8 +24,8 @@
 
 | 路由路徑 | 頁面組件 | 功能說明 | 備註 |
 |---------|---------|---------|------|
-| `#/pitch` | `PitchPage.tsx` | 投資者簡報 | 支援隨機路徑 |
-| `#/pitch/[任意路徑]` | `PitchPage.tsx` | 投資者簡報 | 用於分享連結 |
+| `#/pitch` | `archived/PitchPage.tsx` | 投資者簡報（已封存） | 支援隨機路徑 |
+| `#/pitch/[任意路徑]` | `archived/PitchPage.tsx` | 投資者簡報（已封存） | 用於分享連結 |
 
 ### 開發環境專用路由
 
@@ -92,9 +92,11 @@ src/pages/
 ├── ReferralPage.tsx          # 推薦頁
 ├── ProfilePage.tsx           # 個人檔案頁
 ├── AdminPageFixed.tsx        # 管理頁
-├── PitchPage.tsx             # 投資者簡報頁
 ├── DebugContractPage.tsx     # 合約調試頁（開發用）
-└── PriceDebugPage.tsx        # 價格調試頁（開發用）
+├── PriceDebugPage.tsx        # 價格調試頁（開發用）
+└── archived/                 # 已封存頁面
+    ├── PitchPage.tsx         # 投資者簡報頁（已過時）
+    └── PITCH_PAGE_ARCHIVE.md # 封存文檔
 ```
 
 ## 🔄 路由系統說明

@@ -18,9 +18,9 @@ const __dirname = path.dirname(__filename);
 
 // 配置
 const CONFIG = {
-  keepRecentBackups: 3,  // 保留最近 3 個備份
+  keepRecentBackups: 1,  // 只保留最近 1 個備份（以防萬一）
   archiveOldVersions: true,
-  dryRun: true  // 設為 true 只顯示會刪除的檔案，不實際刪除
+  dryRun: false  // 實際執行清理
 };
 
 // 顏色輸出

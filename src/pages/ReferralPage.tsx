@@ -521,6 +521,224 @@ ${referralLink}
         return <div className="p-4 text-center text-gray-400">請連接到支援的網路以使用邀請功能。</div>;
     }
 
+    // 如果未連接錢包，顯示邀請系統介紹頁面
+    if (!isConnected) {
+        return (
+            <section className="space-y-6 sm:space-y-8 max-w-4xl mx-auto">
+                <h2 className="page-title">🎯 邀請系統介紹</h2>
+                
+                {/* 系統概述 */}
+                <div className="card-bg p-6 sm:p-8 rounded-xl text-center">
+                    <Icons.Copy className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
+                    <h3 className="text-2xl font-bold text-white mb-4">
+                        歡迎來到 DungeonDelvers 邀請系統
+                    </h3>
+                    <p className="text-gray-300 mb-6 leading-relaxed">
+                        邀請朋友一起冒險，當他們從金庫提領時，您將獲得 <span className="text-yellow-400 font-semibold">5% 佣金</span> 獎勵！
+                    </p>
+                    
+                    <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-500/30 mb-6">
+                        <p className="text-blue-300 font-medium">
+                            💡 需要連接錢包才能查看您的邀請數據和管理推薦關係
+                        </p>
+                    </div>
+                    
+                    <ActionButton 
+                        onClick={() => {
+                            const connectButton = document.querySelector('[data-testid="rk-connect-button"]') as HTMLButtonElement;
+                            if (connectButton) {
+                                connectButton.click();
+                            } else {
+                                const buttons = Array.from(document.querySelectorAll('button'));
+                                const connectBtn = buttons.find(btn => 
+                                    btn.textContent?.includes('連接') || 
+                                    btn.textContent?.includes('Connect') ||
+                                    btn.textContent?.includes('連結')
+                                );
+                                if (connectBtn) {
+                                    (connectBtn as HTMLButtonElement).click();
+                                } else {
+                                    showToast('請手動點擊右上角連接錢包', 'info');
+                                }
+                            }
+                        }}
+                        className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-3 text-lg font-semibold"
+                    >
+                        🔗 連接錢包開始使用
+                    </ActionButton>
+                </div>
+
+                {/* 邀請系統詳細說明 */}
+                <div className="card-bg p-6 sm:p-8 rounded-xl bg-gradient-to-r from-purple-900/10 to-blue-900/10 border border-purple-500/20">
+                    <h3 className="text-xl sm:text-2xl font-bold text-white mb-6 text-center">
+                        🎮 邀請系統完整說明
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* 邀請人收益說明 */}
+                        <div className="space-y-4">
+                            <div className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 p-5 rounded-lg border border-yellow-500/30">
+                                <h4 className="text-lg font-bold text-yellow-400 mb-3">📈 邀請人收益</h4>
+                                <ul className="space-y-2 text-sm text-gray-300">
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-green-400 mt-0.5">✓</span>
+                                        <span>被邀請人每次從金庫提領時，您可獲得 <span className="text-yellow-400 font-semibold">5% 佣金</span></span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-green-400 mt-0.5">✓</span>
+                                        <span>佣金以 <span className="text-purple-400 font-semibold">$SoulShard</span> 代幣形式自動發放到您的金庫</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-green-400 mt-0.5">✓</span>
+                                        <span>邀請關係永久有效，持續獲得收益</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-green-400 mt-0.5">✓</span>
+                                        <span>可以邀請無限數量的玩家，累積更多佣金</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <div className="bg-gray-800/50 p-4 rounded-lg">
+                                <h5 className="text-sm font-semibold text-gray-300 mb-2">💡 收益計算範例</h5>
+                                <p className="text-xs text-gray-400">
+                                    如果您邀請的玩家從金庫提領 1000 SOUL，您將獲得 50 SOUL (5%) 的佣金獎勵
+                                </p>
+                            </div>
+                        </div>
+                        
+                        {/* 被邀請人好處說明 */}
+                        <div className="space-y-4">
+                            <div className="bg-gradient-to-r from-blue-900/20 to-cyan-900/20 p-5 rounded-lg border border-blue-500/30">
+                                <h4 className="text-lg font-bold text-blue-400 mb-3">🤝 被邀請人好處</h4>
+                                <ul className="space-y-2 text-sm text-gray-300">
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-green-400 mt-0.5">✓</span>
+                                        <span>綁定邀請人後，享有社群支援和遊戲指導</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-green-400 mt-0.5">✓</span>
+                                        <span><span className="text-blue-400 font-semibold">不影響您的任何收益</span>和遊戲體驗</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-green-400 mt-0.5">✓</span>
+                                        <span>支持邀請人同時建立長期互助關係</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-green-400 mt-0.5">✓</span>
+                                        <span>加入活躍的遊戲社群，獲得更多遊戲攻略</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <div className="bg-gray-800/50 p-4 rounded-lg">
+                                <h5 className="text-sm font-semibold text-gray-300 mb-2">⚠️ 重要提醒</h5>
+                                <p className="text-xs text-gray-400">
+                                    邀請關係一旦建立無法更改，請確認邀請人地址正確
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* 邀請流程說明 */}
+                    <div className="mt-6 p-5 bg-gradient-to-r from-purple-800/20 to-pink-800/20 rounded-lg border border-purple-500/20">
+                        <h4 className="text-lg font-bold text-purple-400 mb-4">🚀 如何開始邀請</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="text-center">
+                                <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                                    <span className="text-white font-bold">1</span>
+                                </div>
+                                <h5 className="text-sm font-semibold text-white mb-1">連接錢包</h5>
+                                <p className="text-xs text-gray-400">首先連接您的 Web3 錢包以獲取專屬邀請連結</p>
+                            </div>
+                            <div className="text-center">
+                                <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                                    <span className="text-white font-bold">2</span>
+                                </div>
+                                <h5 className="text-sm font-semibold text-white mb-1">分享連結</h5>
+                                <p className="text-xs text-gray-400">透過社群媒體、聊天軟體分享您的邀請連結</p>
+                            </div>
+                            <div className="text-center">
+                                <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                                    <span className="text-white font-bold">3</span>
+                                </div>
+                                <h5 className="text-sm font-semibold text-white mb-1">自動獲得佣金</h5>
+                                <p className="text-xs text-gray-400">當朋友提領獎勵時，您將自動獲得 5% 佣金</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* 常見問題 */}
+                    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div className="bg-gray-800/30 p-4 rounded-lg">
+                            <h5 className="font-semibold text-gray-300 mb-2">❓ 佣金何時發放？</h5>
+                            <p className="text-gray-400">當被邀請人從金庫提領時，佣金會立即自動發放到您的金庫中</p>
+                        </div>
+                        <div className="bg-gray-800/30 p-4 rounded-lg">
+                            <h5 className="font-semibold text-gray-300 mb-2">❓ 可以邀請多少人？</h5>
+                            <p className="text-gray-400">沒有限制！您可以邀請任意數量的玩家，每個都能為您帶來佣金</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 如果有推薦參數，顯示推薦信息 */}
+                {urlRefParam && (
+                    <div className="card-bg p-6 rounded-xl border border-purple-500/30 bg-gradient-to-r from-purple-900/20 to-blue-900/20">
+                        <div className="text-center">
+                            <Icons.ExternalLink className="w-12 h-12 text-purple-400 mx-auto mb-4" />
+                            <h3 className="text-xl font-bold text-purple-400 mb-4">檢測到推薦關係</h3>
+                            <p className="text-gray-300 mb-4">您通過推薦連結進入，以下地址將成為您的邀請人：</p>
+                            <div className="bg-black/30 p-4 rounded-lg mb-6">
+                                <MobileAddress 
+                                    address={urlRefParam} 
+                                    className="text-lg text-gray-400"
+                                    showCopyButton={true}
+                                />
+                            </div>
+                            
+                            {/* 推薦人信息卡片 */}
+                            {referrerInfo && (
+                                <div className="bg-gray-800/50 p-4 rounded-lg mb-6">
+                                    <h4 className="text-sm font-semibold text-gray-300 mb-3">推薦人資訊</h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-black/20 p-3 rounded-lg">
+                                            <p className="text-gray-400 text-sm">擁有英雄</p>
+                                            <p className="text-xl font-bold text-white">
+                                                {referrerInfo.heros?.length || 0}
+                                            </p>
+                                        </div>
+                                        <div className="bg-black/20 p-3 rounded-lg">
+                                            <p className="text-gray-400 text-sm">總戰力</p>
+                                            <p className="text-xl font-bold text-white">
+                                                {referrerTotalPower}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            <ActionButton 
+                                onClick={() => setShowConfirmModal(true)}
+                                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-3 text-lg font-semibold"
+                            >
+                                🔗 連接錢包並綁定推薦人
+                            </ActionButton>
+                            
+                            <div className="text-xs text-gray-400 bg-gray-800/30 p-3 rounded-lg mt-4">
+                                <p className="mb-1"><strong>提醒：</strong></p>
+                                <ul className="space-y-1">
+                                    <li>• 連接錢包後即可確認推薦關係</li>
+                                    <li>• 推薦關係一旦建立無法更改</li>
+                                    <li>• 不會影響您的任何遊戲收益</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </section>
+        );
+    }
+
     return (
         <section className="space-y-6 sm:space-y-8 max-w-4xl mx-auto">
             <h2 className="page-title">邀請與佣金中心</h2>
@@ -679,241 +897,56 @@ ${referralLink}
             <div className="card-bg p-4 sm:p-6 rounded-xl shadow-lg">
                 <h3 className="section-title">設定我的邀請人</h3>
                 
-                {/* 未連錢包且有推薦參數時，顯示推薦綁定區塊 */}
-                {!address && urlRefParam && (
-                    <div className="mb-6 p-4 rounded-lg border border-purple-500/30 bg-gradient-to-r from-purple-900/20 to-blue-900/20">
-                        <div className="flex items-start gap-3 mb-4">
-                            <Icons.ExternalLink className="w-6 h-6 text-purple-400 flex-shrink-0 mt-0.5" />
-                            <div>
-                                <h4 className="font-semibold text-purple-400 mb-2">檢測到推薦關係</h4>
-                                <p className="text-sm text-gray-300 mb-3">您通過推薦連結進入，以下地址將成為您的邀請人：</p>
-                                <div className="bg-black/30 p-3 rounded mb-3">
-                                    <MobileAddress 
-                                        address={urlRefParam} 
-                                        className="text-gray-400"
-                                        showCopyButton={true}
-                                    />
-                                </div>
+                {isLoading ? <LoadingSpinner /> : (
+                    hasReferrer ? (
+                        <div className="bg-green-900/20 p-4 rounded-lg border border-green-500/30">
+                            <p className="text-green-400 font-medium mb-2">✓ 您已成功綁定邀請人</p>
+                            <p className="text-gray-400 mb-2">您的邀請人:</p>
+                            <div className="bg-black/20 p-3 rounded-lg">
+                                <MobileAddress 
+                                    address={currentReferrer} 
+                                    className="text-lg text-green-400"
+                                    showCopyButton={true}
+                                />
                             </div>
+                            <p className="text-xs text-gray-500 mt-2">邀請關係已建立，您的邀請人將持續獲得您提領時的佣金分成。</p>
                         </div>
-                        
-                        <div className="space-y-3">
-                            <ActionButton 
-                                onClick={() => setShowConfirmModal(true)}
-                                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-                            >
-                                🔗 連接錢包並綁定推薦人
-                            </ActionButton>
-                            
-                            <div className="text-xs text-gray-400 bg-gray-800/30 p-3 rounded-lg">
-                                <p className="mb-1"><strong>提醒：</strong></p>
-                                <ul className="space-y-1">
-                                    <li>• 連接錢包後即可確認推薦關係</li>
-                                    <li>• 推薦關係一旦建立無法更改</li>
-                                    <li>• 不會影響您的任何遊戲收益</li>
+                    ) : (
+                        <div>
+                            <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-500/30 mb-4">
+                                <h4 className="font-semibold text-blue-400 mb-2">為什麼要設定邀請人？</h4>
+                                <ul className="text-sm text-gray-300 space-y-1">
+                                    <li>• 支持為您介紹遊戲的朋友</li>
+                                    <li>• 建立長期的互助關係</li>
+                                    <li>• 不影響您的任何收益</li>
                                 </ul>
                             </div>
-                        </div>
-                    </div>
-                )}
-                
-                {/* 標準邀請人設定區塊 */}
-                {address ? (
-                    isLoading ? <LoadingSpinner /> : (
-                        hasReferrer ? (
-                            <div className="bg-green-900/20 p-4 rounded-lg border border-green-500/30">
-                                <p className="text-green-400 font-medium mb-2">✓ 您已成功綁定邀請人</p>
-                                <p className="text-gray-400 mb-2">您的邀請人:</p>
-                                <div className="bg-black/20 p-3 rounded-lg">
-                                    <MobileAddress 
-                                        address={currentReferrer} 
-                                        className="text-lg text-green-400"
-                                        showCopyButton={true}
+                            <p className="text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4">如果您是透過好友的連結來到這裡，請在此輸入他的錢包地址以綁定邀請關係。此操作只能進行一次。</p>
+                            <div className="flex flex-col sm:flex-row items-center gap-2">
+                                <div className="flex-1 w-full">
+                                    <label htmlFor="referrer-address" className="sr-only">邀請人錢包地址</label>
+                                    <input 
+                                        id="referrer-address"
+                                        name="referrer-address"
+                                        type="text" 
+                                        value={referrerInput} 
+                                        onChange={(e) => setReferrerInput(e.target.value)} 
+                                        placeholder="貼上邀請人的錢包地址" 
+                                        className="w-full p-2 border rounded-lg bg-gray-800 border-gray-600 text-white font-mono text-sm" 
                                     />
                                 </div>
-                                <p className="text-xs text-gray-500 mt-2">邀請關係已建立，您的邀請人將持續獲得您提領時的佣金分成。</p>
+                                <ActionButton 
+                                    onClick={handleSetReferrer} 
+                                    isLoading={isSettingReferrer} 
+                                    disabled={!isAddress(referrerInput)} 
+                                    className="w-full sm:w-auto flex-shrink-0"
+                                >
+                                    確認綁定
+                                </ActionButton>
                             </div>
-                        ) : (
-                            <div>
-                                <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-500/30 mb-4">
-                                    <h4 className="font-semibold text-blue-400 mb-2">為什麼要設定邀請人？</h4>
-                                    <ul className="text-sm text-gray-300 space-y-1">
-                                        <li>• 支持為您介紹遊戲的朋友</li>
-                                        <li>• 建立長期的互助關係</li>
-                                        <li>• 不影響您的任何收益</li>
-                                    </ul>
-                                </div>
-                                <p className="text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4">如果您是透過好友的連結來到這裡，請在此輸入他的錢包地址以綁定邀請關係。此操作只能進行一次。</p>
-                                <div className="flex flex-col sm:flex-row items-center gap-2">
-                                    <div className="flex-1 w-full">
-                                        <label htmlFor="referrer-address" className="sr-only">邀請人錢包地址</label>
-                                        <input 
-                                            id="referrer-address"
-                                            name="referrer-address"
-                                            type="text" 
-                                            value={referrerInput} 
-                                            onChange={(e) => setReferrerInput(e.target.value)} 
-                                            placeholder="貼上邀請人的錢包地址" 
-                                            className="w-full p-2 border rounded-lg bg-gray-800 border-gray-600 text-white font-mono text-sm" 
-                                        />
-                                    </div>
-                                    <ActionButton 
-                                        onClick={handleSetReferrer} 
-                                        isLoading={isSettingReferrer} 
-                                        disabled={!isAddress(referrerInput)} 
-                                        className="w-full sm:w-auto flex-shrink-0"
-                                    >
-                                        確認綁定
-                                    </ActionButton>
-                                </div>
-                            </div>
-                        )
+                        </div>
                     )
-                ) : (
-                    // 未連錢包且沒有推薦參數的情況
-                    <div className="text-center py-8">
-                        <Icons.ExternalLink className="w-16 h-16 text-gray-500 mx-auto mb-4" />
-                        <h4 className="text-lg font-semibold text-gray-300 mb-2">連接錢包以管理推薦關係</h4>
-                        <p className="text-sm text-gray-400 mb-4">請先連接您的 Web3 錢包以查看和設定邀請人</p>
-                        <ActionButton 
-                            onClick={() => {
-                                const connectButton = document.querySelector('[data-testid="rk-connect-button"]') as HTMLButtonElement;
-                                if (connectButton) {
-                                    connectButton.click();
-                                } else {
-                                    // 備案邏輯
-                                    const buttons = Array.from(document.querySelectorAll('button'));
-                                    const connectBtn = buttons.find(btn => 
-                                        btn.textContent?.includes('連接') || 
-                                        btn.textContent?.includes('Connect') ||
-                                        btn.textContent?.includes('連結')
-                                    );
-                                    if (connectBtn) {
-                                        (connectBtn as HTMLButtonElement).click();
-                                    } else {
-                                        showToast('請手動點擊右上角連接錢包', 'info');
-                                    }
-                                }
-                            }}
-                            className="bg-blue-600 hover:bg-blue-700 mx-auto"
-                        >
-                            連接錢包
-                        </ActionButton>
-                    </div>
                 )}
-            </div>
-
-            {/* 邀請系統詳細說明 - 放在頁面最底部 */}
-            <div className="card-bg p-6 sm:p-8 rounded-xl bg-gradient-to-r from-purple-900/10 to-blue-900/10 border border-purple-500/20">
-                <h3 className="text-xl sm:text-2xl font-bold text-white mb-6 text-center">
-                    🎮 邀請系統完整說明
-                </h3>
-                
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* 邀請人收益說明 */}
-                    <div className="space-y-4">
-                        <div className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 p-5 rounded-lg border border-yellow-500/30">
-                            <h4 className="text-lg font-bold text-yellow-400 mb-3">📈 邀請人收益</h4>
-                            <ul className="space-y-2 text-sm text-gray-300">
-                                <li className="flex items-start gap-2">
-                                    <span className="text-green-400 mt-0.5">✓</span>
-                                    <span>被邀請人每次從金庫提領時，您可獲得 <span className="text-yellow-400 font-semibold">5% 佣金</span></span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-green-400 mt-0.5">✓</span>
-                                    <span>佣金以 <span className="text-purple-400 font-semibold">$SoulShard</span> 代幣形式自動發放到您的金庫</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-green-400 mt-0.5">✓</span>
-                                    <span>邀請關係永久有效，持續獲得收益</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-green-400 mt-0.5">✓</span>
-                                    <span>可以邀請無限數量的玩家，累積更多佣金</span>
-                                </li>
-                            </ul>
-                        </div>
-                        
-                        <div className="bg-gray-800/50 p-4 rounded-lg">
-                            <h5 className="text-sm font-semibold text-gray-300 mb-2">💡 收益計算範例</h5>
-                            <p className="text-xs text-gray-400">
-                                如果您邀請的玩家從金庫提領 1000 SOUL，您將獲得 50 SOUL (5%) 的佣金獎勵
-                            </p>
-                        </div>
-                    </div>
-                    
-                    {/* 被邀請人好處說明 */}
-                    <div className="space-y-4">
-                        <div className="bg-gradient-to-r from-blue-900/20 to-cyan-900/20 p-5 rounded-lg border border-blue-500/30">
-                            <h4 className="text-lg font-bold text-blue-400 mb-3">🤝 被邀請人好處</h4>
-                            <ul className="space-y-2 text-sm text-gray-300">
-                                <li className="flex items-start gap-2">
-                                    <span className="text-green-400 mt-0.5">✓</span>
-                                    <span>綁定邀請人後，享有社群支援和遊戲指導</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-green-400 mt-0.5">✓</span>
-                                    <span><span className="text-blue-400 font-semibold">不影響您的任何收益</span>和遊戲體驗</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-green-400 mt-0.5">✓</span>
-                                    <span>支持邀請人同時建立長期互助關係</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-green-400 mt-0.5">✓</span>
-                                    <span>加入活躍的遊戲社群，獲得更多遊戲攻略</span>
-                                </li>
-                            </ul>
-                        </div>
-                        
-                        <div className="bg-gray-800/50 p-4 rounded-lg">
-                            <h5 className="text-sm font-semibold text-gray-300 mb-2">⚠️ 重要提醒</h5>
-                            <p className="text-xs text-gray-400">
-                                邀請關係一旦建立無法更改，請確認邀請人地址正確
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                
-                {/* 邀請流程說明 */}
-                <div className="mt-6 p-5 bg-gradient-to-r from-purple-800/20 to-pink-800/20 rounded-lg border border-purple-500/20">
-                    <h4 className="text-lg font-bold text-purple-400 mb-4">🚀 如何開始邀請</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="text-center">
-                            <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-2">
-                                <span className="text-white font-bold">1</span>
-                            </div>
-                            <h5 className="text-sm font-semibold text-white mb-1">複製邀請連結</h5>
-                            <p className="text-xs text-gray-400">使用上方的「複製連結」按鈕獲取您的專屬邀請連結</p>
-                        </div>
-                        <div className="text-center">
-                            <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-2">
-                                <span className="text-white font-bold">2</span>
-                            </div>
-                            <h5 className="text-sm font-semibold text-white mb-1">分享給朋友</h5>
-                            <p className="text-xs text-gray-400">透過社群媒體、聊天軟體分享您的邀請連結</p>
-                        </div>
-                        <div className="text-center">
-                            <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-2">
-                                <span className="text-white font-bold">3</span>
-                            </div>
-                            <h5 className="text-sm font-semibold text-white mb-1">自動獲得佣金</h5>
-                            <p className="text-xs text-gray-400">當朋友提領獎勵時，您將自動獲得 5% 佣金</p>
-                        </div>
-                    </div>
-                </div>
-                
-                {/* 常見問題 */}
-                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                    <div className="bg-gray-800/30 p-4 rounded-lg">
-                        <h5 className="font-semibold text-gray-300 mb-2">❓ 佣金何時發放？</h5>
-                        <p className="text-gray-400">當被邀請人從金庫提領時，佣金會立即自動發放到您的金庫中</p>
-                    </div>
-                    <div className="bg-gray-800/30 p-4 rounded-lg">
-                        <h5 className="font-semibold text-gray-300 mb-2">❓ 可以邀請多少人？</h5>
-                        <p className="text-gray-400">沒有限制！您可以邀請任意數量的玩家，每個都能為您帶來佣金</p>
-                    </div>
-                </div>
             </div>
 
             {/* 自動推薦確認彈窗 */}

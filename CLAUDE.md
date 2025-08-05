@@ -42,6 +42,13 @@ npm run lint
 - 查詢參數支援說明
 - 快速找到任何頁面的實現檔案
 
+### 錢包連接狀態頁面對照表
+**📄 [WALLET_CONNECTION_PAGES.md](./WALLET_CONNECTION_PAGES.md)** - 未連接錢包時的頁面顯示對照
+- 每個頁面在未連接錢包時的具體行為
+- 預覽組件和空狀態組件的對應關係
+- 問題頁面識別和改進建議
+- 技術實現細節和檢查模式說明
+
 ### 其他重要文檔
 - **[docs/REACT_HOOKS_RULES.md](./docs/REACT_HOOKS_RULES.md)** - React Hooks 使用規則
 - **[docs/RPC_MONITORING.md](./docs/RPC_MONITORING.md)** - RPC 監控系統說明

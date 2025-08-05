@@ -327,7 +327,7 @@ export const AltarPagePreview: React.FC = () => {
                 <ul className="space-y-3 text-gray-300">
                   <li className="flex items-start">
                     <span className="text-purple-400 mr-2">•</span>
-                    <span>需要<strong className="text-purple-200"> 2 個同稀有度 NFT</strong> 才能嘗試升星</span>
+                    <span>需要<strong className="text-purple-200"> 2 個以上同稀有度 NFT</strong> 才能嘗試升星</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-purple-400 mr-2">•</span>
@@ -335,7 +335,7 @@ export const AltarPagePreview: React.FC = () => {
                   </li>
                   <li className="flex items-start">
                     <span className="text-purple-400 mr-2">•</span>
-                    <span>成功升星獲得<strong className="text-purple-200"> 1 個更高稀有度 NFT</strong></span>
+                    <span>成功升星獲得<strong className="text-purple-200"> 1-2 個更高稀有度 NFT</strong></span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-purple-400 mr-2">•</span>
@@ -388,7 +388,7 @@ export const AltarPagePreview: React.FC = () => {
                   </li>
                   <li className="flex items-start">
                     <span className="text-green-400 mr-2">•</span>
-                    <span><strong>時機選擇</strong>：高價值 NFT 考慮市場時機</span>
+                    <span><strong>計算期望</strong>：評估升星成本與預期收益</span>
                   </li>
                 </ul>
               </div>
@@ -444,9 +444,9 @@ export const AltarPagePreview: React.FC = () => {
                 <p className="text-gray-400 text-sm">解鎖升星成就，獲得特殊稱號和獎勵</p>
               </div>
               <div className="bg-gradient-to-br from-purple-900/30 to-purple-800/20 rounded-lg p-6 border border-purple-500/20">
-                <div className="text-3xl mb-3">🕰️</div>
-                <h4 className="text-lg font-semibold text-purple-400 mb-2">最佳時機</h4>
-                <p className="text-gray-400 text-sm">基於市場數據和成功率的升星時機建議</p>
+                <div className="text-3xl mb-3">🎲</div>
+                <h4 className="text-lg font-semibold text-purple-400 mb-2">隨機結果</h4>
+                <p className="text-gray-400 text-sm">升星結果完全隨機，每次都有相同的成功機率</p>
               </div>
             </div>
 
@@ -497,21 +497,6 @@ export const AltarPagePreview: React.FC = () => {
           <p className="text-gray-300 max-w-2xl mx-auto">
             連接錢包即可使用升星祭壇，將您的 NFT 提升至更高稀有度，解鎖強大力量
           </p>
-          <div className="flex justify-center">
-            <ActionButton
-              onClick={() => {
-                const connectButton = document.querySelector('[data-testid="rk-connect-button"]') as HTMLButtonElement;
-                if (connectButton) {
-                  connectButton.click();
-                } else {
-                  alert('請點擊右上角的「連接錢包」按鈕');
-                }
-              }}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 px-8 py-3 text-lg font-semibold"
-            >
-              🔗 連接錢包開始升星
-            </ActionButton>
-          </div>
         </div>
 
         {/* 底部備註 */}

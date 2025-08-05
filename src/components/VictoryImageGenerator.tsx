@@ -268,7 +268,7 @@ export const VictoryImageGenerator: React.FC<VictoryImageGeneratorProps> = ({
       
       const text = `我剛剛在《Dungeon Delvers》的遠征中大獲全勝！🏆\n\n💰 獲得了 ${soulDisplay}\n⭐ 獲得了 ${expGained.toString()} 經驗值\n\n快來加入我，一起探索地下城吧！\n\n#DungeonDelvers #GameFi #BNBChain`;
       
-      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent('https://www.dungeondelvers.xyz')}`;
+      const twitterUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent('https://www.dungeondelvers.xyz')}`;
       window.open(twitterUrl, '_blank');
       
       showToast('請在新視窗中完成分享，並手動上傳下載的圖片！', 'info');

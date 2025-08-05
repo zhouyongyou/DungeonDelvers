@@ -6,6 +6,7 @@ import './assets/index.css';
 import { wagmiSimpleConfig as wagmiConfig } from './wagmi-simple';
 import { ToastProvider } from './contexts/SimpleToastContext';
 import { ExpeditionProvider } from './contexts/ExpeditionContext';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import App from './App';
 import { checkSubgraphSync } from './utils/checkSubgraphSync';
 import { initializeAppConfig } from './config/initConfig';
@@ -79,6 +80,7 @@ root.render(
         <ToastProvider>
           <ExpeditionProvider>
             <App />
+            <PWAInstallPrompt />
           </ExpeditionProvider>
         </ToastProvider>
       </QueryClientProvider>

@@ -678,7 +678,7 @@ interface DungeonPageContentProps {
 
 const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => {
     // const { setLoading } = useGlobalLoading(); // 移除未使用的 hook
-    const { chainId, address } = useAccount();
+    const { chainId, address, isConnected } = useAccount();
     const { showToast } = useAppToast();
     const { transactions } = useTransactionStore();
     const queryClient = useQueryClient();
@@ -688,6 +688,15 @@ const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => 
 
     // 獲取金庫餘額用於提醒
     const { withdrawableBalance } = usePlayerVaultV4();
+    
+    // 如果未連接錢包，顯示提示
+    if (!isConnected || !address) {
+        return (
+            <div className="mt-10">
+                <EmptyState message="請先連接錢包以進行地下城探索" />
+            </div>
+        );
+    }
     
     // 使用即時遠征通知
     const { } = useRealtimeExpeditions({

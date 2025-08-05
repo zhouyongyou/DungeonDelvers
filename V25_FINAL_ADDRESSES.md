@@ -1,0 +1,44 @@
+# 🚀 V25 最終合約地址
+
+> 部署日期：2025-08-03 PM 11:00
+> 區塊高度：56317376
+
+## ✅ V25 部署的合約
+
+| 合約名稱 | 地址 | 說明 |
+|---------|------|------|
+| ORACLE | `0xf8CE896aF39f95a9d5Dd688c35d381062263E25a` | 價格預言機 |
+| PLAYERVAULT | `0x62Bce9aF5E2C47b13f62A2e0fCB1f9C7AfaF8787` | 玩家金庫 |
+| DUNGEONCORE | `0x1a959ACcb898AdD61C959f2C93Abe502D0e1D34a` | 核心合約 |
+| DUNGEONSTORAGE | `0x1Fd33E7883FdAC36a49f497440a4E2e95C6fcC77` | 地城存儲 |
+| DUNGEONMASTER | `0xd06470d4C6F62F6747cf02bD2b2De0981489034F` | 地城管理 |
+| HERO | `0x6DEb5Ade2F6BEe8294A4b7f37cE372152109E2db` | 英雄 NFT |
+| RELIC | `0xcfB83d8545D68b796a236290b3C1bc7e4A140B11` | 聖物 NFT |
+| PARTY | `0x18bF1eE489CD0D8bfb006b4110bfe0Bb7459bE69` | 隊伍 NFT |
+| VIPSTAKING | `0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C` | VIP 質押 |
+| PLAYERPROFILE | `0x0f5932e89908400a5AfDC306899A2987b67a3155` | 玩家檔案 |
+| ALTAROFASCENSION | `0xE043ef6Ce183C218F8f9d9a144eD4A06cF379686` | 升星祭壇 |
+
+## 📌 複用的現有合約
+
+| 合約名稱 | 地址 | 說明 |
+|---------|------|------|
+| SOULSHARD | `0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF` | 遊戲代幣 |
+| UNISWAP_POOL | `0x1e5Cd5F386Fb6F39cD8788675dd3A5ceB6521C82` | 流動性池 |
+| USD (TESTUSD1) | `0x7C67Af4EBC6651c95dF78De11cfe325660d935FE` | 測試穩定幣 |
+
+## 🔄 同步狀態
+
+- ✅ 子圖：v3.6.0
+- ✅ 後端：已同步
+- ✅ 前端：已同步
+
+## ⚠️ 重要提醒
+
+1. **這是生產環境的最終地址**
+2. **所有舊版本（V19、V22 等）已封存**
+3. **不要再使用舊地址進行任何操作**
+
+## 🛠️ 管理員錢包
+
+- DungeonMaster Wallet: `0x10925A7138649C7E1794CE646182eeb5BF8ba647`

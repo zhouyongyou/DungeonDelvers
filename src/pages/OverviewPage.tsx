@@ -59,7 +59,7 @@ const StatCard: React.FC<{
             </div>
             {action}
         </div>
-        <p className="text-2xl font-bold text-white">{value}</p>
+        <p className="text-lg md:text-xl font-bold text-white">{value}</p>
         {description && <div className="text-xs text-gray-500 mt-1">{description}</div>}
     </div>
 );
@@ -465,14 +465,9 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2 sm:space-x-4">
                                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse flex-shrink-0"></div>
-                                <span className="text-white font-semibold text-xs sm:text-sm md:text-base">
-                                    v1 已上線 <span className="hidden sm:inline">| 所有系統運行正常</span>
+                                <span className="text-white font-semibold text-xs sm:text-xs md:text-sm">
+                                    已上線 <span className="hidden sm:inline">| 所有系統運行正常</span>
                                 </span>
-                            </div>
-                            
-                            <div className="flex items-center space-x-2 text-yellow-300">
-                                <span className="text-xs sm:text-sm">連接錢包</span>
-                                <Icons.ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 -rotate-90" />
                             </div>
                         </div>
                     </div>
@@ -482,10 +477,10 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                     <div className="space-y-6 md:space-y-8">
                         {/* 歡迎標題 */}
                         <div className="text-center py-6 md:py-8 lg:py-12 px-4">
-                            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-4 md:mb-6">
+                            <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-white mb-3 md:mb-4">
                                 歡迎來到 <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent block sm:inline">DungeonDelvers</span>
                             </h1>
-                            <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-6 md:mb-8 max-w-2xl mx-auto px-4">
+                            <p className="text-sm sm:text-base md:text-lg text-gray-300 mb-4 md:mb-6 max-w-2xl mx-auto px-4">
                                 探索地下城，收集英雄，賺取獎勵。體驗真正的 Web3 遊戲樂趣。
                             </p>
                             
@@ -499,7 +494,6 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                 >
                                     <div className="flex items-center space-x-2">
                                         <Icons.Dungeon className="h-4 w-4 sm:h-5 sm:w-5" />
-                                        <span>連接錢包開始遊戲</span>
                                     </div>
                                 </ActionButton>
                             </div>
@@ -524,7 +518,6 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                 className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-full px-6 py-3"
                             >
                                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                                <span className="text-white text-sm font-semibold">立即開始遊戲</span>
                             </ActionButton>
                         </div>
                     </div>
@@ -539,7 +532,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-bold text-white">玩家總覽</h1>
+                        <h1 className="text-lg md:text-2xl font-bold text-white">玩家總覽</h1>
                         <p className="text-gray-400 mt-1">管理您的英雄和追蹤進度</p>
                     </div>
                     <div className="flex gap-2">
@@ -949,7 +942,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                 {/* Analytics Dashboard - Lazy Loaded */}
                 <div className="bg-gray-800 rounded-lg p-6">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        <h2 className="text-base md:text-lg font-bold text-white flex items-center gap-2">
                             <span>📊</span> 個人數據分析
                         </h2>
                         <ActionButton
@@ -985,7 +978,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                 {/* Detailed Stats Section */}
                 <div className="bg-gray-800 rounded-lg p-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-bold text-white">詳細統計</h2>
+                        <h2 className="text-base md:text-lg font-bold text-white">詳細統計</h2>
                         {(expeditions.length === 0 && (playerProfile?.successfulExpeditions || 0) === 0) && (
                             <div className="flex items-center text-yellow-400 text-sm">
                                 <Icons.Info className="h-4 w-4 mr-1" />
@@ -997,15 +990,15 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                         <div>
                             <div className="grid grid-cols-3 gap-4">
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-[#C0A573]">{expeditions.length}</p>
+                                    <p className="text-lg md:text-xl font-bold text-[#C0A573]">{expeditions.length}</p>
                                     <p className="text-sm text-gray-400">總遠征次數</p>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-green-500">{playerProfile?.successfulExpeditions || 0}</p>
+                                    <p className="text-lg md:text-xl font-bold text-green-500">{playerProfile?.successfulExpeditions || 0}</p>
                                     <p className="text-sm text-gray-400">成功遠征</p>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-purple-500">{upgradeAttempts.length || '-'}</p>
+                                    <p className="text-lg md:text-xl font-bold text-purple-500">{upgradeAttempts.length || '-'}</p>
                                     <p className="text-sm text-gray-400">升級嘗試次數</p>
                                 </div>
                             </div>
@@ -1013,7 +1006,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                             {/* 額外統計行 */}
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
                             <div className="text-center">
-                                <p className="text-2xl font-bold text-orange-500">{
+                                <p className="text-lg md:text-xl font-bold text-orange-500">{
                                     upgradeAttempts.filter(u => {
                                         const outcome = typeof u.outcome === 'number' ? u.outcome : Number(u.outcome);
                                         return outcome === 2 || outcome === 3; // 2=成功, 3=大成功
@@ -1022,11 +1015,11 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                 <p className="text-sm text-gray-400">成功升級次數</p>
                             </div>
                             <div className="text-center">
-                                <p className="text-2xl font-bold text-yellow-500">{formatSoul(playerStats?.totalRewardsEarned || playerProfile?.totalRewardsEarned || '0', 1)} SOUL</p>
+                                <p className="text-lg md:text-xl font-bold text-yellow-500">{formatSoul(playerStats?.totalRewardsEarned || playerProfile?.totalRewardsEarned || '0', 1)} SOUL</p>
                                 <p className="text-sm text-gray-400">總獲得獎勵</p>
                             </div>
                             <div className="text-center">
-                                <p className="text-2xl font-bold text-cyan-500">
+                                <p className="text-lg md:text-xl font-bold text-cyan-500">
                                     {expeditions.length > 0 
                                         ? `${((playerProfile?.successfulExpeditions || 0) / expeditions.length * 100).toFixed(1)}%`
                                         : '0%'
@@ -1055,33 +1048,33 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-gray-600">0</p>
+                                    <p className="text-lg md:text-xl font-bold text-gray-600">0</p>
                                     <p className="text-sm text-gray-400">總遠征次數</p>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-gray-600">0</p>
+                                    <p className="text-lg md:text-xl font-bold text-gray-600">0</p>
                                     <p className="text-sm text-gray-400">成功遠征</p>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-gray-600">0</p>
+                                    <p className="text-lg md:text-xl font-bold text-gray-600">0</p>
                                     <p className="text-sm text-gray-400">最高隊伍戰力</p>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-gray-600">0</p>
+                                    <p className="text-lg md:text-xl font-bold text-gray-600">0</p>
                                     <p className="text-sm text-gray-400">升級嘗試次數</p>
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-gray-600">0</p>
+                                    <p className="text-lg md:text-xl font-bold text-gray-600">0</p>
                                     <p className="text-sm text-gray-400">成功升級次數</p>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-gray-600">0 SOUL</p>
+                                    <p className="text-lg md:text-xl font-bold text-gray-600">0 SOUL</p>
                                     <p className="text-sm text-gray-400">總獲得獎勵</p>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-gray-600">0%</p>
+                                    <p className="text-lg md:text-xl font-bold text-gray-600">0%</p>
                                     <p className="text-sm text-gray-400">遠征成功率</p>
                                 </div>
                             </div>
@@ -1134,7 +1127,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
 
                 {/* Actions Section */}
                 <div className="bg-gray-800 rounded-lg p-6">
-                    <h2 className="text-xl font-bold text-white mb-4">快速行動</h2>
+                    <h2 className="text-base md:text-lg font-bold text-white mb-4">快速行動</h2>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <button
                             onClick={() => setActivePage('mint')}
@@ -1170,7 +1163,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                 {/* Project Introduction Section */}
                 <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
                     <div className="text-center mb-6">
-                        <h2 className="text-2xl font-bold text-white mb-2">🌟 踏入 Soulbound Saga，譜寫您的數位傳奇</h2>
+                        <h2 className="text-lg md:text-xl font-bold text-white mb-2">🌟 踏入 Soulbound Saga，譜寫您的數位傳奇</h2>
                         <p className="text-gray-400">完全上鏈的 Roguelike 傳奇，每個決策都被永恆記錄，每個成就都無法被奪走</p>
                     </div>
 

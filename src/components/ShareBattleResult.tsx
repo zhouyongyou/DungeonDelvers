@@ -9,6 +9,7 @@ import { ActionButton } from './ui/ActionButton';
 import { formatSoul } from '../utils/formatters';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { VictoryImageGenerator } from './VictoryImageGenerator';
+import { VictoryReplayModal } from './VictoryReplayModal';
 import { useSoulPrice } from '../hooks/useSoulPrice';
 
 interface BattleResult {
@@ -38,6 +39,7 @@ export const ShareBattleResult: React.FC<ShareBattleResultProps> = ({
     const { address } = useAccount();
     const [showImageGenerator, setShowImageGenerator] = useState(false);
     const [shareMode, setShareMode] = useState<'text' | 'image'>('text');
+    const [showVictoryReplay, setShowVictoryReplay] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // 獲取 SOUL 價格
@@ -117,7 +119,7 @@ ${referralLink ? `來和我一起探索吧：${referralLink}` : ''}
     // 分享到 Twitter
     const shareToTwitter = useCallback(() => {
         const text = generateShareText();
-        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent('https://www.dungeondelvers.xyz')}`;
+        const twitterUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent('https://www.dungeondelvers.xyz')}`;
         window.open(twitterUrl, '_blank');
     }, [generateShareText]);
     
@@ -144,6 +146,16 @@ ${referralLink ? `來和我一起探索吧：${referralLink}` : ''}
                     >
                         <Icons.Share2 className="h-3 w-3" />
                         <span className="hidden sm:inline">分享</span>
+                    </ActionButton>
+                    
+                    {/* 重播勝利畫面按鈕 */}
+                    <ActionButton
+                        onClick={() => setShowVictoryReplay(true)}
+                        className="text-xs px-2 py-1 flex items-center gap-1"
+                        title="重播勝利畫面"
+                    >
+                        <Icons.Play className="h-3 w-3" />
+                        <span className="hidden sm:inline">重播</span>
                     </ActionButton>
                 </div>
                 
@@ -212,6 +224,21 @@ ${referralLink ? `來和我一起探索吧：${referralLink}` : ''}
                         )}
                     </div>
                 )}
+                
+                {/* 勝利畫面重播模態 */}
+                <VictoryReplayModal
+                    isOpen={showVictoryReplay}
+                    onClose={() => setShowVictoryReplay(false)}
+                    result={{
+                        success: result.success,
+                        dungeonName: result.dungeonName,
+                        reward: result.reward,
+                        expGained: result.expGained,
+                        partyName: result.partyName,
+                        partyPower: result.partyPower,
+                        timestamp: result.timestamp
+                    }}
+                />
             </div>
         );
     }
@@ -306,6 +333,21 @@ ${referralLink ? `來和我一起探索吧：${referralLink}` : ''}
                     partyPower={result.partyPower}
                 />
             )}
+            
+            {/* 勝利畫面重播模態 */}
+            <VictoryReplayModal
+                isOpen={showVictoryReplay}
+                onClose={() => setShowVictoryReplay(false)}
+                result={{
+                    success: result.success,
+                    dungeonName: result.dungeonName,
+                    reward: result.reward,
+                    expGained: result.expGained,
+                    partyName: result.partyName,
+                    partyPower: result.partyPower,
+                    timestamp: result.timestamp
+                }}
+            />
         </div>
     );
 };

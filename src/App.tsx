@@ -58,7 +58,7 @@ const GameDataPage = lazy(() => import('./pages/GameDataPage'));
 // 調試頁面只在開發環境載入
 const DebugContractPage = import.meta.env.DEV ? lazy(() => import('./pages/DebugContractPage')) : null;
 const PriceDebugPage = import.meta.env.DEV ? lazy(() => import('./pages/PriceDebugPage')) : null;
-const PitchPage = lazy(() => import('./pages/PitchPage'));
+const PitchPage = lazy(() => import('./pages/archived/PitchPage'));
 
 
 const PageLoader: React.FC = () => {

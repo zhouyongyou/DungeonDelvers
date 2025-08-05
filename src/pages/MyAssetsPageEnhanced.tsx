@@ -69,7 +69,7 @@ const sortOptions: Record<string, SortOption[]> = {
 };
 
 const MyAssetsPageEnhanced: React.FC = () => {
-    const { address, chainId } = useAccount();
+    const { address, chainId, isConnected } = useAccount();
     
     // 🔥 修復：將所有 Hooks 移到組件頂層，在任何條件性返回之前
     const [activeTab, setActiveTab] = useState<'myHeroes' | 'myRelics' | 'myParties' | 'teamBuilder'>('myHeroes');
@@ -90,6 +90,15 @@ const MyAssetsPageEnhanced: React.FC = () => {
     
     // 獲取頁面級快速操作
     const quickActions = usePageQuickActions();
+    
+    // 如果未連接錢包，顯示提示
+    if (!isConnected || !address) {
+        return (
+            <div className="mt-10">
+                <EmptyState message="請先連接錢包以查看你的資產" />
+            </div>
+        );
+    }
     
     // Fetch owned NFTs - use global store
     const { data: nftsData, isLoading: isLoadingNfts, refetch: refetchNfts, isFetching: isFetchingNfts } = useEnhancedNfts({

@@ -35,7 +35,7 @@ export const GameInfoSection: React.FC<GameInfoSectionProps> = ({ variant = 'ful
     return (
       <div className="bg-[#2D2640] rounded-2xl p-6 md:p-8 lg:p-10">
         <div className="text-center mb-8">
-          <h2 className="text-xl md:text-2xl font-bold text-gray-100 mb-3">核心遊戲代幣</h2>
+          <h2 className="text-lg md:text-xl font-bold text-gray-100 mb-3">核心遊戲代幣</h2>
           {soulShardAddress && (
             <div className="flex items-center justify-center gap-2">
               <span className="text-gray-400">$SOUL:</span>
@@ -61,10 +61,10 @@ export const GameInfoSection: React.FC<GameInfoSectionProps> = ({ variant = 'ful
                 </div>
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-yellow-400 mb-3 flex items-center gap-2">
+                <h3 className="text-base font-bold text-yellow-400 mb-2 flex items-center gap-2">
                   <span>⚠️</span> 重要提醒
                 </h3>
-                <ul className="space-y-3 text-sm text-gray-200">
+                <ul className="space-y-2 text-xs text-gray-200">
                   <li className="flex items-start gap-2">
                     <span className="text-yellow-400 mt-1">•</span>
                     <span>$SOUL 遊戲代幣即將發行，敬請期待</span>
@@ -91,14 +91,6 @@ export const GameInfoSection: React.FC<GameInfoSectionProps> = ({ variant = 'ful
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Server className="text-blue-400 w-6 h-6" />
-                <span className="text-gray-300">伺服器：</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-white font-medium">正式服</span>
-                <div className="flex items-center gap-2 bg-green-500/20 px-3 py-1 rounded-full">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-green-400 text-sm">運行中</span>
-                </div>
               </div>
             </div>
           </div>
@@ -106,10 +98,10 @@ export const GameInfoSection: React.FC<GameInfoSectionProps> = ({ variant = 'ful
           {/* Four.Meme 品牌區 */}
           <div className="text-center py-4">
             <div className="inline-block">
-              <div className="text-3xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent mb-2">
+              <div className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent mb-1">
                 Four.Meme
               </div>
-              <p className="text-sm text-gray-400">發行平台</p>
+              <p className="text-xs text-gray-400">發行平台</p>
             </div>
           </div>
 
@@ -178,7 +170,7 @@ export const GameInfoSection: React.FC<GameInfoSectionProps> = ({ variant = 'ful
         <div className="flex items-start gap-3">
           <Coins className="text-yellow-400 w-5 h-5 md:w-6 md:h-6 flex-shrink-0 mt-0.5" />
           <div className="space-y-2 flex-1">
-            <h3 className="text-base md:text-lg font-bold text-yellow-400">核心遊戲代幣</h3>
+            <h3 className="text-sm md:text-base font-bold text-yellow-400">核心遊戲代幣</h3>
             {soulShardAddress && (
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs text-gray-400">$SOUL:</span>
@@ -204,7 +196,7 @@ export const GameInfoSection: React.FC<GameInfoSectionProps> = ({ variant = 'ful
         <div className="flex items-start gap-3">
           <AlertCircle className="text-red-400 w-5 h-5 md:w-6 md:h-6 flex-shrink-0 mt-0.5" />
           <div className="space-y-3 flex-1">
-            <h3 className="text-base md:text-lg font-bold text-red-400">⚠️ 重要提醒</h3>
+            <h3 className="text-sm md:text-base font-bold text-red-400">⚠️ 重要提醒</h3>
             <ul className="space-y-2 text-xs md:text-sm text-gray-300">
               <li className="flex items-start">
                 <span className="text-red-400 mr-2">•</span>
@@ -229,13 +221,6 @@ export const GameInfoSection: React.FC<GameInfoSectionProps> = ({ variant = 'ful
           <div className="flex items-center gap-3">
             <Server className="text-blue-400 w-5 h-5 md:w-6 md:h-6" />
             <div>
-              <h3 className="text-base md:text-lg font-bold text-blue-400">伺服器狀態</h3>
-              <p className="text-xs md:text-sm text-gray-300">正式服</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span className="text-xs md:text-sm text-green-400">運行中</span>
           </div>
         </div>
       </div>
@@ -244,7 +229,7 @@ export const GameInfoSection: React.FC<GameInfoSectionProps> = ({ variant = 'ful
       <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 rounded-lg p-4 md:p-6 border border-purple-500/30">
         <div className="flex items-center justify-center">
           <div className="text-center">
-            <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+            <div className="text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-1">
               Four.Meme
             </div>
             <p className="text-xs md:text-sm text-gray-400">發行平台</p>

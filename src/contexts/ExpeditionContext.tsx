@@ -48,7 +48,7 @@ export const ExpeditionProvider: React.FC<{ children: ReactNode }> = ({ children
         
         // Twitter支援圖片，但需要先上傳圖片到Twitter或使用公開的圖片URL
         const imageUrl = 'https://www.dungeondelvers.xyz/images/victory-share.png'; // 需要準備這個圖片
-        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+        const twitterUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`;
         
         return { text, twitterUrl, referralUrl, imageUrl };
     }, [result]);

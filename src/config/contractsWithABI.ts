@@ -24,15 +24,15 @@ export const CONTRACTS_WITH_ABI = {
   56: { // BSC Mainnet
     // NFT Contracts
     HERO: {
-      address: '0x6DEb5Ade2F6BEe8294A4b7f37cE372152109E2db',
+      address: '0x001b7462b0f1ab832c017a6f09133932be140b18',
       abi: HeroABI
     },
     RELIC: {
-      address: '0xcfB83d8545D68b796a236290b3C1bc7e4A140B11',
+      address: '0xdd8e52cd1d248d04c306c038780315a03866b402',
       abi: RelicABI
     },
     PARTY: {
-      address: '0x18bF1eE489CD0D8bfb006b4110bfe0Bb7459bE69',
+      address: '0x382024850e08ab37e290315fc5f3692b8d6646eb',
       abi: PartyABI
     },
     

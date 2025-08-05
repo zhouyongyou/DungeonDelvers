@@ -86,7 +86,7 @@ export const APP_CONSTANTS = {
     PANCAKESWAP: 'https://pancakeswap.finance',
     DOCUMENTATION: 'https://docs.dungeondelvers.xyz',
     DISCORD: 'https://discord.gg/dungeondelvers',
-    TWITTER: 'https://twitter.com/DungeonDelvers',
+    TWITTER: 'https://x.com/Soulbound_Saga',
   },
 
   // 錯誤訊息

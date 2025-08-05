@@ -190,7 +190,7 @@ dataSources:
     name: PlayerVault
     network: bsc
     source:
-      address: '0xd06470d4C6F62F6747cf02bD2b2De0981489034F'
+      address: '0x62Bce9aF5E2C47b13f62A2e0fCB1f9C7AfaF8787'
       abi: PlayerVault
       startBlock: 56184733
     mapping:
