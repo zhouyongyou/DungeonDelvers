@@ -3,9 +3,9 @@
 import React, { useState, useMemo, memo } from 'react';
 import { useAccount } from 'wagmi';
 import { formatEther } from 'viem';
-import { ActionButton } from '../components/ui/ActionButton';
-import { Icons } from '../components/ui/icons';
-import { DEVELOPER_ADDRESS } from '../config/constants';
+import { ActionButton } from '../../components/ui/ActionButton';
+import { Icons } from '../../components/ui/icons';
+import { DEVELOPER_ADDRESS } from '../../config/constants';
 
 interface PitchSectionProps {
     title: string;
