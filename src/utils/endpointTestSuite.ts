@@ -1,4 +1,5 @@
 // 智能端點測試套件
+import { gql } from '@apollo/client';
 import { subgraphConfig } from '../config/subgraphConfig';
 import { getApolloClient } from '../api/graphqlClient';
 import { logger } from './logger';
@@ -113,7 +114,7 @@ export class EndpointTestSuite {
       const start = Date.now();
       
       const result = await apolloClient.query({
-        query: apolloClient.gql`
+        query: gql`
           query TestQuery {
             _meta { block { number } }
           }

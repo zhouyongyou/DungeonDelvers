@@ -139,14 +139,13 @@ class SubgraphConfigManager {
     await this.getConfig();
   }
 
-  // 新增：獲取最佳端點（智能選擇）
-  async getOptimalEndpoint(feature: string = 'default'): Promise<string> {
-    const checkInterval = 2 * 60 * 1000; // 2分鐘檢查一次
-    const now = Date.now();
-    
-    // 檢查是否需要更新性能指標
-    if (now - this.performanceCache.studio.lastCheck > checkInterval) {
-      await this.updatePerformanceMetrics();
+  // 新增：獲取最佳端點（智能選擇）- 同步版本供 Apollo 使用
+  getOptimalEndpoint(feature: string = 'default'): string {
+    // 由於 Apollo HTTP Link 的 uri 函數不支援 async，我們使用同步的回退策略
+    // 如果還沒有配置，返回默認的 Studio URL
+    if (!this.config) {
+      logger.warn('Config not loaded, using default Studio URL');
+      return 'https://api.studio.thegraph.com/query/90070/dungeon-delvers/version/latest';
     }
     
     const studio = this.performanceCache.studio;
@@ -155,28 +154,44 @@ class SubgraphConfigManager {
     // 健康狀況優先：如果一個不健康，選擇健康的
     if (!studio.isHealthy && decentralized.isHealthy) {
       logger.info('Using decentralized endpoint (studio unhealthy)');
-      return await this.getDecentralizedUrl();
+      return this.config.decentralized;
     }
     if (!decentralized.isHealthy && studio.isHealthy) {
       logger.info('Using studio endpoint (decentralized unhealthy)');
-      return await this.getStudioUrl();
+      return this.config.studio;
     }
     
     // 都健康的話選擇更快的
     const chosenEndpoint = studio.responseTime <= decentralized.responseTime ? 'studio' : 'decentralized';
     
-    logger.info(`Optimal endpoint selected: ${chosenEndpoint}`, {
+    logger.debug(`Optimal endpoint selected: ${chosenEndpoint}`, {
       studioTime: `${studio.responseTime}ms`,
       decentralizedTime: `${decentralized.responseTime}ms`
     });
     
     return chosenEndpoint === 'studio' ? 
-      await this.getStudioUrl() : 
-      await this.getDecentralizedUrl();
+      this.config.studio : 
+      this.config.decentralized;
+  }
+  
+  // 非同步版本的獲取最佳端點（保留供其他地方使用）
+  async getOptimalEndpointAsync(feature: string = 'default'): Promise<string> {
+    const checkInterval = 2 * 60 * 1000; // 2分鐘檢查一次
+    const now = Date.now();
+    
+    // 確保配置已載入
+    await this.getConfig();
+    
+    // 檢查是否需要更新性能指標
+    if (now - this.performanceCache.studio.lastCheck > checkInterval) {
+      await this.updatePerformanceMetrics();
+    }
+    
+    return this.getOptimalEndpoint(feature);
   }
 
   // 更新端點性能指標
-  private async updatePerformanceMetrics() {
+  async updatePerformanceMetrics() {
     try {
       const studioUrl = await this.getStudioUrl();
       const decentralizedUrl = await this.getDecentralizedUrl();

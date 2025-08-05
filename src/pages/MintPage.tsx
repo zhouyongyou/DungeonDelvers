@@ -1,7 +1,7 @@
 // src/pages/MintPage.tsx (優化後最終版)
 
-import React, { useState, useMemo, useEffect, memo, useCallback } from 'react';
-import { useAccount, useWriteContract, useBalance, usePublicClient, useReadContract } from 'wagmi';
+import React, { useState, useMemo, useEffect, memo } from 'react';
+import { useAccount, useBalance, usePublicClient, useReadContract } from 'wagmi';
 import { formatEther, maxUint256, decodeEventLog } from 'viem';
 import type { Abi } from 'viem';
 import { useQueryClient } from '@tanstack/react-query';
@@ -9,10 +9,9 @@ import { useAppToast } from '../contexts/SimpleToastContext';
 import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';
 import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
 import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
-import { getContract, getContractWithABI } from '../config/contractsWithABI';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { useTransactionStore } from '../stores/useTransactionStore';
 import { bsc } from 'wagmi/chains';
 import { Modal } from '../components/ui/Modal';
 import { NftCard } from '../components/ui/NftCard';
@@ -20,7 +19,6 @@ import type { AnyNft, NftAttribute } from '../types/nft';
 import { fetchMetadata } from '../api/nfts';
 import { PRICE_OVERRIDE, logPriceOverride } from '../config/priceOverride';
 import { invalidationStrategies } from '../config/queryConfig';
-import { BATCH_TIERS, RARITY_LABELS, RARITY_COLORS, getBatchTierForQuantity, type BatchTier } from '../utils/batchMintConfig';
 import { MintPagePreview } from '../components/mint/MintPagePreview';
 import { FeaturedNftsGallery } from '../components/mint/FeaturedNftsGallery';
 import { PendingReveals } from '../components/nft/PendingReveals';
@@ -245,57 +243,53 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
 // Section: 子元件與主頁面
 // =================================================================
 
-// 動態稀有度機率顯示組件
-const RarityProbabilities = memo<{ quantity: number }>(({ quantity }) => {
-    const currentTier = getBatchTierForQuantity(quantity);
-    
-    if (!currentTier) {
-        return (
-            <div className="w-full text-xs text-gray-400 mt-4">
-                <h4 className="font-bold text-center mb-1 text-red-400">⚠️ 數量無效</h4>
-                <p className="text-center text-red-300">請輸入有效的數量</p>
-            </div>
-        );
-    }
 
+// 稀有度相關常量
+const RARITY_LABELS = ['一星 ⭐', '二星 ⭐⭐', '三星 ⭐⭐⭐', '四星 ⭐⭐⭐⭐', '五星 ⭐⭐⭐⭐⭐'];
+const RARITY_COLORS = ['text-gray-400', 'text-green-400', 'text-blue-400', 'text-purple-400', 'text-orange-400'];
+
+// 統一的稀有度機率 (基於 Commit-Reveal 機制的公平分布)
+const UNIFIED_RARITY_PROBABILITIES = [44, 35, 15, 5, 1]; // 百分比，與 MintPagePreviewResponsive.tsx 一致
+
+// 動態稀有度機率顯示組件 - 簡化版
+const RarityProbabilities = memo<{ quantity: number }>(({ quantity }) => {
+    // 不再依賴批量等級，顯示統一的機率分布
     return (
         <div className="w-full text-xs text-gray-400 mt-4">
-            <div className="text-center mb-2">
-                <h4 className="font-bold text-gray-300">{currentTier.tierName} - 稀有度機率</h4>
-                <p className="text-xs text-gray-500">{currentTier.description}</p>
+            <div className="text-center mb-3">
+                <h4 className="font-bold text-gray-300 mb-1">🎲 統一稀有度機率</h4>
+                <p className="text-xs text-gray-500">所有數量都享有相同的公平機率分布</p>
             </div>
             <div className="grid grid-cols-5 gap-1 text-center">
                 {RARITY_LABELS.map((label, index) => {
-                    const probability = currentTier.probabilities[index];
-                    const isDisabled = probability === 0;
+                    const probability = UNIFIED_RARITY_PROBABILITIES[index];
                     const [name, stars] = label.split(' ');
                     
                     return (
                         <div 
                             key={index}
-                            className={`p-2 rounded transition-all overflow-hidden ${
-                                isDisabled 
-                                    ? 'bg-gray-800/30 opacity-40' 
-                                    : 'bg-black/40 border border-gray-600/50'
-                            }`}
+                            className="p-2 rounded transition-all overflow-hidden bg-black/40 border border-gray-600/50"
                         >
-                            <div className={`text-xs ${isDisabled ? 'text-gray-600' : RARITY_COLORS[index]}`}>
+                            <div className={`text-xs ${RARITY_COLORS[index]}`}>
                                 <div className="truncate">{name}</div>
                                 <div className="text-[10px] leading-tight break-all">{stars}</div>
                             </div>
-                            <div className={`font-bold text-sm mt-1 ${isDisabled ? 'text-gray-600' : 'text-white'}`}>
+                            <div className="font-bold text-sm mt-1 text-white">
                                 {probability}%
                             </div>
-                            {isDisabled && (
-                                <div className="text-xs text-red-400 mt-1">鎖定</div>
-                            )}
                         </div>
                     );
                 })}
             </div>
+            <div className="mt-3 p-2 bg-purple-900/20 border border-purple-600/50 rounded text-center">
+                <p className="text-xs text-purple-300">
+                    ⚡ 採用 Commit-Reveal 機制確保公平，所有玩家享有相同機率
+                </p>
+            </div>
         </div>
     );
 });
+RarityProbabilities.displayName = 'RarityProbabilities';
 
 // 批量鑄造結果數據結構
 interface BatchMintResult {
@@ -414,7 +408,6 @@ const MintResultModal = memo<{
     
     return null;
 });
-RarityProbabilities.displayName = 'RarityProbabilities';
 MintResultModal.displayName = 'MintResultModal';
 
 interface MintCardProps {
@@ -795,42 +788,27 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
             <div className="my-3 sm:my-4">
                 <div className="flex items-center justify-center gap-1 sm:gap-2 mb-2">
                     {options.map(q => {
-                        const tier = getBatchTierForQuantity(q);
-                        const tierColors = {
-                            "青銅包": "border-orange-600 bg-orange-600",
-                            "白銀包": "border-gray-400 bg-gray-400", 
-                            "黃金包": "border-yellow-500 bg-yellow-500",
-                            "鉑金包": "border-purple-500 bg-purple-500"
-                        };
-                        const tierColor = tier ? tierColors[tier.tierName as keyof typeof tierColors] : "border-gray-600 bg-gray-600";
-                        
                         return (
                             <div key={q} className="flex flex-col items-center">
                                 <button 
                                     onClick={() => setQuantity(q)} 
                                     className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full font-bold text-base sm:text-lg transition-all flex items-center justify-center border-2 ${
                                         quantity === q 
-                                            ? `${tierColor} text-white scale-110 shadow-lg` 
+                                            ? 'border-indigo-500 bg-indigo-500 text-white scale-110 shadow-lg' 
                                             : 'bg-gray-700 hover:bg-gray-600 border-gray-600 text-gray-300'
                                     }`}
                                 >
                                     {q}
                                 </button>
-                                {tier && (
-                                    <div className="text-xs mt-1 text-center">
-                                        <div className={`font-medium ${quantity === q ? 'text-white' : 'text-gray-400'}`}>
-                                            {tier.tierName}
-                                        </div>
-                                        <div className="text-gray-500">
-                                            最高{tier.maxRarity}★
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         );
                     })}
                 </div>
             </div>
+            
+            {/* 稀有度機率顯示 */}
+            <RarityProbabilities quantity={quantity} />
+            
             <div className="w-full my-3 sm:my-4">
                 <label className="block text-sm font-medium mb-2 text-center text-gray-400">選擇支付方式</label>
                 <div className="grid grid-cols-2 gap-1 sm:gap-2 p-1 bg-gray-900/50 rounded-lg">
@@ -910,7 +888,6 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                     </button>
                 </div>
             )}
-            <RarityProbabilities quantity={quantity} />
         </div>
     );
 });
@@ -943,7 +920,7 @@ const MintPage: React.FC = memo(() => {
             <h2 className="page-title">鑄造工坊</h2>
             
             {/* Pending Reveals Section */}
-            <PendingReveals className="mb-6" />
+            <PendingReveals className="mb-6" defaultExpanded={false} />
             
             {chainId === bsc.id ? <MintingInterface chainId={chainId} /> : <div className="card-bg p-10 rounded-xl text-center text-gray-400"><p>請先連接到支援的網路 (BSC 主網) 以使用鑄造功能。</p></div>}
             
@@ -967,32 +944,15 @@ const MintPage: React.FC = memo(() => {
             {/* Commit-Reveal 機制說明 */}
             <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/30 rounded-lg p-4 sm:p-5 md:p-6 mb-6 sm:mb-8 max-w-4xl mx-auto">
                 <div>
-                    <h3 className="text-base sm:text-lg font-bold text-blue-300 mb-2 sm:mb-3">
-                        Commit-Reveal 機制 - 統一機率，延遲揭示
-                    </h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4">
-                            {BATCH_TIERS.map((tier, index) => (
-                                <div key={index} className="bg-black/30 rounded-lg p-2 sm:p-3 border border-gray-600/50">
-                                    <div className="text-center">
-                                        <div className="text-xs sm:text-sm font-bold text-white mb-1">{tier.tierName}</div>
-                                        <div className="text-xs text-gray-400 mb-2">{tier.minQuantity}個起</div>
-                                        <div className="text-xs text-gray-300 mb-2">最高 {tier.maxRarity}★</div>
-                                        <div className="text-xs text-green-400">
-                                            約 ${tier.minQuantity * 2} USD
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="bg-purple-900/20 border border-purple-600/50 rounded-lg p-2 sm:p-3">
-                            <h4 className="text-sm sm:text-base text-purple-300 font-semibold mb-2">⚡ Commit-Reveal 機制</h4>
-                            <ul className="text-xs sm:text-sm text-gray-300 space-y-1">
-                                <li>• <strong>兩步驟鑄造</strong>：提交承諾後等待 3 個區塊揭示結果</li>
-                                <li>• <strong>區塊鏈隨機性</strong>：使用未來區塊 hash 確保公平性</li>
-                                <li>• <strong>統一機率分布</strong>：所有批量享有相同的稀有度機會</li>
-                                <li>• <strong>防止操縱</strong>：延遲揭示機制有效阻止撞庫行為</li>
-                            </ul>
-                        </div>
+                    <div className="bg-purple-900/20 border border-purple-600/50 rounded-lg p-3 sm:p-4">
+                        <h3 className="text-base sm:text-lg font-bold text-purple-300 mb-3">⚡ Commit-Reveal 防撞庫機制</h3>
+                        <ul className="text-xs sm:text-sm text-gray-300 space-y-2">
+                            <li>• <strong>兩步驟鑄造</strong>：提交承諾後等待 3 個區塊揭示結果</li>
+                            <li>• <strong>區塊鏈隨機性</strong>：使用未來區塊 hash 確保公平性</li>
+                            <li>• <strong>統一機率分布</strong>：所有批量享有相同的稀有度機會</li>
+                            <li>• <strong>防止操縱</strong>：延遲揭示機制有效阻止撞庫行為</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
             

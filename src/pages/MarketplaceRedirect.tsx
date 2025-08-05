@@ -195,27 +195,6 @@ export const MarketplaceRedirect: React.FC = () => {
             </div>
           </div>
 
-          {/* OKX 市場推薦卡片 */}
-          <div className="bg-gradient-to-br from-orange-600/20 to-orange-500/10 border border-orange-500/30 rounded-xl p-6 text-center">
-            <div className="mb-4">
-              <h4 className="text-lg font-bold text-orange-400 mb-2">
-                <Icons.ExternalLink className="w-5 h-5 inline mr-2" />
-                在 OKX NFT 市場交易
-              </h4>
-              <p className="text-gray-300 text-sm mb-4">
-                全球領先的 NFT 市場，安全便捷的交易環境
-              </p>
-            </div>
-
-            <ActionButton
-              onClick={() => handleRedirectToOKX()}
-              variant="secondary"
-              className="bg-gradient-to-r from-orange-500/20 to-orange-600/20 hover:from-orange-500/30 hover:to-orange-600/30 border border-orange-500/50"
-            >
-              <Icons.ExternalLink className="w-4 h-4 mr-2" />
-              瀏覽所有 NFT
-            </ActionButton>
-          </div>
 
           {/* 簡化的資訊說明 */}
           <div className="mt-8 bg-gray-800/30 border border-gray-700 rounded-xl p-6 text-center">

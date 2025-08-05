@@ -170,20 +170,6 @@ const NFT_TYPE_LABELS: Record<NftType, string> = {
   party: '隊伍'
 };
 
-const ELEMENT_LABELS: Record<string, string> = {
-  fire: '火',
-  water: '水',
-  earth: '土',
-  metal: '金',
-  wood: '木'
-};
-
-const CLASS_LABELS: Record<string, string> = {
-  warrior: '戰士',
-  mage: '法師',
-  archer: '弓手',
-  priest: '牧師'
-};
 
 export const MarketplacePreview: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState<'overview' | 'listings' | 'guide'>('overview');

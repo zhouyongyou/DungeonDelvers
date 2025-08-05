@@ -1,4 +1,4 @@
-import { useWriteContract } from 'wagmi';
+import { useWriteContractNoRetry as useWriteContract } from './useWriteContractNoRetry';
 import { useTransactionStore } from '../stores/useTransactionStore';
 import { useAppToast } from './useAppToast';
 import { logger } from '../utils/logger';

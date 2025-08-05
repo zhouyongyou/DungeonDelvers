@@ -2,17 +2,19 @@ import React from 'react';
 import { AdminPage } from './AdminPage';
 import { useAccount, useReadContract } from 'wagmi';
 import { getContract } from '../config/contracts';
+import { getContractAddress } from '../config/configLoader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 
 // 包裝 AdminPage，添加權限檢查
 export const AdminPageFixed: React.FC = () => {
   const { address } = useAccount();
+  const dungeonMasterAddress = getContractAddress('DUNGEONMASTER');
   const dungeonMasterContract = getContract('DUNGEONMASTER');
 
   // 檢查是否為管理員
   const { data: owner, isLoading } = useReadContract({
-    address: dungeonMasterContract?.address,
+    address: dungeonMasterContract?.address as `0x${string}`,
     abi: dungeonMasterContract?.abi,
     functionName: 'owner',
     query: {

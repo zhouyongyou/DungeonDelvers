@@ -123,7 +123,7 @@ export const useUnassignedAssets = (address?: `0x${string}`) => {
       }
     },
     enabled: !!address,
-    staleTime: 5 * 1000, // 降低到5秒  
-    refetchInterval: 10 * 1000, // 每10秒刷新
+    staleTime: 2 * 60 * 1000, // 2分鐘緩存
+    refetchInterval: 2 * 60 * 1000, // 每2分鐘刷新，符合速率限制
   });
 };

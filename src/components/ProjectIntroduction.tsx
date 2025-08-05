@@ -432,11 +432,6 @@ const CallToActionSection: React.FC = () => {
           <span>關注 Twitter</span>
         </a>
         
-        <button 
-          onClick={handleConnectWallet}
-          className="bg-purple-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-purple-700 transition-colors"
-        >
-        </button>
       </div>
       
       <div className="mt-6 text-gray-300 text-sm">

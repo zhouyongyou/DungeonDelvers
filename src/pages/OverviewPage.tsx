@@ -44,25 +44,58 @@ const LeaderboardSystem = lazy(() => import('../components/leaderboard/Leaderboa
 // Section: Components
 // =================================================================
 
+// 手機版緊湊的統計卡片元件
 const StatCard: React.FC<{
     title: string;
     value: string;
     icon: React.ReactNode;
     description?: React.ReactNode;
     action?: React.ReactNode;
-}> = ({ title, value, icon, description, action }) => (
-    <div className="bg-gray-800 p-6 rounded-lg">
-        <div className="flex items-center justify-between mb-2">
-            <div className="text-gray-400 flex items-center gap-2">
-                {icon}
-                <span className="text-sm">{title}</span>
+}> = ({ title, value, icon, description, action }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    
+    return (
+        <div className={`bg-gray-800 ${isMobile ? 'p-3' : 'p-6'} rounded-lg`}>
+            <div className="flex items-center justify-between mb-2">
+                <div className="text-gray-400 flex items-center gap-1 md:gap-2">
+                    <div className={isMobile ? 'scale-90' : ''}>{icon}</div>
+                    <span className={`${isMobile ? 'text-xs' : 'text-sm'}`}>{title}</span>
+                </div>
+                {!isMobile && action}
             </div>
-            {action}
+            <p className={`${isMobile ? 'text-base' : 'text-lg md:text-xl'} font-bold text-white`}>{value}</p>
+            
+            {/* 桌面版：直接顯示 */}
+            {!isMobile && description && (
+                <div className="text-xs text-gray-500 mt-1">{description}</div>
+            )}
+            
+            {/* 手機版：可展開的詳情 */}
+            {isMobile && description && (
+                <>
+                    <button
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="text-xs text-gray-500 hover:text-gray-300 mt-1 flex items-center gap-1"
+                    >
+                        <span className={`transform transition-transform ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
+                        <span>詳情</span>
+                    </button>
+                    {isExpanded && (
+                        <div className="text-xs text-gray-500 mt-2 animate-fadeIn">
+                            {description}
+                        </div>
+                    )}
+                </>
+            )}
+            
+            {/* 手機版按鈕 */}
+            {isMobile && action && (
+                <div className="mt-2">{action}</div>
+            )}
         </div>
-        <p className="text-lg md:text-xl font-bold text-white">{value}</p>
-        {description && <div className="text-xs text-gray-500 mt-1">{description}</div>}
-    </div>
-);
+    );
+};
 
 // =================================================================
 // Section: Main Component
@@ -79,6 +112,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     const [showProjectIntro, setShowProjectIntro] = useState(false);
     const [showFullIntro, setShowFullIntro] = useState(false);
     const [showAnalytics, setShowAnalytics] = useState(false);
+    const [showTaxDetails, setShowTaxDetails] = useState(false);
     const { showToast } = useAppToast();
     const { data, isLoading, isError, refetch } = usePlayerOverview(address);
     const { addTransaction, updateTransaction } = useTransactionHistory(address);
@@ -484,19 +518,6 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                 探索地下城，收集英雄，賺取獎勵。體驗真正的 Web3 遊戲樂趣。
                             </p>
                             
-                            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                                <ActionButton
-                                    onClick={() => {
-                                        // 觸發錢包連接邏輯
-                                        showToast('請點擊右上角連接錢包', 'info');
-                                    }}
-                                    className="bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3 px-6 sm:py-4 sm:px-8 rounded-lg hover:from-purple-700 hover:to-blue-700 text-sm sm:text-base"
-                                >
-                                    <div className="flex items-center space-x-2">
-                                        <Icons.Dungeon className="h-4 w-4 sm:h-5 sm:w-5" />
-                                    </div>
-                                </ActionButton>
-                            </div>
                         </div>
 
                         {/* 項目介紹組件 */}
@@ -511,14 +532,6 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                             <h3 className="text-lg font-bold text-white mb-4">加入我們的世界</h3>
                             <p className="text-gray-300 text-sm mb-6">一個偉大的遊戲世界需要熱情的玩家共同塑造。與開發團隊直接交流，見證嶄新遊戲品牌的誕生！</p>
                             
-                            <ActionButton
-                                onClick={() => {
-                                    showToast('請點擊右上角連接錢包', 'info');
-                                }}
-                                className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-full px-6 py-3"
-                            >
-                                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                            </ActionButton>
                         </div>
                     </div>
                 </div>
@@ -592,7 +605,8 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* 手機版 2x2 網格佈局，桌面版 3 欄 */}
+                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4">
                     <StatCard
                         title="等級"
                         value={`LV ${level}`}
@@ -672,11 +686,6 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                             已組隊: {player.parties.reduce((total, party) => total + (party.heroIds?.length || 0), 0)} 個
                                         </p>
                                     )}
-                                    {assetData?.unassignedHeroes !== undefined && (
-                                        <p className="text-blue-400 text-[10px]">
-                                            ✓ 即時鏈上數據
-                                        </p>
-                                    )}
                                 </div>
                             )
                         }
@@ -710,11 +719,6 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                     {player?.parties?.length > 0 && (
                                         <p className="text-yellow-400">
                                             已組隊: {player.parties.reduce((total, party) => total + (party.relicIds?.length || 0), 0)} 個
-                                        </p>
-                                    )}
-                                    {assetData?.unassignedRelics !== undefined && (
-                                        <p className="text-blue-400 text-[10px]">
-                                            ✓ 即時鏈上數據
                                         </p>
                                     )}
                                 </div>
@@ -798,46 +802,63 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                 )}
                                 
                                 <div className="text-xs text-gray-500 space-y-1">
-                                    <p>
-                                        提款稅率：{actualTaxRate.toFixed(1)}% / {actualLargeTaxRate.toFixed(1)}%
-                                    </p>
-                                    <p className="text-xs text-yellow-400">
-                                        (一般 / 大額≥$1000)
-                                    </p>
-                                    
-                                    {/* 詳細減免計算 */}
-                                    {(vipTier > 0 || levelDiscount > 0) && (
-                                        <div className="text-xs text-green-400 space-y-1 bg-green-900/10 p-2 rounded border border-green-600/20">
-                                            <p className="font-medium">稅率減免明細：</p>
-                                            <div className="space-y-0.5 text-[10px]">
-                                                <p>基礎稅率：{standardBaseTaxRate.toFixed(1)}% / {largeBaseTaxRate.toFixed(1)}%</p>
-                                                {vipTier > 0 && (
-                                                    <p>VIP {vipTier} 減免：-{vipDiscount.toFixed(1)}%</p>
-                                                )}
-                                                {levelDiscount > 0 && (
-                                                    <p>等級 {level} 減免：-{levelDiscount.toFixed(1)}% (每10級-1%)</p>
-                                                )}
-                                                {timeDecay > 0 && !isFirstWithdraw && (
-                                                    <p>時間衰減：-{timeDecay.toFixed(1)}% ({periodsPassed} 天)</p>
-                                                )}
-                                                {isFirstWithdraw && (
-                                                    <p className="text-green-300">首次提領免稅：-100%</p>
-                                                )}
-                                                <p className="text-green-300 font-medium">
-                                                    最終稅率：{actualTaxRate.toFixed(1)}% / {actualLargeTaxRate.toFixed(1)}%
-                                                </p>
-                                            </div>
+                                    {/* 稅率摘要 - 始終顯示 */}
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p>
+                                                提款稅率：{actualTaxRate.toFixed(1)}% / {actualLargeTaxRate.toFixed(1)}%
+                                            </p>
+                                            <p className="text-xs text-yellow-400">
+                                                (一般 / 大額≥$1000)
+                                            </p>
                                         </div>
-                                    )}
-                                    
-                                    <div className="text-xs text-blue-400 mt-1">
-                                        每天減少 5% 稅率（時間衰減）
+                                        {/* 折疊按鈕 */}
+                                        <button
+                                            onClick={() => setShowTaxDetails(!showTaxDetails)}
+                                            className="text-gray-400 hover:text-gray-200 text-xs flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-700/50 transition-colors"
+                                        >
+                                            <span className={`transform transition-transform ${showTaxDetails ? 'rotate-90' : ''}`}>▶</span>
+                                            <span>{showTaxDetails ? '收起' : '詳情'}</span>
+                                        </button>
                                     </div>
                                     
-                                    {/* 首次提領備註 */}
-                                    {isFirstWithdraw && (
-                                        <div className="text-xs text-green-400 bg-green-900/20 p-2 rounded border border-green-600/30 mt-2">
-                                            🎉 首次提領免稅優惠！
+                                    {/* 詳細減免計算 - 可折疊 */}
+                                    {showTaxDetails && (
+                                        <div className="animate-fadeIn">
+                                            {(vipTier > 0 || levelDiscount > 0 || isFirstWithdraw) && (
+                                                <div className="text-xs text-green-400 space-y-1 bg-green-900/10 p-2 rounded border border-green-600/20">
+                                                    <p className="font-medium">稅率減免明細：</p>
+                                                    <div className="space-y-0.5 text-[10px]">
+                                                        <p>基礎稅率：{standardBaseTaxRate.toFixed(1)}% / {largeBaseTaxRate.toFixed(1)}%</p>
+                                                        {vipTier > 0 && (
+                                                            <p>VIP {vipTier} 減免：-{vipDiscount.toFixed(1)}%</p>
+                                                        )}
+                                                        {levelDiscount > 0 && (
+                                                            <p>等級 {level} 減免：-{levelDiscount.toFixed(1)}% (每10級-1%)</p>
+                                                        )}
+                                                        {timeDecay > 0 && !isFirstWithdraw && (
+                                                            <p>時間衰減：-{timeDecay.toFixed(1)}% ({periodsPassed} 天)</p>
+                                                        )}
+                                                        {isFirstWithdraw && (
+                                                            <p className="text-green-300">首次提領免稅：-100%</p>
+                                                        )}
+                                                        <p className="text-green-300 font-medium">
+                                                            最終稅率：{actualTaxRate.toFixed(1)}% / {actualLargeTaxRate.toFixed(1)}%
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            
+                                            <div className="text-xs text-blue-400 mt-1">
+                                                💡 每天減少 5% 稅率（時間衰減）
+                                            </div>
+                                            
+                                            {/* 首次提領備註 */}
+                                            {isFirstWithdraw && (
+                                                <div className="text-xs text-green-400 bg-green-900/20 p-2 rounded border border-green-600/30 mt-2">
+                                                    🎉 首次提領免稅優惠！
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -852,7 +873,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                     className="text-xs px-2 py-1"
                                     title="智能提領 - 精確控制稅率和金額"
                                 >
-                                    智能提領
+                                    提領
                                 </ActionButton>
                                 <ActionButton
                                     onClick={showTaxInfo}
@@ -895,14 +916,17 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
                                                 <p className="text-gray-500">≈ ${((Number(stakedAmount || 0n) / 1e18) * priceInUsd).toFixed(2)} USD</p>
                                             )}
                                         </div>
-                                        {/* 下一級需求 */}
-                                        {vipTier < 50 && priceInUsd && (
-                                            <div className="text-blue-400 text-[10px] mt-2 bg-blue-900/20 p-2 rounded">
-                                                <p>升至 VIP {vipTier + 1}：</p>
-                                                <p>需再質押 {Math.max(0, ((vipTier + 1) * 1000000) - (Number(stakedAmount || 0n) / 1e18)).toFixed(0)} SOUL</p>
-                                                <p className="text-gray-500">≈ ${(Math.max(0, ((vipTier + 1) * 1000000) - (Number(stakedAmount || 0n) / 1e18)) * priceInUsd).toFixed(2)} USD</p>
-                                            </div>
-                                        )}
+                                        {/* 下一級需求 - 只在需要質押更多 SOUL 時顯示 */}
+                                        {vipTier < 50 && priceInUsd && (() => {
+                                            const requiredAmount = Math.max(0, ((vipTier + 1) * 1000000) - (Number(stakedAmount || 0n) / 1e18));
+                                            return requiredAmount > 0 ? (
+                                                <div className="text-blue-400 text-[10px] mt-2 bg-blue-900/20 p-2 rounded">
+                                                    <p>升至 VIP {vipTier + 1}：</p>
+                                                    <p>需再質押 {requiredAmount.toFixed(0)} SOUL</p>
+                                                    <p className="text-gray-500">≈ ${(requiredAmount * priceInUsd).toFixed(2)} USD</p>
+                                                </div>
+                                            ) : null;
+                                        })()}
                                     </div>
                                 ) 
                                 : stakedAmount && stakedAmount > 0n
@@ -1251,7 +1275,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
 
                     <div className="text-center mt-6 pt-4 border-t border-gray-700">
                         <p className="text-gray-400 text-sm">
-                            🌟 現在就踏入 Soulbound Saga！連接錢包並召喚您的第一個靈魂英雄
+                            🌟 歡迎來到 Soulbound Saga！開始您的靈魂探索之旅
                         </p>
                     </div>
                 </div>

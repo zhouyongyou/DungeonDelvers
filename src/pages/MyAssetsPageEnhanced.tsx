@@ -535,12 +535,14 @@ const MyAssetsPageEnhanced: React.FC = () => {
                                 <p className="text-gray-400 max-w-md mx-auto">
                                     組建隊伍需要英雄和聖物，請先前往鑄造頁面獲得它們
                                 </p>
-                                <ActionButton
-                                    onClick={() => window.location.href = '/#/mint'}
-                                    className="bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 px-6 py-3 font-semibold"
-                                >
-                                    🏺 前往鑄造頁面
-                                </ActionButton>
+                                <div className="flex justify-center">
+                                    <ActionButton
+                                        onClick={() => window.location.href = '/#/mint'}
+                                        className="bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 px-6 py-3 font-semibold"
+                                    >
+                                        🏺 前往鑄造頁面
+                                    </ActionButton>
+                                </div>
                             </div>
                         ) : (!nftsData.heros || nftsData.heros.length === 0) ? (
                             <div className="text-center py-12 space-y-6">
@@ -549,12 +551,14 @@ const MyAssetsPageEnhanced: React.FC = () => {
                                 <p className="text-gray-400 max-w-md mx-auto">
                                     您有聖物但缺少英雄，快去鑄造一些英雄吧！
                                 </p>
-                                <ActionButton
-                                    onClick={() => window.location.href = '/#/mint'}
-                                    className="bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 px-6 py-3 font-semibold"
-                                >
-                                    🏺 鑄造英雄
-                                </ActionButton>
+                                <div className="flex justify-center">
+                                    <ActionButton
+                                        onClick={() => window.location.href = '/#/mint'}
+                                        className="bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 px-6 py-3 font-semibold"
+                                    >
+                                        🏺 鑄造英雄
+                                    </ActionButton>
+                                </div>
                             </div>
                         ) : (!nftsData.relics || nftsData.relics.length === 0) ? (
                             <div className="text-center py-12 space-y-6">
@@ -563,12 +567,14 @@ const MyAssetsPageEnhanced: React.FC = () => {
                                 <p className="text-gray-400 max-w-md mx-auto">
                                     您有英雄但缺少聖物，快去鑄造一些聖物吧！
                                 </p>
-                                <ActionButton
-                                    onClick={() => window.location.href = '/#/mint'}
-                                    className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 px-6 py-3 font-semibold"
-                                >
-                                    ⚡ 鑄造聖物
-                                </ActionButton>
+                                <div className="flex justify-center">
+                                    <ActionButton
+                                        onClick={() => window.location.href = '/#/mint'}
+                                        className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 px-6 py-3 font-semibold"
+                                    >
+                                        ⚡ 鑄造聖物
+                                    </ActionButton>
+                                </div>
                             </div>
                         ) : (
                             <div className="bg-gray-800/50 backdrop-blur-md rounded-xl border-2 border-emerald-500/30 overflow-hidden">

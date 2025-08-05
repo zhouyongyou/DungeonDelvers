@@ -1,19 +1,32 @@
 // V25 Contract Configuration with ABI
-// Generated on 2025-08-04T10:07:33.052Z
-// DO NOT EDIT MANUALLY - Use v25-sync-all.js to update
+// Generated on 2025-08-05T18:48:18.175Znc-all.js to update
 
-import HeroABI from '../abis/Hero.json';
-import RelicABI from '../abis/Relic.json';
-import PartyABI from '../abis/Party.json';
-import DungeonCoreABI from '../abis/DungeonCore.json';
-import DungeonMasterABI from '../abis/DungeonMaster.json';
-import PlayerProfileABI from '../abis/PlayerProfile.json';
-import VIPStakingABI from '../abis/VIPStaking.json';
-import OracleABI from '../abis/Oracle.json';
-import AltarOfAscensionABI from '../abis/AltarOfAscension.json';
-import PlayerVaultABI from '../abis/PlayerVault.json';
-import DungeonStorageABI from '../abis/DungeonStorage.json';
-import SoulShardTokenABI from '../abis/SoulShardToken.json';
+import HeroArtifact from '../abis/Hero.json';
+import RelicArtifact from '../abis/Relic.json';
+import PartyArtifact from '../abis/Party.json';
+import DungeonCoreArtifact from '../abis/DungeonCore.json';
+import DungeonMasterArtifact from '../abis/DungeonMaster.json';
+import PlayerProfileArtifact from '../abis/PlayerProfile.json';
+import VIPStakingArtifact from '../abis/VIPStaking.json';
+import OracleArtifact from '../abis/Oracle.json';
+import AltarOfAscensionArtifact from '../abis/AltarOfAscension.json';
+import PlayerVaultArtifact from '../abis/PlayerVault.json';
+import DungeonStorageArtifact from '../abis/DungeonStorage.json';
+import SoulShardTokenArtifact from '../abis/SoulShardToken.json';
+
+// Extract ABI from artifacts
+const HeroABI = HeroArtifact.abi || HeroArtifact;
+const RelicABI = RelicArtifact.abi || RelicArtifact;
+const PartyABI = PartyArtifact.abi || PartyArtifact;
+const DungeonCoreABI = DungeonCoreArtifact.abi || DungeonCoreArtifact;
+const DungeonMasterABI = DungeonMasterArtifact.abi || DungeonMasterArtifact;
+const PlayerProfileABI = PlayerProfileArtifact.abi || PlayerProfileArtifact;
+const VIPStakingABI = VIPStakingArtifact.abi || VIPStakingArtifact;
+const OracleABI = OracleArtifact.abi || OracleArtifact;
+const AltarOfAscensionABI = AltarOfAscensionArtifact.abi || AltarOfAscensionArtifact;
+const PlayerVaultABI = PlayerVaultArtifact.abi || PlayerVaultArtifact;
+const DungeonStorageABI = DungeonStorageArtifact.abi || DungeonStorageArtifact;
+const SoulShardTokenABI = SoulShardTokenArtifact.abi || SoulShardTokenArtifact;
 
 export interface ContractWithABI {
   address: string;
@@ -24,15 +37,15 @@ export const CONTRACTS_WITH_ABI = {
   56: { // BSC Mainnet
     // NFT Contracts
     HERO: {
-      address: '0x001b7462b0f1ab832c017a6f09133932be140b18',
+      address: '0x6DEb5Ade2F6BEe8294A4b7f37cE372152109E2db',
       abi: HeroABI
     },
     RELIC: {
-      address: '0xdd8e52cd1d248d04c306c038780315a03866b402',
+      address: '0xcfB83d8545D68b796a236290b3C1bc7e4A140B11',
       abi: RelicABI
     },
     PARTY: {
-      address: '0x382024850e08ab37e290315fc5f3692b8d6646eb',
+      address: '0x18bF1eE489CD0D8bfb006b4110bfe0Bb7459bE69',
       abi: PartyABI
     },
     
@@ -145,5 +158,5 @@ export const CONTRACT_INFO = {
   version: CONTRACT_VERSION,
   network: "BSC Mainnet",
   deploymentBlock: 56184733,
-  lastUpdated: "2025-08-04T10:07:33.052Z"
+  lastUpdated: "2025-08-05T17:45:54.340Z"
 };

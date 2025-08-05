@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { gql } from '@apollo/client';
 import { Icons } from './icons';
 import { ActionButton } from './ActionButton';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -70,7 +71,7 @@ export const WithdrawalHistorySubgraph: React.FC<WithdrawalHistorySubgraphProps>
     queryFn: async () => {
       const apolloClient = getApolloClient();
       const result = await apolloClient.query({
-        query: apolloClient.gql`${GET_WITHDRAWAL_EVENTS}`,
+        query: gql`${GET_WITHDRAWAL_EVENTS}`,
         variables: {
           player: userAddress.toLowerCase(),
           first: pageSize,

@@ -33,7 +33,10 @@ export const EndpointMonitor: React.FC = () => {
 
     if (!shouldShow) return;
 
-    const updateStatus = () => {
+    const updateStatus = async () => {
+      // 先觸發性能更新
+      await subgraphConfig.updatePerformanceMetrics();
+      // 然後獲取狀態
       const currentStatus = subgraphConfig.getPerformanceStatus();
       setStatus(currentStatus);
     };

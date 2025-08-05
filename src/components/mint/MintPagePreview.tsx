@@ -3,13 +3,10 @@
 
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ActionButton } from '../ui/ActionButton';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { THE_GRAPH_API_URL } from '../../config/graphConfig';
 import { graphQLRateLimiter } from '../../utils/rateLimiter';
 import { logger } from '../../utils/logger';
-import { BATCH_TIERS } from '../../utils/batchMintConfig';
-import { FeaturedNftsGallery } from './FeaturedNftsGallery';
 import { PreviewFooterNote } from '../common/PreviewFooterNote';
 
 // GraphQL 查詢 - 獲取最近鑄造統計
@@ -58,43 +55,6 @@ const fetchFromGraph = async (query: string, variables = {}) => {
   });
 };
 
-const RARITY_COLORS: Record<number, string> = {
-  1: 'text-gray-400',
-  2: 'text-green-400',
-  3: 'text-blue-400',
-  4: 'text-purple-400',
-  5: 'text-orange-400',
-};
-
-const RARITY_LABELS: Record<number, string> = {
-  1: '普通',
-  2: '罕見',
-  3: '稀有',
-  4: '史詩',
-  5: '傳說',
-};
-
-const ELEMENT_LABELS: Record<string, string> = {
-  fire: '火',
-  water: '水',
-  earth: '土',
-  metal: '金',
-  wood: '木'
-};
-
-const CLASS_LABELS: Record<string, string> = {
-  warrior: '戰士',
-  mage: '法師',
-  archer: '弓手',
-  priest: '牧師'
-};
-
-const RELIC_CATEGORY_LABELS: Record<string, string> = {
-  weapon: '武器',
-  armor: '護甲',
-  accessory: '飾品',
-  consumable: '消耗品'
-};
 
 interface MintPreviewCardProps {
   type: 'hero' | 'relic';

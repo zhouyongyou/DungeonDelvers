@@ -133,9 +133,9 @@ export const usePlayerOverview = (address?: `0x${string}`) => {
             }
         },
         enabled: !!address && !!THE_GRAPH_API_URL,
-        staleTime: 30 * 1000, // 30秒快取，減少查詢頻率
+        staleTime: 2 * 60 * 1000, // 2分鐘緩存
         gcTime: 5 * 60 * 1000,
-        refetchInterval: 60 * 1000, // 改為每60秒刷新，減少速率限制
+        refetchInterval: 2 * 60 * 1000, // 每2分鐘刷新，符合速率限製
         refetchOnWindowFocus: false, // 關閉視窗焦點刷新，避免過度查詢
     });
 

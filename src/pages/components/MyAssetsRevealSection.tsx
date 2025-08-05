@@ -10,7 +10,7 @@ export const MyAssetsRevealSection: React.FC<MyAssetsRevealSectionProps> = ({
 }) => {
   return (
     <div className={`mb-8 ${className}`}>
-      <PendingReveals />
+      <PendingReveals defaultExpanded={false} />
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAccount } from 'wagmi';
+import { gql } from '@apollo/client';
 import { getApolloClient, graphqlQueries } from '../api/graphqlClient';
 import { getQueryConfig, queryKeys } from '../config/queryConfig';
 import { logger } from '../utils/logger';
@@ -73,7 +74,7 @@ export function usePlayerData(options: PlayerDataOptions = {}) {
 
       try {
         const result = await apolloClient.query({
-          query: apolloClient.gql`${query}`,
+          query: gql`${query}`,
           variables,
           context: {
             cacheTTL: 1000 * 60 * 5, // 5 minutes
@@ -134,7 +135,7 @@ export function usePrefetchPlayerData() {
         );
 
         const result = await apolloClient.query({
-          query: apolloClient.gql`${query}`,
+          query: gql`${query}`,
           variables,
         });
 
@@ -157,7 +158,7 @@ export function usePlayersData(addresses: string[]) {
 
       try {
         const result = await apolloClient.query({
-          query: apolloClient.gql`${query}`,
+          query: gql`${query}`,
           variables,
         });
 

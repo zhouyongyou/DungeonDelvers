@@ -1,70 +1,43 @@
-// DDgraphql/dungeon-delvers/src/config.ts
-// 🎯 單一來源配置管理 - 只依賴 subgraph.yaml
-// ⚠️ 此文件由腳本自動生成，請勿手動編輯！
-// 🔄 更新方式：修改 subgraph.yaml 後運行 npm run sync-addresses
-// 🤖 最後同步: 2025/8/4 下午6:07:33
-
-import { dataSource } from "@graphprotocol/graph-ts"
-
 /**
- * ⚠️ 重要說明：這些地址自動從 V25 配置同步！
- * 
- * 💡 維護方式：
- * 1. 只在合約項目的 master-config.json 中修改地址
- * 2. 運行 v25-sync-all.js 腳本自動同步
- * 
- * 📋 地址來源：V25 配置文件
- * 🕒 最後同步時間：2025/8/4 下午6:07:33
+ * Subgraph Configuration
+ * Generated on 2025-08-05T18:48:18.184Z
+ * DO NOT EDIT MANUALLY - Use sync-system to update
  */
 
-// 合約地址常量 (自動從 V25 配置同步)
-const HERO_ADDRESS = "0x6DEb5Ade2F6BEe8294A4b7f37cE372152109E2db"
-const RELIC_ADDRESS = "0xcfB83d8545D68b796a236290b3C1bc7e4A140B11"
-const PARTY_V3_ADDRESS = "0x18bF1eE489CD0D8bfb006b4110bfe0Bb7459bE69"
-const V_I_P_STAKING_ADDRESS = "0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C"
-const PLAYER_PROFILE_ADDRESS = "0x0f5932e89908400a5AfDC306899A2987b67a3155"
-const ALTAR_OF_ASCENSION_ADDRESS = "0xE043ef6Ce183C218F8f9d9a144eD4A06cF379686"
+export const config = {
+  network: 'bsc',
+  version: 'v3.6.1',
+  
+  contracts: {
+    hero: '0x6DEb5Ade2F6BEe8294A4b7f37cE372152109E2db',
+    relic: '0xcfB83d8545D68b796a236290b3C1bc7e4A140B11',
+    party: '0x18bF1eE489CD0D8bfb006b4110bfe0Bb7459bE69',
+    vipStaking: '0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C',
+    playerProfile: '0x0f5932e89908400a5AfDC306899A2987b67a3155',
+    altarOfAscension: '0xE043ef6Ce183C218F8f9d9a144eD4A06cF379686',
+    dungeonMaster: '0xd06470d4C6F62F6747cf02bD2b2De0981489034F',
+    playerVault: '0x62Bce9aF5E2C47b13f62A2e0fCB1f9C7AfaF8787'
+  },
+  
+  startBlock: 56184733,
+  
+  // Subgraph endpoints
+  endpoints: {
+    studio: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.6.1',
+    decentralized: 'https://gateway-arbitrum.network.thegraph.com/api/[api-key]/subgraphs/id/...'
+  },
+  
+  // Features
+  features: {
+    trackTransfers: true,
+    trackMinting: true,
+    trackBurning: true,
+    trackStaking: true,
+    trackDungeonRuns: true
+  }
+};
 
-// 導出函數來獲取各種合約地址
-export function getHeroContractAddress(): string {
-    return HERO_ADDRESS
-}
-
-export function getRelicContractAddress(): string {
-    return RELIC_ADDRESS
-}
-
-export function getPartyV3ContractAddress(): string {
-    return PARTY_V3_ADDRESS
-}
-
-export function getPartyContractAddress(): string {
-    return PARTY_V3_ADDRESS
-}
-
-export function getVIPStakingContractAddress(): string {
-    return V_I_P_STAKING_ADDRESS
-}
-
-export function getPlayerProfileContractAddress(): string {
-    return PLAYER_PROFILE_ADDRESS
-}
-
-export function getAltarOfAscensionContractAddress(): string {
-    return ALTAR_OF_ASCENSION_ADDRESS
-}
-
-// 工具函數：驗證地址是否有效
-export function isValidAddress(address: string): bool {
-    return address.length == 42 && address.startsWith("0x")
-}
-
-// 工具函數：獲取當前網路
-export function getCurrentNetwork(): string {
-    return dataSource.network()
-}
-
-// 工具函數：建立實體 ID
-export function createEntityId(contractAddress: string, tokenId: string): string {
-    return contractAddress.toLowerCase().concat("-").concat(tokenId)
-}
+// Export individual contracts for convenience
+export const contracts = config.contracts;
+export const startBlock = config.startBlock;
+export const network = config.network;

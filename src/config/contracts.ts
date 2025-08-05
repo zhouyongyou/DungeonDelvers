@@ -1,5 +1,5 @@
 // V25 Contract Configuration
-// Generated on 2025-08-04T10:07:33.051Z
+// Generated on 2025-08-05T18:48:18.174Z
 // DO NOT EDIT MANUALLY - Use v25-sync-all.js to update
 
 export const CONTRACTS = {
@@ -27,7 +27,7 @@ export const CONTRACTS = {
     ALTAROFASCENSION: '0xE043ef6Ce183C218F8f9d9a144eD4A06cF379686',
     
     // External
-    DUNGEONMASTERWALLET: '0x10925A7138649C7E1794CE646182eeb5BF8ba647',
+    DUNGEONMASTERWALLET: 'undefined',
   }
 } as const;
 
@@ -68,7 +68,7 @@ export const CONTRACT_INFO = {
   version: CONTRACT_VERSION,
   network: "BSC Mainnet",
   deploymentBlock: 56184733,
-  lastUpdated: new Date().toISOString()
+  lastUpdated: "2025-08-05T18:12:29.542Z"
 };
 
 // Legacy contract name mappings for backward compatibility

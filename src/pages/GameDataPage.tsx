@@ -444,9 +444,9 @@ const GameDataPage: React.FC = () => {
                     查看排行榜、查詢遊戲數據，探索 Dungeon Delvers 的世界
                 </p>
                 <div className="mt-4 flex justify-center">
-                    <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-3 text-xs text-yellow-300 max-w-md text-center">
-                        <span className="mr-1">⚠️</span>
-                        子圖正在同步 V25 版本，暫時顯示舊版本數據。V25 數據同步完成後將自動更新。
+                    <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-3 text-xs text-blue-300 max-w-md">
+                        <span className="mr-1">💡</span>
+                        數據來源於區塊鏈子圖，實時同步最新狀態
                     </div>
                 </div>
             </div>

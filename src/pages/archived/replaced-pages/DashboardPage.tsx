@@ -173,6 +173,122 @@ const ExternalLinkButton: React.FC<{ title: string; url: string; icon: React.Rea
     </a>
 );
 
+// Tax Rate Info Component with Collapsible Details
+const TaxRateInfo: React.FC<{ 
+    currentTaxRate: number; 
+    taxParams: any; 
+    stats: any;
+    withdrawableBalanceInUSD: any;
+}> = ({ currentTaxRate, taxParams, stats, withdrawableBalanceInUSD }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    
+    // Parse tax parameters
+    const getTaxDetails = () => {
+        if (!taxParams || !stats) return null;
+        
+        const [ playerInfo, smallWithdrawThresholdUSD, largeWithdrawThresholdUSD, standardInitialRate, largeWithdrawInitialRate, decreaseRatePerPeriod, periodDuration, vipTaxReduction ] = taxParams.map(item => item.result);
+        
+        if (!playerInfo || !Array.isArray(playerInfo)) return null;
+        
+        const lastWithdrawTimestamp = typeof playerInfo[1] === 'bigint' ? playerInfo[1] : 0n;
+        const lastFreeWithdrawTimestamp = typeof playerInfo[2] === 'bigint' ? playerInfo[2] : 0n;
+        const amountUSD = typeof withdrawableBalanceInUSD === 'bigint' ? withdrawableBalanceInUSD : 0n;
+        const largeUSD = typeof largeWithdrawThresholdUSD === 'bigint' ? largeWithdrawThresholdUSD : 0n;
+        const stdInit = typeof standardInitialRate === 'bigint' ? standardInitialRate : 0n;
+        const largeInit = typeof largeWithdrawInitialRate === 'bigint' ? largeWithdrawInitialRate : 0n;
+        const vipRed = typeof vipTaxReduction === 'bigint' ? vipTaxReduction : 0n;
+        const levelReduction = BigInt(Math.floor(stats.level / 10)) * 100n;
+        
+        // Calculate if first withdrawal bonus applies
+        const oneDay = 24n * 60n * 60n;
+        const smallUSD = typeof smallWithdrawThresholdUSD === 'bigint' ? smallWithdrawThresholdUSD : 0n;
+        const isFirstWithdrawal = amountUSD <= smallUSD && BigInt(Math.floor(Date.now() / 1000)) >= lastFreeWithdrawTimestamp + oneDay;
+        
+        // Calculate time decay
+        const timeSinceLast = BigInt(Math.floor(Date.now() / 1000)) - lastWithdrawTimestamp;
+        const periodsPassed = timeSinceLast / (typeof periodDuration === 'bigint' ? periodDuration : 86400n);
+        const timeDecay = periodsPassed * (typeof decreaseRatePerPeriod === 'bigint' ? decreaseRatePerPeriod : 0n);
+        
+        const initialRate = (amountUSD > largeUSD) ? largeInit : stdInit;
+        
+        return {
+            isFirstWithdrawal,
+            baseTaxRate: Number(initialRate) / 100,
+            largeAmountRate: Number(largeInit) / 100,
+            standardRate: Number(stdInit) / 100,
+            vipReduction: Number(vipRed) / 100,
+            levelReduction: Number(levelReduction) / 100,
+            timeDecayReduction: Number(timeDecay) / 100,
+            isLargeAmount: amountUSD > largeUSD,
+            periodsPassed: Number(periodsPassed),
+            finalTaxRate: currentTaxRate
+        };
+    };
+    
+    const taxDetails = getTaxDetails();
+    
+    return (
+        <div className="text-xs space-y-1">
+            {/* Main tax rate display */}
+            <div 
+                className="flex items-center justify-between cursor-pointer hover:bg-gray-800/30 px-2 py-1 rounded transition-colors"
+                onClick={() => setIsExpanded(!isExpanded)}
+            >
+                <span className="text-red-400">
+                    {taxDetails?.isFirstWithdrawal ? (
+                        <span className="text-green-400">🎉 首次提領免稅優惠！</span>
+                    ) : (
+                        <>提款稅率：{currentTaxRate.toFixed(1)}%</>
+                    )}
+                </span>
+                <span className="text-gray-500">
+                    {isExpanded ? '▼' : '▶'}
+                </span>
+            </div>
+            
+            {/* Collapsible details */}
+            {isExpanded && taxDetails && (
+                <div className="bg-gray-800/30 rounded p-2 space-y-1 text-gray-400">
+                    <div className="font-semibold text-white mb-1">稅率減免明細：</div>
+                    
+                    {/* Base rates */}
+                    <div className="pl-2">
+                        <div>基礎稅率：{taxDetails.standardRate.toFixed(1)}% / {taxDetails.largeAmountRate.toFixed(1)}% (一般 / 大額≥$1000)</div>
+                    </div>
+                    
+                    {/* Reductions */}
+                    <div className="pl-2 space-y-0.5">
+                        {taxDetails.vipReduction > 0 && (
+                            <div className="text-green-400">VIP 減免：-{taxDetails.vipReduction.toFixed(1)}%</div>
+                        )}
+                        {taxDetails.levelReduction > 0 && (
+                            <div className="text-green-400">等級減免：-{taxDetails.levelReduction.toFixed(1)}%</div>
+                        )}
+                        {taxDetails.timeDecayReduction > 0 && (
+                            <div className="text-green-400">時間衰減：-{taxDetails.timeDecayReduction.toFixed(1)}% ({taxDetails.periodsPassed} 天)</div>
+                        )}
+                        {taxDetails.isFirstWithdrawal && (
+                            <div className="text-yellow-400 font-semibold">首次提領免稅：-100%</div>
+                        )}
+                    </div>
+                    
+                    {/* Final rate */}
+                    <div className="border-t border-gray-700 pt-1 mt-1">
+                        <div className="font-semibold text-white">
+                            最終稅率：{taxDetails.isLargeAmount ? `${taxDetails.finalTaxRate.toFixed(1)}% (大額)` : `${taxDetails.finalTaxRate.toFixed(1)}%`}
+                        </div>
+                    </div>
+                    
+                    {/* Tips */}
+                    <div className="text-xs text-gray-500 italic mt-1">
+                        💡 每天減少 5% 稅率（時間衰減）
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 // 獲取稅率相關參數的 Hook (簡化版)
 const useTaxParams = () => {
     const { address, chainId } = useAccount();
@@ -407,7 +523,7 @@ const DashboardPage: React.FC<{ setActivePage: (page: Page) => void }> = ({ setA
                                     可提領: {formatSoul(vaultBalance)} SOUL
                                 </p>
                             )}
-                            <p className="text-xs text-red-400">當前預估稅率: {currentTaxRate.toFixed(2)}%</p>
+                            <TaxRateInfo currentTaxRate={currentTaxRate} taxParams={taxParams} stats={stats} withdrawableBalanceInUSD={withdrawableBalanceInUSD} />
                             {/* 手動刷新按鈕 */}
                             <button
                                 onClick={() => refetchStats()}

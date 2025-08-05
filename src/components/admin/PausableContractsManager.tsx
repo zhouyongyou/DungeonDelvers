@@ -1,126 +1,175 @@
 // 合約暫停管理組件
-import React, { useState, useEffect } from 'react';
-import { useContractRead, useContractWrite } from 'wagmi';
+import React, { useState, useMemo } from 'react';
+import { useReadContracts, useAccount } from 'wagmi';
+import { useWriteContractNoRetry as useWriteContract } from '../../hooks/useWriteContractNoRetry';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ActionButton } from '../ui/ActionButton';
-import { getContractConfig } from '../../utils/contractUtils';
+import { getContractWithABI } from '../../config/contractsWithABI';
 import { logger } from '../../utils/logger';
+import { useAppToast } from '../../contexts/SimpleToastContext';
+import { useTransactionStore } from '../../stores/useTransactionStore';
+import { useQueryClient } from '@tanstack/react-query';
 
-interface ContractStatus {
+interface ContractInfo {
   name: string;
-  address: string;
-  isPaused: boolean;
-  loading: boolean;
-  hasError: boolean;
+  key: string;
+  supportsPausable: boolean;
 }
 
 export const PausableContractsManager: React.FC = () => {
-  const [contracts, setContracts] = useState<ContractStatus[]>([]);
+  const { chainId } = useAccount();
+  const { showToast } = useAppToast();
+  const { addTransaction } = useTransactionStore();
+  const { writeContractAsync } = useWriteContract();
+  const queryClient = useQueryClient();
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
-  // 需要檢查的合約列表
-  const contractList = [
-    { name: 'DungeonCore', type: 'DUNGEONCORE' },
-    { name: 'DungeonMaster', type: 'DUNGEONMASTER' },
-    { name: 'DungeonStorage', type: 'DUNGEONSTORAGE' },
-    { name: 'PlayerVault', type: 'PLAYERVAULT' },
-    { name: 'Hero NFT', type: 'HERO' },
-    { name: 'Relic NFT', type: 'RELIC' },
-    { name: 'Party NFT', type: 'PARTY' },
-    { name: 'VIPStaking', type: 'VIPSTAKING' },
-    { name: 'PlayerProfile', type: 'PLAYERPROFILE' },
-    { name: 'AltarOfAscension', type: 'ALTAROFASCENSION' },
-    { name: 'Oracle', type: 'ORACLE' },
-    { name: 'SoulShard', type: 'SOULSHARD' }
+  // 需要檢查的合約列表（只包含支援 pausable 的合約）
+  const contractList: ContractInfo[] = [
+    { name: 'DungeonCore', key: 'dungeonCore', supportsPausable: true },
+    { name: 'DungeonMaster', key: 'dungeonMaster', supportsPausable: true },
+    { name: 'DungeonStorage', key: 'dungeonStorage', supportsPausable: false }, // 通常不支援
+    { name: 'PlayerVault', key: 'playerVault', supportsPausable: true },
+    { name: 'Hero NFT', key: 'hero', supportsPausable: true },
+    { name: 'Relic NFT', key: 'relic', supportsPausable: true },
+    { name: 'Party NFT', key: 'party', supportsPausable: true },
+    { name: 'VIPStaking', key: 'vipStaking', supportsPausable: true },
+    { name: 'PlayerProfile', key: 'playerProfile', supportsPausable: true },
+    { name: 'AltarOfAscension', key: 'altarOfAscension', supportsPausable: true },
+    { name: 'Oracle', key: 'oracle', supportsPausable: false }, // Oracle 通常不支援暫停
+    { name: 'SoulShard', key: 'soulShard', supportsPausable: false } // ERC20 通常不支援暫停
   ];
 
-  // 初始化合約狀態
-  useEffect(() => {
-    const initialContracts = contractList.map(contract => {
-      const config = getContractConfig(contract.type);
+  // 準備合約讀取配置
+  const contractsToRead = useMemo(() => {
+    if (!chainId) return [];
+    
+    return contractList
+      .filter(contract => contract.supportsPausable)
+      .map(contract => {
+        const contractConfig = getContractWithABI(chainId, contract.key);
+        if (!contractConfig?.address || !contractConfig?.abi) {
+          return null;
+        }
+        
+        return {
+          address: contractConfig.address,
+          abi: contractConfig.abi,
+          functionName: 'paused' as const,
+          args: []
+        };
+      })
+      .filter(Boolean);
+  }, [chainId]);
+
+  // 使用 wagmi v2 的 useReadContracts 讀取暫停狀態
+  const { data: pausedData, isLoading, error, refetch } = useReadContracts({
+    contracts: contractsToRead,
+    query: {
+      enabled: contractsToRead.length > 0,
+      staleTime: 1000 * 30, // 30秒緩存
+      refetchOnWindowFocus: false,
+    }
+  });
+
+  // 處理合約數據
+  const contractsData = useMemo(() => {
+    return contractList.map((contract, index) => {
+      if (!contract.supportsPausable) {
+        return {
+          ...contract,
+          address: '',
+          isPaused: false,
+          hasError: true,
+          errorMessage: '不支援暫停功能'
+        };
+      }
+
+      const contractConfig = chainId ? getContractWithABI(chainId, contract.key) : null;
+      if (!contractConfig?.address) {
+        return {
+          ...contract,
+          address: '',
+          isPaused: false,
+          hasError: true,
+          errorMessage: '合約未配置'
+        };
+      }
+
+      // 找到對應的讀取結果
+      const pausableIndex = contractList
+        .slice(0, index)
+        .filter(c => c.supportsPausable).length;
+      
+      const readResult = pausedData?.[pausableIndex];
+      
       return {
-        name: contract.name,
-        address: config?.address || '',
-        isPaused: false,
-        loading: true,
-        hasError: false
+        ...contract,
+        address: contractConfig.address,
+        isPaused: readResult?.result === true,
+        hasError: readResult?.status === 'failure',
+        errorMessage: readResult?.error?.message || (readResult?.status === 'failure' ? '讀取失敗' : undefined)
       };
     });
-    setContracts(initialContracts);
-  }, []);
-
-  // 批量查詢合約暫停狀態
-  useEffect(() => {
-    const checkPausedStatus = async () => {
-      const updatedContracts = await Promise.all(
-        contracts.map(async (contract) => {
-          try {
-            const config = getContractConfig(contract.name.toUpperCase().replace(/\s+/g, ''));
-            if (!config) {
-              return { ...contract, loading: false, hasError: true };
-            }
-
-            // 查詢 paused() 函數
-            const response = await fetch('/api/read-contract', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                address: config.address,
-                functionName: 'paused',
-                args: []
-              })
-            });
-
-            if (response.ok) {
-              const data = await response.json();
-              return { ...contract, isPaused: data.result, loading: false };
-            }
-          } catch (error) {
-            logger.error(`Failed to check pause status for ${contract.name}:`, error);
-          }
-          return { ...contract, loading: false, hasError: true };
-        })
-      );
-      setContracts(updatedContracts);
-    };
-
-    if (contracts.length > 0 && contracts.some(c => c.loading)) {
-      checkPausedStatus();
-    }
-  }, [contracts]);
+  }, [contractList, chainId, pausedData]);
 
   // 暫停/恢復合約
   const togglePause = async (contractIndex: number) => {
-    const contract = contracts[contractIndex];
-    const config = getContractConfig(contract.name.toUpperCase().replace(/\s+/g, ''));
-    if (!config) return;
+    const contract = contractsData[contractIndex];
+    if (!contract.supportsPausable || contract.hasError || !chainId) return;
+
+    const contractConfig = getContractWithABI(chainId, contract.key);
+    if (!contractConfig?.address || !contractConfig?.abi) {
+      showToast('合約配置無效', 'error');
+      return;
+    }
 
     setIsUpdating(contract.address);
 
     try {
       const functionName = contract.isPaused ? 'unpause' : 'pause';
-      // TODO: 實際調用合約
-      // 🔄 需要實作：連接 setPaused 合約方法
-      logger.info(`${functionName} called for ${contract.name}`);
       
-      // 模擬成功後更新狀態
+      const hash = await writeContractAsync({
+        address: contractConfig.address,
+        abi: contractConfig.abi,
+        functionName: functionName as any,
+        args: []
+      });
+
+      addTransaction({ 
+        hash, 
+        description: `${contract.isPaused ? '恢復' : '暫停'} ${contract.name} 合約` 
+      });
+      
+      showToast(`${contract.name} 合約${contract.isPaused ? '恢復' : '暫停'}交易已送出`, 'success');
+      
+      // 刷新合約狀態
       setTimeout(() => {
-        const updated = [...contracts];
-        updated[contractIndex].isPaused = !updated[contractIndex].isPaused;
-        setContracts(updated);
-        setIsUpdating(null);
-      }, 1000);
-    } catch (error) {
+        refetch();
+        queryClient.invalidateQueries({ queryKey: ['contract-status'] });
+      }, 2000);
+      
+    } catch (error: any) {
+      if (!error?.message?.includes('User rejected')) {
+        showToast(`${contract.isPaused ? '恢復' : '暫停'}${contract.name}失敗: ${error?.shortMessage || error?.message || '未知錯誤'}`, 'error');
+      }
       logger.error(`Failed to toggle pause for ${contract.name}:`, error);
+    } finally {
       setIsUpdating(null);
     }
   };
 
   // 批量暫停所有合約
   const pauseAll = async () => {
-    const unpausedContracts = contracts.filter(c => !c.isPaused && !c.hasError);
-    for (let i = 0; i < contracts.length; i++) {
-      if (!contracts[i].isPaused && !contracts[i].hasError) {
+    const unpausedContracts = contractsData.filter(c => c.supportsPausable && !c.isPaused && !c.hasError);
+    if (unpausedContracts.length === 0) return;
+
+    showToast(`開始批量暫停 ${unpausedContracts.length} 個合約...`, 'info');
+    
+    for (let i = 0; i < contractsData.length; i++) {
+      const contract = contractsData[i];
+      if (contract.supportsPausable && !contract.isPaused && !contract.hasError) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 避免交易衝突
         await togglePause(i);
       }
     }
@@ -128,19 +177,25 @@ export const PausableContractsManager: React.FC = () => {
 
   // 批量恢復所有合約
   const unpauseAll = async () => {
-    const pausedContracts = contracts.filter(c => c.isPaused && !c.hasError);
-    for (let i = 0; i < contracts.length; i++) {
-      if (contracts[i].isPaused && !contracts[i].hasError) {
+    const pausedContracts = contractsData.filter(c => c.supportsPausable && c.isPaused && !c.hasError);
+    if (pausedContracts.length === 0) return;
+
+    showToast(`開始批量恢復 ${pausedContracts.length} 個合約...`, 'info');
+    
+    for (let i = 0; i < contractsData.length; i++) {
+      const contract = contractsData[i];
+      if (contract.supportsPausable && contract.isPaused && !contract.hasError) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 避免交易衝突
         await togglePause(i);
       }
     }
   };
 
-  const allLoading = contracts.every(c => c.loading);
-  const somePaused = contracts.some(c => c.isPaused);
-  const allPaused = contracts.filter(c => !c.hasError).every(c => c.isPaused);
+  const somePaused = contractsData.some(c => c.supportsPausable && c.isPaused && !c.hasError);
+  const allPaused = contractsData.filter(c => c.supportsPausable && !c.hasError).every(c => c.isPaused);
+  const hasValidContracts = contractsData.some(c => c.supportsPausable && !c.hasError);
 
-  if (allLoading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center p-8">
         <LoadingSpinner size="lg" />
@@ -150,81 +205,64 @@ export const PausableContractsManager: React.FC = () => {
   }
 
   return (
-    <div className="bg-gray-800 rounded-lg p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-white">合約暫停管理</h2>
+        <h3 className="text-lg font-bold text-white">合約暫停管理</h3>
         <div className="flex space-x-4">
           <ActionButton
             onClick={pauseAll}
-            disabled={allPaused || isUpdating !== null}
-            className="bg-red-600 hover:bg-red-700"
+            disabled={!hasValidContracts || allPaused || isUpdating !== null}
+            className="bg-red-600 hover:bg-red-700 text-sm px-3 py-2"
           >
             🛑 暫停所有
           </ActionButton>
           <ActionButton
             onClick={unpauseAll}
-            disabled={!somePaused || isUpdating !== null}
-            className="bg-green-600 hover:bg-green-700"
+            disabled={!hasValidContracts || !somePaused || isUpdating !== null}
+            className="bg-green-600 hover:bg-green-700 text-sm px-3 py-2"
           >
             ▶️ 恢復所有
           </ActionButton>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-700">
-              <th className="text-left py-3 px-4 text-gray-400">合約名稱</th>
-              <th className="text-left py-3 px-4 text-gray-400">地址</th>
-              <th className="text-center py-3 px-4 text-gray-400">狀態</th>
-              <th className="text-center py-3 px-4 text-gray-400">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {contracts.map((contract, index) => (
-              <tr key={contract.address} className="border-b border-gray-700">
-                <td className="py-3 px-4 text-white font-medium">{contract.name}</td>
-                <td className="py-3 px-4">
-                  <code className="text-xs text-gray-400">
-                    {contract.address.slice(0, 6)}...{contract.address.slice(-4)}
-                  </code>
-                </td>
-                <td className="py-3 px-4 text-center">
-                  {contract.hasError ? (
-                    <span className="text-gray-500">不支援</span>
-                  ) : contract.loading ? (
-                    <LoadingSpinner size="sm" />
-                  ) : (
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      contract.isPaused 
-                        ? 'bg-red-900/50 text-red-400 border border-red-500/50' 
-                        : 'bg-green-900/50 text-green-400 border border-green-500/50'
-                    }`}>
-                      {contract.isPaused ? '已暫停' : '運行中'}
-                    </span>
-                  )}
-                </td>
-                <td className="py-3 px-4 text-center">
-                  {!contract.hasError && (
-                    <ActionButton
-                      onClick={() => togglePause(index)}
-                      disabled={contract.loading || isUpdating !== null}
-                      loading={isUpdating === contract.address}
-                      className={`text-sm px-3 py-1 ${
-                        contract.isPaused
-                          ? 'bg-green-600 hover:bg-green-700'
-                          : 'bg-red-600 hover:bg-red-700'
-                      }`}
-                    >
-                      {contract.isPaused ? '恢復' : '暫停'}
-                    </ActionButton>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {contractsData
+          .filter(contract => contract.supportsPausable && !contract.hasError)
+          .map((contract, index) => {
+            const originalIndex = contractsData.findIndex(c => c.key === contract.key);
+            return (
+              <div key={contract.key} className="flex gap-2 items-center">
+                <span className="flex-1 text-white">
+                  {contract.name === 'DungeonMaster' ? '地城主' : 
+                   contract.name === 'Party NFT' ? '隊伍' : 
+                   contract.name === 'Hero NFT' ? '英雄' :
+                   contract.name === 'Relic NFT' ? '聖物' :
+                   contract.name === 'AltarOfAscension' ? '祭壇' :
+                   contract.name}
+                </span>
+                <ActionButton 
+                  onClick={() => togglePause(originalIndex)}
+                  disabled={isLoading || isUpdating !== null}
+                  loading={isUpdating === contract.address}
+                  className={`text-sm flex-1 ${
+                    contract.isPaused
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-red-600 hover:bg-red-700'
+                  }`}
+                >
+                  {contract.isPaused ? '恢復' : '暫停'} {
+                    contract.name === 'DungeonMaster' ? '地城主' : 
+                    contract.name === 'Party NFT' ? '隊伍' : 
+                    contract.name === 'Hero NFT' ? '英雄' :
+                    contract.name === 'Relic NFT' ? '聖物' :
+                    contract.name === 'AltarOfAscension' ? '祭壇' :
+                    contract.name
+                  }
+                </ActionButton>
+              </div>
+            );
+          })}
       </div>
 
       <div className="bg-yellow-900/20 border border-yellow-600/50 rounded-lg p-4">

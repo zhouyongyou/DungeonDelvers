@@ -1,4 +1,4 @@
-import { ApolloClient, InMemoryCache, ApolloLink, Observable } from '@apollo/client';
+import { ApolloClient, InMemoryCache, ApolloLink, Observable, createHttpLink } from '@apollo/client';
 import type { NormalizedCacheObject } from '@apollo/client';
 import { onError } from '@apollo/client/link/error';
 import { graphqlPersistentCache } from '../cache/persistentCache';
@@ -186,48 +186,22 @@ const performanceLink = new ApolloLink((operation, forward) => {
   });
 });
 
-// 智能端點選擇 Link
-const smartEndpointLink = new ApolloLink((operation, forward) => {
-  return new Observable(observer => {
-    // 每次查詢都動態選擇最佳端點
-    subgraphConfig.getOptimalEndpoint().then(optimalUri => {
-      const start = Date.now();
+// Create HTTP Link with smart endpoint selection
+const httpLink = createHttpLink({
+  uri: (operation) => {
+    const start = Date.now();
+    try {
+      const optimalUri = subgraphConfig.getOptimalEndpoint();
+      const endpointType = optimalUri.includes('studio') ? 'studio' : 'decentralized';
       
-      // 設定動態 URI
-      operation.setContext({ uri: optimalUri });
-      
-      // 執行查詢
-      const subscription = forward(operation).subscribe({
-        next: (result) => {
-          const duration = Date.now() - start;
-          const endpointType = optimalUri.includes('studio') ? 'studio' : 'decentralized';
-          
-          logger.debug(`GraphQL query via ${endpointType}: ${duration}ms`, {
-            operation: operation.operationName,
-            endpoint: endpointType,
-            uri: optimalUri
-          });
-          
-          observer.next(result);
-        },
-        error: (error) => {
-          const endpointType = optimalUri.includes('studio') ? 'studio' : 'decentralized';
-          logger.warn(`GraphQL query failed via ${endpointType}:`, {
-            operation: operation.operationName,
-            endpoint: endpointType,
-            error: error.message
-          });
-          observer.error(error);
-        },
-        complete: () => observer.complete()
-      });
-      
-      return () => subscription.unsubscribe();
-    }).catch(error => {
-      logger.error('Failed to get optimal endpoint:', error);
-      observer.error(error);
-    });
-  });
+      logger.debug(`Using ${endpointType} endpoint for ${operation.operationName}`);
+      return optimalUri;
+    } catch (error) {
+      logger.error('Failed to get optimal endpoint, using fallback:', error);
+      // Fallback to a default endpoint
+      return 'https://api.studio.thegraph.com/query/90070/dungeon-delvers/version/latest';
+    }
+  },
 });
 
 // Create Apollo Client
@@ -237,7 +211,6 @@ export const createApolloClient = (): ApolloClient<NormalizedCacheObject> => {
     link: ApolloLink.from([
       errorLink,
       performanceLink,
-      smartEndpointLink, // 使用智能端點選擇
       cachingLink,
       new ApolloLink((operation, forward) => {
         // Add auth headers if needed
@@ -248,6 +221,7 @@ export const createApolloClient = (): ApolloClient<NormalizedCacheObject> => {
         });
         return forward(operation);
       }),
+      httpLink, // Must be the last link in the chain
     ]),
     defaultOptions: {
       watchQuery: {

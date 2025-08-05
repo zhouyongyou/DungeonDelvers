@@ -426,13 +426,20 @@ const AltarPage = memo(() => {
     // 檢查當前 NFT 類型的授權狀態
     const currentNftContract = nftType === 'hero' ? heroContract : relicContract;
     
-    // 批量讀取合約數據
+    // 批量讀取合約數據 - 同時檢查英雄和聖物的授權狀態
     const { results: altarBatchResults } = useContractBatchRead({
         chainId: bsc.id,
         reads: [
-            ...(address && currentNftContract && altarContract ? [
+            ...(address && heroContract && altarContract ? [
                 { 
-                    contractName: nftType === 'hero' ? 'hero' : 'relic', 
+                    contractName: 'hero', 
+                    functionName: 'isApprovedForAll', 
+                    args: [address, altarContract.address] 
+                },
+            ] : []),
+            ...(address && relicContract && altarContract ? [
+                { 
+                    contractName: 'relic', 
                     functionName: 'isApprovedForAll', 
                     args: [address, altarContract.address] 
                 },
@@ -440,8 +447,10 @@ const AltarPage = memo(() => {
         ],
     });
     
-    const [approvalResult] = altarBatchResults;
-    const isApprovedForAll = approvalResult?.data as boolean | undefined;
+    const [heroApprovalResult, relicApprovalResult] = altarBatchResults;
+    const isHeroApproved = heroApprovalResult?.data as boolean | undefined;
+    const isRelicApproved = relicApprovalResult?.data as boolean | undefined;
+    const isApprovedForAll = nftType === 'hero' ? isHeroApproved : isRelicApproved; // 向後兼容
     
     // 單獨的 refetch hook
     const { refetch: refetchApproval } = useReadContract({
@@ -625,7 +634,7 @@ const AltarPage = memo(() => {
         args: address && rarity ? [address, rarity] : undefined,
         query: { 
             enabled: !!address && !!altarContract && !!rarity,
-            refetchInterval: 10000, // 每10秒更新一次
+            refetchInterval: 30000, // 每30秒更新一次
         },
     });
 
@@ -713,7 +722,8 @@ const AltarPage = memo(() => {
         resetSelections();
         setRitualStage('idle');
         // 切換 NFT 類型時重置樂觀授權狀態
-        setOptimisticApproval(false);
+        setOptimisticHeroApproval(false);
+        setOptimisticRelicApproval(false);
     }, [nftType, rarity]);
 
     // 更新儀式階段
@@ -727,45 +737,74 @@ const AltarPage = memo(() => {
         }
     }, [selectedNfts, currentRule]);
 
-    // 使用樂觀更新處理授權狀態
-    const [optimisticApproval, setOptimisticApproval] = useState(false);
+    // 使用樂觀更新處理授權狀態 - 分別追蹤英雄和聖物
+    const [optimisticHeroApproval, setOptimisticHeroApproval] = useState(false);
+    const [optimisticRelicApproval, setOptimisticRelicApproval] = useState(false);
+    const optimisticApproval = nftType === 'hero' ? optimisticHeroApproval : optimisticRelicApproval; // 向後兼容
     
-    const handleApproval = async () => {
-        if (!currentNftContract || !altarContract || !address) return;
+    // 授權處理函數 - 支援三種模式
+    const handleApproval = async (approvalType: 'hero' | 'relic' | 'both' = nftType) => {
+        if (!altarContract || !address) return;
         
         try {
-            showToast('正在授權祭壇合約...', 'info');
-            
-            // 立即樂觀更新授權狀態
-            setOptimisticApproval(true);
-            
-            const hash = await writeContract({
-                address: currentNftContract.address as `0x${string}`,
-                abi: currentNftContract.abi,
-                functionName: 'setApprovalForAll',
-                args: [altarContract.address, true],
-            });
-            
-            showToast('授權交易已發送，正在確認...', 'success');
-            
-            // 監聽交易確認
-            if (publicClient) {
-                publicClient.waitForTransactionReceipt({ hash })
-                    .then(() => {
-                        // 交易確認後刷新真實狀態
-                        refetchApproval();
-                        showToast('✅ 授權成功！現在可以開始升星儀式了', 'success');
+            if (approvalType === 'both') {
+                showToast('正在一鍵授權英雄和聖物...', 'info');
+                setOptimisticHeroApproval(true);
+                setOptimisticRelicApproval(true);
+                
+                // 同時授權英雄和聖物
+                await Promise.all([
+                    writeContract({
+                        address: heroContract?.address as `0x${string}`,
+                        abi: heroContract?.abi,
+                        functionName: 'setApprovalForAll',
+                        args: [altarContract.address, true],
+                    }),
+                    writeContract({
+                        address: relicContract?.address as `0x${string}`,
+                        abi: relicContract?.abi,
+                        functionName: 'setApprovalForAll',
+                        args: [altarContract.address, true],
                     })
-                    .catch((error) => {
-                        // 如果失敗，回滾樂觀更新
-                        setOptimisticApproval(false);
-                        logger.error('授權確認失敗:', error);
-                        showToast('授權確認失敗，請重試', 'error');
-                    });
+                ]);
+                
+                showToast('✅ 一鍵授權成功！', 'success');
+                
+            } else {
+                const targetContract = approvalType === 'hero' ? heroContract : relicContract;
+                const targetName = approvalType === 'hero' ? '英雄' : '聖物';
+                
+                if (!targetContract) return;
+                
+                showToast(`正在授權${targetName}...`, 'info');
+                
+                if (approvalType === 'hero') {
+                    setOptimisticHeroApproval(true);
+                } else {
+                    setOptimisticRelicApproval(true);
+                }
+                
+                await writeContract({
+                    address: targetContract.address as `0x${string}`,
+                    abi: targetContract.abi,
+                    functionName: 'setApprovalForAll',
+                    args: [altarContract.address, true],
+                });
+                
+                showToast(`✅ ${targetName}授權成功！`, 'success');
             }
+            
         } catch (error) {
-            // 用戶拒絕或其他錯誤，立即回滾
-            setOptimisticApproval(false);
+            // 回滾樂觀更新
+            if (approvalType === 'both') {
+                setOptimisticHeroApproval(false);
+                setOptimisticRelicApproval(false);
+            } else if (approvalType === 'hero') {
+                setOptimisticHeroApproval(false);
+            } else {
+                setOptimisticRelicApproval(false);
+            }
+            
             logger.error('授權失敗:', error);
             showToast('授權失敗，請重試', 'error');
         }
@@ -851,11 +890,13 @@ const AltarPage = memo(() => {
             </div>
 
             <div className="relative z-10 container mx-auto px-2 sm:px-4 py-3 sm:py-4 md:py-6 space-y-3 sm:space-y-4 md:space-y-6">
-                {/* Pending Altar Reveals */}
+                {/* Pending Altar Reveals - 摺疊式 */}
                 <UniversalRevealStatus 
                   revealType="altar" 
                   className="mb-6" 
-                  userAddress={address} 
+                  userAddress={address}
+                  collapsible={true}
+                  defaultExpanded={false}
                 />
                 
                 {/* 彈窗組件 */}
@@ -957,11 +998,11 @@ const AltarPage = memo(() => {
                                 </p>
                                 <div className="flex gap-2">
                                     <ActionButton
-                                        onClick={handleApproval}
+                                        onClick={() => handleApproval(nftType)}
                                         className="flex-1 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500"
                                         size="sm"
                                     >
-                                        🔓 立即授權
+                                        🔓 授權{nftType === 'hero' ? '英雄' : '聖物'}
                                     </ActionButton>
                                     <ActionButton
                                         onClick={() => setShowConfirmModal(false)}
@@ -1084,13 +1125,36 @@ const AltarPage = memo(() => {
                                         <p className="text-xs text-yellow-100/70 mt-1">授權後如無反應請刷新頁面</p>
                                     </div>
                                 </div>
-                                <ActionButton
-                                    onClick={handleApproval}
-                                    isLoading={false}
-                                    className="w-full h-12"
-                                >
-                                    🔓 授權 {nftType === 'hero' ? '英雄' : '聖物'} NFT
-                                </ActionButton>
+                                <div className="space-y-2">
+                                    {/* 一鍵授權按鈕 */}
+                                    <ActionButton
+                                        onClick={() => handleApproval('both')}
+                                        disabled={isHeroApproved && isRelicApproved}
+                                        className="w-full h-10 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500"
+                                    >
+                                        🔓 一鍵授權（英雄 + 聖物）
+                                    </ActionButton>
+                                    
+                                    {/* 單獨授權按鈕 */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <ActionButton
+                                            onClick={() => handleApproval('hero')}
+                                            disabled={!!isHeroApproved}
+                                            className="h-10 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500"
+                                            size="sm"
+                                        >
+                                            {isHeroApproved ? '✅' : '🔓'} 英雄
+                                        </ActionButton>
+                                        <ActionButton
+                                            onClick={() => handleApproval('relic')}
+                                            disabled={!!isRelicApproved}
+                                            className="h-10 bg-gradient-to-r from-blue-600 to-teal-600 hover:from-blue-500 hover:to-teal-500"
+                                            size="sm"
+                                        >
+                                            {isRelicApproved ? '✅' : '🔓'} 聖物
+                                        </ActionButton>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
@@ -1172,13 +1236,22 @@ const AltarPage = memo(() => {
                                                     💡 授權完成後如畫面無變化，請手動刷新頁面
                                                 </p>
                                             </div>
-                                            <ActionButton
-                                                onClick={handleApproval}
-                                                size="sm"
-                                                className="bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 whitespace-nowrap"
-                                            >
-                                                🔓 授權
-                                            </ActionButton>
+                                            <div className="flex gap-1">
+                                                <ActionButton
+                                                    onClick={() => handleApproval('both')}
+                                                    size="sm"
+                                                    className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-xs px-2"
+                                                >
+                                                    🔓 一鍵
+                                                </ActionButton>
+                                                <ActionButton
+                                                    onClick={() => handleApproval(nftType)}
+                                                    size="sm"
+                                                    className="bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-xs px-2"
+                                                >
+                                                    {nftType === 'hero' ? '英雄' : '聖物'}
+                                                </ActionButton>
+                                            </div>
                                         </div>
                                     </div>
                                 )}

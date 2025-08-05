@@ -152,12 +152,21 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
           logger.warn(`合約未找到: ${c.targetContractName}`, { chainId, contract });
           return null;
         }
+        
+        // 特殊處理：Party 合約的 dungeonCoreContract 可能會 revert
+        if (c.targetContractName === 'party' && c.getterFunctionName === 'dungeonCoreContract') {
+          logger.info('跳過 Party.dungeonCoreContract 讀取（已知會 revert）');
+          return { ...contract, functionName: c.getterFunctionName, skipRead: true };
+        }
+        
         return { ...contract, functionName: c.getterFunctionName };
       });
       
       configs.unshift({ ...coreContract, functionName: 'owner' });
       
-      const filteredConfigs = configs.filter((c): c is NonNullable<typeof c> => c !== null && !!c.address);
+      const filteredConfigs = configs.filter((c): c is NonNullable<typeof c> => 
+        c !== null && !!c.address && !(c as any).skipRead
+      );
       
       return filteredConfigs;
     } catch (error) {
@@ -259,7 +268,11 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
       
       const owner = contractsReadResult[0]?.result as Address | undefined;
       const settings = setupConfig.reduce((acc, config, index) => {
-        if (config && config.key && contractsReadResult[index + 1] && contractsReadResult[index + 1].result) {
+        // 特殊處理 Party.dungeonCoreContract
+        if (config && config.key === 'dungeonCoreForParty') {
+          // 不從 contractsReadResult 讀取，因為我們跳過了這個讀取
+          acc[config.key] = undefined; // 或者設置為 "未設定" 的佔位符
+        } else if (config && config.key && contractsReadResult[index + 1] && contractsReadResult[index + 1].result) {
           acc[config.key] = contractsReadResult[index + 1].result as Address | undefined;
         }
         return acc;

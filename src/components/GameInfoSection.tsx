@@ -86,25 +86,6 @@ export const GameInfoSection: React.FC<GameInfoSectionProps> = ({ variant = 'ful
             </div>
           </div>
 
-          {/* 伺服器狀態 */}
-          <div className="bg-white/5 rounded-xl p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Server className="text-blue-400 w-6 h-6" />
-              </div>
-            </div>
-          </div>
-
-          {/* Four.Meme 品牌區 */}
-          <div className="text-center py-4">
-            <div className="inline-block">
-              <div className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent mb-1">
-                Four.Meme
-              </div>
-              <p className="text-xs text-gray-400">發行平台</p>
-            </div>
-          </div>
-
           {/* 社群連結 - 底部按鈕區（仿照頁尾設計） */}
           <div className="flex justify-center items-center gap-4 pt-4">
             <a href="https://x.com/Soulbound_Saga" target="_blank" rel="noreferrer" className="flex items-center justify-center w-8 h-8 bg-[#1DA1F2] rounded-full transition-transform hover:scale-110" aria-label="Twitter">
@@ -211,28 +192,6 @@ export const GameInfoSection: React.FC<GameInfoSectionProps> = ({ variant = 'ful
                 <span>請關注 Telegram 獲取最新消息</span>
               </li>
             </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* 伺服器資訊 */}
-      <div className="bg-gradient-to-r from-blue-900/30 to-indigo-900/30 rounded-lg p-4 md:p-6 border border-blue-500/30">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Server className="text-blue-400 w-5 h-5 md:w-6 md:h-6" />
-            <div>
-          </div>
-        </div>
-      </div>
-
-      {/* Four.Meme Logo */}
-      <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 rounded-lg p-4 md:p-6 border border-purple-500/30">
-        <div className="flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-1">
-              Four.Meme
-            </div>
-            <p className="text-xs md:text-sm text-gray-400">發行平台</p>
           </div>
         </div>
       </div>

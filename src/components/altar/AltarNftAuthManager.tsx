@@ -80,7 +80,6 @@ export const AltarNftAuthManager: React.FC<AltarNftAuthManagerProps> = ({
   const needsHeroAuth = selectedSacrifices.length > 0 && !effectiveHeroApproved;
   const needsRelicAuth = selectedRelics.length > 0 && !effectiveRelicApproved;
   const needsAnyAuth = needsHeroAuth || needsRelicAuth;
-  const allAuthorized = effectiveHeroApproved && effectiveRelicApproved;
 
   // Write contracts
   const { writeContract: approveHero, data: heroTxHash } = useWriteContract();
@@ -123,7 +122,7 @@ export const AltarNftAuthManager: React.FC<AltarNftAuthManagerProps> = ({
   
   const isProcessing = isHeroTxPending || isRelicTxPending;
 
-  // 統一授權處理
+  // 統一授權處理（一鍵授權所有NFT）
   const handleAuth = useCallback(async () => {
     if (!address || !altarContract) {
       showToast('請先連接錢包', 'error');
@@ -162,6 +161,68 @@ export const AltarNftAuthManager: React.FC<AltarNftAuthManagerProps> = ({
       setOptimisticAuth({ hero: false, relic: false });
     }
   }, [address, needsHeroAuth, needsRelicAuth, approveHero, approveRelic, heroContract, relicContract, altarContract, onAuthComplete, showToast]);
+
+  // 只授權英雄NFT
+  const handleHeroAuth = useCallback(async () => {
+    if (!address || !altarContract) {
+      showToast('請先連接錢包', 'error');
+      return;
+    }
+
+    if (effectiveHeroApproved) {
+      showToast('英雄NFT已經授權過了', 'info');
+      return;
+    }
+
+    try {
+      logger.info('Approving Hero NFTs only for Altar');
+      setOptimisticAuth(prev => ({ ...prev, hero: true }));
+      
+      approveHero({
+        address: heroContract.address as `0x${string}`,
+        abi: heroContract.abi,
+        functionName: 'setApprovalForAll',
+        args: [altarContract.address, true],
+      });
+
+      onAuthComplete?.();
+    } catch (error) {
+      logger.error('Failed to approve Hero NFTs:', error);
+      showToast('英雄NFT授權失敗，請重試', 'error');
+      setOptimisticAuth(prev => ({ ...prev, hero: false }));
+    }
+  }, [address, effectiveHeroApproved, approveHero, heroContract, altarContract, onAuthComplete, showToast]);
+
+  // 只授權聖物NFT
+  const handleRelicAuth = useCallback(async () => {
+    if (!address || !altarContract) {
+      showToast('請先連接錢包', 'error');
+      return;
+    }
+
+    if (effectiveRelicApproved) {
+      showToast('聖物NFT已經授權過了', 'info');
+      return;
+    }
+
+    try {
+      logger.info('Approving Relic NFTs only for Altar');
+      setOptimisticAuth(prev => ({ ...prev, relic: true }));
+      
+      approveRelic({
+        address: relicContract.address as `0x${string}`,
+        abi: relicContract.abi,
+        functionName: 'setApprovalForAll',
+        args: [altarContract.address, true],
+      });
+
+      onAuthComplete?.();
+    } catch (error) {
+      logger.error('Failed to approve Relic NFTs:', error);
+      showToast('聖物NFT授權失敗，請重試', 'error');
+      setOptimisticAuth(prev => ({ ...prev, relic: false }));
+    }
+  }, [address, effectiveRelicApproved, approveRelic, relicContract, altarContract, onAuthComplete, showToast]);
 
   // 授權狀態顯示
   const authStatus = useMemo(() => {
@@ -233,47 +294,89 @@ export const AltarNftAuthManager: React.FC<AltarNftAuthManagerProps> = ({
         ))}
       </div>
 
-      {/* 授權按鈕 */}
-      {needsAnyAuth && (
-        <div className="space-y-3">
-          <ActionButton
-            onClick={handleAuth}
-            disabled={isProcessing}
-            loading={isProcessing}
-            size="md"
-            className={`w-full transition-all duration-300 ${
-              isProcessing 
+      {/* 授權按鈕 - 三個按鈕佈局 */}
+      <div className="space-y-3">
+        {/* 一鍵授權按鈕 */}
+        <ActionButton
+          onClick={handleAuth}
+          disabled={!needsAnyAuth || isProcessing}
+          loading={isProcessing && (needsHeroAuth && needsRelicAuth)}
+          size="md"
+          className={`w-full transition-all duration-300 ${
+            !needsAnyAuth
+              ? 'bg-green-600 text-white cursor-default'
+              : isProcessing 
                 ? 'bg-gradient-to-r from-yellow-600 to-orange-600 transform scale-95'
                 : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 hover:scale-105'
+          }`}
+        >
+          {!needsAnyAuth ? (
+            '✅ 所有NFT已授權'
+          ) : isProcessing && (needsHeroAuth && needsRelicAuth) ? (
+            <div className="flex items-center gap-2">
+              <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+              <span>🔄 一鍵授權處理中...</span>
+            </div>
+          ) : (
+            '🚀 一鍵授權所有NFT'
+          )}
+        </ActionButton>
+
+        {/* 個別授權按鈕 */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* 英雄NFT授權按鈕 */}
+          <ActionButton
+            onClick={handleHeroAuth}
+            disabled={effectiveHeroApproved || isHeroTxPending}
+            loading={isHeroTxPending}
+            size="sm"
+            className={`transition-all duration-300 ${
+              effectiveHeroApproved
+                ? 'bg-green-600 text-white cursor-default'
+                : isHeroTxPending
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 transform scale-95'
+                  : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 hover:scale-105'
             }`}
           >
-            {isProcessing ? (
-              <div className="flex items-center gap-2">
-                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
-                <span>🔄 授權處理中...</span>
+            {effectiveHeroApproved ? (
+              '✅ 英雄已授權'
+            ) : isHeroTxPending ? (
+              <div className="flex items-center gap-1">
+                <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full"></div>
+                <span>處理中</span>
               </div>
             ) : (
-              authStatus.length === 2 ? '🚀 一鍵授權所有NFT' : '🔓 授權NFT'
+              '⚔️ 授權英雄'
             )}
           </ActionButton>
-          
-          {/* 處理中的動畫提示 */}
-          {isProcessing && (
-            <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3">
-              <div className="flex items-center gap-3">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                </div>
-                <div className="text-sm text-yellow-300">
-                  正在處理授權交易，請在錢包中確認...
-                </div>
+
+          {/* 聖物NFT授權按鈕 */}
+          <ActionButton
+            onClick={handleRelicAuth}
+            disabled={effectiveRelicApproved || isRelicTxPending}
+            loading={isRelicTxPending}
+            size="sm"
+            className={`transition-all duration-300 ${
+              effectiveRelicApproved
+                ? 'bg-green-600 text-white cursor-default'
+                : isRelicTxPending
+                  ? 'bg-gradient-to-r from-orange-600 to-red-600 transform scale-95'
+                  : 'bg-gradient-to-r from-orange-600 to-pink-600 hover:from-orange-500 hover:to-pink-500 hover:scale-105'
+            }`}
+          >
+            {effectiveRelicApproved ? (
+              '✅ 聖物已授權'
+            ) : isRelicTxPending ? (
+              <div className="flex items-center gap-1">
+                <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full"></div>
+                <span>處理中</span>
               </div>
-            </div>
-          )}
+            ) : (
+              '🛡️ 授權聖物'
+            )}
+          </ActionButton>
         </div>
-      )}
+      </div>
       
       {!needsAnyAuth && authStatus.length > 0 && (
         <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-lg p-4">

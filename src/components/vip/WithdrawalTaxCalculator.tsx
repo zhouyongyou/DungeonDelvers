@@ -39,6 +39,13 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [inputMode, setInputMode] = useState<'soul' | 'usd'>('usd');
   const [showDetails, setShowDetails] = useState(false);
+  const [showTaxDetailsExpanded, setShowTaxDetailsExpanded] = useState(() => {
+    // 桌面版默認展開，手機版默認折疊
+    const isMobile = window.innerWidth < 768;
+    const saved = localStorage.getItem('withdrawal-tax-details-expanded');
+    if (saved !== null) return JSON.parse(saved);
+    return !isMobile; // 桌面版默認展開(true)，手機版默認折疊(false)
+  });
   
   // 獲取合約信息
   const playerVaultContract = getContractWithABI('PLAYERVAULT');
@@ -243,6 +250,13 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
     };
   }, [taxBreakdown, withdrawAmount, inputMode, priceInUsd]);
   
+  // 處理折疊狀態變化並保存偏好
+  const toggleTaxDetailsExpanded = useCallback(() => {
+    const newState = !showTaxDetailsExpanded;
+    setShowTaxDetailsExpanded(newState);
+    localStorage.setItem('withdrawal-tax-details-expanded', JSON.stringify(newState));
+  }, [showTaxDetailsExpanded]);
+  
   if (!chainId || chainId !== bsc.id) {
     return (
       <div className={`p-4 bg-gray-800/50 rounded-lg text-center ${className}`}>
@@ -416,22 +430,141 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
             )}
           </div>
           
-          {/* 當前用戶稅率摘要 */}
-          <div className="p-4 bg-gradient-to-r from-green-900/30 to-blue-900/30 border border-green-500/30 rounded-lg">
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div>
-                <div className="text-sm text-gray-400">您的VIP等級</div>
-                <div className="text-xl font-bold text-yellow-400">LV {vipLevel}</div>
-                <div className="text-xs text-green-400">稅率減免: -{(vipLevel * 0.5).toFixed(1)}%</div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-400">標準提現稅率</div>
-                <div className="text-xl font-bold text-green-400">
-                  {Math.max(0, 25 - vipLevel * 0.5).toFixed(1)}%
+          {/* 智能化稅率信息顯示 */}
+          <div className="space-y-4">
+            {/* 關鍵信息區 - 始終可見 */}
+            <div className="p-4 bg-gradient-to-r from-green-900/30 to-blue-900/30 border border-green-500/30 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-green-300 font-medium">提款稅率</h4>
+                <div className="flex items-center gap-2">
+                  {/* 首次提領免稅狀態指示 */}
+                  {playerInfo && Number(playerInfo[1]) === 0 && (
+                    <span className="px-2 py-1 bg-green-900/50 text-green-300 text-xs font-medium rounded">
+                      🎉 首次免稅
+                    </span>
+                  )}
+                  <ActionButton
+                    onClick={toggleTaxDetailsExpanded}
+                    variant="secondary"
+                    className="text-xs px-3 py-1"
+                  >
+                    {showTaxDetailsExpanded ? '收起詳情' : '展開詳情'}
+                  </ActionButton>
                 </div>
-                <div className="text-xs text-gray-500">基礎25% - VIP減免</div>
+              </div>
+              
+              {/* 當前稅率 - 突出顯示 */}
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-400 mb-1">
+                  {playerInfo && Number(playerInfo[1]) === 0 ? (
+                    // 首次提領用戶顯示0%
+                    <span className="text-green-300">0.0% / 0.0%</span>
+                  ) : standardInitialRate && largeWithdrawInitialRate ? (
+                    <>
+                      {Math.max(0.1, (Number(standardInitialRate) / 100) - (vipLevel * 0.5)).toFixed(1)}% / {Math.max(0.1, (Number(largeWithdrawInitialRate) / 100) - (vipLevel * 0.5)).toFixed(1)}%
+                    </>
+                  ) : (
+                    '載入中...'
+                  )}
+                </div>
+                <div className="text-sm text-gray-300">
+                  (一般 / 大額≥$1000)
+                </div>
+                <div className="text-xs text-yellow-400 mt-1">
+                  VIP {vipLevel} • 減免 -{(vipLevel * 0.5).toFixed(1)}%
+                </div>
               </div>
             </div>
+            
+            {/* 詳細信息區 - 可折疊 */}
+            {showTaxDetailsExpanded && (
+              <div className="animate-fadeIn">
+                {/* 首次提領免稅詳細提示 */}
+                {playerInfo && Number(playerInfo[1]) === 0 && (
+                  <div className="p-4 bg-green-900/20 border border-green-500/30 rounded-lg">
+                    <div className="text-center">
+                      <div className="text-green-400 font-medium text-lg mb-2">
+                        🎉 首次提領免稅優惠！
+                      </div>
+                      <div className="text-green-300 text-sm mb-3">
+                        您的提領將享受 0% 稅率
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2 text-sm">
+                      <h5 className="font-medium text-green-300 mb-2">稅率減免明細：</h5>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">基礎稅率：</span>
+                          <span className="text-white">
+                            {standardInitialRate && largeWithdrawInitialRate ? (
+                              `${(Number(standardInitialRate) / 100).toFixed(1)}% / ${(Number(largeWithdrawInitialRate) / 100).toFixed(1)}%`
+                            ) : (
+                              '載入中...'
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">VIP {vipLevel} 減免：</span>
+                          <span className="text-green-400">-{(vipLevel * 0.5).toFixed(1)}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">首次提領免稅：</span>
+                          <span className="text-green-400">-100%</span>
+                        </div>
+                        <div className="flex justify-between pt-1 border-t border-gray-700">
+                          <span className="text-gray-300 font-medium">最終稅率：</span>
+                          <span className="text-green-400 font-bold">0.0% / 0.0%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* 一般用戶的詳細稅率信息 */}
+                {(!playerInfo || Number(playerInfo[1]) !== 0) && (
+                  <div className="p-4 bg-gray-800/30 border border-gray-600/50 rounded-lg">
+                    <div className="text-sm">
+                      <h5 className="font-medium text-gray-300 mb-2">稅率減免明細：</h5>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">基礎稅率：</span>
+                          <span className="text-white">
+                            {standardInitialRate && largeWithdrawInitialRate ? (
+                              `${(Number(standardInitialRate) / 100).toFixed(1)}% / ${(Number(largeWithdrawInitialRate) / 100).toFixed(1)}%`
+                            ) : (
+                              '載入中...'
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">VIP {vipLevel} 減免：</span>
+                          <span className="text-green-400">-{(vipLevel * 0.5).toFixed(1)}%</span>
+                        </div>
+                        <div className="flex justify-between pt-1 border-t border-gray-700">
+                          <span className="text-gray-300 font-medium">最終稅率：</span>
+                          <span className="text-green-400 font-bold">
+                            {standardInitialRate && largeWithdrawInitialRate ? (
+                              `${Math.max(0.1, (Number(standardInitialRate) / 100) - (vipLevel * 0.5)).toFixed(1)}% / ${Math.max(0.1, (Number(largeWithdrawInitialRate) / 100) - (vipLevel * 0.5)).toFixed(1)}%`
+                            ) : (
+                              '載入中...'
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* 時間衰減機制說明 */}
+                <div className="p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                  <div className="text-blue-300 font-medium mb-1 text-sm">💡 時間衰減機制</div>
+                  <div className="text-blue-200 text-xs">
+                    每天減少 5% 稅率（時間衰減）
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           
           {/* 預覽結果 */}
@@ -482,90 +615,6 @@ export const WithdrawalTaxCalculator: React.FC<WithdrawalTaxCalculatorProps> = (
               </div>
             </div>
           )}
-          
-          {/* 詳細稅率分解 */}
-          <div>
-            <ActionButton
-              onClick={() => setShowDetails(!showDetails)}
-              variant="secondary"
-              className="w-full mb-3"
-              disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0}
-            >
-              {showDetails ? '隱藏' : '顯示'}稅率詳細分解
-            </ActionButton>
-            
-            {/* 未輸入金額時的提示 */}
-            {(!withdrawAmount || parseFloat(withdrawAmount) <= 0) && (
-              <p className="text-xs text-gray-500 text-center mb-3">
-                請先輸入提領金額以查看詳細稅率分解
-              </p>
-            )}
-            
-            {/* 首次提領免稅提示 - 移到折疊區域外面 */}
-            {playerInfo && Number(playerInfo[1]) === 0 && withdrawAmount && parseFloat(withdrawAmount) > 0 && (
-              <div className="p-3 bg-gradient-to-r from-green-900/20 to-emerald-900/20 border border-green-500/30 rounded-lg">
-                <p className="text-green-400 font-medium text-sm mb-1">
-                  🎉 首次提領免稅優惠
-                </p>
-                <p className="text-green-300 text-xs">
-                  由於您從未提領過，時間衰減非常大，通常可以享受 0% 稅率
-                </p>
-              </div>
-            )}
-            
-            {showDetails && withdrawAmount && parseFloat(withdrawAmount) > 0 && taxBreakdown && (
-              <div className="space-y-3 p-4 bg-gray-800/50 rounded-lg text-sm">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <h5 className="font-medium text-gray-300">基礎稅率</h5>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">
-                        {taxBreakdown?.isLargeWithdraw ? '大額提現(>$1000)' : '標準提現(≤$1000)'}:
-                      </span>
-                      <span className="text-red-400 font-mono">{(taxBreakdown?.baseRate || 0).toFixed(1)}%</span>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h5 className="font-medium text-gray-300">減免項目</h5>
-                    <div className="space-y-1">
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">VIP減免:</span>
-                        <span className="text-green-400">-{(taxBreakdown?.vipReduction || 0).toFixed(1)}%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">時間衰減:</span>
-                        <span className="text-green-400">
-                          -{Math.min(taxBreakdown?.timeDecay || 0, 99.9).toFixed(1)}%
-                          {(taxBreakdown?.timeDecay || 0) > 50 && (
-                            <span className="text-xs text-green-300 ml-1">
-                              (首次提領)
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">等級減免:</span>
-                        <span className="text-green-400">-{(taxBreakdown?.levelReduction || 0).toFixed(1)}%</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="pt-3 border-t border-gray-700">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-300 font-medium">最終稅率:</span>
-                    <span className="text-xl font-bold text-purple-400">
-                      {((taxBreakdown?.finalRate || 0) * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    = {(taxBreakdown?.baseRate || 0).toFixed(1)}% - {(taxBreakdown?.totalReduction || 0).toFixed(1)}% = {((taxBreakdown?.finalRate || 0) * 100).toFixed(1)}%
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
           
           {/* 優化建議 */}
           {taxBreakdown && taxBreakdown.finalRate > 0 && (
