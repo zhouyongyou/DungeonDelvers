@@ -40,6 +40,7 @@ export const ExpeditionProvider: React.FC<{ children: ReactNode }> = ({ children
         const rewardAmount = parseFloat(formatEther(result.reward)).toFixed(1);
         const baseUrl = 'https://www.dungeondelvers.xyz';
         // TODO: 從用戶設定獲取邀請碼，這裡先使用預設值
+        // 💡 暫緩：當前使用固定邀請碼，待用戶設定系統完善後實作
         const referralCode = 'PLAYER123'; // 實際應該從用戶數據獲取
         const referralUrl = `${baseUrl}?ref=${referralCode}`;
         

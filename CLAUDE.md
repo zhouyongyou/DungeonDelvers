@@ -32,6 +32,21 @@ npm run lint
 /Users/sotadic/Documents/dungeon-delvers-metadata-server/                  # 後端 API
 ```
 
+## 📍 重要文檔索引
+
+### 頁面路由對照表
+**📄 [PAGE_ROUTES.md](./PAGE_ROUTES.md)** - 完整的頁面路由對照表
+- 所有頁面的路由路徑和對應組件
+- 絕對路徑範例（生產環境和本地開發）
+- 頁面權限要求（是否需要連接錢包）
+- 查詢參數支援說明
+- 快速找到任何頁面的實現檔案
+
+### 其他重要文檔
+- **[docs/REACT_HOOKS_RULES.md](./docs/REACT_HOOKS_RULES.md)** - React Hooks 使用規則
+- **[docs/RPC_MONITORING.md](./docs/RPC_MONITORING.md)** - RPC 監控系統說明
+- **[src/components/mobile/README.md](./src/components/mobile/README.md)** - 手機優化組件使用指南
+
 ## 技術棧
 - **框架**: React 18 + TypeScript + Vite
 - **Web3**: wagmi v2 + viem

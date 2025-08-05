@@ -92,7 +92,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
     const quickActions = usePageQuickActions();
     
     // Fetch owned NFTs - use global store
-    const { data: nftsData, isLoading: isLoadingNfts, refetch: refetchNfts } = useEnhancedNfts({
+    const { data: nftsData, isLoading: isLoadingNfts, refetch: refetchNfts, isFetching: isFetchingNfts } = useEnhancedNfts({
         owner: address,
         chainId: chainId || 56
     });
@@ -348,8 +348,8 @@ const MyAssetsPageEnhanced: React.FC = () => {
     // Tab content renderer
     const renderTabContent = () => {
         // My assets content
-        if (isLoadingNfts) return <LoadingSpinner />;
-        if (!nftsData) return <EmptyState message="無法載入資產" />;
+        if (isLoadingNfts && !nftsData) return <LoadingSpinner />;
+        if (!nftsData && !isLoadingNfts) return <EmptyState message="無法載入資產" />;
         
         const { heros: heroes, relics, parties } = nftsData;
         
@@ -381,7 +381,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
                 ) : (
                     <>
                         {/* 載入提示 */}
-                        {isRefreshingNfts && (
+                        {(isRefreshingNfts || isFetchingNfts) && (
                             <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-4">
                                 <div className="flex items-center gap-3">
                                     <div className="animate-spin w-5 h-5 border-2 border-yellow-500 border-t-transparent rounded-full"></div>
@@ -432,7 +432,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
                 ) : (
                     <>
                         {/* 載入提示 */}
-                        {isRefreshingNfts && (
+                        {(isRefreshingNfts || isFetchingNfts) && (
                             <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-4">
                                 <div className="flex items-center gap-3">
                                     <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
@@ -634,6 +634,7 @@ const MyAssetsPageEnhanced: React.FC = () => {
                 />
                 
                 {/* Pending Reveals Section */}
+                {/* Reveal 區域 - 用戶可以使用頁面上的刷新按鈕更新資料 */}
                 <MyAssetsRevealSection />
                 
                 {/* NFT 顯示模式切換 - 暫時隱藏 */}

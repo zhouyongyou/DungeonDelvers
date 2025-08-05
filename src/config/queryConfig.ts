@@ -6,8 +6,8 @@ export type QueryCategory = 'NFT' | 'CONTRACT' | 'GRAPHQL' | 'METADATA' | 'ADMIN
 // 查詢配置映射
 const queryConfigs: Record<QueryCategory, any> = {
   NFT: {
-    staleTime: 1000 * 60 * 30,        // 30 分鐘內視為新鮮
-    gcTime: 1000 * 60 * 60 * 2,       // 2 小時垃圾回收
+    staleTime: 1000 * 60 * 3,          // 3 分鐘內視為新鮮（適中的更新頻率）
+    gcTime: 1000 * 60 * 30,            // 30 分鐘垃圾回收（減少記憶體使用）
     refetchOnWindowFocus: false,       // 視窗聚焦時不重新獲取
     refetchOnMount: false,             // 組件掛載時不重新獲取
     refetchOnReconnect: 'always',      // 重新連接時總是重新獲取
@@ -37,10 +37,10 @@ const queryConfigs: Record<QueryCategory, any> = {
     },
   },
   GRAPHQL: {
-    staleTime: 0,                      // 立即過期，強制每次都獲取最新數據
-    gcTime: 1000 * 60 * 5,             // 5 分鐘垃圾回收
-    refetchOnWindowFocus: true,        // 視窗聚焦時重新獲取
-    refetchOnMount: 'always',          // 組件掛載時總是檢查
+    staleTime: 1000 * 30,              // 30 秒內視為新鮮（平衡即時性和效能）
+    gcTime: 1000 * 60 * 10,            // 10 分鐘垃圾回收
+    refetchOnWindowFocus: false,       // 視窗聚焦時不自動重新獲取
+    refetchOnMount: false,             // 組件掛載時不自動重新獲取
     refetchOnReconnect: true,          // 重新連接時重新獲取
     retry: 3,                          // 重試 3 次
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
@@ -196,6 +196,24 @@ export const invalidationStrategies = {
   // 當質押/解除質押時
   onStakeChanged: (queryClient: any, address: string) => {
     queryClient.invalidateQueries({ queryKey: queryKeys.playerData(address) });
+  },
+  
+  // 當 Reveal 操作完成時（Commit-Reveal 機制）
+  onRevealCompleted: (queryClient: any, address: string, chainId?: number) => {
+    // 立即失效所有 NFT 相關快取
+    queryClient.invalidateQueries({ queryKey: ['enhanced-nfts', address, chainId] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.ownedNfts(address, chainId) });
+    queryClient.invalidateQueries({ queryKey: ['commitReveal'] });
+    queryClient.invalidateQueries({ queryKey: ['pendingReveals'] });
+    // 也更新 GraphQL 快取
+    queryClient.invalidateQueries({ 
+      queryKey: ['graphql'],
+      predicate: (query) => {
+        // 只失效與該地址相關的 GraphQL 查詢
+        const variables = query.queryKey[2] as any;
+        return variables?.owner?.toLowerCase() === address?.toLowerCase();
+      }
+    });
   },
   
   // 🔄 管理員操作後的快取失效策略

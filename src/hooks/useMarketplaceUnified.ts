@@ -152,6 +152,7 @@ export const useUnifiedUpdateListing = () => {
         return {
             updateListingPrice: async (listingId: string, newPrice: bigint) => {
                 // TODO: Implement local price update
+                // 📋 低優先級：當前依賴子圖更新，已足夠使用
                 console.log('Local price update not implemented yet');
             },
             isUpdating: false

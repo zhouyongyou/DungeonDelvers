@@ -100,6 +100,7 @@ export const PausableContractsManager: React.FC = () => {
     try {
       const functionName = contract.isPaused ? 'unpause' : 'pause';
       // TODO: 實際調用合約
+      // 🔄 需要實作：連接 setPaused 合約方法
       logger.info(`${functionName} called for ${contract.name}`);
       
       // 模擬成功後更新狀態

@@ -270,6 +270,7 @@ export const usePlayerAnalytics = (timeRange: number = 30) => {
         earnings: Number(formatEther(earnings)),
         dungeonRewards: Number(formatEther(earnings)), // 暫時全部算作地下城獎勵
         referralRewards: 0 // TODO: 整合推薦獎勵數據
+        // 💡 暫緩：推薦系統尚未上線，待合約部署後實作
       }));
     
     return {

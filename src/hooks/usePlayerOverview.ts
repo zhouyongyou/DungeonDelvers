@@ -1,6 +1,7 @@
 // src/hooks/usePlayerOverview.ts
 // 共用的 Hook 來獲取玩家總覽數據，避免重複代碼
 // TODO: 考慮遷移到新的 Apollo Client 智能端點系統以獲得更好的性能
+// 📋 低優先級：目前 fetch API 效能已經不錯
 
 import { useQuery } from '@tanstack/react-query';
 import { THE_GRAPH_API_URL } from '../config/graphConfig';

@@ -35,7 +35,9 @@ export function useEnhancedNfts({ owner, chainId }: UseEnhancedNftsProps) {
     queryKey: ['enhanced-nfts', owner, chainId],
     queryFn: () => fetchAllOwnedNfts(owner!, chainId!),
     enabled: !!owner && !!chainId,
-    ...getQueryConfig('NFT')
+    ...getQueryConfig('NFT'),
+    // 允許使用 placeholderData 加快初次載入
+    placeholderData: (previousData) => previousData,
   });
 
   // 獲取增強的 VIP 數據（包含合約等級）

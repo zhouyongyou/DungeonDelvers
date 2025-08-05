@@ -23,6 +23,7 @@ export function useRealtimeExpeditions({
   
   // 暫時禁用訂閱 - The Graph Studio 不支援 WebSocket
   // TODO: 當遷移到去中心化網路時重新啟用
+  // 💡 暫緩：目前使用中心化 API，未來考慮 P2P 方案
   const data = null;
   const loading = false;
   const error = null;

@@ -713,6 +713,7 @@ async function parseNfts<T extends AssetWithTokenId>(
                 const vipAsset = asset as Record<string, unknown>;
                 // VIP 等級需要從合約單獨讀取，這裡只設置基本信息
                 // TODO: 需要在上層組件中整合合約讀取的 VIP 等級
+                // ✅ 已完成：使用 useVipWithLevel hook 在 useEnhancedNfts 中實現
                 
                 return { 
                     ...baseNft, 

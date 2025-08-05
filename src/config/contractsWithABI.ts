@@ -1,5 +1,5 @@
 // V25 Contract Configuration with ABI
-// Generated on 2025-08-03T15:57:58.209Z
+// Generated on 2025-08-04T10:07:33.052Z
 // DO NOT EDIT MANUALLY - Use v25-sync-all.js to update
 
 import HeroABI from '../abis/Hero.json';
@@ -32,7 +32,7 @@ export const CONTRACTS_WITH_ABI = {
       abi: RelicABI
     },
     PARTY: {
-      address: '0xabCD5DDa5bd9D73CD70D4F316827383e92f7b551',
+      address: '0x18bF1eE489CD0D8bfb006b4110bfe0Bb7459bE69',
       abi: PartyABI
     },
     
@@ -50,7 +50,7 @@ export const CONTRACTS_WITH_ABI = {
       abi: PlayerProfileABI
     },
     VIPSTAKING: {
-      address: '0x18bF1eE489CD0D8bfb006b4110bfe0Bb7459bE69',
+      address: '0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C',
       abi: VIPStakingABI
     },
     ORACLE: {
@@ -145,5 +145,5 @@ export const CONTRACT_INFO = {
   version: CONTRACT_VERSION,
   network: "BSC Mainnet",
   deploymentBlock: 56184733,
-  lastUpdated: "2025-08-03T15:57:58.209Z"
+  lastUpdated: "2025-08-04T10:07:33.052Z"
 };
