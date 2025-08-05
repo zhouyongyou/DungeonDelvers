@@ -1,36 +1,38 @@
 ---
-description: 我們的經濟核心是 U 本位定價與多維度的動態稅率系統，旨在維持 $SoulShard 的長期價值穩定。
+description: 我們的經濟核心是 U 本位定價與多維度的動態稅率系統，旨在維持 $SOUL 的長期價值穩定。
 ---
 
 # 3. 經濟模型 (Tokenomics)
 
 #### **3.1 代幣資訊**
 
-* **代幣名稱**: SoulShard
-* **代幣符號**: $SoulShard
+* **代幣名稱**: SOUL
+* **代幣符號**: $SOUL
 * **所在區塊鏈**: Binance Smart Chain (BSC)
 * **合約地址**: `0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF`
 
 #### **3.2 智能合約地址**
 
-⚠️ **重要提示**：以下為測試版地址，正式版本發布後將更新。請關注官方公告獲取最新地址。
+以下是我們主要智能合約地址（BSC 主網 - V25 正式版）：
 
-以下是我們主要智能合約地址（BSC 主網 - 測試中）：
+* **英雄合約 (Hero)**: `0x6DEb5Ade2F6BEe8294A4b7f37cE372152109E2db`
+* **聖物合約 (Relic)**: `0xcfB83d8545D68b796a236290b3C1bc7e4A140B11`
+* **隊伍合約 (Party)**: `0x18bF1eE489CD0D8bfb006b4110bfe0Bb7459bE69`
+* **玩家檔案合約 (PlayerProfile)**: `0x0f5932e89908400a5AfDC306899A2987b67a3155`
+* **VIP 質押合約 (VIPStaking)**: `0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C`
+* **地下城主控合約 (DungeonMaster)**: `0xd06470d4C6F62F6747cf02bD2b2De0981489034F`
+* **玩家金庫合約 (PlayerVault)**: `0x62Bce9aF5E2C47b13f62A2e0fCB1f9C7AfaF8787` **(新增虛擬稅收機制)**
+* **升星祭壇合約 (AltarOfAscension)**: `0xE043ef6Ce183C218F8f9d9a144eD4A06cF379686`
+* **核心合約 (DungeonCore)**: `0x1a959ACcb898AdD61C959f2C93Abe502D0e1D34a`
+* **預言機合約 (Oracle)**: `0xf8CE896aF39f95a9d5Dd688c35d381062263E25a`
 
-* **英雄合約 (Hero)**: `0x20E0db8EFCC7608fCFFBbF2f95A86824b034D1e7`
-* **聖物合約 (Relic)**: `0x3c8F1b4172a076D31f0F8fa981E166aDA92C2B79`
-* **隊伍合約 (Party)**: `0x1f21fE51c039321246b219B9F659eaCA9a53176F`
-* **玩家檔案合約 (PlayerProfile)**: `0xB203a1e73500E40A1eeb1D6A51cDDbf2fEb227a2`
-* **VIP 質押合約 (VIPStaking)**: `0xa55fee3ba652e6Ff42ac12C8598C5fDfC26EE4Bf`
-* **地下城主控合約 (DungeonMaster)**: `0x913E5c5c6d844630fd01CbDed82F029f356f1809`
-* **玩家金庫合約 (PlayerVault)**: `0x8c3A73E27C518f082150330e5666e765B52297AF` **(新增虛擬稅收機制)**
-* **升星祭壇合約 (AltarOfAscension)**: `0x167F42bcC21a5ab5319b787F8C2e045f9Aeaa4dD`
-
-⚠️ 注意：當前為測試版本，正式發布時將提供經過完整安全審計的合約地址。
+📌 **部署版本**: V25 (2025-08-03)  
+✅ **網路**: BSC 主網 (Chain ID: 56)  
+🔒 **安全審計**: 所有合約均已通過安全審計
 
 #### **3.3 代幣產出與消耗**
 
-* **唯一產出**: **地下城遠征**是遊戲生態中 `$SoulShard` 的唯一產出來源。所有獎勵都錨定其等值的 USD 價值，保障玩家回報預期的穩定性。
+* **唯一產出**: **地下城遠征**是遊戲生態中 `$SOUL` 的唯一產出來源。所有獎勵都錨定其等值的 USD 價值，保障玩家回報預期的穩定性。
 * **核心消耗**:
   1. **NFT 鑄造**: 招募英雄、鑄造聖物。
   2. **遠征成本**: 探索費用 (BNB)。
