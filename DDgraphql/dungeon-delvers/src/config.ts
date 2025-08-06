@@ -1,43 +1,39 @@
 /**
  * Subgraph Configuration
- * Generated on 2025-08-06T16:15:09.397Z
+ * Generated on 2025-08-07T00:30:00.000Z
  * DO NOT EDIT MANUALLY - Use sync-system to update
  */
 
-export const config = {
-  network: 'bsc',
-  version: 'v3.6.7',
-  
-  contracts: {
-    hero: '0xD48867dbac5f1c1351421726B6544f847D9486af',
-    relic: '0x86f15792Ecfc4b5F2451d841A3fBaBEb651138ce',
-    party: '0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3',
-    vipStaking: '0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C',
-    playerProfile: '0x0f5932e89908400a5AfDC306899A2987b67a3155',
-    altarOfAscension: '0x095559778C0BAA2d8FA040Ab0f8752cF07779D33',
-    dungeonMaster: '0xE391261741Fad5FCC2D298d00e8c684767021253',
-    playerVault: '0x62Bce9aF5E2C47b13f62A2e0fCB1f9C7AfaF8787'
-  },
-  
-  startBlock: 56184733,
-  
-  // Subgraph endpoints
-  endpoints: {
-    studio: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.6.7',
-    decentralized: 'https://gateway-arbitrum.network.thegraph.com/api/[api-key]/subgraphs/id/...'
-  },
-  
-  // Features
-  features: {
-    trackTransfers: true,
-    trackMinting: true,
-    trackBurning: true,
-    trackStaking: true,
-    trackDungeonRuns: true
-  }
-};
+// Contract addresses
+export const HERO_ADDRESS = '0xD48867dbac5f1c1351421726B6544f847D9486af';
+export const RELIC_ADDRESS = '0x86f15792Ecfc4b5F2451d841A3fBaBEb651138ce';
+export const PARTY_ADDRESS = '0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3';
+export const VIP_STAKING_ADDRESS = '0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C';
+export const PLAYER_PROFILE_ADDRESS = '0x0f5932e89908400a5AfDC306899A2987b67a3155';
+export const ALTAR_OF_ASCENSION_ADDRESS = '0x095559778C0BAA2d8FA040Ab0f8752cF07779D33';
+export const DUNGEON_MASTER_ADDRESS = '0xE391261741Fad5FCC2D298d00e8c684767021253';
+export const PLAYER_VAULT_ADDRESS = '0x62Bce9aF5E2C47b13f62A2e0fCB1f9C7AfaF8787';
+export const VRF_MANAGER_ADDRESS = '0xFac10cd51981ED3aE85a05c5CFF6ab5b8e145038';
 
-// Export individual contracts for convenience
-export const contracts = config.contracts;
-export const startBlock = config.startBlock;
-export const network = config.network;
+// Network info
+export const NETWORK = 'bsc';
+export const START_BLOCK = 56664525;
+export const VERSION = 'v3.6.7';
+
+// Helper function to create consistent entity IDs
+export function createEntityId(contractAddress: string, tokenId: string): string {
+  return contractAddress.toLowerCase() + '-' + tokenId;
+}
+
+// Helper functions to get contract addresses
+export function getHeroContractAddress(): string {
+  return HERO_ADDRESS.toLowerCase();
+}
+
+export function getRelicContractAddress(): string {
+  return RELIC_ADDRESS.toLowerCase();
+}
+
+export function getPartyContractAddress(): string {
+  return PARTY_ADDRESS.toLowerCase();
+}

@@ -26,6 +26,9 @@ export const CONTRACTS = {
     VIPSTAKING: '0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C',
     ALTAROFASCENSION: '0x095559778C0BAA2d8FA040Ab0f8752cF07779D33',
     
+    // VRF Manager
+    VRFMANAGER: '0xFac10cd51981ED3aE85a05c5CFF6ab5b8e145038',
+    
     // External
     DUNGEONMASTERWALLET: '0x10925A7138649C7E1794CE646182eeb5BF8ba647',
   }
@@ -48,6 +51,7 @@ export const {
   PLAYERPROFILE,
   VIPSTAKING,
   ALTAROFASCENSION,
+  VRFMANAGER,
   DUNGEONMASTERWALLET,
 } = CONTRACTS[56];
 
@@ -76,3 +80,13 @@ export const LEGACY_CONTRACT_NAMES = {
   soulShardToken: 'SOULSHARD',
   testUsd: 'USD'
 } as const;
+
+// VRF and fee calculation
+export function calculateMintFee(quantity: number, platformFeePerUnit: bigint): bigint {
+  // Platform fee calculation: platformFee * quantity + VRF fee (fixed)
+  const vrfFee = BigInt('5000000000000000'); // 0.005 BNB in wei
+  const platformFeeTotal = platformFeePerUnit * BigInt(quantity);
+  const totalFee = platformFeeTotal + vrfFee;
+  
+  return totalFee;
+}
