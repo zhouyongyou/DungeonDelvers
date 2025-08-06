@@ -94,9 +94,9 @@ export const ENV = {
       
       // NFT 合約 (V26 - VRF 修復版本)
       HERO: import.meta.env.VITE_MAINNET_HERO_ADDRESS || 
-            '0xD48867dbac5f1c1351421726B6544f847D9486af',
+            '0x05Cbb0DbdA4B66c4CC6f60CdADFDb4C4995D9BFD',
       RELIC: import.meta.env.VITE_MAINNET_RELIC_ADDRESS || 
-             '0x86f15792Ecfc4b5F2451d841A3fBaBEb651138ce',
+             '0x9B36DA9584d8170bAA1693F14E898f44eBFc77F4',
       PARTY: import.meta.env.VITE_MAINNET_PARTY_ADDRESS || 
              '0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3',
       VIP_STAKING: import.meta.env.VITE_MAINNET_VIPSTAKING_ADDRESS || 

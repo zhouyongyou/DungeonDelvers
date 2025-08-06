@@ -1075,10 +1075,11 @@ const MintPage: React.FC = memo(() => {
                     <div className="bg-purple-900/20 border border-purple-600/50 rounded-lg p-3 sm:p-4">
                         <h3 className="text-base sm:text-lg font-bold text-purple-300 mb-3">🎲 Chainlink VRF 可驗證隨機性</h3>
                         <ul className="text-xs sm:text-sm text-gray-300 space-y-2">
-                            <li>• <strong>自動揭示</strong>：鑄造後自動完成，無需手動操作</li>
+                            <li>• <strong>等待時間</strong>：鑄造後需等待 <span className="text-yellow-300">10-30 秒</span> 由 Chainlink 網路生成隨機數</li>
                             <li>• <strong>可驗證隨機性</strong>：使用 Chainlink VRF 確保絕對公平</li>
                             <li>• <strong>統一機率分布</strong>：所有批量享有相同的稀有度機會</li>
                             <li>• <strong>防止操縱</strong>：鏈上可驗證的隨機數無法預測或操控</li>
+                            <li>• <strong>成本說明</strong>：VRF 機制約增加 <span className="text-yellow-300">$0.6-1.0</span> 成本，確保公平性</li>
                         </ul>
                     </div>
                 </div>

@@ -312,13 +312,16 @@ const MechanicsTab: React.FC = () => (
       <h4 className={`font-semibold text-yellow-400 mb-3 ${rc.cardText}`}>🎯 Chainlink VRF 亂數機制</h4>
       <div className="space-y-2">
         <p className={`text-gray-300 ${rc.cardText}`}>
-          • <strong>可驗證亂數</strong>：使用 Chainlink VRF 提供的連鏈上可驗證的亂數來源
+          • <strong>等待過程</strong>：鑄造後需等待 <span className="text-yellow-300">10-30秒</span> 生成隨機數
         </p>
         <p className={`text-gray-300 ${rc.cardText}`}>
-          • <strong>防止操縱</strong>：亂數由 Chainlink 網路產生，無法被知東者或抽現者操縱
+          • <strong>可驗證亂數</strong>：使用 Chainlink VRF 提供連鏈上可驗證的亂數來源
         </p>
         <p className={`text-gray-300 ${rc.cardText}`}>
-          • <strong>公平透明</strong>：所有數量享受相同機率，結果完全隨機且可驗證
+          • <strong>防止操縱</strong>：亂數由 Chainlink 網路產生，無法操縱
+        </p>
+        <p className={`text-gray-300 ${rc.cardText}`}>
+          • <strong>成本增加</strong>：約 <span className="text-yellow-300">$0.6-1.0</span> 確保公平性
         </p>
       </div>
     </div>

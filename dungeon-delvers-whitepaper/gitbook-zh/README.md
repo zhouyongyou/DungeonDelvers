@@ -47,9 +47,10 @@
     <td width="50%">
       <h4>🎲 真正的隨機性</h4>
       <ul>
-        <li>Chainlink VRF 保證公平</li>
-        <li>每次探索都是新體驗</li>
+        <li>Chainlink VRF V2.5 已完全實裝</li>
+        <li>10-30 秒等待確保隨機品質</li>
         <li>無法預測或操控結果</li>
+        <li>額外 $0.6-1.0 成本保證公平</li>
       </ul>
     </td>
   </tr>

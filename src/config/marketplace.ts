@@ -13,8 +13,8 @@ export const MARKETPLACE_V2_CONFIG = {
   
   // V25 NFT Contract addresses (must match master-config.json)
   nftContracts: {
-    HERO: '0xD48867dbac5f1c1351421726B6544f847D9486af' as const,
-    RELIC: '0x86f15792Ecfc4b5F2451d841A3fBaBEb651138ce' as const,
+    HERO: '0x05Cbb0DbdA4B66c4CC6f60CdADFDb4C4995D9BFD' as const,
+    RELIC: '0x9B36DA9584d8170bAA1693F14E898f44eBFc77F4' as const,
     PARTY: '0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3' as const,
   },
   

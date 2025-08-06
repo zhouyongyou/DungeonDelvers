@@ -39,11 +39,11 @@ export const CONTRACTS_WITH_ABI = {
   56: { // BSC Mainnet
     // NFT Contracts - V25 Updated (修復正確地址)
     HERO: {
-      address: '0xD48867dbac5f1c1351421726B6544f847D9486af',
+      address: '0x05Cbb0DbdA4B66c4CC6f60CdADFDb4C4995D9BFD',
       abi: HeroABI
     },
     RELIC: {
-      address: '0x86f15792Ecfc4b5F2451d841A3fBaBEb651138ce',
+      address: '0x9B36DA9584d8170bAA1693F14E898f44eBFc77F4',
       abi: RelicABI
     },
     PARTY: {
@@ -165,6 +165,6 @@ export const getContract = (name: keyof typeof CONTRACTS_WITH_ABI[56]): string =
 export const CONTRACT_INFO = {
   version: CONTRACT_VERSION,
   network: "BSC Mainnet",
-  deploymentBlock: 56664525,
+  deploymentBlock: 56688770,
   lastUpdated: "2025-08-06T16:17:10.017Z"
 };

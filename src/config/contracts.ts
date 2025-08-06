@@ -18,8 +18,8 @@ export const CONTRACTS = {
     SOULSHARD: '0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF',
     
     // NFT Contracts
-    HERO: '0x575e7407C06ADeb47067AD19663af50DdAe460CF',
-    RELIC: '0x36cC82c8fb1c71c4B37eC5E6454960e09a5DC739',
+    HERO: '0x05Cbb0DbdA4B66c4CC6f60CdADFDb4C4995D9BFD',
+    RELIC: '0x9B36DA9584d8170bAA1693F14E898f44eBFc77F4',
     PARTY: '0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3',
     
     // Game Contracts
@@ -32,8 +32,8 @@ export const CONTRACTS = {
     VIPSTAKING: '0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C',
     ALTAROFASCENSION: '0x095559778C0BAA2d8FA040Ab0f8752cF07779D33',
     
-    // VRF Manager
-    VRFMANAGER: '0xD95d0A29055E810e9f8c64073998832d66538176',
+    // VRF Manager (V2.5 Subscription Mode)
+    VRFMANAGER: '0xE1D1c53e2e467BFF3d6e4EffB7b89C0C10711ad1',
     
     // External
     DUNGEONMASTERWALLET: '0x10925A7138649C7E1794CE646182eeb5BF8ba647',
@@ -77,7 +77,7 @@ export const getContractAddress = (name: string): string => {
 export const CONTRACT_INFO = {
   version: CONTRACT_VERSION,
   network: "BSC Mainnet",
-  deploymentBlock: 56664525,
+  deploymentBlock: 56688770,
   lastUpdated: "2025-08-06T17:00:00.000Z"
 };
 

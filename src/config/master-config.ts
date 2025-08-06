@@ -3,14 +3,14 @@
  * 所有合約地址和配置都從這裡導出
  * 更新時間：2025-08-06 PM 5:00
  * 版本：V25 VRF
- * 部署區塊：56664525
+ * 部署區塊：56688770
  */
 
 export const MASTER_CONFIG = {
   version: 'V25',
   network: 'BSC Mainnet',
   chainId: 56,
-  deploymentBlock: 56664525,
+  deploymentBlock: 56688770,
   
   // 核心合約 - 長期使用
   core: {
@@ -23,8 +23,8 @@ export const MASTER_CONFIG = {
   
   // NFT 合約 - V25 新部署
   nft: {
-    HERO: '0x575e7407C06ADeb47067AD19663af50DdAe460CF',
-    RELIC: '0x36cC82c8fb1c71c4B37eC5E6454960e09a5DC739',
+    HERO: '0x05Cbb0DbdA4B66c4CC6f60CdADFDb4C4995D9BFD',
+    RELIC: '0x9B36DA9584d8170bAA1693F14E898f44eBFc77F4',
     PARTY: '0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3',
   },
   
@@ -44,7 +44,7 @@ export const MASTER_CONFIG = {
   
   // VRF 系統
   vrf: {
-    VRFMANAGER: '0xD95d0A29055E810e9f8c64073998832d66538176',
+    VRFMANAGER: '0xE1D1c53e2e467BFF3d6e4EffB7b89C0C10711ad1',
     requestPrice: '0.005', // BNB
     platformFee: '0.0003', // BNB per NFT
   },

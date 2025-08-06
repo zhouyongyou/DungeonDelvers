@@ -28,30 +28,37 @@ Soulbound Saga 建立在 **BNB Chain** 上，由多個互相協作的智能合�
 └── 🏆 VIPStaking.sol (VIP 質押系統)
 ```
 
-#### **5.3 鏈上隨機性實現**
+#### **5.3 鏈上隨機性實現** ✅ **已完全實裝 V25**
 
 **問題：** 區塊鏈是確定性的，如何實現真正的隨機？
 
-**解決方案：** Soulbound Saga 使用多層隨機性保證公平：
+**解決方案：** DungeonDelvers 使用 **Chainlink VRF V2.5 Direct Funding** 保證完全公平：
 
-1. **區塊哈希熵** - 利用未來區塊哈希作為隨機種子
-2. **用戶交互熵** - 結合用戶的交易時間和 Gas 價格
-3. **動態種子更新** - 管理員定期更新全局隨機種子
-4. **可驗證隨機函數** - 未來集成 Chainlink VRF
+1. **Chainlink VRF 集成** - 已完全實裝，提供可驗證的鏈上隨機數
+2. **等待機制** - 每次隨機請求需等待 **10-30 秒** 由 Chainlink 網路處理
+3. **成本透明** - VRF 機制約增加 **$0.6-1.0** 成本，確保隨機性品質
+4. **防操縱保證** - 任何人（包括開發團隊）都無法預測或操控結果
+
+**VRF Manager 合約地址**: `0xD95d0A29055E810e9f8c64073998832d66538176`
 
 ```solidity
-// 簡化的隨機數生成邏輯
-function generateRandomness(
-    address player,
-    uint256 nonce
-) internal view returns (uint256) {
-    return uint256(keccak256(abi.encodePacked(
-        block.timestamp,
-        block.difficulty, 
-        player,
-        nonce,
-        dynamicSeed
-    )));
+// Chainlink VRF 隨機數請求邏輯
+function requestRandomForUser(
+    address user,
+    uint256 quantity,
+    uint8 maxRarity,
+    bytes32 commitment
+) external payable returns (uint256 requestId) {
+    uint256 totalFee = vrfRequestPrice + platformFee;
+    require(msg.value >= totalFee, "Insufficient VRF fee");
+    
+    requestId = COORDINATOR.requestRandomWords(
+        keyHash,
+        subscriptionId,
+        requestConfirmations,
+        callbackGasLimit,
+        quantity
+    );
 }
 ```
 
@@ -103,7 +110,7 @@ function generateRandomness(
 - ✅ NFT 鑄造和交易
 
 **2025 Q4:**
-- 🔄 Chainlink VRF 集成
+- ✅ Chainlink VRF 集成 (已完成 V25)
 - 🔄 高級地城機制
 - 🔄 移動端 DApp
 
