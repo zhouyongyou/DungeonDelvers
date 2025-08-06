@@ -72,10 +72,24 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     // 每個 NFT 價格為 2 USD，需要轉換為 SoulShard
     const dungeonCoreContract = getContractWithABI('DUNGEONCORE');
     
-    // 計算總 USD 金額（每個 NFT 2 USD）
+    // 🔧 修復：從合約讀取實際的 mintPriceUSD，而不是硬編碼
+    const { data: mintPriceUSD } = useReadContract({
+        ...contractConfig,
+        functionName: 'mintPriceUSD',
+        query: {
+            enabled: !!contractConfig,
+            staleTime: 0, // 緊急修復：移除緩存
+            gcTime: 1000 * 10,
+            refetchOnWindowFocus: true,
+            refetchOnMount: true,
+        },
+    });
+    
+    // 計算總 USD 金額（根據合約設定的實際價格）
     const totalUSDAmount = useMemo(() => {
-        return BigInt(quantity * 2) * BigInt(10) ** BigInt(18); // 2 USD per NFT, 18 decimals
-    }, [quantity]);
+        const pricePerUnit = mintPriceUSD || 0n;
+        return pricePerUnit * BigInt(quantity);
+    }, [quantity, mintPriceUSD]);
     
     // 通過 DungeonCore 獲取價格（與管理頁面邏輯一致）
     const { data: contractRequiredAmount, isLoading: isLoadingPrice, isError, error, refetch: refetchPrice } = useReadContract({
@@ -84,13 +98,12 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
         args: [totalUSDAmount],
         query: { 
             enabled: !!dungeonCoreContract && quantity > 0 && !PRICE_OVERRIDE.enabled,
-            staleTime: 1000 * 60 * 2, // 2分鐘 - 縮短快取時間，平衡性能與準確性
-            gcTime: 1000 * 60 * 10,   // 10分鐘
-            refetchOnWindowFocus: false,
-            retry: 3, // 增加重試次數
-            // 🔄 價格查詢失敗時的重試策略
+            staleTime: 0, // 🔧 緊急修復：移除緩存，確保獲取最新價格
+            gcTime: 1000 * 10, // 縮短到10秒
+            refetchOnWindowFocus: true, // 開啟焦點刷新
+            refetchOnMount: true, // 開啟掛載時刷新
+            retry: 3,
             retryDelay: (attemptIndex) => {
-                // 遞增延遲：0ms, 500ms, 1500ms
                 return attemptIndex * 500;
             },
         },
@@ -267,6 +280,7 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
         vrfFee: vrfFee ?? 0n,
         refetchAllowance,
         allowance: allowance ?? 0n,
+        mintPriceUSD: mintPriceUSD ?? 0n, // 🔧 添加 mintPriceUSD 到返回值
     };
 };
 
@@ -470,7 +484,7 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
 
     const debouncedQuantity = useDebounce(quantity, 300);
     
-    const { requiredAmount, balance, bnbBalance, needsApproval: baseNeedsApproval, isLoading, isError, error, platformFee, vrfFee, refetchAllowance, allowance } = useMintLogic(type, debouncedQuantity, paymentSource, chainId);
+    const { requiredAmount, balance, bnbBalance, needsApproval: baseNeedsApproval, isLoading, isError, error, platformFee, vrfFee, refetchAllowance, allowance, mintPriceUSD } = useMintLogic(type, debouncedQuantity, paymentSource, chainId);
     
     // 合併實際授權狀態與樂觀狀態
     const needsApproval = baseNeedsApproval && !optimisticApprovalGranted;
@@ -734,9 +748,41 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
     const handleMint = async () => {
         if (!contractConfig || !publicClient) return showToast('客戶端尚未準備好，請稍後再試', 'error');
         if (isError) return showToast('價格讀取失敗，無法鑄造', 'error');
-        // 移除最少5個的限制，允許單個鑄造
-        if (balance < requiredAmount) return showToast(`${paymentSource === 'wallet' ? '錢包' : '金庫'}餘額不足`, 'error');
-        if (paymentSource === 'wallet' && needsApproval) return showToast(`請先完成授權`, 'error');
+        
+        // 詳細的餘額檢查和錯誤提示
+        if (balance < requiredAmount) {
+            const balanceInEther = Number(formatEther(balance));
+            const requiredInEther = Number(formatEther(requiredAmount));
+            const deficit = requiredInEther - balanceInEther;
+            
+            console.error('[MintPage] 餘額不足詳情:', {
+                paymentSource,
+                balance: balance.toString(),
+                balanceFormatted: balanceInEther.toFixed(2),
+                requiredAmount: requiredAmount.toString(),
+                requiredFormatted: requiredInEther.toFixed(2),
+                deficit: deficit.toFixed(2)
+            });
+            
+            return showToast(
+                `${paymentSource === 'wallet' ? '錢包' : '金庫'} SoulShard 餘額不足！\n需要: ${requiredInEther.toFixed(0)} SOUL\n持有: ${balanceInEther.toFixed(0)} SOUL\n缺少: ${deficit.toFixed(0)} SOUL`, 
+                'error'
+            );
+        }
+        
+        if (paymentSource === 'wallet' && needsApproval) {
+            const requiredInEther = Number(formatEther(requiredAmount));
+            const allowanceInEther = Number(formatEther(allowance));
+            
+            console.warn('[MintPage] 需要授權:', {
+                requiredAmount: requiredAmount.toString(),
+                requiredFormatted: requiredInEther.toFixed(2),
+                allowance: allowance.toString(),
+                allowanceFormatted: allowanceInEther.toFixed(2)
+            });
+            
+            return showToast(`請先授權 Hero 合約使用你的 SoulShard 代幣\n需要授權: ${requiredInEther.toFixed(0)} SOUL`, 'error');
+        }
 
         // 直接使用已經獲取的價格開始鑄造
         showToast('開始鑄造...', 'info');
@@ -768,10 +814,35 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
     };
     
     const isInsufficientBalance = balance < requiredAmount;
+    
+    // 🔍 餘額檢查詳細日誌
+    useEffect(() => {
+        if (requiredAmount > 0n && address) {
+            const balanceInEther = Number(formatEther(balance));
+            const requiredInEther = Number(formatEther(requiredAmount));
+            
+            console.log(`[MintPage] 餘額檢查:`, {
+                paymentSource,
+                balance: balance.toString(),
+                balanceInEther: balanceInEther.toFixed(2),
+                requiredAmount: requiredAmount.toString(), 
+                requiredInEther: requiredInEther.toFixed(2),
+                isInsufficientBalance,
+                deficit: isInsufficientBalance ? (requiredInEther - balanceInEther).toFixed(2) : 0
+            });
+            
+            // 如果餘額不足，提供詳細的錯誤信息
+            if (isInsufficientBalance) {
+                const deficit = requiredInEther - balanceInEther;
+                console.warn(`[MintPage] 💰 餘額不足！需要額外 ${deficit.toFixed(2)} SoulShard`);
+            }
+        }
+    }, [balance, requiredAmount, paymentSource, address, isInsufficientBalance]);
+    
     // 授權按鈕不應該因為餘額不足而禁用
-    const isApproveDisabled = !address || isLoading || isError || requiredAmount === 0n || isProcessing || isCheckingApproval || isApprovalProcessing;
-    // 鑄造按鈕需要檢查餘額
-    const isMintDisabled = !address || isLoading || isError || isInsufficientBalance || requiredAmount === 0n || isProcessing || isCheckingApproval || isApprovalProcessing;
+    const isApproveDisabled = !address || isLoading || isError || isProcessing || isCheckingApproval || isApprovalProcessing;
+    // 🔧 修復：移除 requiredAmount === 0n 的檢查，允許免費鑄造
+    const isMintDisabled = !address || isLoading || isError || isInsufficientBalance || isProcessing || isCheckingApproval || isApprovalProcessing;
 
     const getButtonText = () => {
         if (!address) return '請先連接錢包';
@@ -787,7 +858,10 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
         // 授權按鈕優先顯示授權文本，即使餘額不足
         if (paymentSource === 'wallet' && needsApproval) return '授權代幣使用';
         // 只有在不需要授權時才顯示餘額不足
-        if (isInsufficientBalance) return '餘額不足';
+        if (isInsufficientBalance) {
+            const deficit = Number(formatEther(requiredAmount - balance));
+            return `SoulShard 不足 (缺 ${deficit.toFixed(0)})`;
+        }
         // 樂觀更新生效後，立即顯示招募按鈕
         return `招募 ${quantity} 個${quantity >= 50 ? ' ⚡' : ''}`;
     };
@@ -913,7 +987,11 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                         return `${mintFee.total} BNB (${mintFee.platformFee} 平台費 + ${mintFee.vrfFee} VRF費) [${source}]`;
                     })()}</p>
                     <p className="text-xs text-gray-400 mt-1">
-                        (約 ${(2 * quantity).toFixed(0)} USD，每個 $2 USD)
+                        {mintPriceUSD && mintPriceUSD > 0n ? (
+                            `(約 $${(Number(formatEther(mintPriceUSD)) * quantity).toFixed(0)} USD，每個 $${Number(formatEther(mintPriceUSD))} USD)`
+                        ) : (
+                            '(免費鑄造，僅需 VRF 費用)'
+                        )}
                     </p>
                 </div>)}
             </div>

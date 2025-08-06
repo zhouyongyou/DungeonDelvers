@@ -59,14 +59,20 @@ const SettingRow: React.FC<SettingRowProps> = ({
         return BigInt(val);
       });
       
-      await writeContractAsync({
+      console.log('🔧 管理後台更新:', { label, contract: contract.address, functionName, valuesToSet });
+      
+      const result = await writeContractAsync({
         address: contract.address,
         abi: contract.abi as Abi,
         functionName,
         args: valuesToSet
       });
       
-      showToast(`${label} 更新成功！`, 'success');
+      console.log('✅ 合約更新成功:', { label, txHash: result });
+      showToast(`${label} 更新成功！交易哈希: ${result}`, 'success');
+      
+      // 清空輸入框
+      setInputValues(new Array(placeholders.length).fill(''));
       
       // 🔄 立即失效相關快取 - 根據參數類型決定失效策略
       const parameterType = label.toLowerCase();
@@ -91,10 +97,32 @@ const SettingRow: React.FC<SettingRowProps> = ({
             );
           }
         });
-      } else if (parameterType.includes('fee') || parameterType.includes('費用')) {
+      } else if (parameterType.includes('fee') || parameterType.includes('費用') || parameterType.includes('平台費')) {
         // 如果是費用相關，立即失效費用快取
         queryClient.invalidateQueries({ queryKey: ['platform-fees'] });
         queryClient.invalidateQueries({ queryKey: ['admin-parameters'] });
+        
+        // 🔧 增強：失效所有與費用相關的查詢
+        queryClient.invalidateQueries({ 
+          predicate: (query) => {
+            const key = query.queryKey;
+            return Array.isArray(key) && key.some(k => 
+              typeof k === 'string' && (
+                k.includes('fee') || 
+                k.includes('Fee') || 
+                k.includes('platform') || 
+                k.includes('Platform') ||
+                k.includes('費用') ||
+                k.includes('平台費')
+              )
+            );
+          }
+        });
+        
+        // 🔧 立即重新獲取最新數據
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000); // 2秒後重新載入頁面確保顯示最新數據
       } else if (parameterType.includes('tax') || parameterType.includes('稅')) {
         // 如果是稅務相關，立即失效稅務快取
         queryClient.invalidateQueries({ queryKey: ['tax-system'] });
