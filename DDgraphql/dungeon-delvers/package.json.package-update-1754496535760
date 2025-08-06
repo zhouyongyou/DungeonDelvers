@@ -1,0 +1,26 @@
+{
+  "name": "dungeon-delvers",
+  "version": "3.6.6",
+  "description": "Dungeon Delvers Subgraph",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "deploy": "graph deploy dungeon-delvers --access-token $GRAPH_ACCESS_TOKEN --node https://api.studio.thegraph.com/deploy/",
+    "create-local": "graph create --node http://localhost:8020/ dungeon-delvers",
+    "remove-local": "graph remove --node http://localhost:8020/ dungeon-delvers",
+    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 dungeon-delvers",
+    "test": "jest",
+    "deploy:v15": "./deploy-v15-auto.sh",
+    "deploy:v22": "./deploy-v22.sh",
+    "deploy:v25": "./deploy-v25.sh",
+    "deploy:current": "./deploy-v25.sh",
+    "sync:v22": "node scripts/generate-subgraph-from-v22.js"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.97.1",
+    "@graphprotocol/graph-ts": "^0.38.1",
+    "jest": "^29.7.0",
+    "js-yaml": "^4.1.0",
+    "typescript": "^5.3.3"
+  }
+}

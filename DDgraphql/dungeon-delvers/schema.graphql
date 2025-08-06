@@ -913,3 +913,46 @@ type ProxyRevealEvent @entity(immutable: true) {
   " 時間戳 "
   timestamp: BigInt!
 }
+
+# VRF Manager V2Plus Entities
+
+type VRFRequest @entity(immutable: false) {
+  " Request ID from VRF "
+  id: ID!
+  " Requester contract address "
+  requester: Bytes!
+  " Request type (0=HERO_MINT, 1=RELIC_MINT, 2=ALTAR_UPGRADE, 3=DUNGEON_BATTLE) "
+  requestType: Int!
+  " Request fulfilled status "
+  fulfilled: Boolean!
+  " Random words returned "
+  randomWords: [BigInt!]
+  " Transaction hash "
+  transactionHash: Bytes!
+  " Block number "
+  blockNumber: BigInt!
+  " Timestamp "
+  timestamp: BigInt!
+}
+
+type VRFConfig @entity(immutable: false) {
+  " Singleton ID = 'current' "
+  id: ID!
+  " VRF Manager address "
+  managerAddress: Bytes!
+  " VRF request price in BNB "
+  vrfPrice: BigInt!
+  " Platform fee per NFT in BNB "
+  platformFee: BigInt!
+  " Last update timestamp "
+  lastUpdated: BigInt!
+}
+
+type VRFAuthorization @entity(immutable: false) {
+  " Contract address "
+  id: ID!
+  " Authorization status "
+  authorized: Boolean!
+  " Update timestamp "
+  timestamp: BigInt!
+}

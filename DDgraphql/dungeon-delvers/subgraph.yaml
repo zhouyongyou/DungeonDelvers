@@ -1,5 +1,5 @@
-# Generated from V25 VRF update on 2025-08-06T10:12:14.535Z
-# V25 Production Deployment - VRF Enabled
+# Generated from V25 VRF update on 2025-08-06T17:00:00.000Z
+# V25 VRF Version - 8/6 pm 5 Deployment - Block 56664525
 specVersion: 0.0.4
 schema:
   file: ./schema.graphql
@@ -10,7 +10,7 @@ dataSources:
     source:
       address: "0xD48867dbac5f1c1351421726B6544f847D9486af"
       abi: Hero
-      startBlock: 56631513
+      startBlock: 56664525
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -30,14 +30,8 @@ dataSources:
           handler: handleBatchMintCompleted
         - event: HeroBurned(indexed uint256,indexed address,uint8,uint256)
           handler: handleHeroBurned
-        - event: MintCommitted(indexed address,uint256,uint256,bool)
-          handler: handleMintCommitted
         - event: HeroRevealed(indexed uint256,indexed address,uint8,uint256)
           handler: handleHeroRevealed
-        - event: ForcedRevealExecuted(indexed address,indexed address,uint256)
-          handler: handleForcedRevealExecuted
-        - event: RevealedByProxy(indexed address,indexed address)
-          handler: handleRevealedByProxy
       file: ./src/hero.ts
   - kind: ethereum/contract
     name: Relic
@@ -45,7 +39,7 @@ dataSources:
     source:
       address: "0x86f15792Ecfc4b5F2451d841A3fBaBEb651138ce"
       abi: Relic
-      startBlock: 56631513
+      startBlock: 56664525
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -65,14 +59,8 @@ dataSources:
           handler: handleBatchMintCompleted
         - event: RelicBurned(indexed uint256,indexed address,uint8,uint8)
           handler: handleRelicBurned
-        - event: MintCommitted(indexed address,uint256,uint256,bool)
-          handler: handleMintCommitted
         - event: RelicRevealed(indexed uint256,indexed address,uint8,uint8)
           handler: handleRelicRevealed
-        - event: ForcedRevealExecuted(indexed address,indexed address,uint256)
-          handler: handleForcedRevealExecuted
-        - event: RevealedByProxy(indexed address,indexed address)
-          handler: handleRevealedByProxy
       file: ./src/relic.ts
   - kind: ethereum/contract
     name: PartyV3
@@ -80,7 +68,7 @@ dataSources:
     source:
       address: "0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3"
       abi: PartyV3
-      startBlock: 56631513
+      startBlock: 56664525
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -105,7 +93,7 @@ dataSources:
     source:
       address: "0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C"
       abi: VIPStaking
-      startBlock: 56631513
+      startBlock: 56664525
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -132,7 +120,7 @@ dataSources:
     source:
       address: "0x0f5932e89908400a5AfDC306899A2987b67a3155"
       abi: PlayerProfile
-      startBlock: 56631513
+      startBlock: 56664525
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -157,7 +145,7 @@ dataSources:
     source:
       address: "0xE391261741Fad5FCC2D298d00e8c684767021253"
       abi: DungeonMaster
-      startBlock: 56631513
+      startBlock: 56664525
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -182,7 +170,7 @@ dataSources:
     source:
       address: "0x62Bce9aF5E2C47b13f62A2e0fCB1f9C7AfaF8787"
       abi: PlayerVault
-      startBlock: 56631513
+      startBlock: 56664525
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -215,7 +203,7 @@ dataSources:
     source:
       address: "0x095559778C0BAA2d8FA040Ab0f8752cF07779D33"
       abi: AltarOfAscensionVRF
-      startBlock: 56631513
+      startBlock: 56664525
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -235,3 +223,31 @@ dataSources:
         - event: UpgradeRevealed(indexed address,uint8,uint8)
           handler: handleUpgradeRevealed
       file: ./src/altar-of-ascension.ts
+  - kind: ethereum/contract
+    name: VRFManagerV2Plus
+    network: bsc
+    source:
+      address: "0xFac10cd51981ED3aE85a05c5CFF6ab5b8e145038"
+      abi: VRFManagerV2Plus
+      startBlock: 56664525
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.6
+      language: wasm/assemblyscript
+      entities:
+        - VRFRequest
+      abis:
+        - name: VRFManagerV2Plus
+          file: ./abis/VRFManagerV2Plus.json
+      eventHandlers:
+        - event: RandomRequested(indexed uint256,indexed address,uint8)
+          handler: handleRandomRequested
+        - event: RandomFulfilled(indexed uint256,uint256[])
+          handler: handleRandomFulfilled
+        - event: AuthorizationUpdated(indexed address,bool)
+          handler: handleAuthorizationUpdated
+        - event: VRFPriceUpdated(uint256)
+          handler: handleVRFPriceUpdated
+        - event: PlatformFeeUpdated(uint256)
+          handler: handlePlatformFeeUpdated
+      file: ./src/vrf-manager.ts

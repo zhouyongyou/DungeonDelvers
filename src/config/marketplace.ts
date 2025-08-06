@@ -13,9 +13,9 @@ export const MARKETPLACE_V2_CONFIG = {
   
   // V25 NFT Contract addresses (must match master-config.json)
   nftContracts: {
-    HERO: '0x20E0db8EFCC7608fCFFBbF2f95A86824b034D1e7' as const,
-    RELIC: '0x3c8F1b4172a076D31f0F8fa981E166aDA92C2B79' as const,
-    PARTY: '0x1f21fE51c039321246b219B9F659eaCA9a53176F' as const,
+    HERO: '0xD48867dbac5f1c1351421726B6544f847D9486af' as const,
+    RELIC: '0x86f15792Ecfc4b5F2451d841A3fBaBEb651138ce' as const,
+    PARTY: '0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3' as const,
   },
   
   // Supported stablecoins on BSC (only USDT and BUSD for simplicity)

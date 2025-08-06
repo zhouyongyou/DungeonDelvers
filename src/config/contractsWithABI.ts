@@ -1,5 +1,5 @@
 // V25 Contract Configuration with ABI
-// Generated on 2025-08-06T10:04:10.760Znc-all.js to update
+// Generated on 2025-08-06T16:15:09.389Znc-all.js to update
 
 import HeroArtifact from '../abis/Hero.json';
 import RelicArtifact from '../abis/Relic.json';
@@ -13,6 +13,7 @@ import AltarOfAscensionArtifact from '../abis/AltarOfAscension.json';
 import PlayerVaultArtifact from '../abis/PlayerVault.json';
 import DungeonStorageArtifact from '../abis/DungeonStorage.json';
 import SoulShardTokenArtifact from '../abis/SoulShardToken.json';
+import VRFManagerArtifact from '../abis/VRFManager.json';
 
 // Extract ABI from artifacts
 const HeroABI = HeroArtifact.abi || HeroArtifact;
@@ -27,6 +28,7 @@ const AltarOfAscensionABI = AltarOfAscensionArtifact.abi || AltarOfAscensionArti
 const PlayerVaultABI = PlayerVaultArtifact.abi || PlayerVaultArtifact;
 const DungeonStorageABI = DungeonStorageArtifact.abi || DungeonStorageArtifact;
 const SoulShardTokenABI = SoulShardTokenArtifact.abi || SoulShardTokenArtifact;
+const VRFManagerABI = VRFManagerArtifact.abi || VRFManagerArtifact;
 
 export interface ContractWithABI {
   address: string;
@@ -35,13 +37,13 @@ export interface ContractWithABI {
 
 export const CONTRACTS_WITH_ABI = {
   56: { // BSC Mainnet
-    // NFT Contracts - V25 Updated
+    // NFT Contracts - V25 Updated (修復正確地址)
     HERO: {
-      address: '0xcaF37D9D8356eE18938466F4590A69Bf84C35E15',
+      address: '0xD48867dbac5f1c1351421726B6544f847D9486af',
       abi: HeroABI
     },
     RELIC: {
-      address: '0xfA0F9E7bb19761A731be73FD04d6FF38ebF0555A',
+      address: '0x86f15792Ecfc4b5F2451d841A3fBaBEb651138ce',
       abi: RelicABI
     },
     PARTY: {
@@ -55,7 +57,7 @@ export const CONTRACTS_WITH_ABI = {
       abi: DungeonCoreABI
     },
     DUNGEONMASTER: {
-      address: '0x8DcE0E0b3063e84f85A419833e72D044d9Cdc816',
+      address: '0xE391261741Fad5FCC2D298d00e8c684767021253',
       abi: DungeonMasterABI
     },
     PLAYERPROFILE: {
@@ -71,7 +73,7 @@ export const CONTRACTS_WITH_ABI = {
       abi: OracleABI
     },
     ALTAROFASCENSION: {
-      address: '0x21EB6D4EE01aA881539d6aeA275618EDAE9cB3E1',
+      address: '0x095559778C0BAA2d8FA040Ab0f8752cF07779D33',
       abi: AltarOfAscensionABI
     },
     PLAYERVAULT: {
@@ -83,10 +85,10 @@ export const CONTRACTS_WITH_ABI = {
       abi: DungeonStorageABI
     },
     
-    // VRF System - V25 New
+    // VRF System - V25 New (VRFManagerV2Plus)
     VRFMANAGER: {
-      address: '0xD062785C376560A392e1a5F1b25ffb35dB5b67bD',
-      abi: [] // VRF Manager ABI (待添加)
+      address: '0xFac10cd51981ED3aE85a05c5CFF6ab5b8e145038',
+      abi: VRFManagerABI
     },
     
     // Token Contracts
@@ -163,6 +165,6 @@ export const getContract = (name: keyof typeof CONTRACTS_WITH_ABI[56]): string =
 export const CONTRACT_INFO = {
   version: CONTRACT_VERSION,
   network: "BSC Mainnet",
-  deploymentBlock: 56184733,
-  lastUpdated: "2025-08-05T17:45:54.340Z"
+  deploymentBlock: 56664525,
+  lastUpdated: "2025-08-06T16:17:10.017Z"
 };

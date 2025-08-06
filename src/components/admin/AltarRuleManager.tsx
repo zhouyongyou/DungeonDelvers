@@ -131,20 +131,22 @@ const AltarRuleManager: React.FC<AltarRuleManagerProps> = ({ chainId }) => {
       // 驗證輸入參數
       validateRule(inputs);
       
-      // V25 新的函數簽名：8 個獨立參數
+      // 正確的函數簽名：2 個參數 (rarity, UpgradeRule 結構體)
       await writeContractAsync({
         address: altarContract.address,
         abi: altarContract.abi as Abi,
         functionName: 'setUpgradeRule',
         args: [
-          id,                                           // _rarity
-          Number(inputs.materialsRequired),             // _materialsRequired
-          parseEther(inputs.nativeFee),                // _nativeFee
-          Number(inputs.greatSuccessChance),           // _greatSuccessChance
-          Number(inputs.successChance),                // _successChance
-          Number(inputs.partialFailChance),            // _partialFailChance
-          BigInt(Number(inputs.cooldownTime) * 3600),  // _cooldownTime (轉換小時為秒)
-          inputs.isActive                              // _isActive
+          id,                                           // _fromRarity
+          [                                             // _rule (UpgradeRule 結構體)
+            Number(inputs.materialsRequired),           // materialsRequired
+            parseEther(inputs.nativeFee),              // nativeFee
+            Number(inputs.greatSuccessChance),         // greatSuccessChance
+            Number(inputs.successChance),              // successChance
+            Number(inputs.partialFailChance),          // partialFailChance
+            BigInt(Number(inputs.cooldownTime) * 3600), // cooldownTime (轉換小時為秒)
+            inputs.isActive                            // isActive
+          ]
         ],
       });
       
