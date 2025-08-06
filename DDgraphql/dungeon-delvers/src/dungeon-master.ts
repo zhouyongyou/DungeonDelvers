@@ -1,6 +1,6 @@
 // DDgraphql/dungeondelvers/src/dungeon-master.ts (統一配置系統版)
 import { BigInt, log, Address, ethereum } from "@graphprotocol/graph-ts"
-import { ExpeditionFulfilled, RewardsBanked } from "../generated/DungeonMaster/DungeonMaster"
+import { ExpeditionFulfilled, RewardsBanked, ExpeditionCommitted, ExpeditionRevealed } from "../generated/DungeonMaster/DungeonMaster"
 import { Party, PlayerProfile, Expedition } from "../generated/schema"
 import { calculateLevel } from "./utils"
 import { getOrCreatePlayer } from "./common"
@@ -236,6 +236,30 @@ export function handleRewardsBanked(event: RewardsBanked): void {
   } else {
     log.warning("RewardsBanked for a non-existent party: {}", [partyId])
   }
+}
+
+// ===== VRF 相關事件處理器 =====
+// 使用 VRF 後已經沒有 Commit-Reveal 兩步驟
+
+export function handleExpeditionCommitted(event: ExpeditionCommitted): void {
+  // VRF 版本：這個事件在請求 VRF 時觸發
+  // 記錄探險請求，等待 VRF 返回
+  const player = getOrCreatePlayer(event.params.player)
+  
+  log.info("VRF Expedition requested for player: {}, partyId: {}", [
+    event.params.player.toHexString(),
+    event.params.partyId.toString()
+  ])
+}
+
+export function handleExpeditionRevealed(event: ExpeditionRevealed): void {
+  // VRF 版本：VRF 返回後，結果已確定
+  const player = getOrCreatePlayer(event.params.player)
+  
+  log.info("VRF Expedition result for player: {}, success: {}", [
+    event.params.player.toHexString(),
+    event.params.success ? "true" : "false"
+  ])
 }
 
 // ===== 處理合約暫停事件 =====

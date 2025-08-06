@@ -38,8 +38,6 @@ dataSources:
           handler: handleForcedRevealExecuted
         - event: RevealedByProxy(indexed address,indexed address)
           handler: handleRevealedByProxy
-        - event: VRFManagerSet(indexed address)
-          handler: handleVRFManagerSet
       file: ./src/hero.ts
   - kind: ethereum/contract
     name: Relic
@@ -75,8 +73,6 @@ dataSources:
           handler: handleForcedRevealExecuted
         - event: RevealedByProxy(indexed address,indexed address)
           handler: handleRevealedByProxy
-        - event: VRFManagerSet(indexed address)
-          handler: handleVRFManagerSet
       file: ./src/relic.ts
   - kind: ethereum/contract
     name: PartyV3
@@ -179,10 +175,6 @@ dataSources:
           handler: handleExpeditionCommitted
         - event: ExpeditionRevealed(indexed address,uint256,bool)
           handler: handleExpeditionRevealed
-        - event: ForcedRevealExecuted(indexed address,indexed address)
-          handler: handleForcedRevealExecuted
-        - event: RevealedByProxy(indexed address,indexed address)
-          handler: handleRevealedByProxy
       file: ./src/dungeon-master.ts
   - kind: ethereum/contract
     name: PlayerVault
@@ -236,10 +228,10 @@ dataSources:
       eventHandlers:
         - event: UpgradeAttempted(indexed address,indexed address,uint8,uint8,uint256[],uint256[],uint8,uint256,uint8,uint8)
           handler: handleUpgradeAttempted
+        - event: UpgradeRequested(indexed address,uint256[],uint256,uint256)
+          handler: handleUpgradeRequested
         - event: UpgradeCommitted(indexed address,address,uint8,uint256,uint256[])
           handler: handleUpgradeCommitted
         - event: UpgradeRevealed(indexed address,uint8,uint8)
           handler: handleUpgradeRevealed
-        - event: ForcedRevealExecuted(indexed address,indexed address,uint8)
-          handler: handleForcedRevealExecuted
       file: ./src/altar-of-ascension.ts
