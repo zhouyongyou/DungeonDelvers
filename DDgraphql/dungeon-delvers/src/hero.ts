@@ -230,3 +230,9 @@ export function handleRevealedByProxy(event: RevealedByProxy): void {
         event.params.proxy.toHexString()
     ])
 }
+
+// VRF Manager Set Event Handler
+export function handleVRFManagerSet(event: VRFManagerSet): void {
+  // 記錄 VRF Manager 設置事件
+  log.info('VRF Manager set for Hero contract: {}', [event.params.vrfManager.toHexString()]);
+}

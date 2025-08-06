@@ -1,5 +1,5 @@
 // V25 Contract Configuration with ABI
-// Generated on 2025-08-06T10:04:10.760Znc-all.js to update
+// Generated on 2025-08-05T18:48:18.175Znc-all.js to update
 
 import HeroArtifact from '../abis/Hero.json';
 import RelicArtifact from '../abis/Relic.json';

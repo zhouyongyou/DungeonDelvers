@@ -8,9 +8,9 @@ dataSources:
     name: Hero
     network: bsc
     source:
-      address: "0xcaF37D9D8356eE18938466F4590A69Bf84C35E15"
+      address: "0x6DEb5Ade2F6BEe8294A4b7f37cE372152109E2db"
       abi: Hero
-      startBlock: 56631513
+      startBlock: 56184733
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -42,16 +42,14 @@ dataSources:
           handler: handlePaused
         - event: Unpaused(address)
           handler: handleUnpaused
-              - event: VRFManagerSet(indexed address)
-          handler: handleVRFManagerSet
       file: ./src/hero.ts
   - kind: ethereum/contract
     name: Relic
     network: bsc
     source:
-      address: "0xfA0F9E7bb19761A731be73FD04d6FF38ebF0555A"
+      address: "0xcfB83d8545D68b796a236290b3C1bc7e4A140B11"
       abi: Relic
-      startBlock: 56631513
+      startBlock: 56184733
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -83,16 +81,14 @@ dataSources:
           handler: handlePaused
         - event: Unpaused(address)
           handler: handleUnpaused
-              - event: VRFManagerSet(indexed address)
-          handler: handleVRFManagerSet
       file: ./src/relic.ts
   - kind: ethereum/contract
     name: PartyV3
     network: bsc
     source:
-      address: "0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3"
+      address: "0x18bF1eE489CD0D8bfb006b4110bfe0Bb7459bE69"
       abi: PartyV3
-      startBlock: 56631513
+      startBlock: 56184733
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -121,7 +117,7 @@ dataSources:
     source:
       address: "0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C"
       abi: VIPStaking
-      startBlock: 56631513
+      startBlock: 56184733
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -148,7 +144,7 @@ dataSources:
     source:
       address: "0x0f5932e89908400a5AfDC306899A2987b67a3155"
       abi: PlayerProfile
-      startBlock: 56631513
+      startBlock: 56184733
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -171,9 +167,9 @@ dataSources:
     name: DungeonMaster
     network: bsc
     source:
-      address: "0x8DcE0E0b3063e84f85A419833e72D044d9Cdc816"
+      address: "0xd06470d4C6F62F6747cf02bD2b2De0981489034F"
       abi: DungeonMaster
-      startBlock: 56631513
+      startBlock: 56184733
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -189,12 +185,6 @@ dataSources:
           handler: handleExpeditionFulfilled
         - event: RewardsBanked(indexed address,indexed uint256,uint256)
           handler: handleRewardsBanked
-              - event: VRFManagerSet(indexed address)
-          handler: handleVRFManagerSet
-        - event: ExpeditionCommitted(indexed address,uint256,uint256,uint256)
-          handler: handleExpeditionCommitted
-        - event: ExpeditionRevealed(indexed address,uint256,bool)
-          handler: handleExpeditionRevealed
       file: ./src/dungeon-master.ts
   - kind: ethereum/contract
     name: PlayerVault
@@ -202,7 +192,7 @@ dataSources:
     source:
       address: "0x62Bce9aF5E2C47b13f62A2e0fCB1f9C7AfaF8787"
       abi: PlayerVault
-      startBlock: 56631513
+      startBlock: 56184733
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -233,9 +223,9 @@ dataSources:
     name: AltarOfAscension
     network: bsc
     source:
-      address: "0x21EB6D4EE01aA881539d6aeA275618EDAE9cB3E1"
+      address: "0x62Bce9aF5E2C47b13f62A2e0fCB1f9C7AfaF8787"
       abi: AltarOfAscensionV2Fixed
-      startBlock: 56631513
+      startBlock: 56184733
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -248,12 +238,4 @@ dataSources:
       eventHandlers:
         - event: UpgradeAttempted(indexed address,indexed address,uint8,uint8,uint256[],uint256[],uint8,uint256,uint8,uint8)
           handler: handleUpgradeAttempted
-              - event: VRFManagerSet(indexed address)
-          handler: handleVRFManagerSet
-        - event: UpgradeRequested(indexed address,uint256[],uint256,uint256)
-          handler: handleUpgradeRequested
-        - event: UpgradeCommitted(indexed address,address,uint8,uint256,uint256[])
-          handler: handleUpgradeCommitted
-        - event: UpgradeRevealed(indexed address,uint8,uint8)
-          handler: handleUpgradeRevealed
       file: ./src/altar-of-ascension-v2.ts

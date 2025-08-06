@@ -1,6 +1,6 @@
 {
   "version": "V25",
-  "lastUpdated": "2025-08-05T18:12:29.542Z",
+  "lastUpdated": "2025-08-05T18:48:17.470Z",
   "network": "BSC Mainnet",
   "contracts": {
     "SOULSHARD": "0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF",
@@ -20,8 +20,8 @@
   },
   "subgraph": {
     "studio": {
-      "version": "v3.6.1",
-      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.6.1"
+      "version": "v3.6.5",
+      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.6.5"
     },
     "decentralized": {
       "url": "https://gateway-arbitrum.network.thegraph.com/api/[api-key]/subgraphs/id/..."
@@ -29,7 +29,7 @@
   },
   "services": {
     "subgraph": {
-      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.6.1",
+      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.6.5",
       "id": "dungeon-delvers"
     },
     "metadataServer": {

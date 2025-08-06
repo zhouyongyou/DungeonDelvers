@@ -1,12 +1,12 @@
 /**
  * Subgraph Configuration
- * Generated on 2025-08-06T10:04:10.769Z
+ * Generated on 2025-08-05T18:48:18.184Z
  * DO NOT EDIT MANUALLY - Use sync-system to update
  */
 
 export const config = {
   network: 'bsc',
-  version: 'v3.6.5',
+  version: 'v3.6.1',
   
   contracts: {
     hero: '0x6DEb5Ade2F6BEe8294A4b7f37cE372152109E2db',
@@ -23,7 +23,7 @@ export const config = {
   
   // Subgraph endpoints
   endpoints: {
-    studio: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.6.5',
+    studio: 'https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.6.1',
     decentralized: 'https://gateway-arbitrum.network.thegraph.com/api/[api-key]/subgraphs/id/...'
   },
   
