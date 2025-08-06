@@ -55,7 +55,7 @@
     },
     {
       "inputs": [],
-      "name": "getVrfRequestPrice",
+      "name": "vrfRequestPrice",
       "outputs": [
         {
           "internalType": "uint256",

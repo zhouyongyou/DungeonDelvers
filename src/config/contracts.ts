@@ -90,7 +90,7 @@ export const LEGACY_CONTRACT_NAMES = {
 // VRF Configuration
 export const VRF_CONFIG = {
   enabled: true,
-  requestPrice: '0.0005', // BNB - 合理的 VRF 費用
+  requestPrice: '0.0001', // BNB - 與合約實際費用一致
   platformFee: '0', // BNB per NFT - 已設為 0
 };
 
