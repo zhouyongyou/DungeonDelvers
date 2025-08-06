@@ -41,3 +41,8 @@ export const config = {
 export const contracts = config.contracts;
 export const startBlock = config.startBlock;
 export const network = config.network;
+
+// Helper function to create entity IDs
+export function createEntityId(contractAddress: string, tokenId: string): string {
+  return contractAddress + '-' + tokenId;
+}

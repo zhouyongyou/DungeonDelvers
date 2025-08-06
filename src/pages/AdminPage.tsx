@@ -9,7 +9,7 @@ import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatEther, isAddress } from 'viem';
 import { getContractWithABI, CONTRACTS_WITH_ABI as contractConfigs } from '../config/contractsWithABI';
-import { getContract, CONTRACT_ADDRESSES } from '../config/contracts'; // 保留原有函數供地址查詢使用
+import { CONTRACT_ADDRESSES } from '../config/contracts'; // 保留原有函數供地址查詢使用
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -337,7 +337,7 @@ const AdminPageContent: React.FC<{ chainId: SupportedChainId }> = memo(({ chainI
           return { name, address: undefined };
       }
       
-      const contractAddress = getContract(addressKey);
+      const contractAddress = CONTRACT_ADDRESSES[addressKey as keyof typeof CONTRACT_ADDRESSES];
       
       return { 
         name, 

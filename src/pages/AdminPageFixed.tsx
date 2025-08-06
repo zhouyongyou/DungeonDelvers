@@ -1,7 +1,8 @@
 import React from 'react';
 import { AdminPage } from './AdminPage';
 import { useAccount, useReadContract } from 'wagmi';
-import { getContract } from '../config/contracts';
+import { CONTRACT_ADDRESSES } from '../config/contracts';
+import { getContractWithABI } from '../config/contractsWithABI';
 import { getContractAddress } from '../config/configLoader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -10,7 +11,7 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 export const AdminPageFixed: React.FC = () => {
   const { address } = useAccount();
   const dungeonMasterAddress = getContractAddress('DUNGEONMASTER');
-  const dungeonMasterContract = getContract('DUNGEONMASTER');
+  const dungeonMasterContract = getContractWithABI(56, 'DUNGEONMASTER');
 
   // 檢查是否為管理員
   const { data: owner, isLoading } = useReadContract({

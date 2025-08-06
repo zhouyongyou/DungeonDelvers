@@ -28,6 +28,9 @@ export const CONTRACTS = {
   VIPStaking: '0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C',
 } as const;
 
+// Export alias for backward compatibility
+export const CONTRACT_ADDRESSES = CONTRACTS;
+
 // VRF Configuration
 export const VRF_CONFIG = {
   enabled: true,

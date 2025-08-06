@@ -179,8 +179,6 @@ dataSources:
           handler: handleExpeditionCommitted
         - event: ExpeditionRevealed(indexed address,uint256,bool)
           handler: handleExpeditionRevealed
-        - event: VRFManagerSet(indexed address)
-          handler: handleVRFManagerSet
         - event: ForcedRevealExecuted(indexed address,indexed address)
           handler: handleForcedRevealExecuted
         - event: RevealedByProxy(indexed address,indexed address)
@@ -242,10 +240,6 @@ dataSources:
           handler: handleUpgradeCommitted
         - event: UpgradeRevealed(indexed address,uint8,uint8)
           handler: handleUpgradeRevealed
-        - event: VRFManagerSet(indexed address)
-          handler: handleVRFManagerSet
-        - event: UpgradeRequested(indexed address,uint256[],uint256,uint256)
-          handler: handleUpgradeRequested
         - event: ForcedRevealExecuted(indexed address,indexed address,uint8)
           handler: handleForcedRevealExecuted
       file: ./src/altar-of-ascension.ts
