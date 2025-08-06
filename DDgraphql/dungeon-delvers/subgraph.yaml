@@ -1,5 +1,5 @@
-# Generated from v25-config.js on 2025-08-05T17:45:54.348Z
-# V25 Production Deployment
+# Generated from V25 VRF update on 2025-08-06T10:12:14.535Z
+# V25 Production Deployment - VRF Enabled
 specVersion: 0.0.4
 schema:
   file: ./schema.graphql
@@ -38,11 +38,7 @@ dataSources:
           handler: handleForcedRevealExecuted
         - event: RevealedByProxy(indexed address,indexed address)
           handler: handleRevealedByProxy
-        - event: Paused(address)
-          handler: handlePaused
-        - event: Unpaused(address)
-          handler: handleUnpaused
-              - event: VRFManagerSet(indexed address)
+        - event: VRFManagerSet(indexed address)
           handler: handleVRFManagerSet
       file: ./src/hero.ts
   - kind: ethereum/contract
@@ -79,11 +75,7 @@ dataSources:
           handler: handleForcedRevealExecuted
         - event: RevealedByProxy(indexed address,indexed address)
           handler: handleRevealedByProxy
-        - event: Paused(address)
-          handler: handlePaused
-        - event: Unpaused(address)
-          handler: handleUnpaused
-              - event: VRFManagerSet(indexed address)
+        - event: VRFManagerSet(indexed address)
           handler: handleVRFManagerSet
       file: ./src/relic.ts
   - kind: ethereum/contract
@@ -110,10 +102,6 @@ dataSources:
           handler: handlePartyCreated
         - event: PartyMemberChanged(indexed uint256,uint256[],uint256[])
           handler: handlePartyMemberChanged
-        - event: Paused(address)
-          handler: handlePaused
-        - event: Unpaused(address)
-          handler: handleUnpaused
       file: ./src/party.ts
   - kind: ethereum/contract
     name: VIPStaking
@@ -187,14 +175,16 @@ dataSources:
       eventHandlers:
         - event: ExpeditionFulfilled(indexed address,indexed uint256,bool,uint256,uint256)
           handler: handleExpeditionFulfilled
-        - event: RewardsBanked(indexed address,indexed uint256,uint256)
-          handler: handleRewardsBanked
-              - event: VRFManagerSet(indexed address)
-          handler: handleVRFManagerSet
         - event: ExpeditionCommitted(indexed address,uint256,uint256,uint256)
           handler: handleExpeditionCommitted
         - event: ExpeditionRevealed(indexed address,uint256,bool)
           handler: handleExpeditionRevealed
+        - event: VRFManagerSet(indexed address)
+          handler: handleVRFManagerSet
+        - event: ForcedRevealExecuted(indexed address,indexed address)
+          handler: handleForcedRevealExecuted
+        - event: RevealedByProxy(indexed address,indexed address)
+          handler: handleRevealedByProxy
       file: ./src/dungeon-master.ts
   - kind: ethereum/contract
     name: PlayerVault
@@ -234,7 +224,7 @@ dataSources:
     network: bsc
     source:
       address: "0x21EB6D4EE01aA881539d6aeA275618EDAE9cB3E1"
-      abi: AltarOfAscensionV2Fixed
+      abi: AltarOfAscensionVRF
       startBlock: 56631513
     mapping:
       kind: ethereum/events
@@ -243,17 +233,19 @@ dataSources:
       entities:
         - UpgradeAttempt
       abis:
-        - name: AltarOfAscensionV2Fixed
-          file: ./abis/AltarOfAscensionV2Fixed.json
+        - name: AltarOfAscensionVRF
+          file: ./abis/AltarOfAscensionVRF.json
       eventHandlers:
         - event: UpgradeAttempted(indexed address,indexed address,uint8,uint8,uint256[],uint256[],uint8,uint256,uint8,uint8)
           handler: handleUpgradeAttempted
-              - event: VRFManagerSet(indexed address)
-          handler: handleVRFManagerSet
-        - event: UpgradeRequested(indexed address,uint256[],uint256,uint256)
-          handler: handleUpgradeRequested
         - event: UpgradeCommitted(indexed address,address,uint8,uint256,uint256[])
           handler: handleUpgradeCommitted
         - event: UpgradeRevealed(indexed address,uint8,uint8)
           handler: handleUpgradeRevealed
-      file: ./src/altar-of-ascension-v2.ts
+        - event: VRFManagerSet(indexed address)
+          handler: handleVRFManagerSet
+        - event: UpgradeRequested(indexed address,uint256[],uint256,uint256)
+          handler: handleUpgradeRequested
+        - event: ForcedRevealExecuted(indexed address,indexed address,uint8)
+          handler: handleForcedRevealExecuted
+      file: ./src/altar-of-ascension.ts
