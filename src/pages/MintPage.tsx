@@ -21,7 +21,6 @@ import { PRICE_OVERRIDE, logPriceOverride } from '../config/priceOverride';
 import { invalidationStrategies } from '../config/queryConfig';
 import { MintPagePreview } from '../components/mint/MintPagePreview';
 import { FeaturedNftsGallery } from '../components/mint/FeaturedNftsGallery';
-import { PendingReveals } from '../components/nft/PendingReveals';
 
 // =================================================================
 // Section: 工具函數
@@ -919,9 +918,6 @@ const MintPage: React.FC = memo(() => {
         <section>
             <h2 className="page-title">鑄造工坊</h2>
             
-            {/* Pending Reveals Section */}
-            <PendingReveals className="mb-6" defaultExpanded={false} />
-            
             {chainId === bsc.id ? <MintingInterface chainId={chainId} /> : <div className="card-bg p-10 rounded-xl text-center text-gray-400"><p>請先連接到支援的網路 (BSC 主網) 以使用鑄造功能。</p></div>}
             
             {/* 收益最大化建議 */}
@@ -941,16 +937,16 @@ const MintPage: React.FC = memo(() => {
                 </div>
             </div>
             
-            {/* Commit-Reveal 機制說明 */}
+            {/* VRF 隨機性機制說明 */}
             <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/30 rounded-lg p-4 sm:p-5 md:p-6 mb-6 sm:mb-8 max-w-4xl mx-auto">
                 <div>
                     <div className="bg-purple-900/20 border border-purple-600/50 rounded-lg p-3 sm:p-4">
-                        <h3 className="text-base sm:text-lg font-bold text-purple-300 mb-3">⚡ Commit-Reveal 防撞庫機制</h3>
+                        <h3 className="text-base sm:text-lg font-bold text-purple-300 mb-3">🎲 Chainlink VRF 可驗證隨機性</h3>
                         <ul className="text-xs sm:text-sm text-gray-300 space-y-2">
-                            <li>• <strong>兩步驟鑄造</strong>：提交承諾後等待 3 個區塊揭示結果</li>
-                            <li>• <strong>區塊鏈隨機性</strong>：使用未來區塊 hash 確保公平性</li>
+                            <li>• <strong>自動揭示</strong>：鑄造後自動完成，無需手動操作</li>
+                            <li>• <strong>可驗證隨機性</strong>：使用 Chainlink VRF 確保絕對公平</li>
                             <li>• <strong>統一機率分布</strong>：所有批量享有相同的稀有度機會</li>
-                            <li>• <strong>防止操縱</strong>：延遲揭示機制有效阻止撞庫行為</li>
+                            <li>• <strong>防止操縱</strong>：鏈上可驗證的隨機數無法預測或操控</li>
                         </ul>
                     </div>
                 </div>
