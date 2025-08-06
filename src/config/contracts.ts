@@ -83,15 +83,40 @@ export const LEGACY_CONTRACT_NAMES = {
   testUsd: 'USD'
 } as const;
 
-// VRF and fee calculation
-export function calculateMintFee(quantity: number, platformFeePerUnit: bigint, vrfFee: bigint) {
-  // Platform fee calculation: platformFee * quantity + VRF fee (fixed)
-  const platformFeeTotal = platformFeePerUnit * BigInt(quantity);
+// VRF Configuration
+export const VRF_CONFIG = {
+  enabled: true,
+  requestPrice: '0.005', // BNB
+  platformFee: '0.0003', // BNB per NFT
+};
+
+// Calculate total mint fee (platform fee * quantity + VRF fee)
+export const calculateMintFee = (
+  quantity: number, 
+  contractPlatformFee?: bigint,
+  contractVrfFee?: bigint
+) => {
+  // 🔧 修復：正確處理 0n 值和 undefined - 使用 !== undefined 而非 truthy 檢查
+  const platformFeePerUnit = contractPlatformFee !== undefined
+    ? Number(contractPlatformFee) / 1e18 
+    : parseFloat(VRF_CONFIG.platformFee);
+  
+  const vrfFee = contractVrfFee !== undefined
+    ? Number(contractVrfFee) / 1e18 
+    : parseFloat(VRF_CONFIG.requestPrice);
+
+  // 正確的費用計算：平台費 * 數量 + VRF 費用（固定）
+  const platformFeeTotal = (platformFeePerUnit * quantity);
   const totalFee = platformFeeTotal + vrfFee;
   
-  return {
-    platform: platformFeeTotal,
-    vrf: vrfFee,
-    total: formatEther(totalFee)
+  // 格式化：去除不必要的後續零
+  const formatBnb = (value: number) => {
+    return parseFloat(value.toFixed(6)).toString();
   };
-}
+  
+  return {
+    platformFee: formatBnb(platformFeeTotal),
+    vrfFee: formatBnb(vrfFee), 
+    total: formatBnb(totalFee)
+  };
+};
