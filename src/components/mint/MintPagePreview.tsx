@@ -190,26 +190,26 @@ export const MintPagePreview: React.FC = () => {
         <div className="space-y-6">
           <div className="text-center">
             <h3 className="text-xl font-semibold text-white mb-2">⚙️ 防撞庫機制</h3>
-            <p className="text-gray-400">採用 Commit-Reveal 兩步驟機制，使用區塊鏈隨機性確保公平</p>
+            <p className="text-gray-400">使用 Chainlink VRF 可驗證隨機性，自動完成鑄造確保公平</p>
           </div>
 
 
           {/* 防撞庫機制詳解 */}
           <div className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 rounded-lg p-6 border border-purple-500/20">
-            <h4 className="text-lg font-semibold text-purple-400 mb-4">⚡ Commit-Reveal 防撞庫機制</h4>
+            <h4 className="text-lg font-semibold text-purple-400 mb-4">🎲 Chainlink VRF 可驗證隨機性</h4>
             <div className="space-y-4 text-gray-300">
               <div>
-                <p className="font-semibold text-purple-300 mb-2">📝 兩步驟鑄造流程</p>
-                <p className="text-sm">先提交承諾（Commit），等待 3 個區塊後揭示結果（Reveal）。這個延遲確保使用的是未來區塊 hash，無法預測。</p>
+                <p className="font-semibold text-purple-300 mb-2">⚡ 自動揭示流程</p>
+                <p className="text-sm">鑄造後自動請求 VRF 隨機數，無需手動操作。Chainlink VRF 提供鏈上可驗證的隨機性。</p>
               </div>
               <div>
-                <p className="font-semibold text-purple-300 mb-2">🎲 真正的區塊鏈隨機性</p>
-                <p className="text-sm">使用未來區塊 hash 作為隨機源，確保結果公平可驗證。每個 NFT 的屬性完全由區塊鏈決定。</p>
+                <p className="font-semibold text-purple-300 mb-2">🎲 可驗證隨機性</p>
+                <p className="text-sm">使用 Chainlink VRF 作為隨機源，確保結果公平可驗證。每個 NFT 的屬性完全由 VRF 隨機數決定。</p>
               </div>
               <div>
                 <p className="font-semibold text-purple-300 mb-2">🛡️ 為什麼我們不會被撞庫？</p>
-                <p className="text-sm mb-2">許多項目雖然使用區塊 hash，但會加入其他可變參數（如時間戳、交易索引等），導致每個區塊的結果都不同，給了撞庫者機會。</p>
-                <p className="text-sm"><strong className="text-green-400">我們的優勢</strong>：只使用純粹的區塊 hash + tokenId，同一區塊內所有同類 NFT 的稀有度分布是固定的。撞庫者無法通過重試來改變結果，徹底杜絕了撞庫行為。</p>
+                <p className="text-sm mb-2">許多項目雖然使用區塊 hash，但會加入其他可變參數，給了撞庫者機會。</p>
+                <p className="text-sm"><strong className="text-green-400">我們的優勢</strong>：使用 Chainlink VRF 提供真正的鏈上隨機性，無法被預測或操控。每個隨機數都有加密證明，徹底杜絕了撞庫行為。</p>
               </div>
               <div>
                 <p className="font-semibold text-purple-300 mb-2">💰 經濟保護機制</p>
