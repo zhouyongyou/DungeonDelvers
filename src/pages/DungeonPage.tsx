@@ -258,7 +258,7 @@ const usePlayerParties = () => {
                 image: '', 
                 description: '',
                 attributes: [],
-                contractAddress: getContractWithABI('PARTY')?.address ?? '0x',
+                contractAddress: getContract('PARTY')?.address ?? '0x',
                 type: 'party',
                 totalPower: BigInt(p.totalPower || p.power || '0'),
                 totalCapacity: BigInt(p.totalCapacity || '0'),
@@ -367,10 +367,10 @@ const PartyStatusCard = memo<PartyStatusCardProps>(({ party, dungeons, onStartEx
     };
     
     const [selectedDungeonId, setSelectedDungeonId] = useState<bigint>(getHighestChallengeableDungeon());
-    const dungeonMasterContract = getContractWithABI('DUNGEONMASTER');
-    const dungeonStorageContract = getContractWithABI('DUNGEONSTORAGE');
-    const dungeonCoreContract = getContractWithABI('DUNGEONCORE');
-    const playerProfileContract = getContractWithABI('PLAYERPROFILE');
+    const dungeonMasterContract = getContract('DUNGEONMASTER');
+    const dungeonStorageContract = getContract('DUNGEONSTORAGE');
+    const dungeonCoreContract = getContract('DUNGEONCORE');
+    const playerProfileContract = getContract('PLAYERPROFILE');
     
     // 🎯 當地城數據加載完成後，更新預設選擇
     React.useEffect(() => {
@@ -713,8 +713,8 @@ const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => 
     // const [currentAction, setCurrentAction] = useState<'expedition' | 'rest'>('expedition'); // 已移除休息功能
 
     // ✅ 將所有Hooks調用移到組件頂部，在任何條件語句之前
-    const dungeonMasterContract = getContractWithABI('DUNGEONMASTER');
-    const dungeonCoreContract = getContractWithABI('DUNGEONCORE');
+    const dungeonMasterContract = getContract('DUNGEONMASTER');
+    const dungeonCoreContract = getContract('DUNGEONCORE');
 
     // 批量讀取地城相關數據 - 避免重複讀取
     const { results: dungeonBatchResults2 } = useContractBatchRead({
@@ -747,7 +747,7 @@ const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => 
     const partiesFromGraph = nftsData?.parties || [];
     
     // 獲取所有隊伍的冷卻時間
-    const dungeonStorageContractForCooldown = getContractWithABI('DUNGEONSTORAGE');
+    const dungeonStorageContractForCooldown = getContract('DUNGEONSTORAGE');
     
     // 使用 useQueries 批量獲取所有隊伍的狀態
     const partyCooldownQueries = useQueries({
@@ -883,7 +883,7 @@ const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => 
     const isTxPending = currentProgress.status !== 'idle' && currentProgress.status !== 'error';
 
     // 獲取地城資訊的邏輯保持不變，因為這是全域數據
-    const dungeonStorageContract = getContractWithABI('DUNGEONSTORAGE');
+    const dungeonStorageContract = getContract('DUNGEONSTORAGE');
     const dungeonContracts = useMemo(() => {
         if (!dungeonStorageContract) {
             logger.warn('[DungeonPage] dungeonStorageContract is null');

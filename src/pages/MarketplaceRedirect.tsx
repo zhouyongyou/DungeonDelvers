@@ -4,14 +4,12 @@ import { useAccount } from 'wagmi';
 import { ActionButton } from '../components/ui/ActionButton';
 import { Icons } from '../components/ui/icons';
 import { CONTRACTS } from '../config/contracts';
-import { bsc } from 'wagmi/chains';
 
 export const MarketplaceRedirect: React.FC = () => {
   const { isConnected } = useAccount();
-  const bscChainId = bsc.id;
-  const heroAddress = CONTRACTS[bscChainId].HERO.toLowerCase();
-  const relicAddress = CONTRACTS[bscChainId].RELIC.toLowerCase();
-  const partyAddress = CONTRACTS[bscChainId].PARTY.toLowerCase();
+  const heroAddress = CONTRACTS.Hero.toLowerCase();
+  const relicAddress = CONTRACTS.Relic.toLowerCase();
+  const partyAddress = CONTRACTS.Party.toLowerCase();
   
   const okxBaseUrl = 'https://web3.okx.com/zh-hant/nft/collection/bsc/';
   

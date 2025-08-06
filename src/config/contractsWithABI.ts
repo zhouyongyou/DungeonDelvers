@@ -35,27 +35,27 @@ export interface ContractWithABI {
 
 export const CONTRACTS_WITH_ABI = {
   56: { // BSC Mainnet
-    // NFT Contracts
+    // NFT Contracts - V25 Updated
     HERO: {
-      address: '0x6DEb5Ade2F6BEe8294A4b7f37cE372152109E2db',
+      address: '0xcaF37D9D8356eE18938466F4590A69Bf84C35E15',
       abi: HeroABI
     },
     RELIC: {
-      address: '0xcfB83d8545D68b796a236290b3C1bc7e4A140B11',
+      address: '0xfA0F9E7bb19761A731be73FD04d6FF38ebF0555A',
       abi: RelicABI
     },
     PARTY: {
-      address: '0x18bF1eE489CD0D8bfb006b4110bfe0Bb7459bE69',
+      address: '0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3',
       abi: PartyABI
     },
     
-    // Core Contracts
+    // Core Contracts - V25 Updated
     DUNGEONCORE: {
-      address: '0x1a959ACcb898AdD61C959f2C93Abe502D0e1D34a',
+      address: '0x8a2D2b1961135127228EdD71Ff98d6B097915a13',
       abi: DungeonCoreABI
     },
     DUNGEONMASTER: {
-      address: '0xd06470d4C6F62F6747cf02bD2b2De0981489034F',
+      address: '0x8DcE0E0b3063e84f85A419833e72D044d9Cdc816',
       abi: DungeonMasterABI
     },
     PLAYERPROFILE: {
@@ -71,7 +71,7 @@ export const CONTRACTS_WITH_ABI = {
       abi: OracleABI
     },
     ALTAROFASCENSION: {
-      address: '0xE043ef6Ce183C218F8f9d9a144eD4A06cF379686',
+      address: '0x21EB6D4EE01aA881539d6aeA275618EDAE9cB3E1',
       abi: AltarOfAscensionABI
     },
     PLAYERVAULT: {
@@ -79,8 +79,14 @@ export const CONTRACTS_WITH_ABI = {
       abi: PlayerVaultABI
     },
     DUNGEONSTORAGE: {
-      address: '0x1Fd33E7883FdAC36a49f497440a4E2e95C6fcC77',
+      address: '0x539AC926C6daE898f2C843aF8C59Ff92B4b3B468',
       abi: DungeonStorageABI
+    },
+    
+    // VRF System - V25 New
+    VRFMANAGER: {
+      address: '0xD062785C376560A392e1a5F1b25ffb35dB5b67bD',
+      abi: [] // VRF Manager ABI (待添加)
     },
     
     // Token Contracts

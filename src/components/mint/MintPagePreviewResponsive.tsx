@@ -168,7 +168,7 @@ const MintPreviewCard: React.FC<MintPreviewCardProps> = ({ type, recentItems }) 
         </div>
         
         <p className="text-xs text-yellow-400 text-center mt-2 md:mt-3">
-          💡 Commit-Reveal 機制，統一機率分布
+          💡 Chainlink VRF 亂數系統，統一機率分布
         </p>
       </div>
 
@@ -303,19 +303,19 @@ export const MintPagePreview: React.FC = () => {
 const MechanicsTab: React.FC = () => (
   <div className={rc.spacing}>
     <div className="text-center">
-      <h3 className={`font-semibold text-white mb-2 ${rc.cardTitle}`}>⚙️ Commit-Reveal 機制</h3>
-      <p className={`text-gray-400 ${rc.cardText}`}>統一機率，延遲揭示</p>
+      <h3 className={`font-semibold text-white mb-2 ${rc.cardTitle}`}>⚙️ Chainlink VRF 機制</h3>
+      <p className={`text-gray-400 ${rc.cardText}`}>統一機率，公平亂數</p>
     </div>
 
     {/* 機制說明 - 手機版簡化 */}
     <div className={`bg-gradient-to-r from-yellow-900/30 to-orange-900/30 rounded-lg border border-yellow-500/20 ${rc.padding}`}>
-      <h4 className={`font-semibold text-yellow-400 mb-3 ${rc.cardText}`}>🎯 Commit-Reveal 防撞庫機制</h4>
+      <h4 className={`font-semibold text-yellow-400 mb-3 ${rc.cardText}`}>🎯 Chainlink VRF 亂數機制</h4>
       <div className="space-y-2">
         <p className={`text-gray-300 ${rc.cardText}`}>
-          • <strong>延遲揭示</strong>：鑄造後需等待 3 個區塊才能揭示，使用未來區塊哈希作為隨機來源
+          • <strong>可驗證亂數</strong>：使用 Chainlink VRF 提供的連鏈上可驗證的亂數來源
         </p>
         <p className={`text-gray-300 ${rc.cardText}`}>
-          • <strong>防止操縱</strong>：科學家無法預測未來區塊哈希，無法通過 MEV 或其他手段操縱結果
+          • <strong>防止操縱</strong>：亂數由 Chainlink 網路產生，無法被知東者或抽現者操縱
         </p>
         <p className={`text-gray-300 ${rc.cardText}`}>
           • <strong>公平透明</strong>：所有數量享受相同機率，結果完全隨機且可驗證

@@ -198,12 +198,12 @@ export const invalidationStrategies = {
     queryClient.invalidateQueries({ queryKey: queryKeys.playerData(address) });
   },
   
-  // 當 Reveal 操作完成時（Commit-Reveal 機制）
+  // 當 VRF Reveal 操作完成時（Chainlink VRF 機制）
   onRevealCompleted: (queryClient: any, address: string, chainId?: number) => {
     // 立即失效所有 NFT 相關快取
     queryClient.invalidateQueries({ queryKey: ['enhanced-nfts', address, chainId] });
     queryClient.invalidateQueries({ queryKey: queryKeys.ownedNfts(address, chainId) });
-    queryClient.invalidateQueries({ queryKey: ['commitReveal'] });
+    queryClient.invalidateQueries({ queryKey: ['vrfReveals'] });
     queryClient.invalidateQueries({ queryKey: ['pendingReveals'] });
     // 也更新 GraphQL 快取
     queryClient.invalidateQueries({ 

@@ -5,7 +5,7 @@ import { useWriteContract } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import type { Abi } from 'viem';
 import { useQueryClient } from '@tanstack/react-query';
-import { getContract } from '../../config/contracts';
+import { getContractWithABI } from '../../config/contractsWithABI';
 import { useAppToast } from '../../hooks/useAppToast';
 import { ActionButton } from '../ui/ActionButton';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
@@ -14,7 +14,7 @@ import { invalidationStrategies } from '../../config/queryConfig';
 interface SettingRowProps {
   label: string;
   readSource: string;
-  contract: NonNullable<ReturnType<typeof getContract>>;
+  contract: NonNullable<ReturnType<typeof getContractWithABI>>;
   functionName: string;
   currentValue?: unknown;
   isLoading: boolean;

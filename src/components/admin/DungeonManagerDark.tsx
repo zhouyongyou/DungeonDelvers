@@ -5,7 +5,7 @@ import { useWriteContract, useReadContract, useReadContracts } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import type { Abi } from 'viem';
 import { bsc } from 'wagmi/chains';
-import { getContract } from '../../config/contracts';
+// Contract addresses are handled by getContractWithABI
 import { getContractWithABI } from '../../config/contractsWithABI';
 import { useAppToast } from '../../hooks/useAppToast';
 import { ActionButton } from '../ui/ActionButton';

@@ -49,9 +49,11 @@ class SmartEventSystem {
   private eventConfigs: Map<string, EventConfig> = new Map();
   private mode: EventMode = 'unknown';
   private filterIds: Map<string, string> = new Map();
+  private filterCreationTime: Map<string, number> = new Map(); // 追蹤 Filter 創建時間
   private pollingInterval: NodeJS.Timeout | null = null;
   private lastPolledBlock: bigint = 0n;
   private isActive = false;
+  private readonly FILTER_LIFETIME = 8 * 60 * 1000; // 8分鐘，BSC節點通常10-15分鐘清理
   
   constructor() {
     this.initializeClient();
@@ -158,6 +160,7 @@ class SmartEventSystem {
       try {
         await this.client.uninstallFilter({ filter: filterId });
         this.filterIds.delete(eventId);
+        this.filterCreationTime.delete(eventId); // 清理時間記錄
       } catch (error) {
         logger.warn(`清理 Filter ${eventId} 失敗:`, error);
       }
@@ -192,6 +195,7 @@ class SmartEventSystem {
         });
         
         this.filterIds.set(eventId, filter);
+        this.filterCreationTime.set(eventId, Date.now()); // 記錄創建時間
         logger.info(`✅ Filter 已創建: ${eventId}`);
       } catch (error) {
         logger.error(`Filter 創建失敗 ${eventId}:`, error);
@@ -204,7 +208,7 @@ class SmartEventSystem {
       }
     }
     
-    // 開始輪詢 filter 變更（每10秒，避免 RPC 限流）
+    // 開始輪詢 filter 變更（每15秒，進一步減少 RPC 壓力）
     this.pollingInterval = setInterval(() => {
       this.pollFilterChanges().catch(error => {
         logger.error('Filter 輪詢錯誤:', error);
@@ -214,7 +218,7 @@ class SmartEventSystem {
         this.mode = 'polling';
         this.startPollingMode();
       });
-    }, 10000); // 減少輪詢頻率避免 RPC 限流
+    }, 15000); // 增加到15秒，進一步減少 RPC 壓力
   }
   
   /**
@@ -225,6 +229,14 @@ class SmartEventSystem {
       const config = this.eventConfigs.get(eventId);
       if (!config?.enabled) continue;
       
+      // 檢查 Filter 是否接近生命週期結束，主動重建
+      const creationTime = this.filterCreationTime.get(eventId);
+      if (creationTime && Date.now() - creationTime > this.FILTER_LIFETIME) {
+        logger.info(`🔄 Filter ${eventId} 接近生命週期結束，主動重建...`);
+        await this.proactivelyRecreateFilter(eventId, config);
+        continue; // 跳過此次檢查，讓新 Filter 在下次生效
+      }
+      
       try {
         const logs = await this.client.getFilterChanges({ filter: filterId });
         
@@ -234,7 +246,7 @@ class SmartEventSystem {
         }
       } catch (error: any) {
         if (error?.message?.includes('filter not found')) {
-          logger.warn(`Filter ${eventId} 不存在，重新創建...`);
+          logger.info(`Filter ${eventId} 不存在，正在重新創建（這是正常的維護行為）`);
           
           // 重新創建 filter
           try {
@@ -244,8 +256,10 @@ class SmartEventSystem {
               fromBlock: 'latest'
             });
             this.filterIds.set(eventId, newFilter);
+            this.filterCreationTime.set(eventId, Date.now()); // 更新創建時間
+            logger.info(`✅ Filter ${eventId} 重建成功`);
           } catch (recreateError) {
-            logger.error(`重新創建 Filter ${eventId} 失敗:`, recreateError);
+            logger.error(`❌ 重新創建 Filter ${eventId} 失敗:`, recreateError);
             throw recreateError;
           }
         } else if (error?.message?.includes('CONNECTION_CLOSED') || error?.message?.includes('fetch failed') || error?.code === 'NETWORK_ERROR') {
@@ -259,6 +273,38 @@ class SmartEventSystem {
           // 不拋出錯誤，繼續執行其他 filter
         }
       }
+    }
+  }
+  
+  /**
+   * 主動重建 Filter（預期性維護）
+   */
+  private async proactivelyRecreateFilter(eventId: string, config: EventConfig) {
+    try {
+      // 先清理舊的 Filter
+      const oldFilter = this.filterIds.get(eventId);
+      if (oldFilter) {
+        try {
+          await this.client.uninstallFilter({ filter: oldFilter });
+        } catch (_e) {
+          // 忽略清理錯誤，可能已經被節點清理了
+        }
+      }
+      
+      // 創建新的 Filter
+      const newFilter = await this.client.createEventFilter({
+        address: config.address,
+        event: parseEventSignature(config.event),
+        fromBlock: 'latest'
+      });
+      
+      this.filterIds.set(eventId, newFilter);
+      this.filterCreationTime.set(eventId, Date.now());
+      logger.info(`✅ Filter ${eventId} 主動重建成功（預期性維護）`);
+      
+    } catch (error) {
+      logger.warn(`⚠️ Filter ${eventId} 主動重建失敗，將在下次被動觸發時重試:`, error);
+      // 不拋出錯誤，讓系統在下次被動觸發時重試
     }
   }
   
@@ -424,6 +470,7 @@ class SmartEventSystem {
         }
       });
       this.filterIds.clear();
+      this.filterCreationTime.clear(); // 清理時間記錄
     }
     
     logger.info('⏹️ 停止智能事件監聽系統');
@@ -445,6 +492,7 @@ class SmartEventSystem {
     
     // 清理所有 filters
     this.filterIds.clear();
+    this.filterCreationTime.clear(); // 清理時間記錄
     
     // 切換模式並重新啟動
     this.mode = 'polling';

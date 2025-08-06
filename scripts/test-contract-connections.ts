@@ -1,5 +1,5 @@
 // 測試腳本：驗證合約連接狀態
-import { createPublicClient, http, formatEther } from 'viem';
+import { createPublicClient, http } from 'viem';
 import { bsc } from 'viem/chains';
 import HeroABI from '../src/abis/Hero.json';
 import RelicABI from '../src/abis/Relic.json';

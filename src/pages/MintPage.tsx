@@ -247,7 +247,7 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
 const RARITY_LABELS = ['一星 ⭐', '二星 ⭐⭐', '三星 ⭐⭐⭐', '四星 ⭐⭐⭐⭐', '五星 ⭐⭐⭐⭐⭐'];
 const RARITY_COLORS = ['text-gray-400', 'text-green-400', 'text-blue-400', 'text-purple-400', 'text-orange-400'];
 
-// 統一的稀有度機率 (基於 Commit-Reveal 機制的公平分布)
+// 統一的稀有度機率 (基於 Chainlink VRF 的公平亂數)
 const UNIFIED_RARITY_PROBABILITIES = [44, 35, 15, 5, 1]; // 百分比，與 MintPagePreviewResponsive.tsx 一致
 
 // 動態稀有度機率顯示組件 - 簡化版
@@ -282,7 +282,7 @@ const RarityProbabilities = memo<{ quantity: number }>(({ quantity }) => {
             </div>
             <div className="mt-3 p-2 bg-purple-900/20 border border-purple-600/50 rounded text-center">
                 <p className="text-xs text-purple-300">
-                    ⚡ 採用 Commit-Reveal 機制確保公平，所有玩家享有相同機率
+                    ⚡ 採用 Chainlink VRF 亂數系統確保公平，所有玩家享有相同機率
                 </p>
             </div>
         </div>
