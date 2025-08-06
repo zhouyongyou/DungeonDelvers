@@ -80,31 +80,31 @@ export const ENV = {
   // =================================================================
   CONTRACTS: {
     MAINNET: {
-      // 核心合約
+      // 核心合約 (V25/V26 - 最新版本)
       ORACLE: import.meta.env.VITE_MAINNET_ORACLE_ADDRESS || 
-              '0xb9317179466fd7fb253669538dE1c4635E81eAc4',
+              '0xf8CE896aF39f95a9d5Dd688c35d381062263E25a',
       DUNGEON_STORAGE: import.meta.env.VITE_MAINNET_DUNGEONSTORAGE_ADDRESS || 
-                       '0x2fcd1bbbB88cce8040A2DE92E97d5375d8B088da',
+                       '0x539AC926C6daE898f2C843aF8C59Ff92B4b3B468',
       PLAYER_VAULT: import.meta.env.VITE_MAINNET_PLAYERVAULT_ADDRESS || 
-                    '0xE4654796e4c03f88776a666f3A47E16F5d6BE4FA',
+                    '0x62Bce9aF5E2C47b13f62A2e0fCB1f9C7AfaF8787',
       ALTAR_OF_ASCENSION: import.meta.env.VITE_MAINNET_ALTAROFASCENSION_ADDRESS || 
-                          '0xFaEda7886Cc9dF32a96ebc7DaF4DA1a27d3fB3De',
+                          '0x095559778C0BAA2d8FA040Ab0f8752cF07779D33',
       DUNGEON_MASTER: import.meta.env.VITE_MAINNET_DUNGEONMASTER_ADDRESS || 
-                      '0xd13250E0F0766006816d7AfE95EaEEc5e215d082',
+                      '0xE391261741Fad5FCC2D298d00e8c684767021253',
       
-      // NFT 合約
+      // NFT 合約 (V26 - VRF 修復版本)
       HERO: import.meta.env.VITE_MAINNET_HERO_ADDRESS || 
-            '0x141F081922D4015b3157cdA6eE970dff34bb8AAb',
+            '0xD48867dbac5f1c1351421726B6544f847D9486af',
       RELIC: import.meta.env.VITE_MAINNET_RELIC_ADDRESS || 
-             '0xB1eb505426e852B8Dca4BF41454a7A22D2B6F3D3',
+             '0x86f15792Ecfc4b5F2451d841A3fBaBEb651138ce',
       PARTY: import.meta.env.VITE_MAINNET_PARTY_ADDRESS || 
-             '0x096aa1e0F9c87E57e8b69a7DD35D893D13BbA8F5',
+             '0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3',
       VIP_STAKING: import.meta.env.VITE_MAINNET_VIPSTAKING_ADDRESS || 
-                   '0x43f03C89aF6091090bE05C00a65CC4934CF5f90D',
+                   '0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C',
       PLAYER_PROFILE: import.meta.env.VITE_MAINNET_PLAYERPROFILE_ADDRESS || 
-                      '0xc5A972B7186562f768c8aC97D3b4ca15A019657d',
+                      '0x0f5932e89908400a5AfDC306899A2987b67a3155',
       DUNGEON_CORE: import.meta.env.VITE_MAINNET_DUNGEONCORE_ADDRESS || 
-                    '0x4D353aFC420E6187bfA5F99f0DdD8F7F137c20E9',
+                    '0x8a2D2b1961135127228EdD71Ff98d6B097915a13',
       
       // 代幣合約
       SOUL_SHARD_TOKEN: import.meta.env.VITE_MAINNET_SOUL_SHARD_TOKEN_ADDRESS || 

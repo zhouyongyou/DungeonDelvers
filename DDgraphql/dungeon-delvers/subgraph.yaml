@@ -8,7 +8,7 @@ dataSources:
     name: Hero
     network: bsc
     source:
-      address: "0xcaF37D9D8356eE18938466F4590A69Bf84C35E15"
+      address: "0xD48867dbac5f1c1351421726B6544f847D9486af"
       abi: Hero
       startBlock: 56631513
     mapping:
@@ -43,7 +43,7 @@ dataSources:
     name: Relic
     network: bsc
     source:
-      address: "0xfA0F9E7bb19761A731be73FD04d6FF38ebF0555A"
+      address: "0x86f15792Ecfc4b5F2451d841A3fBaBEb651138ce"
       abi: Relic
       startBlock: 56631513
     mapping:
@@ -155,7 +155,7 @@ dataSources:
     name: DungeonMaster
     network: bsc
     source:
-      address: "0x8DcE0E0b3063e84f85A419833e72D044d9Cdc816"
+      address: "0xE391261741Fad5FCC2D298d00e8c684767021253"
       abi: DungeonMaster
       startBlock: 56631513
     mapping:
@@ -213,7 +213,7 @@ dataSources:
     name: AltarOfAscension
     network: bsc
     source:
-      address: "0x21EB6D4EE01aA881539d6aeA275618EDAE9cB3E1"
+      address: "0x095559778C0BAA2d8FA040Ab0f8752cF07779D33"
       abi: AltarOfAscensionVRF
       startBlock: 56631513
     mapping:

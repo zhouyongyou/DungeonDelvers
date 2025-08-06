@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, memo } from 'react';
 import { useAccount, useBalance, usePublicClient, useReadContract } from 'wagmi';
-import { formatEther, maxUint256, decodeEventLog } from 'viem';
+import { formatEther, maxUint256, decodeEventLog, parseEther } from 'viem';
 import type { Abi } from 'viem';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppToast } from '../contexts/SimpleToastContext';
@@ -10,6 +10,7 @@ import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress'
 import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
 import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
 import { getContractWithABI } from '../config/contractsWithABI';
+import { calculateMintFee } from '../config/contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { bsc } from 'wagmi/chains';
@@ -722,7 +723,11 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                     abi: contractConfig.abi as Abi,
                     functionName: paymentSource === 'wallet' ? 'mintFromWallet' : 'mintFromVault',
                     args: [BigInt(quantity)],
-                    value: (typeof platformFee === 'bigint' ? platformFee : 0n) * BigInt(quantity)
+                    value: (() => {
+                        // 計算完整的鑄造費用（平台費用 + VRF 費用）
+                        const mintFee = calculateMintFee(quantity);
+                        return parseEther(mintFee.total);
+                    })()
                 },
                 `從${paymentSource === 'wallet' ? '錢包' : '金庫'}鑄造 ${quantity} 個${title}`
             );
@@ -857,7 +862,10 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                     <p className="font-bold text-yellow-400 text-xl sm:text-2xl">
                         {formatPriceDisplay(requiredAmount)}
                     </p>
-                    <p className="text-xs text-gray-500">$SoulShard + {formatEther(typeof platformFee === 'bigint' ? platformFee * BigInt(quantity) : 0n)} BNB</p>
+                    <p className="text-xs text-gray-500">$SoulShard + {(() => {
+                        const mintFee = calculateMintFee(quantity);
+                        return `${mintFee.total} BNB (${mintFee.platformFee} 平台費 + ${mintFee.vrfFee} VRF費)`;
+                    })()}</p>
                     <p className="text-xs text-gray-400 mt-1">
                         (約 ${(2 * quantity).toFixed(0)} USD，每個 $2 USD)
                     </p>

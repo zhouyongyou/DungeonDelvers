@@ -2,16 +2,16 @@
 // V25 Production Deployment - VRF Enabled
 
 export const CONTRACTS = {
-  // VRF Updated NFT Contracts
-  Hero: '0xcaF37D9D8356eE18938466F4590A69Bf84C35E15',
-  Relic: '0xfA0F9E7bb19761A731be73FD04d6FF38ebF0555A',
+  // V25 Updated NFT Contracts (Latest Deployment)
+  Hero: '0xD48867dbac5f1c1351421726B6544f847D9486af',
+  Relic: '0x86f15792Ecfc4b5F2451d841A3fBaBEb651138ce',
   Party: '0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3',
   
-  // VRF Updated Core Contracts  
+  // V25 Updated Core Contracts (Latest Deployment)
   DungeonCore: '0x8a2D2b1961135127228EdD71Ff98d6B097915a13',
-  DungeonMaster: '0x8DcE0E0b3063e84f85A419833e72D044d9Cdc816',
+  DungeonMaster: '0xE391261741Fad5FCC2D298d00e8c684767021253',
   DungeonStorage: '0x539AC926C6daE898f2C843aF8C59Ff92B4b3B468',
-  AltarOfAscension: '0x21EB6D4EE01aA881539d6aeA275618EDAE9cB3E1',
+  AltarOfAscension: '0x095559778C0BAA2d8FA040Ab0f8752cF07779D33',
   
   // VRF System
   VRFManager: '0xD062785C376560A392e1a5F1b25ffb35dB5b67bD',
