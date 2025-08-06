@@ -1,10 +1,11 @@
-// V25 Contract Configuration - 2025-08-06 PM 5
-// Generated on 2025-08-06T17:54:02.731Z
+// V25 Fixed Contract Configuration - #1002 Error Fixed
+// Generated on 2025-08-06T22:51:13.521Z
 // DO NOT EDIT MANUALLY - Use sync scripts to update
 // 
-// V25 DEPLOYED CONTRACTS (2025-08-06):
-// New deployments with updated DUNGEONMASTER and DUNGEONSTORAGE
-// HERO & RELIC remain from fixed version to maintain stability
+// FIXED CONTRACTS (2025-01-08):
+// - HERO: Fixed VRF fee calculation logic
+// - RELIC: Fixed VRF fee calculation logic  
+// - VRFMANAGER: Added detailed error messages
 
 import { formatEther } from 'viem';
 
@@ -18,8 +19,8 @@ export const CONTRACTS = {
     SOULSHARD: '0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF',
     
     // NFT Contracts
-    HERO: '0x05Cbb0DbdA4B66c4CC6f60CdADFDb4C4995D9BFD',
-    RELIC: '0x9B36DA9584d8170bAA1693F14E898f44eBFc77F4',
+    HERO: '0x5eded2670a6e7eb4a9c581bc397edc3b48cafd6d',
+    RELIC: '0x7a9469587ffd28a69d4420d8893e7a0e92ef6316',
     PARTY: '0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3',
     
     // Game Contracts
@@ -30,7 +31,7 @@ export const CONTRACTS = {
     
     // Feature Contracts
     VIPSTAKING: '0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C',
-    ALTAROFASCENSION: '0x095559778C0BAA2d8FA040Ab0f8752cF07779D33',
+    ALTAROFASCENSION: '0x3de7c97e6b65be8a1d726f5261cda1dd7d1e0cf1',
     
     // VRF Manager (V2.5 Subscription Mode)
     VRFMANAGER: '0xE1D1c53e2e467BFF3d6e4EffB7b89C0C10711ad1',
