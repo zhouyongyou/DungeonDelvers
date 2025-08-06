@@ -249,19 +249,21 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     const finalRequiredAmount = requiredAmount ?? 0n;
     const finalPlatformFee = platformFee ?? 0n;
     
-    // 🔍 調試：記錄費用讀取狀態
+    // 🔍 調試：記錄費用讀取狀態 - 僅開發環境
     useEffect(() => {
-        console.log(`[MintLogic] 費用讀取狀態:`, {
-            type,
-            quantity: quantity,
-            platformFee: platformFee?.toString(),
-            vrfFee: vrfFee?.toString(),
-            vrfError: vrfError?.message,
-            vrfManagerAddress: vrfManagerContract?.address,
-            isLoadingPlatformFee,
-            isLoadingVrfFee
-        });
-    }, [platformFee, vrfFee, vrfError, type, quantity]);
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`[MintLogic] 費用讀取狀態:`, {
+                type,
+                quantity: quantity,
+                platformFee: platformFee?.toString(),
+                vrfFee: vrfFee?.toString(),
+                vrfError: vrfError?.message,
+                vrfManagerAddress: vrfManagerContract?.address,
+                isLoadingPlatformFee,
+                isLoadingVrfFee
+            });
+        }
+    }, [platformFee, vrfFee, type, quantity]); // 減少不必要的依賴
 
     const needsApproval = useMemo(() => {
         if (paymentSource !== 'wallet' || typeof allowance !== 'bigint' || typeof finalRequiredAmount !== 'bigint') return false;
@@ -505,6 +507,32 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
         }
     }, [allowance, requiredAmount]);
     
+    // 🚀 緩存費用計算結果，避免重複計算
+    const cachedMintFee = useMemo(() => {
+        return calculateMintFee(quantity, platformFee, vrfFee);
+    }, [quantity, platformFee, vrfFee]);
+    
+    // 🚀 緩存費用顯示字符串，避免每次渲染重新計算
+    const cachedFeeDisplay = useMemo(() => {
+        const hasContractPlatformFee = platformFee !== undefined && platformFee !== null;
+        const hasContractVrfFee = vrfFee !== undefined && vrfFee !== null;
+        const source = (hasContractPlatformFee && hasContractVrfFee) ? '合約讀取' : '配置備用';
+        
+        // 🐛 調試輸出 - 僅開發環境
+        if (process.env.NODE_ENV === 'development') {
+            console.log('[費用計算調試]', {
+                platformFee: platformFee?.toString(),
+                vrfFee: vrfFee?.toString(),
+                hasContractPlatformFee,
+                hasContractVrfFee,
+                source,
+                mintFeeResult: cachedMintFee
+            });
+        }
+        
+        return `${cachedMintFee.total} BNB (${cachedMintFee.platformFee} 平台費 + ${cachedMintFee.vrfFee} VRF費) [${source}]`;
+    }, [cachedMintFee, platformFee, vrfFee]);
+
     // 計算價格合理性
     const pricePerUnit = useMemo(() => {
         if (!requiredAmount || quantity === 0) return 0;
@@ -800,11 +828,7 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                     abi: contractConfig.abi as Abi,
                     functionName: paymentSource === 'wallet' ? 'mintFromWallet' : 'mintFromVault',
                     args: [BigInt(quantity)],
-                    value: (() => {
-                        // 🔧 使用從合約讀取的實際費用
-                        const mintFee = calculateMintFee(quantity, platformFee, vrfFee);
-                        return parseEther(mintFee.total);
-                    })()
+                    value: parseEther(cachedMintFee.total) // 使用緩存的費用計算
                 },
                 `從${paymentSource === 'wallet' ? '錢包' : '金庫'}鑄造 ${quantity} 個${title}`
             );
@@ -815,9 +839,9 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
     
     const isInsufficientBalance = balance < requiredAmount;
     
-    // 🔍 餘額檢查詳細日誌
+    // 🔍 餘額檢查詳細日誌 - 僅開發環境
     useEffect(() => {
-        if (requiredAmount > 0n && address) {
+        if (process.env.NODE_ENV === 'development' && requiredAmount > 0n && address) {
             const balanceInEther = Number(formatEther(balance));
             const requiredInEther = Number(formatEther(requiredAmount));
             
@@ -967,25 +991,7 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                     <p className="font-bold text-yellow-400 text-xl sm:text-2xl">
                         {formatPriceDisplay(requiredAmount)}
                     </p>
-                    <p className="text-xs text-gray-500">$SoulShard + {(() => {
-                        const mintFee = calculateMintFee(quantity, platformFee, vrfFee);
-                        // 🔧 修復判斷邏輯：檢查是否為 undefined/null，而非 truthy
-                        const hasContractPlatformFee = platformFee !== undefined && platformFee !== null;
-                        const hasContractVrfFee = vrfFee !== undefined && vrfFee !== null;
-                        const source = (hasContractPlatformFee && hasContractVrfFee) ? '合約讀取' : '配置備用';
-                        
-                        // 🐛 調試輸出
-                        console.log('[費用計算調試]', {
-                            platformFee: platformFee?.toString(),
-                            vrfFee: vrfFee?.toString(),
-                            hasContractPlatformFee,
-                            hasContractVrfFee,
-                            source,
-                            mintFeeResult: mintFee
-                        });
-                        
-                        return `${mintFee.total} BNB (${mintFee.platformFee} 平台費 + ${mintFee.vrfFee} VRF費) [${source}]`;
-                    })()}</p>
+                    <p className="text-xs text-gray-500">$SoulShard + {cachedFeeDisplay}</p>
                     <p className="text-xs text-gray-400 mt-1">
                         {mintPriceUSD && mintPriceUSD > 0n ? (
                             `(約 $${(Number(formatEther(mintPriceUSD)) * quantity).toFixed(0)} USD，每個 $${Number(formatEther(mintPriceUSD))} USD)`

@@ -90,8 +90,8 @@ export const LEGACY_CONTRACT_NAMES = {
 // VRF Configuration
 export const VRF_CONFIG = {
   enabled: true,
-  requestPrice: '0.005', // BNB
-  platformFee: '0.0003', // BNB per NFT
+  requestPrice: '0.0005', // BNB - 合理的 VRF 費用
+  platformFee: '0', // BNB per NFT - 已設為 0
 };
 
 // Calculate total mint fee (platform fee * quantity + VRF fee)
