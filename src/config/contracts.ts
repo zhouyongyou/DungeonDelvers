@@ -1,6 +1,10 @@
-// V25 Contract Configuration
-// Generated on 2025-08-06T16:15:09.388Z
-// DO NOT EDIT MANUALLY - Use v25-sync-all.js to update
+// V25 Contract Configuration - 2025-08-06 PM 5
+// Generated on 2025-08-06T17:54:02.731Z
+// DO NOT EDIT MANUALLY - Use sync scripts to update
+// 
+// V25 DEPLOYED CONTRACTS (2025-08-06):
+// New deployments with updated DUNGEONMASTER and DUNGEONSTORAGE
+// HERO & RELIC remain from fixed version to maintain stability
 
 import { formatEther } from 'viem';
 
@@ -14,8 +18,8 @@ export const CONTRACTS = {
     SOULSHARD: '0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF',
     
     // NFT Contracts
-    HERO: '0xD48867dbac5f1c1351421726B6544f847D9486af',
-    RELIC: '0x86f15792Ecfc4b5F2451d841A3fBaBEb651138ce',
+    HERO: '0x575e7407C06ADeb47067AD19663af50DdAe460CF',
+    RELIC: '0x36cC82c8fb1c71c4B37eC5E6454960e09a5DC739',
     PARTY: '0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3',
     
     // Game Contracts
@@ -29,7 +33,7 @@ export const CONTRACTS = {
     ALTAROFASCENSION: '0x095559778C0BAA2d8FA040Ab0f8752cF07779D33',
     
     // VRF Manager
-    VRFMANAGER: '0xFac10cd51981ED3aE85a05c5CFF6ab5b8e145038',
+    VRFMANAGER: '0xD95d0A29055E810e9f8c64073998832d66538176',
     
     // External
     DUNGEONMASTERWALLET: '0x10925A7138649C7E1794CE646182eeb5BF8ba647',
@@ -74,7 +78,7 @@ export const CONTRACT_INFO = {
   version: CONTRACT_VERSION,
   network: "BSC Mainnet",
   deploymentBlock: 56664525,
-  lastUpdated: "2025-08-06T16:17:10.017Z"
+  lastUpdated: "2025-08-06T17:00:00.000Z"
 };
 
 // Legacy contract name mappings for backward compatibility
