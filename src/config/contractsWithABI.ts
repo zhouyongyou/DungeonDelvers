@@ -87,7 +87,7 @@ export const CONTRACTS_WITH_ABI = {
     
     // VRF System - V25 New (VRFManagerV2Plus)
     VRFMANAGER: {
-      address: '0xFac10cd51981ED3aE85a05c5CFF6ab5b8e145038',
+      address: '0xE1D1c53e2e467BFF3d6e4EffB7b89C0C10711ad1',
       abi: VRFManagerABI
     },
     
