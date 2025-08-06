@@ -2,6 +2,8 @@
 // Generated on 2025-08-06T16:15:09.388Z
 // DO NOT EDIT MANUALLY - Use v25-sync-all.js to update
 
+import { formatEther } from 'viem';
+
 export const CONTRACTS = {
   56: { // BSC Mainnet
     // Core Contracts
@@ -82,11 +84,14 @@ export const LEGACY_CONTRACT_NAMES = {
 } as const;
 
 // VRF and fee calculation
-export function calculateMintFee(quantity: number, platformFeePerUnit: bigint): bigint {
+export function calculateMintFee(quantity: number, platformFeePerUnit: bigint, vrfFee: bigint) {
   // Platform fee calculation: platformFee * quantity + VRF fee (fixed)
-  const vrfFee = BigInt('5000000000000000'); // 0.005 BNB in wei
   const platformFeeTotal = platformFeePerUnit * BigInt(quantity);
   const totalFee = platformFeeTotal + vrfFee;
   
-  return totalFee;
+  return {
+    platform: platformFeeTotal,
+    vrf: vrfFee,
+    total: formatEther(totalFee)
+  };
 }
