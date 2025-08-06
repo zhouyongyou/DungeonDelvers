@@ -42,7 +42,6 @@ import { generatePartySVG } from '../utils/svgGenerators';
 import { useNftDisplayPreference } from '../hooks/useNftDisplayPreference';
 import { LazyImage } from '../components/ui/LazyImage';
 import { usePlayerVaultV4 } from '../hooks/usePlayerVaultV4';
-import { UniversalRevealStatus } from '../components/reveal/UniversalRevealStatus';
 
 // RewardClaimButton 已移至統一的 RewardClaimSection 組件
 
@@ -1127,15 +1126,6 @@ const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => 
 
             {/* 已移除儲備購買 Modal */}
             <div>
-                {/* Pending Dungeon Reveals - 摺疊式 */}
-                <UniversalRevealStatus 
-                  revealType="dungeon" 
-                  className="mb-6" 
-                  userAddress={address}
-                  collapsible={true}
-                  defaultExpanded={false}
-                />
-                
                 <PageActionBar
                     title="遠征指揮中心"
                     actions={[

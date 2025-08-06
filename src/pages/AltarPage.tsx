@@ -37,7 +37,6 @@ import { AltarNftAuthManager } from '../components/altar/AltarNftAuthManager';
 import { AltarNftSelector } from '../components/altar/AltarNftSelector';
 import { useVipStatus } from '../hooks/useVipStatus';
 import { AltarPagePreview } from '../components/altar/AltarPagePreview';
-import { UniversalRevealStatus } from '../components/reveal/UniversalRevealStatus';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取 Hooks
@@ -890,15 +889,6 @@ const AltarPage = memo(() => {
             </div>
 
             <div className="relative z-10 container mx-auto px-2 sm:px-4 py-3 sm:py-4 md:py-6 space-y-3 sm:space-y-4 md:space-y-6">
-                {/* Pending Altar Reveals - 摺疊式 */}
-                <UniversalRevealStatus 
-                  revealType="altar" 
-                  className="mb-6" 
-                  userAddress={address}
-                  collapsible={true}
-                  defaultExpanded={false}
-                />
-                
                 {/* 彈窗組件 */}
                 <UpgradeResultModal result={upgradeResult} onClose={() => setUpgradeResult(null)} />
                 <TransactionProgressModal
