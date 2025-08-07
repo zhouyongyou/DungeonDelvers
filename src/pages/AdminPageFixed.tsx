@@ -1,7 +1,7 @@
 import React from 'react';
 import { AdminPage } from './AdminPage';
 import { useAccount, useReadContract } from 'wagmi';
-import { CONTRACT_ADDRESSES } from '../config/contracts';
+import {  CONTRACT_ADDRESSES  } from '../config/env-contracts';
 import { getContractWithABI } from '../config/contractsWithABI';
 import { getContractAddress } from '../config/configLoader';
 import { EmptyState } from '../components/ui/EmptyState';

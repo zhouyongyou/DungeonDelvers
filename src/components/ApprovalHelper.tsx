@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { formatEther, parseEther } from 'viem';
 import { bsc } from 'wagmi/chains';
-import { getContract } from '../config/contracts';
+import {  getContract  } from '../config/env-contracts';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { ActionButton } from './ui/ActionButton';
 import { logger } from '../utils/logger';

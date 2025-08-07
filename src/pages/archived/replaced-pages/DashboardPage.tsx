@@ -5,7 +5,7 @@ import { useAccount, useReadContract, useReadContracts } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatEther } from 'viem';
 import { formatSoul, formatLargeNumber } from '../utils/formatters';
-import { getContract, CONTRACT_ADDRESSES } from '../config/contracts';
+import {  getContract, CONTRACT_ADDRESSES  } from '../config/env-contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import type { Page } from '../types/page';
 import { useAppToast } from '../contexts/SimpleToastContext';

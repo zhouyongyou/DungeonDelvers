@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-08-07T14:15:58.744Z",
+  "timestamp": "2025-08-07T14:17:28.856Z",
   "version": "V25",
   "abi": {
     "synced": 0,
@@ -33,17 +33,12 @@
     ]
   },
   "validation": {
-    "issues": [
-      "缺少必要變數：VITE_HERO_ADDRESS",
-      "缺少必要變數：VITE_RELIC_ADDRESS",
-      "缺少必要變數：VITE_DUNGEONMASTER_ADDRESS",
-      "缺少必要變數：VITE_SUBGRAPH_STUDIO_URL"
-    ],
+    "issues": [],
     "warnings": []
   },
   "summary": {
-    "status": "HAS_ISSUES",
-    "totalIssues": 4,
+    "status": "SUCCESS",
+    "totalIssues": 0,
     "totalWarnings": 0
   }
 }

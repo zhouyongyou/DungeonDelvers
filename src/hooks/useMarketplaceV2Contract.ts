@@ -6,7 +6,7 @@ import { useAccount, useWriteContract, useReadContract, useWaitForTransactionRec
 import { parseUnits } from 'viem';
 import { useAppToast } from '../contexts/SimpleToastContext';
 // ✅ V25 Marketplace V2 restored with deployed contract addresses
-import { HERO, RELIC, PARTY } from '../config/contracts';
+import {  HERO, RELIC, PARTY  } from '../config/env-contracts';
 import { DUNGEONMARKETPLACE_V2, OFFERSYSTEM_V2, SUPPORTED_STABLECOINS } from '../config/marketplace';
 import marketplaceV2Abi from '../abis/DungeonMarketplaceV2.json';
 import offerSystemV2Abi from '../abis/OfferSystemV2.json';

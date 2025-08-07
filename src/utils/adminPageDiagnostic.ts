@@ -6,7 +6,7 @@ import { contractBatchOptimizer } from './contractBatchOptimizer';
 import { createAdminConfigValidator } from './adminConfigValidator';
 import { adminErrorHandler } from './adminErrorHandler';
 import { watchOptimizer } from './watchOptimizer';
-import { getContract } from '../config/contracts';
+import {  getContract  } from '../config/env-contracts';
 import { bsc } from 'wagmi/chains';
 
 // 診斷結果接口

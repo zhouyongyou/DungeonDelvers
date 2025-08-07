@@ -5,7 +5,7 @@ import { useState, useCallback } from 'react';
 import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseEther } from 'viem';
 import { useAppToast } from '../contexts/SimpleToastContext';
-import { DUNGEONMARKETPLACE, OFFERSYSTEM, SOULSHARD } from '../config/contracts';
+import {  DUNGEONMARKETPLACE, OFFERSYSTEM, SOULSHARD  } from '../config/env-contracts';
 import type { HeroNft, RelicNft, PartyNft, NftType } from '../types/nft';
 import { getContractWithABI } from '../config/contractsWithABI';
 

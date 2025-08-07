@@ -75,7 +75,7 @@ function parseEnvFile(filePath) {
   const content = fs.readFileSync(filePath, 'utf8');
   const env = {};
   
-  content.split('\\n').forEach(line => {
+  content.split('\n').forEach(line => {
     line = line.trim();
     if (line && !line.startsWith('#') && line.includes('=')) {
       const [key, ...values] = line.split('=');
@@ -167,7 +167,7 @@ function syncConfigurations(env) {
     // 1. 同步前端環境變數
     fs.writeFileSync(PATHS.frontendEnv, Object.entries(env)
       .map(([key, value]) => `${key}=${value}`)
-      .join('\\n'));
+      .join('\n'));
     results.push('✅ 前端 .env.local');
     
     // 2. 同步後端配置
@@ -191,12 +191,12 @@ function syncConfigurations(env) {
         VIPSTAKING: env.VITE_VIPSTAKING_ADDRESS,
         SOULSHARD: env.VITE_SOULSHARD_ADDRESS,
         USD: env.VITE_USD_ADDRESS,
-        VRFMANAGER: env.VITE_VRFMANAGER_ADDRESS
+        VRFMANAGER: env.VITE_VRF_MANAGER_V2PLUS_ADDRESS
       },
       endpoints: {
-        subgraph: env.VITE_SUBGRAPH_STUDIO_URL,
+        subgraph: env.VITE_SUBGRAPH_URL,
         backend: env.VITE_METADATA_SERVER_URL,
-        rpc: env.VITE_BSC_RPC_URL
+        rpc: env.VITE_RPC_URL
       }
     };
     
@@ -218,7 +218,7 @@ function syncConfigurations(env) {
       // 更新服務端點
       if (publicConfig.services) {
         if (publicConfig.services.subgraph) {
-          publicConfig.services.subgraph.url = env.VITE_SUBGRAPH_STUDIO_URL;
+          publicConfig.services.subgraph.url = env.VITE_SUBGRAPH_URL;
         }
         if (publicConfig.services.metadataServer) {
           publicConfig.services.metadataServer.url = env.VITE_METADATA_SERVER_URL;
@@ -254,7 +254,7 @@ function verifyConsistency(env) {
       'VITE_HERO_ADDRESS',
       'VITE_RELIC_ADDRESS',
       'VITE_DUNGEONMASTER_ADDRESS',
-      'VITE_SUBGRAPH_STUDIO_URL'
+      'VITE_SUBGRAPH_URL'
     ];
     
     requiredVars.forEach(varName => {

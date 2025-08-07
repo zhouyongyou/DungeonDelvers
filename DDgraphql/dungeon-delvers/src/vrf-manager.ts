@@ -5,7 +5,7 @@ import {
   AuthorizationUpdated,
   VRFPriceUpdated,
   PlatformFeeUpdated
-} from "../generated/VRFManagerV2Plus/VRFManagerV2Plus"
+} from "../generated/VRFManagerV2PlusFixed/VRFManagerV2PlusFixed"
 import { VRFRequest, VRFConfig, VRFAuthorization } from "../generated/schema"
 import { BigInt } from "@graphprotocol/graph-ts"
 

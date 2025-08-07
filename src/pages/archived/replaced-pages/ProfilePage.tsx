@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
-import { getContract } from '../config/contracts';
+import {  getContract  } from '../config/env-contracts';
 import { formatSoul, formatLargeNumber } from '../utils/formatters';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { EmptyState } from '../components/ui/EmptyState';

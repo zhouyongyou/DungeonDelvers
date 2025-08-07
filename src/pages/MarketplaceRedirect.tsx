@@ -3,7 +3,7 @@ import React from 'react';
 import { useAccount } from 'wagmi';
 import { ActionButton } from '../components/ui/ActionButton';
 import { Icons } from '../components/ui/icons';
-import { CONTRACTS } from '../config/contracts';
+import {  CONTRACTS  } from '../config/env-contracts';
 
 export const MarketplaceRedirect: React.FC = () => {
   const { isConnected } = useAccount();

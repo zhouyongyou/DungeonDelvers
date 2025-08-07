@@ -147,9 +147,9 @@ dataSources:
         - Player
       abis:
         - name: DungeonMaster
-          file: ./abis/DungeonMaster.json
+          file: ./abis/DungeonMasterV8.json
       eventHandlers:
-        - event: ExpeditionFulfilled(indexed address,indexed uint256,bool,uint256,uint256)
+        - event: ExpeditionFulfilled(indexed address,indexed uint256,uint256,bool,uint256,uint256)
           handler: handleExpeditionFulfilled
       file: ./src/dungeon-master.ts
   - kind: ethereum/contract
@@ -176,12 +176,8 @@ dataSources:
           handler: handleWithdrawn
         - event: CommissionPaid(indexed address,indexed address,uint256)
           handler: handleCommissionPaid
-        - event: VirtualGameSpending(indexed address,indexed address,uint256)
-          handler: handleVirtualGameSpending
-        - event: VirtualCommissionAdded(indexed address,uint256)
-          handler: handleVirtualCommissionAdded
-        - event: VirtualTaxCollected(uint256)
-          handler: handleVirtualTaxCollected
+        - event: GameSpending(indexed address,indexed address,uint256)
+          handler: handleGameSpending
         - event: ReferralSet(indexed address,indexed address)
           handler: handleReferralSet
       file: ./src/player-vault.ts
@@ -190,7 +186,7 @@ dataSources:
     network: bsc
     source:
       address: "0xa86749237d4631ad92ba859d0b0df4770f6147ba"
-      abi: AltarOfAscensionVRF
+      abi: AltarOfAscension
       startBlock: 56757876
     mapping:
       kind: ethereum/events
@@ -199,18 +195,18 @@ dataSources:
       entities:
         - UpgradeAttempt
       abis:
-        - name: AltarOfAscensionVRF
-          file: ./abis/AltarOfAscensionVRF.json
+        - name: AltarOfAscension
+          file: ./abis/AltarOfAscension.json
       eventHandlers:
         - event: UpgradeProcessed(indexed address,indexed address,uint8,uint8)
           handler: handleUpgradeProcessed
       file: ./src/altar-of-ascension.ts
   - kind: ethereum/contract
-    name: VRFManagerV2Plus
+    name: VRFManagerV2PlusFixed
     network: bsc
     source:
       address: "0x980d224ec4d198d94f34a8af76a19c00dabe2436"
-      abi: VRFManagerV2Plus
+      abi: VRFManagerV2PlusFixed
       startBlock: 56757876
     mapping:
       kind: ethereum/events
@@ -219,8 +215,8 @@ dataSources:
       entities:
         - VRFRequest
       abis:
-        - name: VRFManagerV2Plus
-          file: ./abis/VRFManagerV2Plus.json
+        - name: VRFManagerV2PlusFixed
+          file: ./abis/VRFManagerV2PlusFixed.json
       eventHandlers:
         - event: RandomRequested(indexed uint256,indexed address,uint8)
           handler: handleRandomRequested

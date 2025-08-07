@@ -9,7 +9,7 @@ import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatEther, isAddress } from 'viem';
 import { getContractWithABI, CONTRACTS_WITH_ABI as contractConfigs } from '../config/contractsWithABI';
-import { CONTRACT_ADDRESSES } from '../config/contracts'; // 保留原有函數供地址查詢使用
+import {  CONTRACT_ADDRESSES  } from '../config/env-contracts'; // 保留原有函數供地址查詢使用
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';

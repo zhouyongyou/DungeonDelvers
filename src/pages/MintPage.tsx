@@ -10,7 +10,7 @@ import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress'
 import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
 import { useOptimisticUpdate } from '../hooks/useOptimisticUpdate';
 import { getContractWithABI } from '../config/contractsWithABI';
-import { calculateMintFee } from '../config/contracts';
+import {  calculateMintFee  } from '../config/env-contracts';
 import { ActionButton } from '../components/ui/ActionButton';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { bsc } from 'wagmi/chains';

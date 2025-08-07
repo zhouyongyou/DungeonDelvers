@@ -14,7 +14,7 @@ import {
   decodeFunctionResult
 } from 'viem';
 import { useAppToast } from '../contexts/SimpleToastContext';
-import { HERO, RELIC, PARTY } from '../config/contracts';
+import {  HERO, RELIC, PARTY  } from '../config/env-contracts';
 import { DUNGEONMARKETPLACE_V2, SUPPORTED_STABLECOINS } from '../config/marketplace';
 import marketplaceV2Abi from '../abis/DungeonMarketplaceV2.json';
 import type { HeroNft, RelicNft, PartyNft } from '../types/nft';

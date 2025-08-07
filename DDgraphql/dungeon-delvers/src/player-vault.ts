@@ -4,9 +4,7 @@ import {
     Deposited, 
     Withdrawn, 
     CommissionPaid,
-    VirtualGameSpending,
-    VirtualCommissionAdded,
-    VirtualTaxCollected,
+    GameSpending,
     ReferralSet
 } from "../generated/PlayerVault/PlayerVault"
 import { PlayerVault, PlayerProfile, VirtualTaxRecord, TaxStatistics, WithdrawalEvent } from "../generated/schema"
@@ -91,7 +89,7 @@ export function handleCommissionPaid(event: CommissionPaid): void {
     }
 }
 
-export function handleVirtualGameSpending(event: VirtualGameSpending): void {
+export function handleGameSpending(event: GameSpending): void {
     const vault = getOrCreatePlayerVault(event.params.player)
     vault.totalProvisionSpent = vault.totalProvisionSpent.plus(event.params.amount)
     vault.totalVirtualGameSpending = vault.totalVirtualGameSpending.plus(event.params.amount)
@@ -99,7 +97,8 @@ export function handleVirtualGameSpending(event: VirtualGameSpending): void {
     vault.save()
 }
 
-export function handleVirtualCommissionAdded(event: VirtualCommissionAdded): void {
+// Removed: handleVirtualCommissionAdded - no longer exists in V25
+// export function handleVirtualCommissionAdded(event: VirtualCommissionAdded): void {
     const vault = getOrCreatePlayerVault(event.params.referrer)
     vault.pendingRewards = vault.pendingRewards.plus(event.params.amount)
     vault.totalVirtualCommissionEarned = vault.totalVirtualCommissionEarned.plus(event.params.amount)
@@ -118,7 +117,8 @@ export function handleVirtualCommissionAdded(event: VirtualCommissionAdded): voi
     }
 }
 
-export function handleVirtualTaxCollected(event: VirtualTaxCollected): void {
+// Removed: handleVirtualTaxCollected - no longer exists in V25
+// export function handleVirtualTaxCollected(event: VirtualTaxCollected): void {
     // 創建個別稅收記錄
     const recordId = event.transaction.hash.toHex() + "-" + event.logIndex.toString()
     const record = new VirtualTaxRecord(recordId)

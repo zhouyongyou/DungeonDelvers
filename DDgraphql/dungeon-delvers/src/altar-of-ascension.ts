@@ -1,6 +1,6 @@
 // DDgraphql/dungeondelvers/src/altar-of-ascension.ts (V25 Simplified Version)
 import { BigInt } from "@graphprotocol/graph-ts"
-import { UpgradeProcessed } from "../generated/AltarOfAscension/AltarOfAscensionVRF"
+import { UpgradeProcessed } from "../generated/AltarOfAscension/AltarOfAscension"
 import { UpgradeAttempt } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { updateGlobalStats, updatePlayerStats, TOTAL_UPGRADE_ATTEMPTS, SUCCESSFUL_UPGRADES, TOTAL_UPGRADE_ATTEMPTS_PLAYER, SUCCESSFUL_UPGRADES_PLAYER } from "./stats"
