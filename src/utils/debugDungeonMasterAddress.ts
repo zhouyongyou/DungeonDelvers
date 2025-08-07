@@ -4,9 +4,17 @@ import { bsc } from 'viem/chains';
 import { getContractWithABI } from '../config/contractsWithABI';
 import { logger } from './logger';
 
+// 獲取 Alchemy RPC URL
+function getAlchemyUrl(): string {
+  const alchemyKey = import.meta.env.VITE_ALCHEMY_KEY || 
+                    import.meta.env.VITE_ALCHEMY_KEY_PUBLIC ||
+                    'tiPlQVTwx4_2P98Pl7hb-LfzaTyi5HOn';
+  return `https://bnb-mainnet.g.alchemy.com/v2/${alchemyKey}`;
+}
+
 const publicClient = createPublicClient({
   chain: bsc,
-  transport: http()
+  transport: http(getAlchemyUrl())
 });
 
 export const debugDungeonMasterAddress = async () => {

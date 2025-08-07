@@ -1,5 +1,5 @@
 // V25 Contract Configuration with ABI
-// Generated on 2025-08-06T16:15:09.389Znc-all.js to update
+// Updated on 2025-08-07T07:00:00.000Z - 8/7 am 7 deployment
 
 import HeroArtifact from '../abis/Hero.json';
 import RelicArtifact from '../abis/Relic.json';
@@ -37,13 +37,13 @@ export interface ContractWithABI {
 
 export const CONTRACTS_WITH_ABI = {
   56: { // BSC Mainnet
-    // NFT Contracts - V25 Updated (修復正確地址)
+    // NFT Contracts - V25 Updated (8/7 am 7 deployment)
     HERO: {
-      address: '0x05Cbb0DbdA4B66c4CC6f60CdADFDb4C4995D9BFD',
+      address: '0x5eded2670a6e7eb4a9c581bc397edc3b48cafd6d',
       abi: HeroABI
     },
     RELIC: {
-      address: '0x9B36DA9584d8170bAA1693F14E898f44eBFc77F4',
+      address: '0x7a9469587ffd28a69d4420d8893e7a0e92ef6316',
       abi: RelicABI
     },
     PARTY: {
@@ -73,7 +73,7 @@ export const CONTRACTS_WITH_ABI = {
       abi: OracleABI
     },
     ALTAROFASCENSION: {
-      address: '0x095559778C0BAA2d8FA040Ab0f8752cF07779D33',
+      address: '0x3de7c97e6b65be8a1d726f5261cda1dd7d1e0cf1',
       abi: AltarOfAscensionABI
     },
     PLAYERVAULT: {

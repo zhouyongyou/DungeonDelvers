@@ -1,11 +1,11 @@
-// DDgraphql/dungeondelvers/src/altar-of-ascension.ts (VRF Version)
-import { BigInt, log } from "@graphprotocol/graph-ts"
-import { UpgradeAttempted, UpgradeRequested, UpgradeCommitted, UpgradeRevealed } from "../generated/AltarOfAscension/AltarOfAscensionVRF"
+// DDgraphql/dungeondelvers/src/altar-of-ascension.ts (V25 Simplified Version)
+import { BigInt } from "@graphprotocol/graph-ts"
+import { UpgradeProcessed } from "../generated/AltarOfAscension/AltarOfAscensionVRF"
 import { UpgradeAttempt } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { updateGlobalStats, updatePlayerStats, TOTAL_UPGRADE_ATTEMPTS, SUCCESSFUL_UPGRADES, TOTAL_UPGRADE_ATTEMPTS_PLAYER, SUCCESSFUL_UPGRADES_PLAYER } from "./stats"
 
-export function handleUpgradeAttempted(event: UpgradeAttempted): void {
+export function handleUpgradeProcessed(event: UpgradeProcessed): void {
     // 使用 getOrCreatePlayer 確保玩家實體存在
     const player = getOrCreatePlayer(event.params.player)
     
@@ -16,13 +16,23 @@ export function handleUpgradeAttempted(event: UpgradeAttempted): void {
     upgradeAttempt.player = player.id
     upgradeAttempt.type = event.params.tokenContract.toHexString() // 使用合約地址來確定類型
     upgradeAttempt.targetId = event.params.targetRarity.toString() // 使用目標稀有度作為 ID
-    upgradeAttempt.materialIds = event.params.burnedTokenIds.map<string>((id: BigInt) => id.toString()) // 燒毀的 NFT IDs
+    upgradeAttempt.materialIds = [] // V25 簡化版沒有詳細的 token IDs，設為空陣列
     upgradeAttempt.materials = [] // 無法從事件中獲取材料實體，設為空陣列
     upgradeAttempt.isSuccess = event.params.outcome >= 2 // 2 = success, 3 = great success
     if (event.params.outcome >= 2) {
         upgradeAttempt.newRarity = event.params.targetRarity // 成功升級到目標稀有度
     }
     upgradeAttempt.timestamp = event.block.timestamp
+    
+    // V25 簡化版欄位設定
+    upgradeAttempt.baseRarity = 1 // 預設值
+    upgradeAttempt.outcome = event.params.outcome
+    upgradeAttempt.fee = BigInt.zero() // 事件中沒有 fee 資訊
+    upgradeAttempt.burnedTokenIds = [] // V25 沒有詳細的 tokenId 列表
+    upgradeAttempt.mintedTokenIds = [] // V25 沒有詳細的 tokenId 列表
+    upgradeAttempt.vipLevel = 0 // 預設值
+    upgradeAttempt.totalVipBonus = 0 // 預設值
+    
     upgradeAttempt.save()
     
     // 更新統計數據
@@ -34,45 +44,4 @@ export function handleUpgradeAttempted(event: UpgradeAttempted): void {
         updateGlobalStats(SUCCESSFUL_UPGRADES, 1, event.block.timestamp)
         updatePlayerStats(event.params.player, SUCCESSFUL_UPGRADES_PLAYER, 1, event.block.timestamp)
     }
-}
-
-// ===== VRF 事件處理器 =====
-
-export function handleUpgradeRequested(event: UpgradeRequested): void {
-  // VRF 升級請求已發出
-  const player = getOrCreatePlayer(event.params.user)
-  
-  log.info("VRF Upgrade requested - Player: {}, RequestId: {}, TokenIds: [{}]", [
-    event.params.user.toHexString(),
-    event.params.requestId.toString(),
-    event.params.tokenIds.map<string>((id: BigInt) => id.toString()).join(", ")
-  ])
-  
-  // 記錄待處理的升級請求
-  // 可以創建一個 PendingUpgrade 實體來追蹤
-}
-
-export function handleUpgradeCommitted(event: UpgradeCommitted): void {
-  // 舊版 Commit-Reveal 事件，VRF 版本可能不需要
-  // 但為了兼容性保留
-  const player = getOrCreatePlayer(event.params.player)
-  
-  log.info("Upgrade committed - Player: {}, Rarity: {}", [
-    event.params.player.toHexString(),
-    event.params.baseRarity.toString()
-  ])
-}
-
-export function handleUpgradeRevealed(event: UpgradeRevealed): void {
-  // VRF 返回後，升級結果已揭示
-  const player = getOrCreatePlayer(event.params.player)
-  
-  log.info("VRF Upgrade revealed - Player: {}, Outcome: {}, TargetRarity: {}", [
-    event.params.player.toHexString(),
-    event.params.outcome.toString(),
-    event.params.targetRarity.toString()
-  ])
-  
-  // 升級結果已在 UpgradeAttempted 中記錄
-  // 這裡可以更新任何額外的狀態
 }

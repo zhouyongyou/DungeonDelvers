@@ -1,8 +1,9 @@
-// src/wagmi.ts (直接 Alchemy RPC 版本)
+// src/wagmi.ts (簡化私人節點版本 - 移除 thirdweb)
 
 import { createConfig } from 'wagmi';
 import { bsc } from 'wagmi/chains';
-import { createSmartRpcTransport } from './config/smartRpcTransport';
+// 使用簡化的私人節點 RPC，完全移除 thirdweb
+import { createPrivateRpcTransport } from './config/privateRpcTransport';
 
 // 檢查是否為管理員頁面
 const isAdminPage = () => {
@@ -10,11 +11,11 @@ const isAdminPage = () => {
   return window.location.hash.includes('admin');
 };
 
-// 使用直接 RPC 傳輸層
+// 使用簡化的私人節點 RPC 傳輸層
 export const wagmiConfig = createConfig({
   chains: [bsc],
   transports: {
-    [bsc.id]: createSmartRpcTransport(),
+    [bsc.id]: createPrivateRpcTransport(),
   },
   // 全域禁用自動監聽以減少 RPC 請求
   pollingInterval: isAdminPage() ? 0 : 60000, // 管理員頁面完全禁用輪詢

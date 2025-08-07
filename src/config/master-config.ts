@@ -1,16 +1,16 @@
 /**
  * 主配置文件 - 單一真相來源
  * 所有合約地址和配置都從這裡導出
- * 更新時間：2025-08-06 PM 5:00
+ * 更新時間：2025-08-07 AM 7:00
  * 版本：V25 VRF
- * 部署區塊：56688770
+ * 部署區塊：56696666
  */
 
 export const MASTER_CONFIG = {
   version: 'V25',
   network: 'BSC Mainnet',
   chainId: 56,
-  deploymentBlock: 56688770,
+  deploymentBlock: 56696666,
   
   // 核心合約 - 長期使用
   core: {
@@ -21,10 +21,10 @@ export const MASTER_CONFIG = {
     UNISWAP_POOL: '0x1e5Cd5F386Fb6F39cD8788675dd3A5ceB6521C82',
   },
   
-  // NFT 合約 - V25 新部署
+  // NFT 合約 - V25 新部署 (8/7 am 7)
   nft: {
-    HERO: '0x05Cbb0DbdA4B66c4CC6f60CdADFDb4C4995D9BFD',
-    RELIC: '0x9B36DA9584d8170bAA1693F14E898f44eBFc77F4',
+    HERO: '0x5eded2670a6e7eb4a9c581bc397edc3b48cafd6d',
+    RELIC: '0x7a9469587ffd28a69d4420d8893e7a0e92ef6316',
     PARTY: '0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3',
   },
   
@@ -32,7 +32,7 @@ export const MASTER_CONFIG = {
   game: {
     DUNGEONMASTER: '0xE391261741Fad5FCC2D298d00e8c684767021253',
     DUNGEONSTORAGE: '0x539AC926C6daE898f2C843aF8C59Ff92B4b3B468',
-    ALTAROFASCENSION: '0x095559778C0BAA2d8FA040Ab0f8752cF07779D33',
+    ALTAROFASCENSION: '0x3de7c97e6b65be8a1d726f5261cda1dd7d1e0cf1',
   },
   
   // 玩家系統 - 重複使用
