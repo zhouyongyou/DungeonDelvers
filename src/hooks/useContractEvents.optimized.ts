@@ -215,14 +215,14 @@ export const useContractEventsOptimized = () => {
 
     // --- 事件監聽設定 (使用自適應輪詢間隔) ---
     
-    // 🔥 VRF 鑄造階段 1：監聽 MintCommitted（VRF 請求提交）
+    // 🔥 VRF 鑄造階段 1：監聽 MintRequested（VRF 請求提交）
     useWatchContractEvent({ 
         ...heroContract, 
         chainId: bsc.id, 
-        eventName: 'MintCommitted', 
+        eventName: 'MintRequested', 
         pollingInterval: 5000, // VRF 階段需要更頻繁的檢查
         enabled: isEnabled,
-        onLogs: createContractEventHandler(heroContract, 'MintCommitted', address, (log) => { 
+        onLogs: createContractEventHandler(heroContract, 'MintRequested', address, (log) => { 
             const quantity = log.args.quantity?.toString() || '0';
             showToast(`⚡ VRF 請求已提交！正在生成 ${quantity} 個英雄的隨機屬性...`, 'info');
             // 觸發 VRF 等待狀態
@@ -234,14 +234,14 @@ export const useContractEventsOptimized = () => {
         }) 
     });
     
-    // 類似的 Relic MintCommitted 事件
+    // 類似的 Relic MintRequested 事件
     useWatchContractEvent({ 
         ...relicContract, 
         chainId: bsc.id, 
-        eventName: 'MintCommitted', 
+        eventName: 'MintRequested', 
         pollingInterval: 5000,
         enabled: isEnabled,
-        onLogs: createContractEventHandler(relicContract, 'MintCommitted', address, (log) => { 
+        onLogs: createContractEventHandler(relicContract, 'MintRequested', address, (log) => { 
             const quantity = log.args.quantity?.toString() || '0';
             showToast(`⚡ VRF 請求已提交！正在生成 ${quantity} 個聖物的隨機屬性...`, 'info');
             queryClient.setQueryData(['vrfWaiting', 'relic', address], {
@@ -337,14 +337,14 @@ export const useContractEventsOptimized = () => {
         }) 
     });
 
-    // 🔥 VRF 遠征階段 1：監聽 ExpeditionCommitted（VRF 請求）
+    // 🔥 VRF 遠征階段 1：監聽 ExpeditionRequested（VRF 請求）
     useWatchContractEvent({ 
         ...dungeonMasterContract, 
         chainId: bsc.id, 
-        eventName: 'ExpeditionCommitted', 
+        eventName: 'ExpeditionRequested', 
         pollingInterval: 3000,
         enabled: isEnabled,
-        onLogs: createContractEventHandler(dungeonMasterContract, 'ExpeditionCommitted', address, (log) => { 
+        onLogs: createContractEventHandler(dungeonMasterContract, 'ExpeditionRequested', address, (log) => { 
             const partyId = log.args.partyId?.toString() || '?';
             showToast(`⚡ VRF 請求已提交！正在生成隊伍 #${partyId} 的遠征結果...`, 'info');
             queryClient.setQueryData(['vrfWaiting', 'dungeon', address], {
@@ -393,14 +393,14 @@ export const useContractEventsOptimized = () => {
     });
     
     
-    // 🔥 VRF 升星階段 1：監聽 UpgradeCommitted（VRF 請求）
+    // 🔥 VRF 升星階段 1：監聽 UpgradeRequested（VRF 請求）
     useWatchContractEvent({ 
         ...altarOfAscensionContract, 
         chainId: bsc.id, 
-        eventName: 'UpgradeCommitted', 
+        eventName: 'UpgradeRequested', 
         pollingInterval: 3000,
         enabled: isEnabled,
-        onLogs: createContractEventHandler(altarOfAscensionContract, 'UpgradeCommitted', address, (log) => { 
+        onLogs: createContractEventHandler(altarOfAscensionContract, 'UpgradeRequested', address, (log) => { 
             const quantity = log.args.materialIds?.length || 1;
             showToast(`⚡ VRF 請求已提交！正在生成升星結果...`, 'info');
             queryClient.setQueryData(['vrfWaiting', 'altar', address], {
