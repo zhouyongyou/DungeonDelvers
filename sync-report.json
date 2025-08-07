@@ -1,0 +1,49 @@
+{
+  "timestamp": "2025-08-07T14:15:58.744Z",
+  "version": "V25",
+  "abi": {
+    "synced": 0,
+    "failed": 0,
+    "skipped": 13,
+    "details": {
+      "success": [],
+      "failed": [],
+      "skipped": [
+        "Hero (找不到 nft/Hero.sol/Hero.json)",
+        "Relic (找不到 nft/Relic.sol/Relic.json)",
+        "Party (找不到 nft/Party.sol/Party.json)",
+        "PlayerProfile (找不到 nft/PlayerProfile.sol/PlayerProfile.json)",
+        "VIPStaking (找不到 nft/VIPStaking.sol/VIPStaking.json)",
+        "DungeonCore (找不到 core/DungeonCore.sol/DungeonCore.json)",
+        "DungeonMaster (找不到 core/DungeonMaster.sol/DungeonMaster.json)",
+        "DungeonStorage (找不到 core/DungeonStorage.sol/DungeonStorage.json)",
+        "AltarOfAscension (找不到 core/AltarOfAscension.sol/AltarOfAscension.json)",
+        "PlayerVault (找不到 defi/PlayerVault.sol/PlayerVault.json)",
+        "Oracle (找不到 defi/Oracle.sol/Oracle.json)",
+        "SoulShardToken (找不到 defi/SoulShard.sol/SoulShard.json)",
+        "VRFManager (找不到 core/VRFManager.sol/VRFManager.json)"
+      ]
+    }
+  },
+  "config": {
+    "results": [
+      "✅ 前端 .env.local",
+      "✅ 後端 contracts.json",
+      "✅ 公共配置 v25.json"
+    ]
+  },
+  "validation": {
+    "issues": [
+      "缺少必要變數：VITE_HERO_ADDRESS",
+      "缺少必要變數：VITE_RELIC_ADDRESS",
+      "缺少必要變數：VITE_DUNGEONMASTER_ADDRESS",
+      "缺少必要變數：VITE_SUBGRAPH_STUDIO_URL"
+    ],
+    "warnings": []
+  },
+  "summary": {
+    "status": "HAS_ISSUES",
+    "totalIssues": 4,
+    "totalWarnings": 0
+  }
+}
