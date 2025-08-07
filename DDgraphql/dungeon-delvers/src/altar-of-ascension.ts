@@ -1,11 +1,11 @@
 // DDgraphql/dungeondelvers/src/altar-of-ascension.ts (V25 Simplified Version)
 import { BigInt } from "@graphprotocol/graph-ts"
-import { UpgradeProcessed } from "../generated/AltarOfAscension/AltarOfAscension"
+import { UpgradeRevealed } from "../generated/AltarOfAscension/AltarOfAscension"
 import { UpgradeAttempt } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { updateGlobalStats, updatePlayerStats, TOTAL_UPGRADE_ATTEMPTS, SUCCESSFUL_UPGRADES, TOTAL_UPGRADE_ATTEMPTS_PLAYER, SUCCESSFUL_UPGRADES_PLAYER } from "./stats"
 
-export function handleUpgradeProcessed(event: UpgradeProcessed): void {
+export function handleUpgradeRevealed(event: UpgradeRevealed): void {
     // 使用 getOrCreatePlayer 確保玩家實體存在
     const player = getOrCreatePlayer(event.params.player)
     
@@ -14,7 +14,7 @@ export function handleUpgradeProcessed(event: UpgradeProcessed): void {
     
     const upgradeAttempt = new UpgradeAttempt(attemptId)
     upgradeAttempt.player = player.id
-    upgradeAttempt.type = event.params.tokenContract.toHexString() // 使用合約地址來確定類型
+    upgradeAttempt.type = "ALTAR" // 固定類型，因為來自 AltarOfAscension 合約
     upgradeAttempt.targetId = event.params.targetRarity.toString() // 使用目標稀有度作為 ID
     upgradeAttempt.materialIds = [] // V25 簡化版沒有詳細的 token IDs，設為空陣列
     upgradeAttempt.materials = [] // 無法從事件中獲取材料實體，設為空陣列

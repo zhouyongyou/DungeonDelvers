@@ -25,13 +25,12 @@ function getDungeonName(dungeonId: BigInt): string {
   return id < dungeonNames.length ? dungeonNames[id] : "未知地下城"
 }
 
-// V25 ExpeditionFulfilled 事件處理器
-// 事件參數：requester, partyId, dungeonId, success, reward, expGained
+// V25 ExpeditionFulfilled 事件處理器  
+// ABI 事件參數：player, partyId, success, reward, expGained (dungeonId已移除)
 export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
   log.info("=== ExpeditionFulfilled Event ===", [])
-  log.info("Requester: {}", [event.params.requester.toHexString()])
+  log.info("Player: {}", [event.params.player.toHexString()])
   log.info("Party ID: {}", [event.params.partyId.toString()])
-  log.info("Dungeon ID: {}", [event.params.dungeonId.toString()])
   log.info("Success: {}", [event.params.success ? "true" : "false"])
   log.info("Reward: {}", [event.params.reward.toString()])
   log.info("Exp Gained: {}", [event.params.expGained.toString()])
@@ -40,10 +39,10 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
   const expeditionId = event.transaction.hash.toHexString() + "-" + event.logIndex.toString()
   
   const expedition = new Expedition(expeditionId)
-  expedition.player = getOrCreatePlayer(event.params.requester).id
-  expedition.party = event.params.partyId.toString()  // 簡單使用 partyId 作為 string
-  expedition.dungeonId = event.params.dungeonId
-  expedition.dungeonName = getDungeonName(event.params.dungeonId)
+  expedition.player = getOrCreatePlayer(event.params.player).id
+  expedition.party = event.params.partyId.toString()
+  expedition.dungeonId = BigInt.fromI32(0)  // V25 版本不再從事件中獲取dungeonId
+  expedition.dungeonName = "未知地下城"  // V25 版本簡化，不再區分地下城
   expedition.dungeonPowerRequired = BigInt.fromI32(0)  // 暫時使用默認值
   expedition.partyPower = BigInt.fromI32(0)  // 暫時使用默認值
   expedition.success = event.params.success
@@ -63,7 +62,7 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
   }
 
   // 更新玩家統計
-  const playerAddress = event.params.requester
+  const playerAddress = event.params.player
   getOrCreatePlayer(playerAddress)
   updatePlayerStats(playerAddress, TOTAL_EXPEDITIONS, 1, event.block.timestamp)
   
@@ -76,15 +75,15 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
 }
 
 // V25 RewardsBanked 事件處理器
-// 事件參數：player, partyId, amount
+// 事件參數：user, partyId, amount
 export function handleRewardsBanked(event: RewardsBanked): void {
   log.info("=== RewardsBanked Event ===", [])
-  log.info("Player: {}", [event.params.player.toHexString()])
+  log.info("User: {}", [event.params.user.toHexString()])
   log.info("Party ID: {}", [event.params.partyId.toString()])
   log.info("Amount: {}", [event.params.amount.toString()])
 
   // 更新玩家統計
-  const playerAddress = event.params.player
+  const playerAddress = event.params.user
   getOrCreatePlayer(playerAddress)
   updatePlayerStatsBigInt(playerAddress, "totalRewardsClaimed", event.params.amount, event.block.timestamp)
 

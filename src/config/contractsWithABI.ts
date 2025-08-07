@@ -8,6 +8,11 @@ import DungeonMasterArtifact from '../contracts/abi/DungeonMaster.json';
 import DungeonStorageArtifact from '../contracts/abi/DungeonStorage.json';
 import AltarOfAscensionVRFArtifact from '../contracts/abi/AltarOfAscensionVRF.json';
 import VRFConsumerV2PlusArtifact from '../contracts/abi/VRFConsumerV2Plus.json';
+import VIPStakingArtifact from '../contracts/abi/VIPStaking.json';
+import PlayerProfileArtifact from '../contracts/abi/PlayerProfile.json';
+import PlayerVaultArtifact from '../contracts/abi/PlayerVault.json';
+import DungeonCoreArtifact from '../contracts/abi/DungeonCore.json';
+import OracleArtifact from '../contracts/abi/Oracle.json';
 
 // Extract ABI from artifacts (V25 核心合約)
 const HeroABI = HeroArtifact.abi || HeroArtifact;
@@ -17,6 +22,11 @@ const DungeonMasterABI = DungeonMasterArtifact.abi || DungeonMasterArtifact;
 const DungeonStorageABI = DungeonStorageArtifact.abi || DungeonStorageArtifact;
 const AltarOfAscensionVRFABI = AltarOfAscensionVRFArtifact.abi || AltarOfAscensionVRFArtifact;
 const VRFConsumerV2PlusABI = VRFConsumerV2PlusArtifact.abi || VRFConsumerV2PlusArtifact;
+const VIPStakingABI = VIPStakingArtifact.abi || VIPStakingArtifact;
+const PlayerProfileABI = PlayerProfileArtifact.abi || PlayerProfileArtifact;
+const PlayerVaultABI = PlayerVaultArtifact.abi || PlayerVaultArtifact;
+const DungeonCoreABI = DungeonCoreArtifact.abi || DungeonCoreArtifact;
+const OracleABI = OracleArtifact.abi || OracleArtifact;
 
 export interface ContractWithABI {
   address: string;
@@ -52,6 +62,10 @@ export const CONTRACTS_WITH_ABI = {
       address: '0xa86749237d4631ad92ba859d0b0df4770f6147ba',
       abi: AltarOfAscensionVRFABI
     },
+    ALTAROFASCENSION: {
+      address: '0xa86749237d4631ad92ba859d0b0df4770f6147ba',
+      abi: AltarOfAscensionVRFABI
+    },
     
     // VRF System - V25 Updated
     VRFCONSUMERV2PLUS: {
@@ -59,14 +73,28 @@ export const CONTRACTS_WITH_ABI = {
       abi: VRFConsumerV2PlusABI
     },
     
-    // Legacy addresses (using environment variables)
+    // Player & Vault Contracts - V25 Updated
+    PLAYERPROFILE: {
+      address: '0x0f5932e89908400a5AfDC306899A2987b67a3155',
+      abi: PlayerProfileABI
+    },
+    PLAYERVAULT: {
+      address: '0x62Bce9aF5E2C47b13f62A2e0fCB1f9C7AfaF8787',
+      abi: PlayerVaultABI
+    },
+    VIPSTAKING: {
+      address: '0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C',
+      abi: VIPStakingABI
+    },
+    
+    // Legacy contracts with full ABI
     DUNGEONCORE: {
       address: '0x8a2D2b1961135127228EdD71Ff98d6B097915a13',
-      abi: [] // Legacy contract
+      abi: DungeonCoreABI
     },
     ORACLE: {
       address: '0xf8CE896aF39f95a9d5Dd688c35d381062263E25a',
-      abi: [] // Legacy contract
+      abi: OracleABI
     },
     SOULSHARD: {
       address: '0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF',

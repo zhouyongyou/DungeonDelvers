@@ -66,6 +66,16 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     const contractConfig = getContractWithABI(type === 'hero' ? 'HERO' : 'RELIC');
     const soulShardContract = getContractWithABI('SOULSHARD');
     const playerVaultContract = getContractWithABI('PLAYERVAULT');
+    
+    // 調試：檢查合約配置
+    console.log('[useMintLogic 合約配置]', {
+        type,
+        address,
+        contractConfig: contractConfig?.address,
+        soulShardContract: soulShardContract?.address,
+        hasAbi: !!contractConfig?.abi && !!soulShardContract?.abi,
+        paymentSource
+    });
 
     // ★★★【核心修復】★★★
     // 改用與管理頁面相同的 Oracle 直接查詢方式，避免 Hero 合約的問題
@@ -237,7 +247,7 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
         functionName: 'allowance',
         args: [address!, contractConfig?.address as `0x${string}`],
         query: { 
-            enabled: !!address && !!contractConfig && paymentSource === 'wallet',
+            enabled: !!address && !!contractConfig && !!soulShardContract && paymentSource === 'wallet',
             staleTime: 1000 * 30, // 30秒 - 授權後需要快速更新
             gcTime: 1000 * 60 * 5,   // 5分鐘
             refetchOnWindowFocus: true, // 開啟視窗焦點刷新
@@ -266,6 +276,16 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     }, [platformFee, vrfFee, type, quantity]); // 減少不必要的依賴
 
     const needsApproval = useMemo(() => {
+        // 添加調試日誌
+        console.log('[授權檢測]', {
+            paymentSource,
+            allowance: allowance?.toString(),
+            allowanceType: typeof allowance,
+            finalRequiredAmount: finalRequiredAmount?.toString(),
+            finalRequiredAmountType: typeof finalRequiredAmount,
+            needsApproval: allowance && finalRequiredAmount ? allowance < finalRequiredAmount : 'N/A'
+        });
+        
         if (paymentSource !== 'wallet' || typeof allowance !== 'bigint' || typeof finalRequiredAmount !== 'bigint') return false;
         return allowance < finalRequiredAmount;
     }, [paymentSource, allowance, finalRequiredAmount]);

@@ -149,7 +149,7 @@ dataSources:
         - name: DungeonMaster
           file: ./abis/DungeonMasterV8.json
       eventHandlers:
-        - event: ExpeditionFulfilled(indexed address,indexed uint256,uint256,bool,uint256,uint256)
+        - event: ExpeditionFulfilled(indexed address,indexed uint256,bool,uint256,uint256)
           handler: handleExpeditionFulfilled
       file: ./src/dungeon-master.ts
   - kind: ethereum/contract
@@ -198,8 +198,8 @@ dataSources:
         - name: AltarOfAscension
           file: ./abis/AltarOfAscension.json
       eventHandlers:
-        - event: UpgradeProcessed(indexed address,indexed address,uint8,uint8)
-          handler: handleUpgradeProcessed
+        - event: UpgradeRevealed(indexed address,uint8,uint8)
+          handler: handleUpgradeRevealed
       file: ./src/altar-of-ascension.ts
   - kind: ethereum/contract
     name: VRFManagerV2PlusFixed
@@ -218,14 +218,10 @@ dataSources:
         - name: VRFManagerV2PlusFixed
           file: ./abis/VRFManagerV2PlusFixed.json
       eventHandlers:
-        - event: RandomRequested(indexed uint256,indexed address,uint8)
-          handler: handleRandomRequested
-        - event: RandomFulfilled(indexed uint256,uint256[])
-          handler: handleRandomFulfilled
-        - event: AuthorizationUpdated(indexed address,bool)
-          handler: handleAuthorizationUpdated
-        - event: VRFPriceUpdated(uint256)
-          handler: handleVRFPriceUpdated
-        - event: PlatformFeeUpdated(uint256)
-          handler: handlePlatformFeeUpdated
+        - event: RequestSent(indexed uint256,uint32)
+          handler: handleRequestSent
+        - event: RequestFulfilled(indexed uint256,uint256[])
+          handler: handleRequestFulfilled
+        - event: AuthorizationChanged(indexed address,bool)
+          handler: handleAuthorizationChanged
       file: ./src/vrf-manager.ts

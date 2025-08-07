@@ -130,11 +130,11 @@ const OverviewPage: React.FC<OverviewPageProps> = ({ setActivePage }) => {
     
     // Read player level from contract with caching
     const { data: levelData } = useCachedReadContract({
-        address: playerProfileContract.address,
-        abi: playerProfileContract.abi,
+        address: playerProfileContract?.address,
+        abi: playerProfileContract?.abi,
         functionName: 'getLevel',
         args: address ? [address] : undefined,
-        query: { enabled: !!address },
+        query: { enabled: !!address && !!playerProfileContract?.address },
         cacheKey: `playerLevel-${address}`,
         cacheTime: 300000 // 5 分鐘緩存
     });
