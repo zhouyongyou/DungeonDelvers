@@ -1,5 +1,4 @@
-# Generated from V25 VRF update on 2025-08-07T07:00:00.000Z
-# V25 VRF Version - 8/7 am 7 Deployment - Block 56696666
+# V25 Latest Deployment - 2025-08-07 PM6
 specVersion: 0.0.4
 schema:
   file: ./schema.graphql
@@ -58,7 +57,7 @@ dataSources:
     name: PartyV3
     network: bsc
     source:
-      address: "0x28a85d14e0f87d6ed04e21c30992df8b3e9434e3"
+      address: "0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3"
       abi: PartyV3
       startBlock: 56757876
     mapping:
@@ -83,7 +82,7 @@ dataSources:
     name: VIPStaking
     network: bsc
     source:
-      address: "0xc0d8c84e28e5bcfc9cbd109551de53ba04e7328c"
+      address: "0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C"
       abi: VIPStaking
       startBlock: 56757876
     mapping:
@@ -99,18 +98,22 @@ dataSources:
       eventHandlers:
         - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleTransfer
-        - event: Staked(indexed address,uint256,uint256)
+        - event: VIPCardMinted(indexed address,indexed uint256)
+          handler: handleVIPCardMinted
+        - event: VIPCardBurned(indexed uint256)
+          handler: handleVIPCardBurned
+        - event: Staked(indexed address,uint256)
           handler: handleStaked
-        - event: UnstakeRequested(indexed address,uint256,uint256)
+        - event: Unstaked(indexed address,uint256)
+          handler: handleUnstaked
+        - event: UnstakeRequested(indexed address,uint256)
           handler: handleUnstakeRequested
-        - event: UnstakeClaimed(indexed address,uint256)
-          handler: handleUnstakeClaimed
       file: ./src/vip-staking.ts
   - kind: ethereum/contract
     name: PlayerProfile
     network: bsc
     source:
-      address: "0x0f5932e89908400a5afdc306899a2987b67a3155"
+      address: "0x0f5932e89908400a5AfDC306899A2987b67a3155"
       abi: PlayerProfile
       startBlock: 56757876
     mapping:
@@ -119,14 +122,12 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - PlayerProfile
-        - Transfer
+        - Player
       abis:
         - name: PlayerProfile
           file: ./abis/PlayerProfile.json
       eventHandlers:
-        - event: Transfer(indexed address,indexed address,indexed uint256)
-          handler: handleTransfer
-        - event: ProfileCreated(indexed address,indexed uint256)
+        - event: ProfileCreated(indexed address,string)
           handler: handleProfileCreated
         - event: ExperienceAdded(indexed address,indexed uint256,uint256,uint256)
           handler: handleExperienceAdded
@@ -156,7 +157,7 @@ dataSources:
     name: PlayerVault
     network: bsc
     source:
-      address: "0x62bce9af5e2c47b13f62a2e0fcb1f9c7afaf8787"
+      address: "0x62Bce9aF5E2C47b13f62A2e0fCB1f9C7AfaF8787"
       abi: PlayerVault
       startBlock: 56757876
     mapping:
@@ -233,3 +234,4 @@ dataSources:
         - event: PlatformFeeUpdated(uint256)
           handler: handlePlatformFeeUpdated
       file: ./src/vrf-manager.ts
+EOF < /dev/null
