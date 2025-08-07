@@ -821,6 +821,41 @@ type VRFRequest @entity(immutable: false) {
   timestamp: BigInt!
 }
 
+type VRFCommitment @entity(immutable: false) {
+  " Request ID as ID "
+  id: ID!
+  " Player who made the commitment "
+  player: Bytes!
+  " Commitment type (EXPEDITION, UPGRADE, MINT) "
+  commitmentType: String!
+  " Target ID (for upgrades) "
+  targetId: BigInt
+  " Party ID (for expeditions) "
+  partyId: BigInt
+  " Dungeon ID (for expeditions) "
+  dungeonId: BigInt
+  " Base rarity (for upgrades) "
+  baseRarity: Int
+  " Whether request is fulfilled "
+  fulfilled: Boolean!
+  " Whether the action was successful (for fulfilled requests) "
+  success: Boolean
+  " New rarity (for successful upgrades) "
+  newRarity: Int
+  " Original rarity (for upgrades) "
+  originalRarity: Int
+  " Reward gained (for expeditions) "
+  reward: BigInt
+  " Experience gained (for expeditions) "
+  expGained: BigInt
+  " Creation timestamp "
+  timestamp: BigInt!
+  " Block number "
+  blockNumber: BigInt!
+  " Transaction hash "
+  transactionHash: Bytes!
+}
+
 type VRFConfig @entity(immutable: false) {
   " Singleton ID = 'current' "
   id: ID!

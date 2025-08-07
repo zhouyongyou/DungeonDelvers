@@ -7,9 +7,10 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 interface VRFWaitingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  quantity: number;
-  type: 'hero' | 'relic';
+  quantity?: number;
+  type: 'hero' | 'relic' | 'altar' | 'dungeon';
   estimatedTime?: number; // 預估時間（秒）
+  partyId?: bigint | number; // 遠征使用
 }
 
 export const VRFWaitingModal: React.FC<VRFWaitingModalProps> = ({
@@ -20,26 +21,25 @@ export const VRFWaitingModal: React.FC<VRFWaitingModalProps> = ({
   estimatedTime = 30
 }) => {
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [currentPhase, setCurrentPhase] = useState<'requesting' | 'processing' | 'finalizing'>('requesting');
+  const [currentPhase, setCurrentPhase] = useState<'requesting' | 'processing' | 'finalizing' | 'completed'>('requesting');
+  const [isCompleted, setIsCompleted] = useState(false);
   
   useEffect(() => {
-    if (!isOpen) {
-      setElapsedTime(0);
-      setCurrentPhase('requesting');
-      return;
-    }
+    if (!isOpen || isCompleted) return;
     
     const interval = setInterval(() => {
       setElapsedTime(prev => {
         const next = prev + 1;
         
-        // 更新階段
-        if (next < 10) {
-          setCurrentPhase('requesting');
-        } else if (next < 25) {
-          setCurrentPhase('processing');
-        } else {
-          setCurrentPhase('finalizing');
+        // 更新階段（如果尚未完成）
+        if (!isCompleted) {
+          if (next < 10) {
+            setCurrentPhase('requesting');
+          } else if (next < 25) {
+            setCurrentPhase('processing');
+          } else if (next < 35) {
+            setCurrentPhase('finalizing');
+          }
         }
         
         return next;
@@ -47,29 +47,88 @@ export const VRFWaitingModal: React.FC<VRFWaitingModalProps> = ({
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [isOpen]);
+  }, [isOpen, isCompleted]);
   
-  const progress = Math.min((elapsedTime / estimatedTime) * 100, 95);
-  const typeLabel = type === 'hero' ? '英雄' : '聖物';
-  
-  const phaseMessages = {
-    requesting: '正在向 Chainlink VRF 請求隨機數...',
-    processing: 'VRF 節點正在生成可驗證隨機數...',
-    finalizing: '正在確定 NFT 稀有度與屬性...'
+  const progress = isCompleted ? 100 : Math.min((elapsedTime / estimatedTime) * 100, 95);
+  const getTypeLabel = () => {
+    switch (type) {
+      case 'hero': return '英雄';
+      case 'relic': return '聖物';
+      case 'altar': return '升星';
+      case 'dungeon': return '遠征';
+      default: return 'NFT';
+    }
   };
+  const typeLabel = getTypeLabel();
+  
+  const getPhaseMessages = () => {
+    switch (type) {
+      case 'hero':
+      case 'relic':
+        return {
+          requesting: '正在向 Chainlink VRF 請求隨機數...',
+          processing: 'VRF 節點正在生成可驗證隨機數...',
+          finalizing: '正在確定 NFT 稀有度與屬性...',
+          completed: '鑄造完成！NFT 屬性已確定'
+        };
+      case 'altar':
+        return {
+          requesting: '正在向 Chainlink VRF 請求隨機數...',
+          processing: 'VRF 節點正在生成可驗證隨機數...',
+          finalizing: '神諷正在決定升星結果...',
+          completed: '升星儀式完成！結果已確定'
+        };
+      case 'dungeon':
+        return {
+          requesting: '正在向 Chainlink VRF 請求隨機數...',
+          processing: 'VRF 節點正在生成可驗證隨機數...',
+          finalizing: '命運之輪正在決定遠征結果...',
+          completed: '遠征完成！戰利成果已確定'
+        };
+      default:
+        return {
+          requesting: '正在請求隨機數...',
+          processing: '正在處理...',
+          finalizing: '正在確定結果...',
+          completed: '完成！'
+        };
+    }
+  };
+  const phaseMessages = getPhaseMessages();
   
   const phaseIcons = {
     requesting: '🎲',
     processing: '⚡',
-    finalizing: '✨'
+    finalizing: '✨',
+    completed: '🎉'
   };
+  
+  // 接收外部完成通知
+  useEffect(() => {
+    if (isOpen && (window as any).vrfCompleted) {
+      setCurrentPhase('completed');
+      setIsCompleted(true);
+      // 不立即清除，等 Modal 關閉後再清除
+    }
+  }, [isOpen]);
+  
+  // 當 Modal 關閉時重置狀態
+  useEffect(() => {
+    if (!isOpen) {
+      setElapsedTime(0);
+      setCurrentPhase('requesting');
+      setIsCompleted(false);
+      // 清除全局狀態
+      (window as any).vrfCompleted = false;
+    }
+  }, [isOpen]);
   
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="🔮 命運織造中..."
-      showCloseButton={false}
+      showCloseButton={isCompleted}
       closeOnOverlayClick={false}
       closeOnEsc={false}
       maxWidth="md"
@@ -81,7 +140,9 @@ export const VRFWaitingModal: React.FC<VRFWaitingModalProps> = ({
             {phaseIcons[currentPhase]}
           </div>
           <h3 className="text-xl font-bold text-purple-300 mb-2">
-            正在鑄造 {quantity} 個{typeLabel}
+            {type === 'altar' ? `正在進行 ${typeLabel} 儀式` : 
+             type === 'dungeon' ? `隊伍 #${partyId || '?'} ${typeLabel}中` :
+             `正在鑄造 ${quantity || 0} 個${typeLabel}`}
           </h3>
           <p className="text-gray-400">
             {phaseMessages[currentPhase]}
@@ -115,7 +176,7 @@ export const VRFWaitingModal: React.FC<VRFWaitingModalProps> = ({
               }`}>
                 3
               </div>
-              <span className="text-sm">確定屬性</span>
+              <span className="text-sm">{type === 'altar' ? '確定結果' : type === 'dungeon' ? '確定戰利' : '確定屬性'}</span>
             </div>
           </div>
           

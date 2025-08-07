@@ -523,7 +523,7 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
     // 定義 title 變數，避免 TDZ 錯誤 - 必須在所有使用它的 hooks 之前
     const title = type === 'hero' ? '英雄' : '聖物';
     
-    const [quantity, setQuantity] = useState(50); // 默認 50 個，符合大多数用户的批量铸造需求
+    const [quantity, setQuantity] = useState(25); // 默認 25 個，避免 Gas 不足同時保持批量優勢
     const [paymentSource, setPaymentSource] = useState<PaymentSource>('wallet');
     const [mintingResult, setMintingResult] = useState<BatchMintResult | AnyNft | null>(null);
     const [showProgressModal, setShowProgressModal] = useState(false);
@@ -671,35 +671,52 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
     
     const { execute: executeMint, progress: mintProgress, reset: resetMint } = useTransactionWithProgress({
         onSuccess: async (receipt) => {
-            // 🔥 VRF 修正：不立即顯示成功，而是顯示 VRF 等待
-            setShowProgressModal(false);
+            // 🔥 VRF 修正：保持 Progress Modal 開啟，直到 VRF Modal 準備好
+            console.log('[MintPage] 交易成功，準備顯示 VRF 等待', {
+                quantity,
+                type,
+                receipt
+            });
+            
+            // 設定 VRF 狀態追蹤（在顯示 Modal 之前）
+            queryClient.setQueryData(['vrfWaiting', type, address], {
+                isWaiting: true,
+                quantity: Number(quantity),
+                timestamp: Date.now()
+            });
+            
             setVrfWaitingQuantity(quantity);
+            
+            // 先顯示 VRF Modal，再關閉 Progress Modal
             setShowVRFWaitingModal(true);
+            setTimeout(() => {
+                setShowProgressModal(false);
+            }, 800); // 延遲 800ms 關閉，確保平滑過渡
             
             // 不要立即確認樂觀更新，等 VRF 完成後再確認
             // confirmUpdate(); // 移除
             
-            // 找 MintCommitted 事件而非 HeroMinted
-            const mintCommittedEventName = 'MintCommitted';
-            const commitLogs = receipt.logs.filter((log: any) => {
+            // 找 MintRequested 事件而非 HeroMinted
+            const mintRequestedEventName = 'MintRequested';
+            const requestLogs = receipt.logs.filter((log: any) => {
                 try {
-                    return decodeEventLog({ abi: contractConfig.abi, ...log }).eventName === mintCommittedEventName;
+                    return decodeEventLog({ abi: contractConfig.abi, ...log }).eventName === mintRequestedEventName;
                 } catch {
                     return false;
                 }
             });
             
-            if (commitLogs.length > 0 && contractConfig) {
+            if (requestLogs.length > 0 && contractConfig) {
                 // 🔥 VRF 修正：不在這裡處理結果，因為 NFT 還沒有真正鑄造
-                // 只記錄 MintCommitted 事件的信息
-                const commitLog = commitLogs[0];
-                const decodedLog = decodeEventLog({ abi: contractConfig.abi, ...commitLog });
-                const committedQuantity = (decodedLog.args as { quantity?: bigint }).quantity;
+                // 只記錄 MintRequested 事件的信息
+                const requestLog = requestLogs[0];
+                const decodedLog = decodeEventLog({ abi: contractConfig.abi, ...requestLog });
+                const requestedQuantity = (decodedLog.args as { quantity?: bigint }).quantity;
                 
                 console.log('[MintPage] VRF 請求已提交', {
                     type,
-                    quantity: committedQuantity?.toString(),
-                    blockNumber: commitLog.blockNumber
+                    quantity: requestedQuantity?.toString(),
+                    blockNumber: requestLog.blockNumber
                 });
                 
                 // 🔥 VRF 修正：不立即刷新數據，等 VRF 完成後再刷新
@@ -712,12 +729,7 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
                 );
             }
             
-            // 設定超時檢查，防止 VRF 一直不回應
-            setTimeout(() => {
-                if (showVRFWaitingModal) {
-                    showToast('⚠️ VRF 處理時間較長，建議手動刷新頁面查看結果', 'warning');
-                }
-            }, 60000); // 60秒超時
+            // 已在上面設定 VRF 狀態，此處不再重複
         },
         onError: () => {
             // 回滾樂觀更新
@@ -924,43 +936,71 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
             {getButtonText()}
           </ActionButton>;
 
-    // 🔥 使用 React Query 訂閱 VRF 狀態變化
-    const { data: vrfState } = useQuery({
-        queryKey: ['vrfWaiting', type, address],
-        queryFn: () => queryClient.getQueryData(['vrfWaiting', type, address]) as { isWaiting: boolean; quantity: number; timestamp: number } | null,
-        enabled: showVRFWaitingModal,
-        refetchInterval: 2000, // 每2秒檢查一次
-    });
-    
-    // 🔥 監聽 VRF 完成狀態
+    // 🔥 監聽 VRF 狀態變化（透過事件監聽更新）
     useEffect(() => {
-        if (vrfState && !vrfState.isWaiting && showVRFWaitingModal) {
-            // VRF 完成，關閉等待模態框
-            setShowVRFWaitingModal(false);
-            confirmUpdate(); // 確認樂觀更新
+        if (!showVRFWaitingModal) return;
+        
+        // 檢查 VRF 狀態
+        const checkVrfStatus = () => {
+            const vrfState = queryClient.getQueryData(['vrfWaiting', type, address]) as any;
             
-            // 刷新數據
-            queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
-            queryClient.invalidateQueries({ queryKey: ['dashboardSimpleStats'] });
-            queryClient.invalidateQueries({ queryKey: ['explorer'] });
-            if (address) {
-                invalidationStrategies.onNftMinted(queryClient, address);
+            // 檢查 VRF 是否完成（isWaiting 為 false 表示完成）
+            if (vrfState && vrfState.isWaiting === false) {
+                console.log('[MintPage] VRF 完成！準備顯示結果');
+                
+                // 通知 VRFWaitingModal 顯示完成狀態
+                console.log('[MintPage] 設定 VRF 完成狀態');
+                (window as any).vrfCompleted = true;
+                
+                // VRF 完成，先顯示成功結果
+                const batchResult: BatchMintResult = {
+                    type,
+                    quantity: vrfWaitingQuantity,
+                    totalValue: vrfWaitingQuantity * 2
+                };
+                
+                // 延遲關閉 VRF Modal，讓用戶看到完成狀態
+                setTimeout(() => {
+                    setShowVRFWaitingModal(false);
+                    setMintingResult(batchResult);
+                    confirmUpdate(); // 確認樂觀更新
+                    
+                    // 刷新數據
+                    queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
+                    queryClient.invalidateQueries({ queryKey: ['dashboardSimpleStats'] });
+                    queryClient.invalidateQueries({ queryKey: ['explorer'] });
+                    if (address) {
+                        invalidationStrategies.onNftMinted(queryClient, address);
+                    }
+                    
+                    showToast(`✨ ${vrfWaitingQuantity} 個${title}鑄造完成！屬性已確定`, 'success');
+                    
+                    // 清除 VRF 狀態
+                    queryClient.removeQueries({ queryKey: ['vrfWaiting', type, address] });
+                    (window as any).vrfCompleted = false;
+                }, 3000); // 讓用戶看到完成動畫 3 秒
             }
-            
-            showToast(`✨ ${vrfWaitingQuantity} 個${title}鑄造完成！屬性已確定`, 'success');
-            
-            // 顯示成功結果
-            const batchResult: BatchMintResult = {
-                type,
-                quantity: vrfWaitingQuantity,
-                totalValue: vrfWaitingQuantity * 2
-            };
-            setMintingResult(batchResult);
-            
-            // 清除 VRF 狀態
-            queryClient.removeQueries({ queryKey: ['vrfWaiting', type, address] });
-        }
-    }, [vrfState, showVRFWaitingModal, vrfWaitingQuantity, confirmUpdate, queryClient, showToast, title, type, address, invalidationStrategies]);
+        };
+        
+        // 立即檢查一次
+        checkVrfStatus();
+        
+        // 設定定時檢查
+        const interval = setInterval(checkVrfStatus, 2000);
+        
+        // 超時處理
+        const timeout = setTimeout(() => {
+            if (showVRFWaitingModal) {
+                console.warn('[MintPage] VRF 超時');
+                // 不自動關閉，讓用戶決定
+            }
+        }, 90000); // 90 秒超時
+        
+        return () => {
+            clearInterval(interval);
+            clearTimeout(timeout);
+        };
+    }, [showVRFWaitingModal, vrfWaitingQuantity, type, title, address, confirmUpdate, queryClient, showToast, invalidationStrategies]);
     
     return (
         <div className="card-bg p-4 sm:p-5 md:p-6 rounded-xl shadow-lg flex flex-col items-center h-full">
@@ -1092,8 +1132,8 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
 MintCard.displayName = 'MintCard';
 
 const MintingInterface = memo<{ chainId: typeof bsc.id }>(({ chainId }) => {
-    const heroMintOptions = [50, 20, 10, 5, 1]; // 批量鑄造優先，鼓勵更好的用戶體驗
-    const relicMintOptions = [50, 20, 10, 5, 1]; // 批量鑄造優先，鼓勵更好的用戶體驗
+    const heroMintOptions = [25, 20, 10, 5, 1]; // 批量鑄造優先，25 個避免 Gas 不足
+    const relicMintOptions = [25, 20, 10, 5, 1]; // 批量鑄造優先，25 個避免 Gas 不足
     return (
         <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-8">

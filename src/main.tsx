@@ -12,6 +12,11 @@ import App from './App';
 import { checkSubgraphSync } from './utils/checkSubgraphSync';
 import { initializeAppConfig } from './config/initConfig';
 import { setupEmergencyRpcHandler } from './config/emergencyRpcFallback';
+import { setupConsoleFilters, setupDevConsole } from './utils/consoleFilter';
+
+// 設置 Console 過濾器以減少第三方 SDK 噪音
+setupConsoleFilters();
+setupDevConsole();
 
 // 將函數暴露到全局，方便在控制台手動調用
 // 移除自動檢查以減少 API 請求

@@ -1,7 +1,7 @@
 // DDgraphql/dungeondelvers/src/dungeon-master.ts (V25 簡化版)
 import { BigInt, log } from "@graphprotocol/graph-ts"
-import { ExpeditionFulfilled, RewardsBanked } from "../generated/DungeonMaster/DungeonMaster"
-import { Expedition, PlayerProfile } from "../generated/schema"
+import { ExpeditionCommitted, ExpeditionFulfilled, RewardsBanked } from "../generated/DungeonMaster/DungeonMaster"
+import { Expedition, PlayerProfile, VRFCommitment } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { updatePlayerStats, updatePlayerStatsBigInt, updateGlobalStats, TOTAL_EXPEDITIONS, SUCCESSFUL_EXPEDITIONS } from "./stats"
 
@@ -88,4 +88,30 @@ export function handleRewardsBanked(event: RewardsBanked): void {
   updatePlayerStatsBigInt(playerAddress, "totalRewardsClaimed", event.params.amount, event.block.timestamp)
 
   log.info("=== RewardsBanked Event Complete ===", [])
+}
+
+// VRF ExpeditionCommitted 事件處理器  
+// ABI: ExpeditionCommitted(indexed address player, uint256 partyId, uint256 dungeonId, uint256 blockNumber)
+export function handleExpeditionCommitted(event: ExpeditionCommitted): void {
+  log.info("=== ExpeditionCommitted Event ===", [])
+  log.info("Player: {}", [event.params.player.toHexString()])
+  log.info("Party ID: {}", [event.params.partyId.toString()])
+  log.info("Dungeon ID: {}", [event.params.dungeonId.toString()])
+  log.info("Block Number: {}", [event.params.blockNumber.toString()])
+
+  let commitment = new VRFCommitment(event.transaction.hash.toHex() + "-" + event.logIndex.toString())
+  commitment.player = event.params.player
+  commitment.partyId = event.params.partyId
+  commitment.dungeonId = event.params.dungeonId
+  commitment.commitmentType = "EXPEDITION"
+  commitment.fulfilled = false
+  commitment.timestamp = event.block.timestamp
+  commitment.blockNumber = event.block.number
+  commitment.transactionHash = event.transaction.hash
+  commitment.save()
+
+  // Update player
+  getOrCreatePlayer(event.params.player)
+
+  log.info("=== ExpeditionCommitted Event Complete ===", [])
 }

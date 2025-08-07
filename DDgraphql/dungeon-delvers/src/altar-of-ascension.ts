@@ -1,7 +1,7 @@
 // DDgraphql/dungeondelvers/src/altar-of-ascension.ts (V25 Simplified Version)
-import { BigInt } from "@graphprotocol/graph-ts"
-import { UpgradeRevealed } from "../generated/AltarOfAscension/AltarOfAscension"
-import { UpgradeAttempt } from "../generated/schema"
+import { BigInt, log } from "@graphprotocol/graph-ts"
+import { UpgradeCommitted, UpgradeRevealed } from "../generated/AltarOfAscension/AltarOfAscension"
+import { UpgradeAttempt, VRFCommitment } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { updateGlobalStats, updatePlayerStats, TOTAL_UPGRADE_ATTEMPTS, SUCCESSFUL_UPGRADES, TOTAL_UPGRADE_ATTEMPTS_PLAYER, SUCCESSFUL_UPGRADES_PLAYER } from "./stats"
 
@@ -44,4 +44,28 @@ export function handleUpgradeRevealed(event: UpgradeRevealed): void {
         updateGlobalStats(SUCCESSFUL_UPGRADES, 1, event.block.timestamp)
         updatePlayerStats(event.params.player, SUCCESSFUL_UPGRADES_PLAYER, 1, event.block.timestamp)
     }
+}
+
+// VRF UpgradeCommitted 事件處理器
+// ABI: UpgradeCommitted(indexed address user, uint256[] tokenIds)
+export function handleUpgradeCommitted(event: UpgradeCommitted): void {
+  log.info("=== UpgradeCommitted Event ===", [])
+  log.info("User: {}", [event.params.user.toHexString()])
+  log.info("Token IDs length: {}", [event.params.tokenIds.length.toString()])
+
+  let commitment = new VRFCommitment(event.transaction.hash.toHex() + "-" + event.logIndex.toString())
+  commitment.player = event.params.user
+  commitment.targetId = BigInt.fromI32(0) // No specific target ID in this event
+  commitment.baseRarity = 0 // No rarity info in this event
+  commitment.commitmentType = "UPGRADE"
+  commitment.fulfilled = false
+  commitment.timestamp = event.block.timestamp
+  commitment.blockNumber = event.block.number
+  commitment.transactionHash = event.transaction.hash
+  commitment.save()
+
+  // Update player
+  getOrCreatePlayer(event.params.user)
+
+  log.info("=== UpgradeCommitted Event Complete ===", [])
 }

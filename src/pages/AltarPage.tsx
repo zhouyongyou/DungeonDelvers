@@ -37,6 +37,7 @@ import { AltarNftAuthManager } from '../components/altar/AltarNftAuthManager';
 import { AltarNftSelector } from '../components/altar/AltarNftSelector';
 import { useVipStatus } from '../hooks/useVipStatus';
 import { AltarPagePreview } from '../components/altar/AltarPagePreview';
+import { VRFWaitingModal } from '../components/mint/VRFWaitingModal';
 
 // =================================================================
 // Section: GraphQL 查詢與數據獲取 Hooks
@@ -408,6 +409,7 @@ const AltarPage = memo(() => {
     const [selectedNfts, setSelectedNfts] = useState<bigint[]>([]);
     const [upgradeResult, setUpgradeResult] = useState<UpgradeOutcome | null>(null);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [showVRFWaitingModal, setShowVRFWaitingModal] = useState(false);
     const [showProgressModal, setShowProgressModal] = useState(false);
     
     // 新增的 UI 狀態
@@ -466,7 +468,22 @@ const AltarPage = memo(() => {
     const { execute: executeUpgrade, progress: upgradeProgress, reset: resetProgress } = useTransactionWithProgress({
         onSuccess: async (receipt) => {
             try {
-                // 設定儀式為成功狀態
+                console.log('[AltarPage] 升星交易成功，準備顯示 VRF 等待', receipt);
+                
+                // 設定 VRF 狀態追蹤（在顯示 Modal 之前）
+                queryClient.setQueryData(['vrfWaiting', 'altar', address], {
+                    isWaiting: true,
+                    quantity: selectedNfts.length,
+                    timestamp: Date.now()
+                });
+                
+                // 顯示 VRF 等待 Modal
+                setShowVRFWaitingModal(true);
+                setTimeout(() => {
+                    setShowProgressModal(false);
+                }, 800); // 延遲關閉，確保平滑過渡
+                
+                // 設定儀式為 VRF 等待狀態
                 setRitualStage('ritual');
                 
                 // 修復：正確的事件解析邏輯
@@ -735,6 +752,51 @@ const AltarPage = memo(() => {
             setRitualStage('idle');
         }
     }, [selectedNfts, currentRule]);
+    
+    // 🔥 監聽 VRF 狀態變化（Altar 專用）
+    useEffect(() => {
+        if (!showVRFWaitingModal) return;
+        
+        const checkVrfStatus = () => {
+            const vrfState = queryClient.getQueryData(['vrfWaiting', 'altar', address]) as any;
+            
+            // 檢查 VRF 是否完成（isWaiting 為 false 表示完成）
+            if (vrfState && vrfState.isWaiting === false) {
+                console.log('[AltarPage] VRF 完成！準備關閉等待 Modal');
+                
+                // 通知 VRFWaitingModal 顯示完成狀態
+                (window as any).vrfCompleted = true;
+                
+                // 延遲關閉 VRF Modal，讓用戶看到完成狀態
+                setTimeout(() => {
+                    setShowVRFWaitingModal(false);
+                    setRitualStage('success'); // 設定為成功狀態，將在 UpgradeProcessed 事件中最終設定
+                    confirmUpdate(); // 確認樂觀更新
+                    
+                    // 刷新數據
+                    queryClient.invalidateQueries({ queryKey: ['altarMaterials'] });
+                    queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
+                    queryClient.invalidateQueries({ queryKey: ['altarHistory'] });
+                    
+                    showToast(`✨ 升星儀式完成！結果已確定`, 'success');
+                    
+                    // 清除 VRF 狀態
+                    queryClient.removeQueries({ queryKey: ['vrfWaiting', 'altar', address] });
+                    (window as any).vrfCompleted = false;
+                }, 3000); // 讓用戶看到完成動畫 3 秒
+            }
+        };
+        
+        // 立即檢查一次
+        checkVrfStatus();
+        
+        // 設定定時檢查
+        const interval = setInterval(checkVrfStatus, 2000);
+        
+        return () => {
+            clearInterval(interval);
+        };
+    }, [showVRFWaitingModal, address, confirmUpdate, queryClient, showToast]);
 
     // 使用樂觀更新處理授權狀態 - 分別追蹤英雄和聖物
     const [optimisticHeroApproval, setOptimisticHeroApproval] = useState(false);
@@ -896,6 +958,13 @@ const AltarPage = memo(() => {
                     onClose={() => setShowProgressModal(false)}
                     progress={upgradeProgress}
                     title="神秘儀式進行中"
+                />
+                <VRFWaitingModal 
+                    isOpen={showVRFWaitingModal}
+                    onClose={() => setShowVRFWaitingModal(false)}
+                    quantity={selectedNfts.length}
+                    type="altar"
+                    estimatedTime={45}
                 />
                 <AltarTutorial isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
                 <AltarHistoryStats isOpen={showHistoryStats} onClose={() => setShowHistoryStats(false)} />

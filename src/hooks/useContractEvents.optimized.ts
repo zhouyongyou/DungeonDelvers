@@ -263,7 +263,11 @@ export const useContractEventsOptimized = () => {
             showToast(`✨ 英雄 #${log.args.tokenId?.toString()} 鑄造完成！屬性已確定`, 'success'); 
             invalidateNftsAndBalance();
             // 清除 VRF 等待狀態
-            queryClient.setQueryData(['vrfWaiting', 'hero', address], null);
+            queryClient.setQueryData(['vrfWaiting', 'hero', address], {
+                isWaiting: false,
+                quantity: 0,
+                timestamp: Date.now()
+            });
         }) 
     });
     
@@ -278,7 +282,11 @@ export const useContractEventsOptimized = () => {
             showToast(`✨ 聖物 #${log.args.tokenId?.toString()} 鑄造完成！屬性已確定`, 'success'); 
             invalidateNftsAndBalance();
             // 清除 VRF 等待狀態
-            queryClient.setQueryData(['vrfWaiting', 'relic', address], null);
+            queryClient.setQueryData(['vrfWaiting', 'relic', address], {
+                isWaiting: false,
+                quantity: 0,
+                timestamp: Date.now()
+            });
         }) 
     });
     
@@ -329,7 +337,25 @@ export const useContractEventsOptimized = () => {
         }) 
     });
 
-    // 隊伍遠征相關事件 -> 刷新特定隊伍的狀態和玩家檔案
+    // 🔥 VRF 遠征階段 1：監聽 ExpeditionCommitted（VRF 請求）
+    useWatchContractEvent({ 
+        ...dungeonMasterContract, 
+        chainId: bsc.id, 
+        eventName: 'ExpeditionCommitted', 
+        pollingInterval: 3000,
+        enabled: isEnabled,
+        onLogs: createContractEventHandler(dungeonMasterContract, 'ExpeditionCommitted', address, (log) => { 
+            const partyId = log.args.partyId?.toString() || '?';
+            showToast(`⚡ VRF 請求已提交！正在生成隊伍 #${partyId} 的遠征結果...`, 'info');
+            queryClient.setQueryData(['vrfWaiting', 'dungeon', address], {
+                isWaiting: true,
+                partyId: log.args.partyId,
+                timestamp: Date.now()
+            });
+        }, true, queryClient) 
+    });
+    
+    // 🔥 VRF 遠征階段 2：監聽 ExpeditionFulfilled（VRF 完成）
     useWatchContractEvent({ 
         ...dungeonMasterContract, 
         chainId: bsc.id, 
@@ -345,6 +371,12 @@ export const useContractEventsOptimized = () => {
             }); 
             invalidatePartyStatus(log.args.partyId as bigint); 
             invalidateProfile(); 
+            // 清除 VRF 等待狀態
+            queryClient.setQueryData(['vrfWaiting', 'dungeon', address], {
+                isWaiting: false,
+                partyId: null,
+                timestamp: Date.now()
+            });
         }, true, queryClient) 
     });
     
@@ -361,7 +393,25 @@ export const useContractEventsOptimized = () => {
     });
     
     
-    // 升星祭壇事件 -> 刷新 NFT 列表和餘額
+    // 🔥 VRF 升星階段 1：監聽 UpgradeCommitted（VRF 請求）
+    useWatchContractEvent({ 
+        ...altarOfAscensionContract, 
+        chainId: bsc.id, 
+        eventName: 'UpgradeCommitted', 
+        pollingInterval: 3000,
+        enabled: isEnabled,
+        onLogs: createContractEventHandler(altarOfAscensionContract, 'UpgradeCommitted', address, (log) => { 
+            const quantity = log.args.materialIds?.length || 1;
+            showToast(`⚡ VRF 請求已提交！正在生成升星結果...`, 'info');
+            queryClient.setQueryData(['vrfWaiting', 'altar', address], {
+                isWaiting: true,
+                quantity: Number(quantity),
+                timestamp: Date.now()
+            });
+        }) 
+    });
+    
+    // 🔥 VRF 升星階段 2：監聽 UpgradeProcessed（VRF 完成）
     useWatchContractEvent({ 
         ...altarOfAscensionContract, 
         chainId: bsc.id, 
@@ -380,6 +430,12 @@ export const useContractEventsOptimized = () => {
             const type = (outcome as number) >= 2 ? 'success' : 'info';
             showToast(message, type);
             invalidateNftsAndBalance();
+            // 清除 VRF 等待狀態
+            queryClient.setQueryData(['vrfWaiting', 'altar', address], {
+                isWaiting: false,
+                quantity: 0,
+                timestamp: Date.now()
+            });
         })
     });
     

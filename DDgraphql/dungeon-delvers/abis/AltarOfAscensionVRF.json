@@ -70,44 +70,6 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "newSeed",
-        "type": "uint256"
-      }
-    ],
-    "name": "DynamicSeedUpdated",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "executor",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint8",
-        "name": "outcome",
-        "type": "uint8"
-      }
-    ],
-    "name": "ForcedRevealExecuted",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
         "indexed": true,
         "internalType": "address",
         "name": "previousOwner",
@@ -270,18 +232,12 @@
       },
       {
         "indexed": false,
-        "internalType": "uint256",
-        "name": "blockNumber",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
         "internalType": "uint256[]",
         "name": "burnedTokenIds",
         "type": "uint256[]"
       }
     ],
-    "name": "UpgradeCommitted",
+    "name": "UpgradeRequested",
     "type": "event"
   },
   {
@@ -443,38 +399,12 @@
   },
   {
     "inputs": [],
-    "name": "MAX_REVEAL_WINDOW",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
     "name": "MAX_VIP_BONUS",
     "outputs": [
       {
         "internalType": "uint8",
         "name": "",
         "type": "uint8"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "REVEAL_BLOCK_DELAY",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -519,44 +449,6 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_user",
-        "type": "address"
-      }
-    ],
-    "name": "canForceReveal",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_user",
-        "type": "address"
-      }
-    ],
-    "name": "canReveal",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "dungeonCore",
     "outputs": [
@@ -564,19 +456,6 @@
         "internalType": "contract IDungeonCore",
         "name": "",
         "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "dynamicSeed",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -599,51 +478,14 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "user",
-        "type": "address"
-      }
-    ],
-    "name": "forceRevealExpiredUpgrade",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
         "name": "_user",
         "type": "address"
       }
     ],
-    "name": "getRevealBlocksRemaining",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_user",
-        "type": "address"
-      }
-    ],
-    "name": "getUserCommitment",
+    "name": "getUserRequest",
     "outputs": [
       {
         "components": [
-          {
-            "internalType": "uint256",
-            "name": "blockNumber",
-            "type": "uint256"
-          },
           {
             "internalType": "address",
             "name": "tokenContract",
@@ -660,11 +502,6 @@
             "type": "uint256[]"
           },
           {
-            "internalType": "bytes32",
-            "name": "commitment",
-            "type": "bytes32"
-          },
-          {
             "internalType": "bool",
             "name": "fulfilled",
             "type": "bool"
@@ -675,7 +512,7 @@
             "type": "uint256"
           }
         ],
-        "internalType": "struct AltarOfAscensionVRF.UpgradeCommitment",
+        "internalType": "struct AltarOfAscensionVRF.UpgradeRequest",
         "name": "",
         "type": "tuple"
       }
@@ -892,13 +729,6 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "revealUpgrade",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "address",
@@ -1092,13 +922,8 @@
         "type": "address"
       }
     ],
-    "name": "userCommitments",
+    "name": "userRequests",
     "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "blockNumber",
-        "type": "uint256"
-      },
       {
         "internalType": "address",
         "name": "tokenContract",
@@ -1108,11 +933,6 @@
         "internalType": "uint8",
         "name": "baseRarity",
         "type": "uint8"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "commitment",
-        "type": "bytes32"
       },
       {
         "internalType": "bool",

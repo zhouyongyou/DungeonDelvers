@@ -145,10 +145,13 @@ dataSources:
       entities:
         - DungeonExploration
         - Player
+        - VRFCommitment
       abis:
         - name: DungeonMaster
           file: ./abis/DungeonMasterV8.json
       eventHandlers:
+        - event: ExpeditionCommitted(indexed address,uint256,uint256,uint256)
+          handler: handleExpeditionCommitted
         - event: ExpeditionFulfilled(indexed address,indexed uint256,bool,uint256,uint256)
           handler: handleExpeditionFulfilled
       file: ./src/dungeon-master.ts
@@ -194,19 +197,22 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - UpgradeAttempt
+        - VRFCommitment
       abis:
         - name: AltarOfAscension
           file: ./abis/AltarOfAscension.json
       eventHandlers:
+        - event: UpgradeCommitted(indexed address,address,uint8,uint256,uint256[])
+          handler: handleUpgradeCommitted
         - event: UpgradeRevealed(indexed address,uint8,uint8)
           handler: handleUpgradeRevealed
       file: ./src/altar-of-ascension.ts
   - kind: ethereum/contract
-    name: VRFManagerV2PlusFixed
+    name: VRFConsumerV2Plus
     network: bsc
     source:
-      address: "0x980d224ec4d198d94f34a8af76a19c00dabe2436"
-      abi: VRFManagerV2PlusFixed
+      address: "0x662F0B22CBCD35f5a2e4Cb01dB9e0707b1AF4546"
+      abi: VRFConsumerV2Plus
       startBlock: 56771885
     mapping:
       kind: ethereum/events
@@ -215,8 +221,8 @@ dataSources:
       entities:
         - VRFRequest
       abis:
-        - name: VRFManagerV2PlusFixed
-          file: ./abis/VRFManagerV2PlusFixed.json
+        - name: VRFConsumerV2Plus
+          file: ./abis/VRFConsumerV2Plus.json
       eventHandlers:
         - event: RequestSent(indexed uint256,uint32)
           handler: handleRequestSent
@@ -224,4 +230,4 @@ dataSources:
           handler: handleRequestFulfilled
         - event: AuthorizationChanged(indexed address,bool)
           handler: handleAuthorizationChanged
-      file: ./src/vrf-manager.ts
+      file: ./src/vrf-consumer.ts
