@@ -2,7 +2,7 @@ import { useReadContracts } from 'wagmi';
 import { useMemo } from 'react';
 import type { Abi } from 'viem';
 import { getContractWithABI } from '../config/contractsWithABI';
-import type { ContractName } import { 202 } from '../config/env-contracts';
+import type { ContractName } from '../types/contracts';
 import type { SupportedChainId } from '../types';
 
 interface ContractRead {

@@ -108,6 +108,72 @@ await executeTransaction({
 - 支援環境變數覆蓋
 - 自動從 CDN 載入配置
 
+## 🔄 統一配置管理系統
+
+### 🎯 重要：前端配置由合約項目統一管理
+前端**不應該**直接編輯配置文件，所有配置由合約項目自動同步。
+
+### 📍 配置文件位置
+- **主配置來源**：`/Users/sotadic/Documents/DungeonDelversContracts/.env.v25`
+- **前端配置文件**：`/Users/sotadic/Documents/GitHub/DungeonDelvers/.env.local` （自動生成）
+
+### 🚀 配置同步流程
+
+#### 當需要更新合約地址時：
+```bash
+# ❌ 錯誤：不要直接編輯前端配置
+# vim /Users/sotadic/Documents/GitHub/DungeonDelvers/.env.local
+
+# ✅ 正確：編輯主配置文件
+vim /Users/sotadic/Documents/DungeonDelversContracts/.env.v25
+
+# ✅ 然後執行同步
+cd /Users/sotadic/Documents/DungeonDelversContracts
+node scripts/ultimate-config-system.js sync
+```
+
+#### 同步後重啟開發服務器：
+```bash
+# 在前端項目根目錄
+cd /Users/sotadic/Documents/GitHub/DungeonDelvers
+npm run dev
+```
+
+### 📋 自動同步的配置內容
+- ✅ **合約地址**：所有 VITE_ 前綴的合約地址變數
+- ✅ **網路配置**：鏈 ID、RPC URL、瀏覽器 URL
+- ✅ **VRF 配置**：Coordinator、訂閱 ID、Gas 限制
+- ✅ **服務端點**：子圖 URL、後端 API URL
+- ✅ **ABI 文件**：自動從合約項目同步到 `src/contracts/abi/`
+
+### 🔍 驗證配置正確性
+```bash
+# 檢查前端配置是否與主配置一致
+cd /Users/sotadic/Documents/DungeonDelversContracts
+node scripts/ultimate-config-system.js validate
+```
+
+### 🛠️ 前端專用開發配置
+以下配置**不會**被自動同步，可以自由編輯：
+```bash
+# .env.local 中的前端專用配置（添加到文件末尾）
+VITE_ENABLE_DEV_TOOLS=true     # 開發工具
+VITE_MOCK_MODE=false           # 模擬模式
+VITE_DEBUG_MODE=true           # 調試模式
+```
+
+### ⚡ 動態配置載入
+前端使用以下機制載入配置：
+- **環境變數讀取**：`src/config/env-contracts.ts` 自動讀取 VITE_ 變數
+- **ABI 自動載入**：`src/contracts/abi/` 目錄中的 ABI 文件
+- **類型安全**：TypeScript 類型檢查確保配置正確性
+
+### 🚨 關鍵提醒
+1. **永遠不要**手動編輯 `.env.local` 中的合約地址
+2. **配置變更後**必須重啟 `npm run dev` 服務器
+3. **部署前**確保 `npm run build` 成功
+4. **ABI 更新後**重新運行 `npm run type-check`
+
 ## 📱 手機版開發原則
 
 ### 使用手機優化組件

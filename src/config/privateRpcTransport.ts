@@ -2,44 +2,18 @@
 
 import { custom, type Transport } from 'viem';
 import { logger } from '../utils/logger';
+import { getCurrentRPC, reportRPCFailure } from './rpc-manager';
 
 /**
- * 獲取 RPC URL
- * 優先順序：
- * 1. 私人節點（如果配置）
- * 2. Alchemy 節點（必須有，否則報錯）
- */
-function getRpcUrl(): string {
-  // 1. 檢查私人節點配置
-  if (import.meta.env.VITE_PRIVATE_RPC_URL) {
-    logger.info('🔐 使用私人 RPC 節點');
-    return import.meta.env.VITE_PRIVATE_RPC_URL;
-  }
-  
-  // 2. 使用 Alchemy（必須配置）
-  const alchemyKey = import.meta.env.VITE_ALCHEMY_KEY || 
-                    import.meta.env.VITE_ALCHEMY_KEY_PUBLIC ||
-                    'tiPlQVTwx4_2P98Pl7hb-LfzaTyi5HOn';
-  
-  if (!alchemyKey) {
-    // 不再使用公共節點，直接報錯
-    throw new Error('❌ 必須配置 Alchemy API Key 或私人 RPC 節點！請在 .env 中設置 VITE_ALCHEMY_KEY 或 VITE_PRIVATE_RPC_URL');
-  }
-  
-  logger.info('🔑 使用 Alchemy RPC 節點');
-  return `https://bnb-mainnet.g.alchemy.com/v2/${alchemyKey}`;
-}
-
-/**
- * 創建簡化的私人節點 RPC 傳輸層
- * 移除所有 thirdweb 和複雜的 fallback 邏輯
+ * 創建智能 Alchemy RPC 傳輸層
+ * 支援自動故障轉移和負載均衡
  */
 export function createPrivateRpcTransport(): Transport {
-  const rpcUrl = getRpcUrl();
   
   return custom({
     async request({ method, params }) {
       try {
+        const rpcUrl = getCurrentRPC();
         const response = await fetch(rpcUrl, {
           method: 'POST',
           headers: {
@@ -69,10 +43,13 @@ export function createPrivateRpcTransport(): Transport {
         
         return data.result;
       } catch (error) {
+        // 報告 RPC 失敗，觸發自動切換
+        reportRPCFailure();
+        
         logger.error('RPC 請求失敗:', {
           method,
           error: error.message,
-          rpcUrl: rpcUrl.includes('alchemy') ? 'Alchemy' : 'Private'
+          currentRPC: getCurrentRPC().includes('alchemy') ? 'Alchemy' : 'Public'
         });
         throw error;
       }

@@ -49,7 +49,7 @@ export const CONTRACTS: ContractAddresses = {
   VIPSTAKING: getEnvContract('VIPSTAKING'),
   SOULSHARD: getEnvContract('SOULSHARD'),
   USD: getEnvContract('USD'),
-  VRFMANAGER: getEnvContract('VRFMANAGER'),
+  VRFMANAGER: getEnvContract('VRF_MANAGER_V2PLUS'),
   DUNGEONMASTERWALLET: '0x10925A7138649C7E1794CE646182eeb5BF8ba647', // 固定地址
 };
 
