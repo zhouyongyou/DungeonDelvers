@@ -10,10 +10,10 @@ export const MARKETPLACE_V2_CONFIG = {
     OfferSystemV2: '0xE072DC1Ea6243aEaD9c794aFe2585A8b6A5350EF' as const,
   },
   
-  // V25 NFT Contract addresses (8/7 am 7 deployment)
+  // V25 NFT Contract addresses (8/7 PM6 deployment)
   nftContracts: {
-    HERO: '0x5eded2670a6e7eb4a9c581bc397edc3b48cafd6d' as const,
-    RELIC: '0x7a9469587ffd28a69d4420d8893e7a0e92ef6316' as const,
+    HERO: '0x671d937b171e2ba2c4dc23c133b07e4449f283ef' as const,
+    RELIC: '0x42bf1bd8fc5a8dfdd0e97de131246ec0e3ec73da' as const,
     PARTY: '0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3' as const,
   },
   

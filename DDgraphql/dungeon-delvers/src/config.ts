@@ -1,6 +1,6 @@
 /**
  * Subgraph Configuration
- * Generated on 2025-08-07T18:00:00.000Z
+ * Generated on 2025-08-07T14:13:36.310Z
  * DO NOT EDIT MANUALLY - Use sync-system to update
  */
 
@@ -18,7 +18,7 @@ export const VRF_MANAGER_ADDRESS = '0x980d224ec4d198d94f34a8af76a19c00dabe2436';
 // Network info
 export const NETWORK = 'bsc';
 export const START_BLOCK = 56757876;
-export const VERSION = 'v3.8.0';
+export const VERSION = 'v3.8.1';
 
 // Helper function to create consistent entity IDs
 export function createEntityId(contractAddress: string, tokenId: string): string {

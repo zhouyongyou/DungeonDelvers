@@ -37,13 +37,13 @@ export interface ContractWithABI {
 
 export const CONTRACTS_WITH_ABI = {
   56: { // BSC Mainnet
-    // NFT Contracts - V25 Updated (8/7 am 7 deployment)
+    // NFT Contracts - V25 Updated (8/7 PM6 deployment)
     HERO: {
-      address: '0x5eded2670a6e7eb4a9c581bc397edc3b48cafd6d',
+      address: '0x671d937b171e2ba2c4dc23c133b07e4449f283ef',
       abi: HeroABI
     },
     RELIC: {
-      address: '0x7a9469587ffd28a69d4420d8893e7a0e92ef6316',
+      address: '0x42bf1bd8fc5a8dfdd0e97de131246ec0e3ec73da',
       abi: RelicABI
     },
     PARTY: {
@@ -57,7 +57,7 @@ export const CONTRACTS_WITH_ABI = {
       abi: DungeonCoreABI
     },
     DUNGEONMASTER: {
-      address: '0xE391261741Fad5FCC2D298d00e8c684767021253',
+      address: '0xc0bbae55cf9245f76628d2c5299cd6fa35cd102a',
       abi: DungeonMasterABI
     },
     PLAYERPROFILE: {
@@ -73,7 +73,7 @@ export const CONTRACTS_WITH_ABI = {
       abi: OracleABI
     },
     ALTAROFASCENSION: {
-      address: '0x3de7c97e6b65be8a1d726f5261cda1dd7d1e0cf1',
+      address: '0xa86749237d4631ad92ba859d0b0df4770f6147ba',
       abi: AltarOfAscensionABI
     },
     PLAYERVAULT: {
@@ -87,7 +87,7 @@ export const CONTRACTS_WITH_ABI = {
     
     // VRF System - V25 New (VRFManagerV2Plus)
     VRFMANAGER: {
-      address: '0xE1D1c53e2e467BFF3d6e4EffB7b89C0C10711ad1',
+      address: '0x980d224ec4d198d94f34a8af76a19c00dabe2436',
       abi: VRFManagerABI
     },
     

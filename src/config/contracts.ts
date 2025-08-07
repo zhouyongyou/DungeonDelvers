@@ -17,6 +17,7 @@ export const CONTRACTS = {
     
     // Token Contracts
     SOULSHARD: '0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF',
+    USD: '0x7C67Af4EBC6651c95dF78De11cfe325660d935FE',
     
     // NFT Contracts (V25 - Updated 2025-08-07)
     HERO: '0x671d937b171e2ba2c4dc23c133b07e4449f283ef',

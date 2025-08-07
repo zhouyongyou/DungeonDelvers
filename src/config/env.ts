@@ -88,15 +88,15 @@ export const ENV = {
       PLAYER_VAULT: import.meta.env.VITE_MAINNET_PLAYERVAULT_ADDRESS || 
                     '0x62Bce9aF5E2C47b13f62A2e0fCB1f9C7AfaF8787',
       ALTAR_OF_ASCENSION: import.meta.env.VITE_MAINNET_ALTAROFASCENSION_ADDRESS || 
-                          '0x3de7c97e6b65be8a1d726f5261cda1dd7d1e0cf1',
+                          '0xa86749237d4631ad92ba859d0b0df4770f6147ba',
       DUNGEON_MASTER: import.meta.env.VITE_MAINNET_DUNGEONMASTER_ADDRESS || 
-                      '0xE391261741Fad5FCC2D298d00e8c684767021253',
+                      '0xc0bbae55cf9245f76628d2c5299cd6fa35cd102a',
       
-      // NFT 合約 (V25 - 8/7 am 7 deployment)
+      // NFT 合約 (V25 - 8/7 PM6 deployment)
       HERO: import.meta.env.VITE_MAINNET_HERO_ADDRESS || 
-            '0x5eded2670a6e7eb4a9c581bc397edc3b48cafd6d',
+            '0x671d937b171e2ba2c4dc23c133b07e4449f283ef',
       RELIC: import.meta.env.VITE_MAINNET_RELIC_ADDRESS || 
-             '0x7a9469587ffd28a69d4420d8893e7a0e92ef6316',
+             '0x42bf1bd8fc5a8dfdd0e97de131246ec0e3ec73da',
       PARTY: import.meta.env.VITE_MAINNET_PARTY_ADDRESS || 
              '0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3',
       VIP_STAKING: import.meta.env.VITE_MAINNET_VIPSTAKING_ADDRESS || 

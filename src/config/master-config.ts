@@ -21,18 +21,18 @@ export const MASTER_CONFIG = {
     UNISWAP_POOL: '0x1e5Cd5F386Fb6F39cD8788675dd3A5ceB6521C82',
   },
   
-  // NFT 合約 - V25 新部署 (8/7 am 7)
+  // NFT 合約 - V25 新部署 (8/7 PM6)
   nft: {
-    HERO: '0x5eded2670a6e7eb4a9c581bc397edc3b48cafd6d',
-    RELIC: '0x7a9469587ffd28a69d4420d8893e7a0e92ef6316',
+    HERO: '0x671d937b171e2ba2c4dc23c133b07e4449f283ef',
+    RELIC: '0x42bf1bd8fc5a8dfdd0e97de131246ec0e3ec73da',
     PARTY: '0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3',
   },
   
   // 遊戲合約 - V25 新部署
   game: {
-    DUNGEONMASTER: '0xE391261741Fad5FCC2D298d00e8c684767021253',
+    DUNGEONMASTER: '0xc0bbae55cf9245f76628d2c5299cd6fa35cd102a',
     DUNGEONSTORAGE: '0x539AC926C6daE898f2C843aF8C59Ff92B4b3B468',
-    ALTAROFASCENSION: '0x3de7c97e6b65be8a1d726f5261cda1dd7d1e0cf1',
+    ALTAROFASCENSION: '0xa86749237d4631ad92ba859d0b0df4770f6147ba',
   },
   
   // 玩家系統 - 重複使用
@@ -44,7 +44,7 @@ export const MASTER_CONFIG = {
   
   // VRF 系統
   vrf: {
-    VRFMANAGER: '0xE1D1c53e2e467BFF3d6e4EffB7b89C0C10711ad1',
+    VRFMANAGER: '0x980d224ec4d198d94f34a8af76a19c00dabe2436',
     requestPrice: '0.005', // BNB
     platformFee: '0.0003', // BNB per NFT
   },

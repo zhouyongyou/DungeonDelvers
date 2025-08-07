@@ -34,7 +34,7 @@
       "id": "dungeon-delvers---bsc"
     },
     "metadataServer": {
-      "url": "https://dungeon-delvers-metadata-server.vercel.app"
+      "url": "https://dungeon-delvers-metadata-server.onrender.com"
     }
   }
 }
