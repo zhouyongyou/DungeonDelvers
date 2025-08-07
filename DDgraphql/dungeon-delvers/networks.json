@@ -9,36 +9,36 @@
     "DUNGEONMASTER_ADDRESS": "0xc0bbae55cf9245f76628d2c5299cd6fa35cd102a",
     "PLAYERVAULT_ADDRESS": "0x62Bce9aF5E2C47b13f62A2e0fCB1f9C7AfaF8787",
     "DUNGEONSTORAGE_ADDRESS": "0x539AC926C6daE898f2C843aF8C59Ff92B4b3B468",
-    "HERO_START_BLOCK": 56688770,
-    "RELIC_START_BLOCK": 56688770,
-    "PARTY_START_BLOCK": 56688770,
-    "VIPSTAKING_START_BLOCK": 56688770,
-    "PLAYERPROFILE_START_BLOCK": 56688770,
-    "ALTAROFASCENSION_START_BLOCK": 56688770,
-    "DUNGEONMASTER_START_BLOCK": 56688770,
-    "PLAYERVAULT_START_BLOCK": 56688770,
-    "DUNGEONSTORAGE_START_BLOCK": 56688770,
+    "HERO_START_BLOCK": 56757876,
+    "RELIC_START_BLOCK": 56757876,
+    "PARTY_START_BLOCK": 56757876,
+    "VIPSTAKING_START_BLOCK": 56757876,
+    "PLAYERPROFILE_START_BLOCK": 56757876,
+    "ALTAROFASCENSION_START_BLOCK": 56757876,
+    "DUNGEONMASTER_START_BLOCK": 56757876,
+    "PLAYERVAULT_START_BLOCK": 56757876,
+    "DUNGEONSTORAGE_START_BLOCK": 56757876,
     "network": "bsc",
     "chainId": 56,
     "Hero": {
       "address": "0x671d937b171e2ba2c4dc23c133b07e4449f283ef",
-      "startBlock": 56688770
+      "startBlock": 56757876
     },
     "Relic": {
       "address": "0x42bf1bd8fc5a8dfdd0e97de131246ec0e3ec73da",
-      "startBlock": 56688770
+      "startBlock": 56757876
     },
     "VRFManagerV2Plus": {
       "address": "0x980d224ec4d198d94f34a8af76a19c00dabe2436",
-      "startBlock": 56688770
+      "startBlock": 56757876
     },
     "DungeonMaster": {
       "address": "0xc0bbae55cf9245f76628d2c5299cd6fa35cd102a",
-      "startBlock": 56688770
+      "startBlock": 56757876
     },
     "DungeonStorage": {
       "address": "0x539AC926C6daE898f2C843aF8C59Ff92B4b3B468",
-      "startBlock": 56688770
+      "startBlock": 56757876
     }
   }
 }
