@@ -50,8 +50,8 @@ if [ -z "$GRAPH_ACCESS_TOKEN" ]; then
 fi
 
 # 部署並指定版本標籤
-VERSION="v3.8.0"
-echo "📌 部署版本: $VERSION (V25 deployment)"
+VERSION="v3.8.2"
+echo "📌 部署版本: $VERSION (V25 PM10 deployment)"
 
 graph deploy dungeon-delvers \
   --version-label $VERSION \
