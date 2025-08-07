@@ -246,6 +246,10 @@ type Player @entity(immutable: false) {
   expeditions: [Expedition!] @derivedFrom(field: "player")
   " 是否擁有 VIP 卡 (SBT) "
   hasVIPCard: Boolean!
+  " 玩家被強制揭示的記錄 "
+  forcedReveals: [ForcedRevealEvent!] @derivedFrom(field: "user")
+  " 玩家被代理揭示的記錄 "
+  proxyReveals: [ProxyRevealEvent!] @derivedFrom(field: "user")
 }
 
 type Hero @entity(immutable: false) {
@@ -271,9 +275,12 @@ type Hero @entity(immutable: false) {
   burnedAt: BigInt
   " 升級歷史 "
   upgradeHistory: [HeroUpgrade!] @derivedFrom(field: "hero")
-  " VRF 請求 ID "
-  vrfRequestId: BigInt
-
+  " 是否已揭示 "
+  isRevealed: Boolean!
+  " 揭示時間戳 "
+  revealedAt: BigInt
+  " 關聯的鑄造承諾 "
+  mintCommitment: MintCommitment
 }
 
 type Relic @entity(immutable: false) {
@@ -299,9 +306,12 @@ type Relic @entity(immutable: false) {
   burnedAt: BigInt
   " 升級歷史 "
   upgradeHistory: [RelicUpgrade!] @derivedFrom(field: "relic")
-  " VRF 請求 ID "
-  vrfRequestId: BigInt
-
+  " 是否已揭示 "
+  isRevealed: Boolean!
+  " 揭示時間戳 "
+  revealedAt: BigInt
+  " 關聯的鑄造承諾 "
+  mintCommitment: MintCommitment
 }
 
 type Party @entity(immutable: false) {
@@ -801,6 +811,110 @@ type PausableEvent @entity(immutable: true) {
 # =================================================================
 # Commit-Reveal Mechanism - 鑄造承諾和揭示追蹤
 # =================================================================
+
+type MintCommitment @entity(immutable: false) {
+  " 唯一 ID：user-blockNumber "
+  id: ID!
+  " 執行鑄造的玩家 "
+  player: Player!
+  " 鑄造數量 "
+  quantity: BigInt!
+  " 承諾區塊號 "
+  blockNumber: BigInt!
+  " 是否從金庫支付 "
+  fromVault: Boolean!
+  " 最大稀有度 "
+  maxRarity: Int!
+  " 支付金額 "
+  payment: BigInt!
+  " 是否已揭示 "
+  isRevealed: Boolean!
+  " 揭示時間戳 "
+  revealedAt: BigInt
+  " 是否為強制揭示 "
+  isForcedReveal: Boolean!
+  " 強制揭示執行者 "
+  forcedRevealExecutor: Bytes
+  " 承諾類型 (hero/relic) "
+  nftType: String!
+  " 合約地址 "
+  contractAddress: Bytes!
+  " 創建時間戳 "
+  createdAt: BigInt!
+  " 最後更新時間戳 "
+  lastUpdatedAt: BigInt!
+  " 揭示後的 NFT ID 列表 "
+  revealedTokens: [String!]!
+}
+
+type RevealEvent @entity(immutable: true) {
+  " 唯一 ID：txHash-logIndex "
+  id: ID!
+  " 揭示的 NFT ID "
+  tokenId: BigInt!
+  " NFT 擁有者 "
+  owner: Player!
+  " NFT 類型 (hero/relic) "
+  nftType: String!
+  " 稀有度 "
+  rarity: Int!
+  " 戰力或容量 "
+  powerOrCapacity: BigInt!
+  " 關聯的鑄造承諾 "
+  mintCommitment: MintCommitment!
+  " 是否為代理揭示 "
+  isProxyReveal: Boolean!
+  " 代理揭示執行者 "
+  proxyExecutor: Bytes
+  " 交易哈希 "
+  transactionHash: Bytes!
+  " 區塊號 "
+  blockNumber: BigInt!
+  " 時間戳 "
+  timestamp: BigInt!
+}
+
+type ForcedRevealEvent @entity(immutable: true) {
+  " 唯一 ID：txHash-logIndex "
+  id: ID!
+  " 被強制揭示的用戶 "
+  user: Player!
+  " 執行強制揭示的地址 "
+  executor: Bytes!
+  " 強制揭示的 NFT 數量 "
+  quantity: BigInt!
+  " NFT 類型 (hero/relic) "
+  nftType: String!
+  " 合約地址 "
+  contractAddress: Bytes!
+  " 交易哈希 "
+  transactionHash: Bytes!
+  " 區塊號 "
+  blockNumber: BigInt!
+  " 時間戳 "
+  timestamp: BigInt!
+}
+
+type ProxyRevealEvent @entity(immutable: true) {
+  " 唯一 ID：txHash-logIndex "
+  id: ID!
+  " 被代理揭示的用戶 "
+  user: Player!
+  " 代理執行者 "
+  proxy: Bytes!
+  " NFT 類型 (hero/relic) "
+  nftType: String!
+  " 合約地址 "
+  contractAddress: Bytes!
+  " 交易哈希 "
+  transactionHash: Bytes!
+  " 區塊號 "
+  blockNumber: BigInt!
+  " 時間戳 "
+  timestamp: BigInt!
+}
+
+# VRF Manager V2Plus Entities
 
 type VRFRequest @entity(immutable: false) {
   " Request ID from VRF "

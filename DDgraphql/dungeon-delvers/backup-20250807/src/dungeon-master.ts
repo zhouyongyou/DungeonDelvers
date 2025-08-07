@@ -238,10 +238,29 @@ export function handleRewardsBanked(event: RewardsBanked): void {
   }
 }
 
-// ===== V25 VRF 版本說明 =====
-// ExpeditionCommitted 和 ExpeditionRevealed 在 V25 VRF 版本中不存在
-// 只保留 ExpeditionFulfilled 作為最終結果事件
-// VRF 請求和完成由 VRFManagerV2Plus 處理
+// ===== VRF 相關事件處理器 =====
+// 使用 VRF 後已經沒有 Commit-Reveal 兩步驟
+
+export function handleExpeditionCommitted(event: ExpeditionCommitted): void {
+  // VRF 版本：這個事件在請求 VRF 時觸發
+  // 記錄探險請求，等待 VRF 返回
+  const player = getOrCreatePlayer(event.params.player)
+  
+  log.info("VRF Expedition requested for player: {}, partyId: {}", [
+    event.params.player.toHexString(),
+    event.params.partyId.toString()
+  ])
+}
+
+export function handleExpeditionRevealed(event: ExpeditionRevealed): void {
+  // VRF 版本：VRF 返回後，結果已確定
+  const player = getOrCreatePlayer(event.params.player)
+  
+  log.info("VRF Expedition result for player: {}, success: {}", [
+    event.params.player.toHexString(),
+    event.params.success ? "true" : "false"
+  ])
+}
 
 // ===== 處理合約暫停事件 =====
 // 注意：當新版本 DungeonMaster 合約部署後，需要在 ABI 中添加 Paused/Unpaused 事件

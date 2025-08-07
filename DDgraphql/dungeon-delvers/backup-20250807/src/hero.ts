@@ -39,7 +39,7 @@ export function handleHeroMinted(event: HeroMinted): void {
     hero.power = event.params.power
     hero.createdAt = event.block.timestamp
     hero.isBurned = false
-    // V25 VRF 版本：英雄在鑄造時屬性已確定，不需要 isRevealed
+    hero.isRevealed = false  // 新鑄造的英雄尚未揭示
     hero.save()
     
     // 更新統計數據

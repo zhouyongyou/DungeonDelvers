@@ -1,0 +1,83 @@
+# ===== V25 VRF 相關的 Schema 新增 =====
+# 添加這些內容到現有的 schema.graphql
+
+# VRF 鑄造承諾實體
+type MintCommitment @entity {
+  id: ID! # user address + optional suffix
+  user: Bytes! # address
+  quantity: BigInt!
+  blockNumber: BigInt!
+  fromVault: Boolean!
+  fulfilled: Boolean!
+  createdAt: BigInt!
+  updatedAt: BigInt!
+}
+
+# VRF 請求實體
+type VRFRequest @entity {
+  id: ID! # requestId
+  requestId: BigInt!
+  requester: Bytes! # contract address
+  requestType: Int! # 0: MINT, 1: REVEAL, 2: EXPEDITION, 3: UPGRADE
+  fulfilled: Boolean!
+  randomWords: [BigInt!]
+  createdAt: BigInt!
+  fulfilledAt: BigInt
+}
+
+# VRF 授權實體
+type VRFAuthorization @entity {
+  id: ID! # contract address
+  contract: Bytes!
+  authorized: Boolean!
+  updatedAt: BigInt!
+}
+
+# 探索承諾實體
+type ExpeditionCommitment @entity {
+  id: ID! # player + partyId
+  player: Bytes!
+  partyId: BigInt!
+  dungeonId: BigInt!
+  blockNumber: BigInt!
+  revealed: Boolean!
+  success: Boolean
+  createdAt: BigInt!
+}
+
+# 升級承諾實體
+type UpgradeCommitment @entity {
+  id: ID! # player + blockNumber
+  player: Bytes!
+  tokenContract: Bytes!
+  baseRarity: Int!
+  blockNumber: BigInt!
+  burnedTokenIds: [BigInt!]!
+  revealed: Boolean!
+  outcome: Int
+  targetRarity: Int
+  createdAt: BigInt!
+}
+
+# VRF 統計實體
+type VRFStats @entity {
+  id: ID! # "global" or contract address
+  totalRequests: BigInt!
+  fulfilledRequests: BigInt!
+  pendingRequests: BigInt!
+  averageFulfillTime: BigInt!
+  lastRequestAt: BigInt!
+  lastFulfilledAt: BigInt!
+}
+
+# 擴展現有的 Hero 實體
+# 在現有 Hero 實體中添加：
+# isRevealed: Boolean!
+# revealedAt: BigInt
+# vrfRequestId: BigInt
+
+# 擴展現有的 Relic 實體
+# 在現有 Relic 實體中添加：
+# isRevealed: Boolean!
+# revealedAt: BigInt
+# vrfRequestId: BigInt

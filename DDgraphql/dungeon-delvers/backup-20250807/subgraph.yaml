@@ -151,8 +151,10 @@ dataSources:
       eventHandlers:
         - event: ExpeditionFulfilled(indexed address,indexed uint256,bool,uint256,uint256)
           handler: handleExpeditionFulfilled
-        # VRF 版本只保留 ExpeditionFulfilled
-        # ExpeditionCommitted 和 ExpeditionRevealed 在 VRF 版本中不存在
+        - event: ExpeditionCommitted(indexed address,uint256,uint256,uint256)
+          handler: handleExpeditionCommitted
+        - event: ExpeditionRevealed(indexed address,uint256,bool)
+          handler: handleExpeditionRevealed
       file: ./src/dungeon-master.ts
   - kind: ethereum/contract
     name: PlayerVault
@@ -226,10 +228,6 @@ dataSources:
       eventHandlers:
         - event: RandomRequested(indexed uint256,indexed address,uint8)
           handler: handleRandomRequested
-        - event: RandomFulfilled(indexed uint256,uint256[])
-          handler: handleRandomFulfilled
-        - event: AuthorizationUpdated(indexed address,bool)
-          handler: handleAuthorizationUpdated
         - event: RandomFulfilled(indexed uint256,uint256[])
           handler: handleRandomFulfilled
         - event: AuthorizationUpdated(indexed address,bool)

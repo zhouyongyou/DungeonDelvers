@@ -1,0 +1,122 @@
+import { BigInt, Bytes, log } from "@graphprotocol/graph-ts"
+import {
+  RandomRequested,
+  RandomFulfilled,
+  AuthorizationUpdated,
+  VRFPriceUpdated,
+  PlatformFeeUpdated
+} from "../generated/VRFManagerV2Plus/VRFManagerV2Plus"
+import { VRFRequest, VRFConfig, VRFAuthorization, VRFStats } from "../generated/schema"
+
+// 獲取或創建 VRF 統計
+function getOrCreateVRFStats(): VRFStats {
+  let stats = VRFStats.load("global")
+  if (stats == null) {
+    stats = new VRFStats("global")
+    stats.totalRequests = BigInt.fromI32(0)
+    stats.fulfilledRequests = BigInt.fromI32(0)
+    stats.pendingRequests = BigInt.fromI32(0)
+    stats.lastRequestAt = BigInt.fromI32(0)
+    stats.lastFulfilledAt = BigInt.fromI32(0)
+  }
+  return stats
+}
+
+export function handleRandomRequested(event: RandomRequested): void {
+  let request = new VRFRequest(event.params.requestId.toString())
+  request.requestId = event.params.requestId
+  request.requester = event.params.requester
+  
+  // 根據 requestType 設置類型字符串
+  let requestType = "UNKNOWN"
+  if (event.params.requestType == 0) requestType = "HERO_MINT"
+  else if (event.params.requestType == 1) requestType = "RELIC_MINT"
+  else if (event.params.requestType == 2) requestType = "EXPEDITION"
+  else if (event.params.requestType == 3) requestType = "UPGRADE"
+  
+  request.requestType = requestType
+  request.fulfilled = false
+  request.randomWords = []
+  request.createdAt = event.block.timestamp
+  request.txHash = event.transaction.hash
+  request.save()
+  
+  // 更新統計
+  let stats = getOrCreateVRFStats()
+  stats.totalRequests = stats.totalRequests.plus(BigInt.fromI32(1))
+  stats.pendingRequests = stats.pendingRequests.plus(BigInt.fromI32(1))
+  stats.lastRequestAt = event.block.timestamp
+  stats.save()
+  
+  log.info("VRF Request created: {} for {} type {}", [
+    event.params.requestId.toString(),
+    event.params.requester.toHexString(),
+    requestType
+  ])
+}
+
+export function handleRandomFulfilled(event: RandomFulfilled): void {
+  let request = VRFRequest.load(event.params.requestId.toString())
+  if (request == null) {
+    log.warning("VRF Request not found: {}", [event.params.requestId.toString()])
+    return
+  }
+  
+  request.fulfilled = true
+  request.randomWords = event.params.randomWords
+  request.fulfilledAt = event.block.timestamp
+  request.save()
+  
+  // 更新統計
+  let stats = getOrCreateVRFStats()
+  stats.fulfilledRequests = stats.fulfilledRequests.plus(BigInt.fromI32(1))
+  stats.pendingRequests = stats.pendingRequests.minus(BigInt.fromI32(1))
+  stats.lastFulfilledAt = event.block.timestamp
+  stats.save()
+  
+  log.info("VRF Request fulfilled: {} with {} random words", [
+    event.params.requestId.toString(),
+    event.params.randomWords.length.toString()
+  ])
+}
+
+export function handleAuthorizationUpdated(event: AuthorizationUpdated): void {
+  let auth = VRFAuthorization.load(event.params.contract_.toHexString())
+  if (auth == null) {
+    auth = new VRFAuthorization(event.params.contract_.toHexString())
+  }
+  
+  auth.contract = event.params.contract_
+  auth.authorized = event.params.authorized
+  auth.updatedAt = event.block.timestamp
+  auth.save()
+  
+  log.info("VRF Authorization updated: {} = {}", [
+    event.params.contract_.toHexString(),
+    event.params.authorized ? "true" : "false"
+  ])
+}
+
+export function handleVRFPriceUpdated(event: VRFPriceUpdated): void {
+  let config = VRFConfig.load("current")
+  if (config == null) {
+    config = new VRFConfig("current")
+    config.managerAddress = event.address
+    config.platformFee = BigInt.fromI32(0)
+  }
+  config.vrfPrice = event.params.newPrice
+  config.lastUpdated = event.block.timestamp
+  config.save()
+}
+
+export function handlePlatformFeeUpdated(event: PlatformFeeUpdated): void {
+  let config = VRFConfig.load("current")
+  if (config == null) {
+    config = new VRFConfig("current")
+    config.managerAddress = event.address
+    config.vrfPrice = BigInt.fromI32(0)
+  }
+  config.platformFee = event.params.newFee
+  config.lastUpdated = event.block.timestamp
+  config.save()
+}

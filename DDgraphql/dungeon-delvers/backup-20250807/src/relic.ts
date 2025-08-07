@@ -39,7 +39,7 @@ export function handleRelicMinted(event: RelicMinted): void {
     relic.capacity = event.params.capacity
     relic.createdAt = event.block.timestamp
     relic.isBurned = false
-    // V25 VRF 版本：聖物在鑄造時屬性已確定，不需要 isRevealed
+    relic.isRevealed = false  // 新鑄造的聖物尚未揭示
     relic.save()
     
     // 更新統計數據
