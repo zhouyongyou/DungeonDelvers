@@ -215,7 +215,44 @@ export const useContractEventsOptimized = () => {
 
     // --- 事件監聽設定 (使用自適應輪詢間隔) ---
     
-    // NFT 鑄造/創建事件 -> 刷新 NFT 列表和餘額
+    // 🔥 VRF 鑄造階段 1：監聽 MintCommitted（VRF 請求提交）
+    useWatchContractEvent({ 
+        ...heroContract, 
+        chainId: bsc.id, 
+        eventName: 'MintCommitted', 
+        pollingInterval: 5000, // VRF 階段需要更頻繁的檢查
+        enabled: isEnabled,
+        onLogs: createContractEventHandler(heroContract, 'MintCommitted', address, (log) => { 
+            const quantity = log.args.quantity?.toString() || '0';
+            showToast(`⚡ VRF 請求已提交！正在生成 ${quantity} 個英雄的隨機屬性...`, 'info');
+            // 觸發 VRF 等待狀態
+            queryClient.setQueryData(['vrfWaiting', 'hero', address], {
+                isWaiting: true,
+                quantity: Number(quantity),
+                timestamp: Date.now()
+            });
+        }) 
+    });
+    
+    // 類似的 Relic MintCommitted 事件
+    useWatchContractEvent({ 
+        ...relicContract, 
+        chainId: bsc.id, 
+        eventName: 'MintCommitted', 
+        pollingInterval: 5000,
+        enabled: isEnabled,
+        onLogs: createContractEventHandler(relicContract, 'MintCommitted', address, (log) => { 
+            const quantity = log.args.quantity?.toString() || '0';
+            showToast(`⚡ VRF 請求已提交！正在生成 ${quantity} 個聖物的隨機屬性...`, 'info');
+            queryClient.setQueryData(['vrfWaiting', 'relic', address], {
+                isWaiting: true,
+                quantity: Number(quantity),
+                timestamp: Date.now()
+            });
+        }) 
+    });
+    
+    // 🔥 VRF 鑄造階段 2：監聽 HeroMinted（VRF 完成，NFT 真正鑄造）
     useWatchContractEvent({ 
         ...heroContract, 
         chainId: bsc.id, 
@@ -223,11 +260,14 @@ export const useContractEventsOptimized = () => {
         pollingInterval, // 🔥 使用自適應間隔
         enabled: isEnabled, // 🔥 背景模式時停用
         onLogs: createContractEventHandler(heroContract, 'HeroMinted', address, (log) => { 
-            showToast(`英雄 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); 
-            invalidateNftsAndBalance(); 
+            showToast(`✨ 英雄 #${log.args.tokenId?.toString()} 鑄造完成！屬性已確定`, 'success'); 
+            invalidateNftsAndBalance();
+            // 清除 VRF 等待狀態
+            queryClient.setQueryData(['vrfWaiting', 'hero', address], null);
         }) 
     });
     
+    // 🔥 VRF 鑄造階段 2：監聽 RelicMinted（VRF 完成）
     useWatchContractEvent({ 
         ...relicContract, 
         chainId: bsc.id, 
@@ -235,8 +275,10 @@ export const useContractEventsOptimized = () => {
         pollingInterval, // 🔥 使用自適應間隔
         enabled: isEnabled, // 🔥 背景模式時停用
         onLogs: createContractEventHandler(relicContract, 'RelicMinted', address, (log) => { 
-            showToast(`聖物 #${log.args.tokenId?.toString()} 鑄造成功！`, 'success'); 
-            invalidateNftsAndBalance(); 
+            showToast(`✨ 聖物 #${log.args.tokenId?.toString()} 鑄造完成！屬性已確定`, 'success'); 
+            invalidateNftsAndBalance();
+            // 清除 VRF 等待狀態
+            queryClient.setQueryData(['vrfWaiting', 'relic', address], null);
         }) 
     });
     

@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect, memo } from 'react';
 import { useAccount, useBalance, usePublicClient, useReadContract } from 'wagmi';
 import { formatEther, maxUint256, decodeEventLog, parseEther } from 'viem';
 import type { Abi } from 'viem';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAppToast } from '../contexts/SimpleToastContext';
 import { useTransactionWithProgress } from '../hooks/useTransactionWithProgress';
 import { TransactionProgressModal } from '../components/ui/TransactionProgressModal';
@@ -22,6 +22,7 @@ import { PRICE_OVERRIDE, logPriceOverride } from '../config/priceOverride';
 import { invalidationStrategies } from '../config/queryConfig';
 import { MintPagePreview } from '../components/mint/MintPagePreview';
 import { FeaturedNftsGallery } from '../components/mint/FeaturedNftsGallery';
+import { VRFWaitingModal } from '../components/mint/VRFWaitingModal';
 
 // =================================================================
 // Section: 工具函數
@@ -67,15 +68,19 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     const soulShardContract = getContractWithABI('SOULSHARD');
     const playerVaultContract = getContractWithABI('PLAYERVAULT');
     
-    // 調試：檢查合約配置
-    console.log('[useMintLogic 合約配置]', {
-        type,
-        address,
-        contractConfig: contractConfig?.address,
-        soulShardContract: soulShardContract?.address,
-        hasAbi: !!contractConfig?.abi && !!soulShardContract?.abi,
-        paymentSource
-    });
+    // 調試：檢查合約配置（僅在開發環境且第一次渲染時）
+    useEffect(() => {
+        if (import.meta.env.DEV) {
+            console.log('[useMintLogic 合約配置]', {
+                type,
+                address,
+                contractConfig: contractConfig?.address,
+                soulShardContract: soulShardContract?.address,
+                hasAbi: !!contractConfig?.abi && !!soulShardContract?.abi,
+                paymentSource
+            });
+        }
+    }, []); // 只在 mount 時執行一次
 
     // ★★★【核心修復】★★★
     // 改用與管理頁面相同的 Oracle 直接查詢方式，避免 Hero 合約的問題
@@ -241,7 +246,7 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     const vaultBalance = useMemo(() => (vaultInfo && Array.isArray(vaultInfo) ? vaultInfo[0] : 0n), [vaultInfo]);
 
     // 獲取授權狀態的邏輯
-    const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    const { data: allowance, refetch: refetchAllowance, isLoading: isLoadingAllowance, error: allowanceError } = useReadContract({
         address: soulShardContract?.address,
         abi: soulShardContract?.abi,
         functionName: 'allowance',
@@ -255,6 +260,21 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
             retry: 2,
         },
     });
+    
+    // 調試 allowance 查詢狀態
+    useEffect(() => {
+        if (allowanceError) {
+            console.error('[授權查詢錯誤]', {
+                error: allowanceError,
+                soulShardAddress: soulShardContract?.address,
+                spenderAddress: contractConfig?.address,
+                userAddress: address
+            });
+        }
+        if (isLoadingAllowance) {
+            console.log('[授權查詢] 加載中...');
+        }
+    }, [allowanceError, isLoadingAllowance, soulShardContract?.address, contractConfig?.address, address]);
 
     const finalRequiredAmount = requiredAmount ?? 0n;
     const finalPlatformFee = platformFee ?? 0n;
@@ -276,17 +296,28 @@ const useMintLogic = (type: 'hero' | 'relic', quantity: number, paymentSource: P
     }, [platformFee, vrfFee, type, quantity]); // 減少不必要的依賴
 
     const needsApproval = useMemo(() => {
-        // 添加調試日誌
-        console.log('[授權檢測]', {
-            paymentSource,
-            allowance: allowance?.toString(),
-            allowanceType: typeof allowance,
-            finalRequiredAmount: finalRequiredAmount?.toString(),
-            finalRequiredAmountType: typeof finalRequiredAmount,
-            needsApproval: allowance && finalRequiredAmount ? allowance < finalRequiredAmount : 'N/A'
-        });
+        // 調試日誌（僅在開發環境且值有變化時）
+        if (import.meta.env.DEV && (allowance !== undefined || finalRequiredAmount > 0n)) {
+            console.log('[授權檢測]', {
+                paymentSource,
+                allowance: allowance?.toString(),
+                allowanceType: typeof allowance,
+                finalRequiredAmount: finalRequiredAmount?.toString(),
+                finalRequiredAmountType: typeof finalRequiredAmount,
+                needsApproval: allowance && finalRequiredAmount ? allowance < finalRequiredAmount : 'N/A'
+            });
+        }
         
-        if (paymentSource !== 'wallet' || typeof allowance !== 'bigint' || typeof finalRequiredAmount !== 'bigint') return false;
+        // 重要修復：如果 allowance 是 undefined，視為需要授權（保守策略）
+        if (paymentSource !== 'wallet' || typeof finalRequiredAmount !== 'bigint') return false;
+        
+        // 如果 allowance 還在加載中（undefined），預設需要授權
+        if (typeof allowance === 'undefined') {
+            return true; // 保守策略：未知時假設需要授權
+        }
+        
+        if (typeof allowance !== 'bigint') return false;
+        
         return allowance < finalRequiredAmount;
     }, [paymentSource, allowance, finalRequiredAmount]);
 
@@ -497,6 +528,8 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
     const [mintingResult, setMintingResult] = useState<BatchMintResult | AnyNft | null>(null);
     const [showProgressModal, setShowProgressModal] = useState(false);
     const [isCheckingApproval, setIsCheckingApproval] = useState(false);
+    const [showVRFWaitingModal, setShowVRFWaitingModal] = useState(false);
+    const [vrfWaitingQuantity, setVrfWaitingQuantity] = useState(0);
     
     // 樂觀授權狀態：用於立即更新 UI，無需等待鏈上確認
     const [optimisticApprovalGranted, setOptimisticApprovalGranted] = useState(false);
@@ -638,101 +671,53 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
     
     const { execute: executeMint, progress: mintProgress, reset: resetMint } = useTransactionWithProgress({
         onSuccess: async (receipt) => {
-            // 確認樂觀更新
-            confirmUpdate();
+            // 🔥 VRF 修正：不立即顯示成功，而是顯示 VRF 等待
+            setShowProgressModal(false);
+            setVrfWaitingQuantity(quantity);
+            setShowVRFWaitingModal(true);
             
-            // 處理鑄造成功邏輯
-            const mintEventName = type === 'hero' ? 'HeroMinted' : 'RelicMinted';
-            const allMintLogs = receipt.logs.filter((log: any) => {
+            // 不要立即確認樂觀更新，等 VRF 完成後再確認
+            // confirmUpdate(); // 移除
+            
+            // 找 MintCommitted 事件而非 HeroMinted
+            const mintCommittedEventName = 'MintCommitted';
+            const commitLogs = receipt.logs.filter((log: any) => {
                 try {
-                    return decodeEventLog({ abi: contractConfig.abi, ...log }).eventName === mintEventName;
+                    return decodeEventLog({ abi: contractConfig.abi, ...log }).eventName === mintCommittedEventName;
                 } catch {
                     return false;
                 }
             });
             
-            if (allMintLogs.length > 0 && contractConfig) {
-                // 提取所有 token ID
-                const allTokenIds: bigint[] = [];
-                const allNfts: AnyNft[] = [];
+            if (commitLogs.length > 0 && contractConfig) {
+                // 🔥 VRF 修正：不在這裡處理結果，因為 NFT 還沒有真正鑄造
+                // 只記錄 MintCommitted 事件的信息
+                const commitLog = commitLogs[0];
+                const decodedLog = decodeEventLog({ abi: contractConfig.abi, ...commitLog });
+                const committedQuantity = (decodedLog.args as { quantity?: bigint }).quantity;
                 
-                // 如果是批量鑄造（超過1個），使用新的批量結果格式
-                if (quantity > 1) {
-                    // 對於批量鑄造，我們先創建基本的批量結果
-                    const batchResult: BatchMintResult = {
-                        type,
-                        quantity,
-                        allTokenIds: allMintLogs.map(log => {
-                            const decoded = decodeEventLog({ abi: contractConfig.abi, ...log });
-                            const tokenId = (decoded.args as { tokenId?: bigint }).tokenId;
-                            return tokenId!;
-                        }).filter(Boolean),
-                        totalValue: quantity * 2 // 每個 NFT 2 USD
-                    };
-                    
-                    // 批量鑄造策略：為提高效率，不嘗試獲取具體 NFT 詳情
-                    // bestNft 保持 undefined，直接顯示佔位符和數量信息
-                    
-                    setMintingResult(batchResult);
-                } else {
-                    // 單個鑄造的原有邏輯
-                    const mintLog = allMintLogs[0];
-                    const decodedLog = decodeEventLog({ abi: contractConfig.abi, ...mintLog });
-                    const tokenId = (decodedLog.args as { tokenId?: bigint }).tokenId;
-                    
-                    if (tokenId) {
-                        const tokenUri = await publicClient?.readContract({
-                            address: contractConfig.address,
-                            abi: contractConfig.abi,
-                            functionName: 'tokenURI',
-                            args: [tokenId]
-                        }) as string;
-
-                        const metadata = await fetchMetadata(tokenUri, tokenId.toString(), contractConfig.address);
-                        const findAttr = (trait: string, defaultValue: string | number = 0) => 
-                            metadata.attributes?.find((a: NftAttribute) => a.trait_type === trait)?.value ?? defaultValue;
-                        
-                        let nftData: AnyNft;
-                        if (type === 'hero') {
-                            nftData = {
-                                ...metadata,
-                                id: tokenId,
-                                type,
-                                contractAddress: contractConfig.address,
-                                power: Number(findAttr('Power')),
-                                rarity: Number(findAttr('Rarity'))
-                            };
-                        } else {
-                            nftData = {
-                                ...metadata,
-                                id: tokenId,
-                                type,
-                                contractAddress: contractConfig.address,
-                                capacity: Number(findAttr('Capacity')),
-                                rarity: Number(findAttr('Rarity'))
-                            };
-                        }
-                        setMintingResult(nftData);
-                    }
-                }
+                console.log('[MintPage] VRF 請求已提交', {
+                    type,
+                    quantity: committedQuantity?.toString(),
+                    blockNumber: commitLog.blockNumber
+                });
                 
-                // 清理多個相關快取，確保數據更新  
-                queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
-                queryClient.invalidateQueries({ queryKey: ['dashboardSimpleStats'] });
-                queryClient.invalidateQueries({ queryKey: ['explorer'] });
-                // 使用統一的失效策略
-                if (address) {
-                    invalidationStrategies.onNftMinted(queryClient, address);
-                }
-                // 提示用戶數據同步（子圖可能有延遲）
+                // 🔥 VRF 修正：不立即刷新數據，等 VRF 完成後再刷新
+                // queryClient.invalidateQueries({ queryKey: ['ownedNfts'] }); // 移除
+                
+                // 提示 VRF 狀態
                 showToast(
-                    quantity > 1 
-                        ? `批量鑄造成功！${quantity} 個 ${title} 已添加到您的資產` 
-                        : '鑄造成功！子圖數據同步可能需要 1-2 分鐘', 
-                    'success'
+                    `🎲 VRF 請求已提交！正在等待 Chainlink 生成隨機數...`, 
+                    'info'
                 );
             }
-            setShowProgressModal(false);
+            
+            // 設定超時檢查，防止 VRF 一直不回應
+            setTimeout(() => {
+                if (showVRFWaitingModal) {
+                    showToast('⚠️ VRF 處理時間較長，建議手動刷新頁面查看結果', 'warning');
+                }
+            }, 60000); // 60秒超時
         },
         onError: () => {
             // 回滾樂觀更新
@@ -939,9 +924,54 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
             {getButtonText()}
           </ActionButton>;
 
+    // 🔥 使用 React Query 訂閱 VRF 狀態變化
+    const { data: vrfState } = useQuery({
+        queryKey: ['vrfWaiting', type, address],
+        queryFn: () => queryClient.getQueryData(['vrfWaiting', type, address]) as { isWaiting: boolean; quantity: number; timestamp: number } | null,
+        enabled: showVRFWaitingModal,
+        refetchInterval: 2000, // 每2秒檢查一次
+    });
+    
+    // 🔥 監聽 VRF 完成狀態
+    useEffect(() => {
+        if (vrfState && !vrfState.isWaiting && showVRFWaitingModal) {
+            // VRF 完成，關閉等待模態框
+            setShowVRFWaitingModal(false);
+            confirmUpdate(); // 確認樂觀更新
+            
+            // 刷新數據
+            queryClient.invalidateQueries({ queryKey: ['ownedNfts'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboardSimpleStats'] });
+            queryClient.invalidateQueries({ queryKey: ['explorer'] });
+            if (address) {
+                invalidationStrategies.onNftMinted(queryClient, address);
+            }
+            
+            showToast(`✨ ${vrfWaitingQuantity} 個${title}鑄造完成！屬性已確定`, 'success');
+            
+            // 顯示成功結果
+            const batchResult: BatchMintResult = {
+                type,
+                quantity: vrfWaitingQuantity,
+                totalValue: vrfWaitingQuantity * 2
+            };
+            setMintingResult(batchResult);
+            
+            // 清除 VRF 狀態
+            queryClient.removeQueries({ queryKey: ['vrfWaiting', type, address] });
+        }
+    }, [vrfState, showVRFWaitingModal, vrfWaitingQuantity, confirmUpdate, queryClient, showToast, title, type, address, invalidationStrategies]);
+    
     return (
         <div className="card-bg p-4 sm:p-5 md:p-6 rounded-xl shadow-lg flex flex-col items-center h-full">
             <MintResultModal result={mintingResult} onClose={() => setMintingResult(null)} />
+            <VRFWaitingModal 
+                isOpen={showVRFWaitingModal}
+                onClose={() => setShowVRFWaitingModal(false)}
+                quantity={vrfWaitingQuantity}
+                type={type}
+                estimatedTime={30}
+            />
             <TransactionProgressModal
                 isOpen={showProgressModal}
                 onClose={() => setShowProgressModal(false)}

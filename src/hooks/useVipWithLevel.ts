@@ -76,24 +76,37 @@ export function useVipWithLevel({
 
 /**
  * 批量處理多個 VIP NFT 的等級
+ * 注意：這不是一個 Hook，因為它在循環中調用 Hook 會違反 React 規則
+ * 請直接在組件中使用 useVipWithLevel
  */
-export function useMultipleVipWithLevel(
+export function processMultipleVipData(
   vipNfts: VipNft[], 
-  ownerAddress?: `0x${string}`
+  contractLevel: bigint | undefined,
+  isLevelLoading: boolean,
+  levelError?: Error
 ): VipWithLevel[] {
-  // 對於多個 VIP（理論上每個用戶只有一個），可以考慮批量調用
-  // 但目前簡化為單個處理
   const results: VipWithLevel[] = [];
   
   for (const vipData of vipNfts) {
-    const enhancedVip = useVipWithLevel({
-      address: ownerAddress,
-      vipData,
-    });
+    const currentLevel = contractLevel ? Number(contractLevel) : 0;
     
-    if (enhancedVip) {
-      results.push(enhancedVip);
-    }
+    const enhancedVipData: VipWithLevel = {
+      ...vipData,
+      level: currentLevel,
+      currentLevel,
+      isLevelLoading,
+      levelError,
+      name: currentLevel > 0 ? `VIP${currentLevel} Card #${vipData.id}` : `VIP Card #${vipData.id}`,
+      attributes: [
+        { trait_type: 'Level', value: currentLevel },
+        { trait_type: 'Staked Amount', value: Number(vipData.stakedAmount) },
+        ...vipData.attributes.filter(attr => 
+          attr.trait_type !== 'Level' && attr.trait_type !== 'Staked Amount'
+        )
+      ]
+    };
+    
+    results.push(enhancedVipData);
   }
   
   return results;

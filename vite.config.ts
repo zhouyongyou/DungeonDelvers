@@ -121,7 +121,7 @@ export default defineConfig(({ mode }) => ({
     
     // 🔥 優化：資源處理
     assetsInlineLimit: 4096, // 4KB 以下的資源內聯
-    sourcemap: false, // 生產環境關閉 sourcemap 以減少包大小
+    sourcemap: false, // 關閉 sourcemap 避免 WalletConnect 警告並減少包大小
     
     // 🔥 新增：分塊大小優化
     chunkSizeWarningLimit: 1000, // 1MB 警告閾值
@@ -135,6 +135,11 @@ export default defineConfig(({ mode }) => ({
     fs: {
       // 放寬文件系統存取限制，有助於解決某些環境下的模組解析問題
       strict: false,
+    },
+    // 抑制 sourcemap 警告
+    sourcemapIgnoreList: (sourcePath) => {
+      // 忽略所有 node_modules 中的 sourcemap 警告
+      return sourcePath.includes('node_modules');
     },
     // 🔥 新增：HMR 優化
     hmr: {
@@ -188,8 +193,18 @@ export default defineConfig(({ mode }) => ({
     ],
     exclude: [
       // 大型庫按需載入，不預構建
-      '@tanstack/react-virtual'
-    ]
+      '@tanstack/react-virtual',
+      // 排除有問題的依賴
+      '@walletconnect/ethereum-provider',
+      '@walletconnect/modal'
+    ],
+    // 強制重新優化
+    force: true,
+    // 忽略依賴的 sourcemap 警告
+    esbuildOptions: {
+      sourcemap: false,
+      sourceRoot: undefined
+    }
   },
   
   // 🔥 新增：解析優化
@@ -202,7 +217,7 @@ export default defineConfig(({ mode }) => ({
   
   // 🔥 新增：CSS 優化
   css: {
-    devSourcemap: true, // 開發環境保留 CSS sourcemap
+    devSourcemap: false, // 關閉 CSS sourcemap 保持一致性
     preprocessorOptions: {
       // 如果使用 SCSS/SASS，可以在這裡添加全局變量
     }

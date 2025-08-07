@@ -19,41 +19,77 @@ class AlchemyRPCManager {
   constructor() {
     this.initializeEndpoints();
     this.selectBestEndpoint();
+    
+    // 開發環境下顯示配置
+    if (import.meta.env.DEV) {
+      console.log('🚀 Alchemy RPC Manager 已初始化:', {
+        totalEndpoints: this.endpoints.length,
+        endpoints: this.endpoints.map(e => ({
+          key: e.key.substring(0, 6) + '...',
+          priority: e.priority
+        })),
+        currentEndpoint: this.currentEndpoint?.key.substring(0, 6) + '...'
+      });
+    }
   }
 
   private initializeEndpoints() {
-    const primaryKey = import.meta.env.VITE_ALCHEMY_PRIMARY_KEY;
-    const backendKey = import.meta.env.VITE_ALCHEMY_BACKEND_KEY;
-    const backupKeys = import.meta.env.VITE_ALCHEMY_BACKUP_KEYS?.split(',') || [];
+    // 優先使用單獨配置的 Keys
+    const keys = [
+      { key: import.meta.env.VITE_ALCHEMY_KEY_1, priority: 1 },
+      { key: import.meta.env.VITE_ALCHEMY_KEY_2, priority: 2 },
+      { key: import.meta.env.VITE_ALCHEMY_KEY_3, priority: 3 },
+      { key: import.meta.env.VITE_ALCHEMY_KEY_4, priority: 4 },
+      { key: import.meta.env.VITE_ALCHEMY_KEY_5, priority: 5 },
+    ];
 
-    if (primaryKey) {
-      this.endpoints.push({
-        url: `https://bnb-mainnet.g.alchemy.com/v2/${primaryKey}`,
-        key: primaryKey,
-        priority: 1,
-        failures: 0
-      });
-    }
+    // 如果沒有單獨配置，則使用舊的配置方式
+    if (!keys[0].key) {
+      const primaryKey = import.meta.env.VITE_ALCHEMY_PRIMARY_KEY;
+      const backendKey = import.meta.env.VITE_ALCHEMY_BACKEND_KEY;
+      const backupKeys = import.meta.env.VITE_ALCHEMY_BACKUP_KEYS?.split(',') || [];
 
-    if (backendKey) {
-      this.endpoints.push({
-        url: `https://bnb-mainnet.g.alchemy.com/v2/${backendKey}`,
-        key: backendKey,
-        priority: 2,
-        failures: 0
-      });
-    }
-
-    backupKeys.forEach((key, index) => {
-      if (key.trim()) {
+      if (primaryKey) {
         this.endpoints.push({
-          url: `https://bnb-mainnet.g.alchemy.com/v2/${key.trim()}`,
-          key: key.trim(),
-          priority: 3 + index,
+          url: `https://bnb-mainnet.g.alchemy.com/v2/${primaryKey}`,
+          key: primaryKey,
+          priority: 1,
           failures: 0
         });
       }
-    });
+
+      if (backendKey) {
+        this.endpoints.push({
+          url: `https://bnb-mainnet.g.alchemy.com/v2/${backendKey}`,
+          key: backendKey,
+          priority: 2,
+          failures: 0
+        });
+      }
+
+      backupKeys.forEach((key, index) => {
+        if (key.trim()) {
+          this.endpoints.push({
+            url: `https://bnb-mainnet.g.alchemy.com/v2/${key.trim()}`,
+            key: key.trim(),
+            priority: 3 + index,
+            failures: 0
+          });
+        }
+      });
+    } else {
+      // 使用新的配置方式（5個獨立的 Keys）
+      keys.forEach(({ key, priority }) => {
+        if (key) {
+          this.endpoints.push({
+            url: `https://bnb-mainnet.g.alchemy.com/v2/${key}`,
+            key,
+            priority,
+            failures: 0
+          });
+        }
+      });
+    }
 
     // 如果沒有 Alchemy 配置，使用公共 RPC
     if (this.endpoints.length === 0) {

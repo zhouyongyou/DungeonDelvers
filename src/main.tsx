@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { WagmiProvider } from 'wagmi';
+import './utils/suppressSourcemapWarnings'; // 抑制 sourcemap 警告
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './assets/index.css';
 import { wagmiSimpleConfig as wagmiConfig } from './wagmi-simple';

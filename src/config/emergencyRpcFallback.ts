@@ -140,6 +140,11 @@ export async function findFastestEmergencyRpc(): Promise<string> {
  * 檢查是否已經在緊急模式
  */
 export function isEmergencyModeActive(): boolean {
+  // 本地開發環境預設不使用緊急模式
+  if (import.meta.env.DEV) {
+    return false;
+  }
+  
   // 檢查 localStorage
   try {
     return localStorage.getItem('emergency-rpc-mode') === 'true' || emergencyModeActive;

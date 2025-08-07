@@ -41,9 +41,10 @@ export function useEnhancedNfts({ owner, chainId }: UseEnhancedNftsProps) {
   });
 
   // 獲取增強的 VIP 數據（包含合約等級）
+  // 注意：Hook 必須無條件調用，即使 vipData 為 undefined
   const enhancedVipCard = useVipWithLevel({
     address: owner,
-    vipData: baseNftData?.vipCards[0], // 假設每個用戶只有一個 VIP
+    vipData: baseNftData?.vipCards?.[0], // 可能為 undefined，但 Hook 仍會被調用
     chainId
   });
 

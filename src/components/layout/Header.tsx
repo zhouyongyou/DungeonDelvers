@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
-import { injected } from 'wagmi/connectors';
 import { ActionButton } from '../ui/ActionButton';
 import type { Page } from '../../types/page';
 import logoUrl from '/logo-192x192.png';
@@ -96,7 +95,7 @@ export const Header: React.FC<HeaderProps> = ({
   onHoverDashboard,
 }) => {
   const { address, isConnected, isConnecting } = useAccount();
-  const { connect } = useConnect();
+  const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { isMobile } = useMobileOptimization();
 
@@ -169,7 +168,19 @@ export const Header: React.FC<HeaderProps> = ({
       return items;
   }, [isDeveloper]);
 
-  const handleConnectClick = () => { if (isConnected) disconnect(); else connect({ connector: injected() }); };
+  const handleConnectClick = () => {
+    if (isConnected) {
+      disconnect();
+    } else {
+      // 使用配置中的第一個連接器（通常是 MetaMask）
+      const metamaskConnector = connectors.find(c => c.id === 'metamask' || c.name === 'MetaMask') || connectors[0];
+      if (metamaskConnector) {
+        connect({ connector: metamaskConnector });
+      } else {
+        console.error('沒有可用的連接器');
+      }
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

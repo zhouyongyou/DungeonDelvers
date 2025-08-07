@@ -13,6 +13,7 @@ import PlayerProfileArtifact from '../contracts/abi/PlayerProfile.json';
 import PlayerVaultArtifact from '../contracts/abi/PlayerVault.json';
 import DungeonCoreArtifact from '../contracts/abi/DungeonCore.json';
 import OracleArtifact from '../contracts/abi/Oracle.json';
+import SoulShardArtifact from '../contracts/abi/SoulShard.json';
 
 // Extract ABI from artifacts (V25 核心合約)
 const HeroABI = HeroArtifact.abi || HeroArtifact;
@@ -27,6 +28,7 @@ const PlayerProfileABI = PlayerProfileArtifact.abi || PlayerProfileArtifact;
 const PlayerVaultABI = PlayerVaultArtifact.abi || PlayerVaultArtifact;
 const DungeonCoreABI = DungeonCoreArtifact.abi || DungeonCoreArtifact;
 const OracleABI = OracleArtifact.abi || OracleArtifact;
+const SoulShardABI = SoulShardArtifact.abi || SoulShardArtifact;
 
 export interface ContractWithABI {
   address: string;
@@ -98,7 +100,7 @@ export const CONTRACTS_WITH_ABI = {
     },
     SOULSHARD: {
       address: '0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF',
-      abi: [] // Token contract
+      abi: SoulShardABI // SoulShard Token contract
     },
     
     // Additional Addresses (from master-config.json)
