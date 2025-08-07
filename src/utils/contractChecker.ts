@@ -3,7 +3,7 @@
 import { createPublicClient, http, isAddress } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { getContractWithABI } from '../config/contractsWithABI';
-import dungeonMasterABI from '../abis/DungeonMaster.json';
+import dungeonMasterABI from '../contracts/abi/DungeonMaster.json';
 
 export class ContractChecker {
   private publicClient;

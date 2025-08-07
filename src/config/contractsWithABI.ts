@@ -1,34 +1,22 @@
 // V25 Contract Configuration with ABI
 // Updated on 2025-08-07T07:00:00.000Z - 8/7 am 7 deployment
 
-import HeroArtifact from '../abis/Hero.json';
-import RelicArtifact from '../abis/Relic.json';
-import PartyArtifact from '../abis/Party.json';
-import DungeonCoreArtifact from '../abis/DungeonCore.json';
-import DungeonMasterArtifact from '../abis/DungeonMaster.json';
-import PlayerProfileArtifact from '../abis/PlayerProfile.json';
-import VIPStakingArtifact from '../abis/VIPStaking.json';
-import OracleArtifact from '../abis/Oracle.json';
-import AltarOfAscensionArtifact from '../abis/AltarOfAscension.json';
-import PlayerVaultArtifact from '../abis/PlayerVault.json';
-import DungeonStorageArtifact from '../abis/DungeonStorage.json';
-import SoulShardTokenArtifact from '../abis/SoulShardToken.json';
-import VRFManagerArtifact from '../abis/VRFManager.json';
+import HeroArtifact from '../contracts/abi/Hero.json';
+import RelicArtifact from '../contracts/abi/Relic.json';
+import PartyArtifact from '../contracts/abi/Party.json';
+import DungeonMasterArtifact from '../contracts/abi/DungeonMaster.json';
+import DungeonStorageArtifact from '../contracts/abi/DungeonStorage.json';
+import AltarOfAscensionVRFArtifact from '../contracts/abi/AltarOfAscensionVRF.json';
+import VRFConsumerV2PlusArtifact from '../contracts/abi/VRFConsumerV2Plus.json';
 
-// Extract ABI from artifacts
+// Extract ABI from artifacts (V25 核心合約)
 const HeroABI = HeroArtifact.abi || HeroArtifact;
 const RelicABI = RelicArtifact.abi || RelicArtifact;
 const PartyABI = PartyArtifact.abi || PartyArtifact;
-const DungeonCoreABI = DungeonCoreArtifact.abi || DungeonCoreArtifact;
 const DungeonMasterABI = DungeonMasterArtifact.abi || DungeonMasterArtifact;
-const PlayerProfileABI = PlayerProfileArtifact.abi || PlayerProfileArtifact;
-const VIPStakingABI = VIPStakingArtifact.abi || VIPStakingArtifact;
-const OracleABI = OracleArtifact.abi || OracleArtifact;
-const AltarOfAscensionABI = AltarOfAscensionArtifact.abi || AltarOfAscensionArtifact;
-const PlayerVaultABI = PlayerVaultArtifact.abi || PlayerVaultArtifact;
 const DungeonStorageABI = DungeonStorageArtifact.abi || DungeonStorageArtifact;
-const SoulShardTokenABI = SoulShardTokenArtifact.abi || SoulShardTokenArtifact;
-const VRFManagerABI = VRFManagerArtifact.abi || VRFManagerArtifact;
+const AltarOfAscensionVRFABI = AltarOfAscensionVRFArtifact.abi || AltarOfAscensionVRFArtifact;
+const VRFConsumerV2PlusABI = VRFConsumerV2PlusArtifact.abi || VRFConsumerV2PlusArtifact;
 
 export interface ContractWithABI {
   address: string;
@@ -51,50 +39,38 @@ export const CONTRACTS_WITH_ABI = {
       abi: PartyABI
     },
     
-    // Core Contracts - V25 Updated
-    DUNGEONCORE: {
-      address: '0x8a2D2b1961135127228EdD71Ff98d6B097915a13',
-      abi: DungeonCoreABI
-    },
+    // Game Contracts - V25 Updated
     DUNGEONMASTER: {
       address: '0xc0bbae55cf9245f76628d2c5299cd6fa35cd102a',
       abi: DungeonMasterABI
-    },
-    PLAYERPROFILE: {
-      address: '0x0f5932e89908400a5AfDC306899A2987b67a3155',
-      abi: PlayerProfileABI
-    },
-    VIPSTAKING: {
-      address: '0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C',
-      abi: VIPStakingABI
-    },
-    ORACLE: {
-      address: '0xf8CE896aF39f95a9d5Dd688c35d381062263E25a',
-      abi: OracleABI
-    },
-    ALTAROFASCENSION: {
-      address: '0xa86749237d4631ad92ba859d0b0df4770f6147ba',
-      abi: AltarOfAscensionABI
-    },
-    PLAYERVAULT: {
-      address: '0x62Bce9aF5E2C47b13f62A2e0fCB1f9C7AfaF8787',
-      abi: PlayerVaultABI
     },
     DUNGEONSTORAGE: {
       address: '0x539AC926C6daE898f2C843aF8C59Ff92B4b3B468',
       abi: DungeonStorageABI
     },
-    
-    // VRF System - V25 New (VRFManagerV2Plus)
-    VRFMANAGER: {
-      address: '0x980d224ec4d198d94f34a8af76a19c00dabe2436',
-      abi: VRFManagerABI
+    ALTAROFASCENSIONVRF: {
+      address: '0xa86749237d4631ad92ba859d0b0df4770f6147ba',
+      abi: AltarOfAscensionVRFABI
     },
     
-    // Token Contracts
+    // VRF System - V25 Updated
+    VRFCONSUMERV2PLUS: {
+      address: '0x980d224ec4d198d94f34a8af76a19c00dabe2436',
+      abi: VRFConsumerV2PlusABI
+    },
+    
+    // Legacy addresses (using environment variables)
+    DUNGEONCORE: {
+      address: '0x8a2D2b1961135127228EdD71Ff98d6B097915a13',
+      abi: [] // Legacy contract
+    },
+    ORACLE: {
+      address: '0xf8CE896aF39f95a9d5Dd688c35d381062263E25a',
+      abi: [] // Legacy contract
+    },
     SOULSHARD: {
       address: '0x97B2C2a9A11C7b6A020b4bAEaAd349865eaD0bcF',
-      abi: SoulShardTokenABI
+      abi: [] // Token contract
     },
     
     // Additional Addresses (from master-config.json)

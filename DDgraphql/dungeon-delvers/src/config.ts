@@ -1,6 +1,6 @@
 /**
  * Subgraph Configuration
- * Generated on 2025-08-07T14:51:36.200Z
+ * Generated on 2025-08-07T14:59:45.034Z
  * DO NOT EDIT MANUALLY - Use sync-system to update
  */
 

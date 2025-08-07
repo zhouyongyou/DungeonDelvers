@@ -68,8 +68,9 @@ export const CONTRACT_VERSION = import.meta.env.VITE_CONTRACT_VERSION || 'V25';
 // VRF 配置
 export const VRF_CONFIG = {
   enabled: import.meta.env.VITE_VRF_ENABLED === 'true',
-  requestPrice: import.meta.env.VITE_VRF_PRICE || '0.0001',
+  requestPrice: import.meta.env.VITE_VRF_PRICE || '0',
   platformFee: import.meta.env.VITE_PLATFORM_FEE || '0',
+  mode: import.meta.env.VITE_VRF_MODE || 'subscription', // subscription 或 direct
 };
 
 // 向後兼容 - 匯出個別地址
@@ -118,7 +119,7 @@ export const LEGACY_CONTRACT_NAMES = {
   testUsd: 'USD'
 } as const;
 
-// Calculate total mint fee (platform fee * quantity + VRF fee)
+// Calculate total mint fee (V25 訂閱模式：只有平台費，無 VRF 費)
 export const calculateMintFee = (
   quantity: number, 
   contractPlatformFee?: bigint,
@@ -128,9 +129,12 @@ export const calculateMintFee = (
     ? Number(contractPlatformFee) / 1e18 
     : parseFloat(VRF_CONFIG.platformFee);
   
-  const vrfFee = contractVrfFee !== undefined
-    ? Number(contractVrfFee) / 1e18 
-    : parseFloat(VRF_CONFIG.requestPrice);
+  // V25 訂閱模式：VRF 費用始終為 0（由項目方承擔）
+  const vrfFee = VRF_CONFIG.mode === 'subscription' ? 0 : (
+    contractVrfFee !== undefined
+      ? Number(contractVrfFee) / 1e18 
+      : parseFloat(VRF_CONFIG.requestPrice)
+  );
 
   const platformFeeTotal = (platformFeePerUnit * quantity);
   const totalFee = platformFeeTotal + vrfFee;
@@ -142,7 +146,8 @@ export const calculateMintFee = (
   return {
     platformFee: formatBnb(platformFeeTotal),
     vrfFee: formatBnb(vrfFee), 
-    total: formatBnb(totalFee)
+    total: formatBnb(totalFee),
+    isSubscription: VRF_CONFIG.mode === 'subscription'
   };
 };
 

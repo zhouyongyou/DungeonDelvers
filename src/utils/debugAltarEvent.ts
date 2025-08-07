@@ -1,6 +1,6 @@
 // 調試工具：分析祭壇升級事件
 import { decodeEventLog } from 'viem';
-import altarOfAscensionABI from '../abis/AltarOfAscension.json';
+import altarOfAscensionABI from '../contracts/abi/AltarOfAscensionVRF.json';
 
 export function debugAltarTransaction(receipt: any, altarContractAddress: string) {
   console.log('=== 祭壇交易調試信息 ===');

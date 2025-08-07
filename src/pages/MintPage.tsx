@@ -530,7 +530,18 @@ const MintCard = memo<MintCardProps>(({ type, options, chainId }) => {
             });
         }
         
-        return `${cachedMintFee.total} BNB (${cachedMintFee.platformFee} 平台費 + ${cachedMintFee.vrfFee} VRF費) [${source}]`;
+        // V25 訂閱模式：根據是否為訂閱模式顯示不同的費用文案
+        if (cachedMintFee.isSubscription && cachedMintFee.vrfFee === '0') {
+            // 訂閱模式：不顯示 VRF 費用，因為由項目方承擔
+            if (cachedMintFee.platformFee === '0') {
+                return `免費鑄造 (VRF 由項目方承擔)`;
+            } else {
+                return `${cachedMintFee.total} BNB (${cachedMintFee.platformFee} 平台費) [VRF 由項目方承擔]`;
+            }
+        } else {
+            // 傳統模式：顯示平台費 + VRF 費
+            return `${cachedMintFee.total} BNB (${cachedMintFee.platformFee} 平台費 + ${cachedMintFee.vrfFee} VRF費) [${source}]`;
+        }
     }, [cachedMintFee, platformFee, vrfFee]);
 
     // 計算價格合理性

@@ -3,8 +3,8 @@
 import { createPublicClient, http } from 'viem';
 import { bsc } from 'wagmi/chains';
 import { Buffer } from 'buffer';
-import { getContractWithABI } from '../config/contractsWithABI.js';
-import { CONTRACT_ADDRESSES } from '../config/contracts.js';
+import { getContractWithABI } from '../config/contractsWithABI';
+import { CONTRACT_ADDRESSES } from '../config/env-contracts';
 import { nftMetadataPersistentCache } from '../cache/persistentCache';
 import { graphQLRateLimiter } from '../utils/rateLimiter';
 import { dedupeNFTMetadata, dedupeGraphQLQuery } from '../utils/requestDeduper';
