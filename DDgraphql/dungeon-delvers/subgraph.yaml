@@ -1,5 +1,5 @@
-# Generated from V25 Latest Deployment on 2025-08-07 PM6
-# V25 VRF Version - Latest Deployment - Block 56757876
+# Generated from V25 VRF update on 2025-08-07T07:00:00.000Z
+# V25 VRF Version - 8/7 am 7 Deployment - Block 56696666
 specVersion: 0.0.4
 schema:
   file: ./schema.graphql
@@ -8,7 +8,7 @@ dataSources:
     name: Hero
     network: bsc
     source:
-      address: "0xF6A318568CFF7704c24C1Ab81B34de26Cd473d40"
+      address: "0x671d937b171e2ba2c4dc23c133b07e4449f283ef"
       abi: Hero
       startBlock: 56757876
     mapping:
@@ -33,7 +33,7 @@ dataSources:
     name: Relic
     network: bsc
     source:
-      address: "0xF8E887B019CAddfF5F965d03c60B59B58344de9c"
+      address: "0x42bf1bd8fc5a8dfdd0e97de131246ec0e3ec73da"
       abi: Relic
       startBlock: 56757876
     mapping:
@@ -58,7 +58,7 @@ dataSources:
     name: PartyV3
     network: bsc
     source:
-      address: "0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3"
+      address: "0x28a85d14e0f87d6ed04e21c30992df8b3e9434e3"
       abi: PartyV3
       startBlock: 56757876
     mapping:
@@ -83,7 +83,7 @@ dataSources:
     name: VIPStaking
     network: bsc
     source:
-      address: "0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C"
+      address: "0xc0d8c84e28e5bcfc9cbd109551de53ba04e7328c"
       abi: VIPStaking
       startBlock: 56757876
     mapping:
@@ -110,7 +110,7 @@ dataSources:
     name: PlayerProfile
     network: bsc
     source:
-      address: "0x0f5932e89908400a5AfDC306899A2987b67a3155"
+      address: "0x0f5932e89908400a5afdc306899a2987b67a3155"
       abi: PlayerProfile
       startBlock: 56757876
     mapping:
@@ -135,7 +135,7 @@ dataSources:
     name: DungeonMaster
     network: bsc
     source:
-      address: "0xE391261741Fad5FCC2D298d00e8c684767021253"
+      address: "0xc0bbae55cf9245f76628d2c5299cd6fa35cd102a"
       abi: DungeonMaster
       startBlock: 56757876
     mapping:
@@ -151,14 +151,12 @@ dataSources:
       eventHandlers:
         - event: ExpeditionFulfilled(indexed address,indexed uint256,bool,uint256,uint256)
           handler: handleExpeditionFulfilled
-        # VRF 版本只保留 ExpeditionFulfilled
-        # ExpeditionCommitted 和 ExpeditionRevealed 在 VRF 版本中不存在
       file: ./src/dungeon-master.ts
   - kind: ethereum/contract
     name: PlayerVault
     network: bsc
     source:
-      address: "0x62Bce9aF5E2C47b13f62A2e0fCB1f9C7AfaF8787"
+      address: "0x62bce9af5e2c47b13f62a2e0fcb1f9c7afaf8787"
       abi: PlayerVault
       startBlock: 56757876
     mapping:
@@ -191,7 +189,7 @@ dataSources:
     name: AltarOfAscension
     network: bsc
     source:
-      address: "0x27E35Aa079a0F2eb43D666Fe5E8A009D84a1e7C8"
+      address: "0xa86749237d4631ad92ba859d0b0df4770f6147ba"
       abi: AltarOfAscensionVRF
       startBlock: 56757876
     mapping:
@@ -211,7 +209,7 @@ dataSources:
     name: VRFManagerV2Plus
     network: bsc
     source:
-      address: "0xE1D1c53e2e467BFF3d6e4EffB7b89C0C10711ad1"
+      address: "0x980d224ec4d198d94f34a8af76a19c00dabe2436"
       abi: VRFManagerV2Plus
       startBlock: 56757876
     mapping:
@@ -226,10 +224,6 @@ dataSources:
       eventHandlers:
         - event: RandomRequested(indexed uint256,indexed address,uint8)
           handler: handleRandomRequested
-        - event: RandomFulfilled(indexed uint256,uint256[])
-          handler: handleRandomFulfilled
-        - event: AuthorizationUpdated(indexed address,bool)
-          handler: handleAuthorizationUpdated
         - event: RandomFulfilled(indexed uint256,uint256[])
           handler: handleRandomFulfilled
         - event: AuthorizationUpdated(indexed address,bool)
