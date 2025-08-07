@@ -151,6 +151,10 @@ dataSources:
       eventHandlers:
         - event: ExpeditionFulfilled(indexed address,indexed uint256,bool,uint256,uint256)
           handler: handleExpeditionFulfilled
+        - event: ExpeditionCommitted(indexed address,uint256,uint256,uint256)
+          handler: handleExpeditionCommitted
+        - event: ExpeditionRevealed(indexed address,uint256,bool)
+          handler: handleExpeditionRevealed
       file: ./src/dungeon-master.ts
   - kind: ethereum/contract
     name: PlayerVault
