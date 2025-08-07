@@ -9,20 +9,20 @@
     "PLAYERVAULT": "0x62Bce9aF5E2C47b13f62A2e0fCB1f9C7AfaF8787",
     "DUNGEONCORE": "0x8a2D2b1961135127228EdD71Ff98d6B097915a13",
     "DUNGEONSTORAGE": "0x539AC926C6daE898f2C843aF8C59Ff92B4b3B468",
-    "DUNGEONMASTER": "0xE391261741Fad5FCC2D298d00e8c684767021253",
-    "HERO": "0x5eded2670a6e7eb4a9c581bc397edc3b48cafd6d",
-    "RELIC": "0x7a9469587ffd28a69d4420d8893e7a0e92ef6316",
+    "DUNGEONMASTER": "0xc0bbae55cf9245f76628d2c5299cd6fa35cd102a",
+    "HERO": "0x671d937b171e2ba2c4dc23c133b07e4449f283ef",
+    "RELIC": "0x42bf1bd8fc5a8dfdd0e97de131246ec0e3ec73da",
     "PARTY": "0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3",
     "VIPSTAKING": "0xC0D8C84e28E5BcfC9cBD109551De53BA04e7328C",
     "PLAYERPROFILE": "0x0f5932e89908400a5AfDC306899A2987b67a3155",
-    "ALTAROFASCENSION": "0x3de7c97e6b65be8a1d726f5261cda1dd7d1e0cf1",
-    "VRFMANAGER": "0xE1D1c53e2e467BFF3d6e4EffB7b89C0C10711ad1",
+    "ALTAROFASCENSION": "0xa86749237d4631ad92ba859d0b0df4770f6147ba",
+    "VRFMANAGER": "0x980d224ec4d198d94f34a8af76a19c00dabe2436",
     "USD": "0x7C67Af4EBC6651c95dF78De11cfe325660d935FE"
   },
   "subgraph": {
     "studio": {
-      "version": "v3.7.7",
-      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.7.7"
+      "version": "v3.8.1",
+      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.8.1"
     },
     "decentralized": {
       "url": "https://gateway-arbitrum.network.thegraph.com/api/[api-key]/subgraphs/id/..."
@@ -30,8 +30,8 @@
   },
   "services": {
     "subgraph": {
-      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.7.7",
-      "id": "dungeon-delvers"
+      "url": "https://api.studio.thegraph.com/query/115633/dungeon-delvers---bsc/v3.8.1",
+      "id": "dungeon-delvers---bsc"
     },
     "metadataServer": {
       "url": "https://dungeon-delvers-metadata-server.vercel.app"

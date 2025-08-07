@@ -10,15 +10,15 @@ if [ ! -f "package.json" ]; then
     exit 1
 fi
 
-# 檢查 networks.json 是否包含新地址
+# 檢查 subgraph.yaml 是否包含新地址
 echo "📋 檢查合約地址..."
-HERO_ADDRESS=$(grep -o '"0xF6A318568CFF7704c24C1Ab81B34de26Cd473d40"' networks.json)
+HERO_ADDRESS=$(grep -o '0x671d937b171e2ba2c4dc23c133b07e4449f283ef' subgraph.yaml)
 if [ -z "$HERO_ADDRESS" ]; then
-    echo "❌ 錯誤：networks.json 中沒有找到合約地址"
+    echo "❌ 錯誤：subgraph.yaml 中沒有找到正確的 V25 Hero 地址"
     exit 1
 fi
 
-echo "✅ 確認使用合約地址"
+echo "✅ 確認使用 V25 合約地址"
 
 # 1. 運行 codegen
 echo "🔧 運行 graph codegen..."
@@ -50,8 +50,8 @@ if [ -z "$GRAPH_ACCESS_TOKEN" ]; then
 fi
 
 # 部署並指定版本標籤
-VERSION="v3.2.5"
-echo "📌 部署版本: $VERSION"
+VERSION="v3.8.0"
+echo "📌 部署版本: $VERSION (V25 deployment)"
 
 graph deploy dungeon-delvers \
   --version-label $VERSION \
