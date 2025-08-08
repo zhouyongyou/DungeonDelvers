@@ -169,28 +169,34 @@ interface IPlayerVault {
 }
 
 interface IDungeonMaster {
+    // === Structs ===
+    struct ExpeditionRequest {
+        uint256 partyId;
+        uint256 dungeonId;
+        address player;
+        bool fulfilled;
+        uint256 payment;
+    }
+    
     // --- Core Exploration Functions ---
     function isPartyLocked(uint256 partyId) external view returns (bool);
     function buyProvisions(uint256 _partyId, uint256 _amount) external;
-    function claimRewards(uint256 _partyId, string calldata reason) external;
+    function claimRewards(uint256 _partyId) external view; // Note: returns error message
     function getPartyPower(uint256 _partyId) external view returns (uint256 capacity);
     
-    // === Commit-Reveal Functions ===
+    // === VRF Functions ===
     function requestExpedition(uint256 _partyId, uint256 _dungeonId) external payable;
     function revealExpedition() external;
     function revealExpeditionFor(address user) external;
-    function forceRevealExpired(address user) external;
-    function canReveal(address user) external view returns (bool);
-    function canForceReveal(address user) external view returns (bool);
-    function getRevealBlocksRemaining(address user) external view returns (uint256);
+    function setVRFManager(address _vrfManager) external;
+    function getExpeditionCost() external view returns (uint256 totalCost, uint256 explorationFeeAmount, uint256 vrfFeeAmount);
+    function getUserRequest(address _user) external view returns (ExpeditionRequest memory);
     
     // --- Configuration ---
     function cooldownPeriod() external view returns (uint256);
     function explorationFee() external view returns (uint256);
     function provisionPriceUSD() external view returns (uint256);
     function globalRewardMultiplier() external view returns (uint256);
-    function dynamicSeed() external view returns (uint256);
-    function ignoreProfileErrors() external view returns (bool);
     
     // --- Contract References ---
     function dungeonCore() external view returns (address);
@@ -250,13 +256,19 @@ interface IDungeonStorage {
 }
 
 interface IAltarOfAscension {
-    // === Commit-Reveal Functions ===
-    function revealUpgrade() external;
-    function revealUpgradeFor(address user) external;
-    function forceRevealExpired(address user) external;
-    function canReveal(address user) external view returns (bool);
-    function canForceReveal(address user) external view returns (bool);
-    function getRevealBlocksRemaining(address user) external view returns (uint256);
+    // === Structs ===
+    struct UpgradeRequest {
+        address tokenContract;
+        uint8 baseRarity;
+        uint256[] burnedTokenIds;
+        bool fulfilled;
+        uint256 payment;
+    }
+    
+    // === Core Functions ===
+    function upgradeNFTs(address tokenContract, uint256[] calldata tokenIds) external payable;
+    function setVRFManager(address _vrfManager) external;
+    function getUserRequest(address _user) external view returns (UpgradeRequest memory);
 }
 
 // =================================================================
@@ -265,11 +277,9 @@ interface IAltarOfAscension {
 
 interface IHero {
     // === Structs ===
-    struct MintCommitment {
-        uint256 blockNumber;
+    struct MintRequest {
         uint256 quantity;
         uint256 payment;
-        bytes32 commitment;
         bool fulfilled;
         uint8 maxRarity;
         bool fromVault;
@@ -283,26 +293,21 @@ interface IHero {
     function safeTransferFrom(address from, address to, uint256 tokenId) external;
     function setApprovalForAll(address operator, bool approved) external;
     
-    // === Commit-Reveal Functions ===
+    // === VRF Functions ===
     function revealMint() external;
     function revealMintFor(address user) external;
-    function forceRevealExpired(address user) external;
-    function canReveal(address user) external view returns (bool);
-    function canForceReveal(address user) external view returns (bool);
-    function getRevealBlocksRemaining(address user) external view returns (uint256);
+    function setVRFManager(address _vrfManager) external;
     
     // === Query Functions ===
-    function getUserCommitment(address user) external view returns (MintCommitment memory);
+    function getUserRequest(address user) external view returns (MintRequest memory);
     function getUserPendingTokens(address user) external view returns (uint256[] memory);
 }
 
 interface IRelic {
     // === Structs ===
-    struct MintCommitment {
-        uint256 blockNumber;
+    struct MintRequest {
         uint256 quantity;
         uint256 payment;
-        bytes32 commitment;
         bool fulfilled;
         uint8 maxRarity;
         bool fromVault;
@@ -316,16 +321,13 @@ interface IRelic {
     function safeTransferFrom(address from, address to, uint256 tokenId) external;
     function setApprovalForAll(address operator, bool approved) external;
     
-    // === Commit-Reveal Functions ===
+    // === VRF Functions ===
     function revealMint() external;
     function revealMintFor(address user) external;
-    function forceRevealExpired(address user) external;
-    function canReveal(address user) external view returns (bool);
-    function canForceReveal(address user) external view returns (bool);
-    function getRevealBlocksRemaining(address user) external view returns (uint256);
+    function setVRFManager(address _vrfManager) external;
     
     // === Query Functions ===
-    function getUserCommitment(address user) external view returns (MintCommitment memory);
+    function getUserRequest(address user) external view returns (MintRequest memory);
     function getUserPendingTokens(address user) external view returns (uint256[] memory);
 }
 

@@ -19,8 +19,6 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable, IVRFCallback {
     // === VRF 相關 ===
     address public vrfManager;
     
-    uint256 public dynamicSeed;
-
     // 遊戲設定
     uint256 public globalRewardMultiplier = 1000; // 1000 = 100%
     uint256 public explorationFee = 0.0015 ether;
@@ -39,33 +37,25 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable, IVRFCallback {
         bool isInitialized;
     }
 
-    // === 延遲揭示相關 ===
-    uint256 public constant REVEAL_BLOCK_DELAY = 3;
-    uint256 public constant MAX_REVEAL_WINDOW = 255;
-    
-    struct ExpeditionCommitment {
-        uint256 blockNumber;
+    struct ExpeditionRequest {
         uint256 partyId;
         uint256 dungeonId;
         address player;
-        bytes32 commitment;
         bool fulfilled;
         uint256 payment;
     }
     
-    mapping(address => ExpeditionCommitment) public userCommitments;
+    mapping(address => ExpeditionRequest) public userRequests;
 
     // --- 事件 ---
     event ExpeditionFulfilled(address indexed player, uint256 indexed partyId, bool success, uint256 reward, uint256 expGained);
     event RewardsBanked(address indexed user, uint256 indexed partyId, uint256 amount);
-    event DynamicSeedUpdated(uint256 newSeed);
     event DungeonCoreSet(address indexed newAddress);
     event DungeonStorageSet(address indexed newAddress);
     event SoulShardTokenSet(address indexed newAddress);
     event DungeonSet(uint256 indexed dungeonId, uint256 requiredPower, uint256 rewardAmountUSD, uint8 baseSuccessRate);
-    event ExpeditionCommitted(address indexed player, uint256 partyId, uint256 dungeonId, uint256 blockNumber);
+    event ExpeditionRequested(address indexed player, uint256 partyId, uint256 dungeonId);
     event ExpeditionRevealed(address indexed player, uint256 partyId, bool success);
-    event ForcedRevealExecuted(address indexed user, address indexed executor);
     event RevealedByProxy(address indexed user, address indexed proxy);
     // === VRF 事件 ===
     event VRFManagerSet(address indexed vrfManager);
@@ -79,7 +69,7 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable, IVRFCallback {
     function requestExpedition(uint256 _partyId, uint256 _dungeonId) 
         external payable nonReentrant whenNotPaused
     {
-        require(userCommitments[msg.sender].blockNumber == 0 || userCommitments[msg.sender].fulfilled, "DM: Previous expedition pending");
+        require(userRequests[msg.sender].player == address(0) || userRequests[msg.sender].fulfilled, "DM: Previous expedition pending");
         
         // 檢查是否為隊伍擁有者
         IParty partyContract = IParty(dungeonCore.partyContractAddress());
@@ -111,22 +101,20 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable, IVRFCallback {
         _setPartyStatus(_partyId, partyStatus);
         
         if (vrfManager != address(0)) {
-            bytes32 vrfCommitment = keccak256(abi.encodePacked(msg.sender, block.number, _partyId, _dungeonId));
+            bytes32 requestData = keccak256(abi.encodePacked(msg.sender, _partyId, _dungeonId));
             
             // 傳遞 VRF 費用給 VRFManager
             IVRFManager(vrfManager).requestRandomForUser{value: vrfFee}(
                 msg.sender,
                 1, // 只需要一個隨機數用於探索結果
                 1, // maxRarity 對探索無意義，設為1
-                vrfCommitment
+                requestData
             );
             
-            userCommitments[msg.sender] = ExpeditionCommitment({
-                blockNumber: block.number,
+            userRequests[msg.sender] = ExpeditionRequest({
                 partyId: _partyId,
                 dungeonId: _dungeonId,
                 player: msg.sender,
-                commitment: vrfCommitment,
                 fulfilled: false,
                 payment: msg.value
             });
@@ -137,25 +125,13 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable, IVRFCallback {
                 require(success, "DM: Refund failed");
             }
             
-            emit ExpeditionCommitted(msg.sender, _partyId, _dungeonId, block.number);
+            emit ExpeditionRequested(msg.sender, _partyId, _dungeonId);
             return;
         }
         // ===== VRF 改動結束 =====
         
-        // 生成承諾（原有邏輯）
-        bytes32 commitment = keccak256(abi.encodePacked(msg.sender, block.number, _partyId, _dungeonId));
-        
-        userCommitments[msg.sender] = ExpeditionCommitment({
-            blockNumber: block.number,
-            partyId: _partyId,
-            dungeonId: _dungeonId,
-            player: msg.sender,
-            commitment: commitment,
-            fulfilled: false,
-            payment: msg.value
-        });
-        
-        emit ExpeditionCommitted(msg.sender, _partyId, _dungeonId, block.number);
+        // VRF 不可用時直接失敗
+        revert("DM: VRF required for expeditions");
     }
     
     // === VRF 整合的揭示函數 ===
@@ -174,95 +150,40 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable, IVRFCallback {
     
     // 內部揭示邏輯
     function _revealExpeditionFor(address user) private {
-        ExpeditionCommitment storage commitment = userCommitments[user];
-        require(commitment.blockNumber > 0, "DM: No pending expedition");
-        require(!commitment.fulfilled, "DM: Already revealed");
+        ExpeditionRequest storage request = userRequests[user];
+        require(request.player != address(0), "DM: No pending expedition");
+        require(!request.fulfilled, "DM: Already revealed");
         
-        // ===== VRF 改動開始 =====
-        if (vrfManager != address(0)) {
-            // 檢查 VRF 是否完成
-            (bool vrfFulfilled, uint256[] memory randomWords) = IVRFManager(vrfManager).getRandomForUser(user);
-            if (vrfFulfilled && randomWords.length > 0) {
-                // 使用 VRF 隨機數
-                _executeRevealWithVRF(user, randomWords[0]);
-                return;
-            }
-        }
-        // ===== VRF 改動結束 =====
+        // VRF-only 模式
+        require(vrfManager != address(0), "DM: VRF Manager not set");
         
-        require(block.number >= commitment.blockNumber + REVEAL_BLOCK_DELAY, "DM: Too early to reveal");
-        require(block.number <= commitment.blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW, "DM: Reveal window expired");
+        // 檢查 VRF 是否完成
+        (bool vrfFulfilled, uint256[] memory randomWords) = IVRFManager(vrfManager).getRandomForUser(user);
+        require(vrfFulfilled && randomWords.length > 0, "DM: VRF not ready");
         
-        _executeReveal(user, false);
+        // 使用 VRF 隨機數
+        _executeRevealWithVRF(user, randomWords[0]);
     }
     
     // === VRF 揭示函數 ===
     function _executeRevealWithVRF(address user, uint256 randomWord) private {
-        ExpeditionCommitment storage commitment = userCommitments[user];
-        commitment.fulfilled = true;
+        ExpeditionRequest storage request = userRequests[user];
+        request.fulfilled = true;
         
         // 再次驗證隊伍所有權（防止在等待期間轉移）
         IParty partyContract = IParty(dungeonCore.partyContractAddress());
-        require(partyContract.ownerOf(commitment.partyId) == commitment.player, "DM: No longer party owner");
+        require(partyContract.ownerOf(request.partyId) == request.player, "DM: No longer party owner");
         
         // 使用 VRF 隨機數處理探索結果
         _processExpeditionResultWithVRF(
-            commitment.player,
-            commitment.partyId,
-            commitment.dungeonId,
+            request.player,
+            request.partyId,
+            request.dungeonId,
             randomWord
         );
         
-        // 清理承諾
-        delete userCommitments[user];
-    }
-
-    // === 過期強制揭示函數 ===
-    function forceRevealExpired(address user) external nonReentrant whenNotPaused {
-        ExpeditionCommitment storage commitment = userCommitments[user];
-        require(commitment.blockNumber > 0, "DM: No pending expedition");
-        require(!commitment.fulfilled, "DM: Already revealed");
-        
-        uint256 expiredBlock = commitment.blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW;
-        require(block.number > expiredBlock, "DM: Not expired yet");
-        
-        _executeReveal(user, true);
-        
-        emit ForcedRevealExecuted(user, msg.sender);
-    }
-    
-    // === 統一的揭示執行邏輯 ===
-    function _executeReveal(address user, bool isForced) private {
-        ExpeditionCommitment storage commitment = userCommitments[user];
-        commitment.fulfilled = true;
-        
-        // 再次驗證隊伍所有權（防止在等待期間轉移）
-        IParty partyContract = IParty(dungeonCore.partyContractAddress());
-        require(partyContract.ownerOf(commitment.partyId) == commitment.player, "DM: No longer party owner");
-        
-        if (isForced) {
-            // 強制揭示：直接判定失敗，作為未及時揭示的懲罰
-            _handleExpeditionOutcome(commitment.player, commitment.dungeonId, false);
-            emit ExpeditionFulfilled(commitment.player, commitment.partyId, false, 0, 0);
-            emit ExpeditionRevealed(commitment.player, commitment.partyId, false);
-        } else {
-            // 正常揭示：使用未來區塊哈希生成隨機數
-            uint256 revealBlockNumber = commitment.blockNumber + REVEAL_BLOCK_DELAY;
-            bytes32 blockHash = blockhash(revealBlockNumber);
-            if (blockHash == bytes32(0)) {
-                blockHash = blockhash(block.number - 1);
-            }
-            
-            _processExpeditionResultWithReveal(
-                commitment.player,
-                commitment.partyId,
-                commitment.dungeonId,
-                blockHash
-            );
-        }
-        
-        // 清理承諾
-        delete userCommitments[user];
+        // 清理請求
+        delete userRequests[user];
     }
 
     // === VRF 結果處理 ===
@@ -284,24 +205,6 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable, IVRFCallback {
         emit ExpeditionRevealed(_requester, _partyId, success);
     }
     
-    // === 基於區塊哈希的結果處理（保持不變）===
-    function _processExpeditionResultWithReveal(address _requester, uint256 _partyId, uint256 _dungeonId, bytes32 _blockHash) private {
-        Dungeon memory dungeon = _getDungeon(_dungeonId);
-        
-        uint8 vipBonus = 0;
-        try IVIPStaking(dungeonCore.vipStakingAddress()).getVipLevel(_requester) returns (uint8 level) { vipBonus = level; } catch {}
-        uint256 finalSuccessRate = dungeon.baseSuccessRate + vipBonus;
-        if (finalSuccessRate > 100) finalSuccessRate = 100;
-
-        // 使用區塊哈希生成隨機數
-        uint256 randomValue = uint256(keccak256(abi.encodePacked(_blockHash, _requester, _partyId, _dungeonId))) % 100;
-        bool success = randomValue < finalSuccessRate;
-
-        (uint256 reward, uint256 expGained) = _handleExpeditionOutcome(_requester, _dungeonId, success);
-        
-        emit ExpeditionFulfilled(_requester, _partyId, success, reward, expGained);
-        emit ExpeditionRevealed(_requester, _partyId, success);
-    }
     
     function _handleExpeditionOutcome(address _player, uint256 _dungeonId, bool _success) private returns (uint256 reward, uint256 expGained) {
         Dungeon memory dungeon = _getDungeon(_dungeonId);
@@ -366,37 +269,8 @@ contract DungeonMaster is Ownable, ReentrancyGuard, Pausable, IVRFCallback {
     }
 
     // === 查詢函數 ===
-    function getUserCommitment(address _user) external view returns (ExpeditionCommitment memory) {
-        return userCommitments[_user];
-    }
-    
-    function canReveal(address _user) external view returns (bool) {
-        ExpeditionCommitment memory commitment = userCommitments[_user];
-        
-        // === VRF 改動：如果有 VRF，檢查是否完成 ===
-        if (vrfManager != address(0)) {
-            (bool vrfFulfilled, ) = IVRFManager(vrfManager).getRandomForUser(_user);
-            if (vrfFulfilled) return true;
-        }
-        
-        return commitment.blockNumber > 0 && 
-               !commitment.fulfilled && 
-               block.number >= commitment.blockNumber + REVEAL_BLOCK_DELAY &&
-               block.number <= commitment.blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW;
-    }
-    
-    function canForceReveal(address _user) external view returns (bool) {
-        ExpeditionCommitment memory commitment = userCommitments[_user];
-        return commitment.blockNumber > 0 && 
-               !commitment.fulfilled && 
-               block.number > commitment.blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW;
-    }
-    
-    function getRevealBlocksRemaining(address _user) external view returns (uint256) {
-        ExpeditionCommitment memory commitment = userCommitments[_user];
-        if (commitment.blockNumber == 0 || commitment.fulfilled) return 0;
-        if (block.number >= commitment.blockNumber + REVEAL_BLOCK_DELAY) return 0;
-        return (commitment.blockNumber + REVEAL_BLOCK_DELAY) - block.number;
+    function getUserRequest(address _user) external view returns (ExpeditionRequest memory) {
+        return userRequests[_user];
     }
 
     // === VRF 管理函數 ===

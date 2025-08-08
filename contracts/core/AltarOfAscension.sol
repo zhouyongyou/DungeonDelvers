@@ -44,22 +44,15 @@ contract AltarOfAscensionVRF is Ownable, ReentrancyGuard, Pausable, IVRFCallback
     uint8 public constant MAX_VIP_BONUS = 20;
     uint8 public constant MAX_ADDITIONAL_BONUS = 20;
     
-    uint256 public dynamicSeed;
-    
-    uint256 public constant REVEAL_BLOCK_DELAY = 3;
-    uint256 public constant MAX_REVEAL_WINDOW = 255;
-    
-    struct UpgradeCommitment {
-        uint256 blockNumber;
+    struct UpgradeRequest {
         address tokenContract;
         uint8 baseRarity;
         uint256[] burnedTokenIds;
-        bytes32 commitment;
         bool fulfilled;
         uint256 payment;
     }
     
-    mapping(address => UpgradeCommitment) public userCommitments;
+    mapping(address => UpgradeRequest) public userRequests;
     
     // 事件
     event UpgradeAttempted(
@@ -82,13 +75,11 @@ contract AltarOfAscensionVRF is Ownable, ReentrancyGuard, Pausable, IVRFCallback
         uint256 totalMinted
     );
 
-    event DynamicSeedUpdated(uint256 newSeed);
     event UpgradeRuleSet(uint8 indexed fromRarity, UpgradeRule rule);
     event AdditionalVIPBonusSet(address indexed player, uint8 bonusRate);
     event VIPQueryFailed(address indexed player, string reason);
-    event UpgradeCommitted(address indexed player, address tokenContract, uint8 baseRarity, uint256 blockNumber, uint256[] burnedTokenIds);
+    event UpgradeRequested(address indexed player, address tokenContract, uint8 baseRarity, uint256[] burnedTokenIds);
     event UpgradeRevealed(address indexed player, uint8 outcome, uint8 targetRarity);
-    event ForcedRevealExecuted(address indexed user, address indexed executor, uint8 outcome);
     // === VRF 事件 ===
     event VRFManagerSet(address indexed vrfManager);
     event UpgradeRequested(address indexed user, uint256[] tokenIds, uint256 materialTokenId, uint256 requestId);
@@ -140,7 +131,7 @@ contract AltarOfAscensionVRF is Ownable, ReentrancyGuard, Pausable, IVRFCallback
         address _tokenContract,
         uint256[] calldata _tokenIds
     ) external payable whenNotPaused nonReentrant {
-        require(userCommitments[msg.sender].blockNumber == 0 || userCommitments[msg.sender].fulfilled, "PU");
+        require(userRequests[msg.sender].tokenContract == address(0) || userRequests[msg.sender].fulfilled, "PU");
         require(activeUpgradeRequest[msg.sender] == 0, "PE");
         
         uint8 baseRarity = _validateMaterials(_tokenContract, _tokenIds);
@@ -204,22 +195,8 @@ contract AltarOfAscensionVRF is Ownable, ReentrancyGuard, Pausable, IVRFCallback
         }
         // ===== VRF 改動結束 =====
         
-        // 立即燃燒NFT材料（原有邏輯）
-        _burnNFTs(_tokenContract, _tokenIds);
-        
-        bytes32 commitment = keccak256(abi.encodePacked(msg.sender, block.number, _tokenIds));
-        
-        userCommitments[msg.sender] = UpgradeCommitment({
-            blockNumber: block.number,
-            tokenContract: _tokenContract,
-            baseRarity: baseRarity,
-            burnedTokenIds: burnedIds,
-            commitment: commitment,
-            fulfilled: false,
-            payment: msg.value
-        });
-        
-        emit UpgradeCommitted(msg.sender, _tokenContract, baseRarity, block.number, burnedIds);
+        // VRF 不可用時直接失敗
+        revert("VRF required for upgrades");
     }
 
     // === VRF 回調處理 ===
@@ -425,172 +402,7 @@ contract AltarOfAscensionVRF is Ownable, ReentrancyGuard, Pausable, IVRFCallback
     function _getUserFromRequest(uint256 requestId) internal view returns (address) {
         return requestIdToUser[requestId];
     }
-
-    // 原有的揭示函數保持不變
-    function revealUpgrade() external whenNotPaused nonReentrant {
-        UpgradeCommitment storage commitment = userCommitments[msg.sender];
-        require(commitment.blockNumber > 0, "NP");
-        require(!commitment.fulfilled, "AR");
-        require(block.number >= commitment.blockNumber + REVEAL_BLOCK_DELAY, "TE");
-        require(block.number <= commitment.blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW, "RE");
-        
-        _executeReveal(msg.sender, false);
-    }
-
-    function forceRevealExpiredUpgrade(address user) external nonReentrant whenNotPaused {
-        UpgradeCommitment storage commitment = userCommitments[user];
-        require(commitment.blockNumber > 0, "NP");
-        require(!commitment.fulfilled, "AR");
-        
-        uint256 expiredBlock = commitment.blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW;
-        require(block.number > expiredBlock, "NY");
-        
-        _executeReveal(user, true);
-        
-        uint8 outcome = 1;
-        emit ForcedRevealExecuted(user, msg.sender, outcome);
-    }
-
-    function _executeReveal(address user, bool isForced) private {
-        UpgradeCommitment storage commitment = userCommitments[user];
-        commitment.fulfilled = true;
-        
-        uint256[] memory mintedIds;
-        uint8 outcome;
-        uint8 targetRarity;
-        uint8 vipLevel;
-        uint8 totalVipBonus;
-        
-        if (isForced) {
-            (mintedIds, outcome, targetRarity, vipLevel, totalVipBonus) = _processUpgradeOutcomeForced(
-                user,
-                commitment.tokenContract,
-                commitment.baseRarity,
-                commitment.burnedTokenIds.length
-            );
-        } else {
-            uint256 revealBlockNumber = commitment.blockNumber + REVEAL_BLOCK_DELAY;
-            bytes32 blockHash = blockhash(revealBlockNumber);
-            if (blockHash == bytes32(0)) {
-                blockHash = blockhash(block.number - 1);
-            }
-            
-            (mintedIds, outcome, targetRarity, vipLevel, totalVipBonus) = _processUpgradeOutcomeWithReveal(
-                user,
-                commitment.tokenContract,
-                commitment.baseRarity,
-                blockHash
-            );
-        }
-        
-        _updateStats(user, commitment.burnedTokenIds.length, mintedIds.length, commitment.payment);
-        
-        lastUpgradeTime[user][commitment.baseRarity] = block.timestamp;
-        
-        emit UpgradeAttempted(
-            user,
-            commitment.tokenContract,
-            commitment.baseRarity,
-            targetRarity,
-            commitment.burnedTokenIds,
-            mintedIds,
-            outcome,
-            commitment.payment,
-            vipLevel,
-            totalVipBonus
-        );
-        
-        emit UpgradeRevealed(user, outcome, targetRarity);
-        
-        delete userCommitments[user];
-    }
     
-    function _processUpgradeOutcomeWithReveal(
-        address _player,
-        address _tokenContract,
-        uint8 _baseRarity,
-        bytes32 _blockHash
-    ) private returns (uint256[] memory mintedIds, uint8 outcome, uint8 targetRarity, uint8 vipLevel, uint8 totalVipBonus) {
-        uint256 randomValue = uint256(keccak256(abi.encodePacked(
-            _blockHash,
-            _player,
-            _baseRarity
-        ))) % 100;
-        
-        UpgradeRule memory rule = upgradeRules[_baseRarity];
-        
-        vipLevel = 0;
-        try IVIPStaking(dungeonCore.vipStakingAddress()).getVipLevel(_player) returns (uint8 level) {
-            vipLevel = level;
-        } catch Error(string memory reason) {
-            emit VIPQueryFailed(_player, reason);
-            vipLevel = 0;
-        } catch {
-            emit VIPQueryFailed(_player, "Unknown error");
-            vipLevel = 0;
-        }
-        
-        uint8 rawTotalBonus = vipLevel + additionalVipBonusRate[_player];
-        totalVipBonus = rawTotalBonus > MAX_VIP_BONUS ? MAX_VIP_BONUS : rawTotalBonus;
-        
-        uint256 tempSuccessChance = uint256(rule.successChance) + uint256(totalVipBonus);
-        uint8 effectiveSuccessChance = tempSuccessChance > 100 ? 100 : uint8(tempSuccessChance);
-        
-        uint256 mintCount = 0;
-        targetRarity = _baseRarity;
-        
-        if (randomValue < rule.greatSuccessChance) {
-            mintCount = 2;
-            targetRarity = _baseRarity + 1;
-            outcome = 3;
-        } else if (randomValue < rule.greatSuccessChance + effectiveSuccessChance) {
-            mintCount = 1;
-            targetRarity = _baseRarity + 1;
-            outcome = 2;
-        } else if (randomValue < rule.greatSuccessChance + effectiveSuccessChance + rule.partialFailChance) {
-            mintCount = rule.materialsRequired / 2;
-            targetRarity = _baseRarity;
-            outcome = 1;
-        } else {
-            mintCount = 0;
-            outcome = 0;
-        }
-        
-        mintedIds = new uint256[](mintCount);
-        for (uint i = 0; i < mintCount; i++) {
-            uint256 newTokenId = _mintUpgradedNFT(_player, _tokenContract, targetRarity);
-            mintedIds[i] = newTokenId;
-        }
-        
-        dynamicSeed = uint256(keccak256(abi.encodePacked(dynamicSeed, randomValue, outcome)));
-        emit DynamicSeedUpdated(dynamicSeed);
-        
-        return (mintedIds, outcome, targetRarity, vipLevel, totalVipBonus);
-    }
-
-    function _processUpgradeOutcomeForced(
-        address _player,
-        address _tokenContract,
-        uint8 _baseRarity,
-        uint256 burnedCount
-    ) private returns (uint256[] memory mintedIds, uint8 outcome, uint8 targetRarity, uint8 vipLevel, uint8 totalVipBonus) {
-        uint256 mintCount = burnedCount / 2;
-        targetRarity = _baseRarity;
-        outcome = 1;
-        vipLevel = 0;
-        totalVipBonus = 0;
-        
-        mintedIds = new uint256[](mintCount);
-        for (uint i = 0; i < mintCount; i++) {
-            uint256 newTokenId = _mintUpgradedNFT(_player, _tokenContract, targetRarity);
-            mintedIds[i] = newTokenId;
-        }
-        
-        dynamicSeed = uint256(keccak256(abi.encodePacked(dynamicSeed, block.timestamp, outcome)));
-        emit DynamicSeedUpdated(dynamicSeed);
-        
-        return (mintedIds, outcome, targetRarity, vipLevel, totalVipBonus);
-    }
     
     
     function _mintUpgradedNFT(
@@ -670,37 +482,8 @@ contract AltarOfAscensionVRF is Ownable, ReentrancyGuard, Pausable, IVRFCallback
     }
 
     // 查詢函數
-    function getUserCommitment(address _user) external view returns (UpgradeCommitment memory) {
-        return userCommitments[_user];
-    }
-    
-    function canReveal(address _user) external view returns (bool) {
-        UpgradeCommitment memory commitment = userCommitments[_user];
-        
-        // === VRF 改動：如果有 VRF，檢查是否完成 ===
-        if (vrfManager != address(0) && activeUpgradeRequest[_user] != 0) {
-            // VRF 升級中，不能使用傳統揭示
-            return false;
-        }
-        
-        return commitment.blockNumber > 0 && 
-               !commitment.fulfilled && 
-               block.number >= commitment.blockNumber + REVEAL_BLOCK_DELAY &&
-               block.number <= commitment.blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW;
-    }
-    
-    function canForceReveal(address _user) external view returns (bool) {
-        UpgradeCommitment memory commitment = userCommitments[_user];
-        return commitment.blockNumber > 0 && 
-               !commitment.fulfilled && 
-               block.number > commitment.blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW;
-    }
-    
-    function getRevealBlocksRemaining(address _user) external view returns (uint256) {
-        UpgradeCommitment memory commitment = userCommitments[_user];
-        if (commitment.blockNumber == 0 || commitment.fulfilled) return 0;
-        if (block.number >= commitment.blockNumber + REVEAL_BLOCK_DELAY) return 0;
-        return (commitment.blockNumber + REVEAL_BLOCK_DELAY) - block.number;
+    function getUserRequest(address _user) external view returns (UpgradeRequest memory) {
+        return userRequests[_user];
     }
 
     // === VRF 管理函數 ===

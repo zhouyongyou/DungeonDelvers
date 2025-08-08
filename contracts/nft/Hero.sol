@@ -10,7 +10,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "../interfaces/interfaces.sol";
 
-
 contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable, IVRFCallback {
     using SafeERC20 for IERC20;
     using Strings for uint256;
@@ -32,31 +31,24 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable, IVRFCallback {
     // === VRF 相關 ===
     address public vrfManager;
 
-    uint256 public dynamicSeed;
     uint256 private _nextTokenId;
     uint256 public mintPriceUSD = 2 * 1e18;
     uint256 public platformFee = 0.0003 ether;
+    
 
-
-    uint256 public constant REVEAL_BLOCK_DELAY = 3;
-    uint256 public constant MAX_REVEAL_WINDOW = 255;
     string public unrevealedURI = "https://dungeon-delvers-metadata-server.onrender.com/api/hero/unrevealed";
     
-    struct MintCommitment {
-        uint256 blockNumber;
+    struct MintRequest {
         uint256 quantity;
         uint256 payment;
-        bytes32 commitment;
         bool fulfilled;
         uint8 maxRarity;
         bool fromVault;
     }
     
-    mapping(address => MintCommitment) public userCommitments;
+    mapping(address => MintRequest) public userRequests;
     mapping(address => uint256[]) public userPendingTokens;
-    
-    mapping(address => mapping(uint8 => uint8)) private userRarityCount;
-    
+        
     struct RarityLimits {
         uint8 maxFiveStar;
         uint8 maxFourStar;
@@ -64,30 +56,17 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable, IVRFCallback {
         uint8 maxTwoStar;
     }
     mapping(uint256 => RarityLimits) private quantityLimits;
-    
-    struct ForcedDistribution {
-        uint8 oneStar;
-        uint8 twoStar;
-        uint8 threeStar;
-        uint8 fourStar;
-        uint8 fiveStar;
-    }
-    mapping(uint256 => ForcedDistribution) private forcedDistributions;
-    uint8[] private forcedRevealSequence;
 
     // --- 事件 ---
     event HeroMinted(uint256 indexed tokenId, address indexed owner, uint8 rarity, uint256 power);
     event BatchMintCompleted(address indexed player, uint256 quantity, uint8 maxRarity, uint256[] tokenIds);
-    event DynamicSeedUpdated(uint256 newSeed);
     event ContractsSet(address indexed core, address indexed token);
     event BaseURISet(string newBaseURI);
     event ContractURIUpdated(string newContractURI);
     event AscensionAltarSet(address indexed newAddress);
     event HeroBurned(uint256 indexed tokenId, address indexed owner, uint8 rarity, uint256 power);
-    event MintCommitted(address indexed player, uint256 quantity, uint256 blockNumber, bool fromVault);
+    event MintRequested(address indexed player, uint256 quantity, bool fromVault);
     event HeroRevealed(uint256 indexed tokenId, address indexed owner, uint8 rarity, uint256 power);
-    event ForcedRevealExecuted(address indexed user, address indexed executor, uint256 quantity);
-    event RevealedByProxy(address indexed user, address indexed proxy);
     // === VRF 事件 ===
     event VRFManagerSet(address indexed vrfManager);
     
@@ -98,26 +77,14 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable, IVRFCallback {
     
     constructor(
         address initialOwner
-    ) ERC721("Dungeon Delvers Hero VRF", "DDHVRF") Ownable(initialOwner) {
+    ) ERC721("Dungeon Delvers Hero", "DDH") Ownable(initialOwner) {
         _nextTokenId = 1;
-        _setupRarityLimits();
     }
-
-    
-    function _setupRarityLimits() private {
-        quantityLimits[1] = RarityLimits({maxFiveStar: 1, maxFourStar: 1, maxThreeStar: 1, maxTwoStar: 1});
-        quantityLimits[5] = RarityLimits({maxFiveStar: 1, maxFourStar: 2, maxThreeStar: 3, maxTwoStar: 4});
-        quantityLimits[10] = RarityLimits({maxFiveStar: 1, maxFourStar: 3, maxThreeStar: 4, maxTwoStar: 7});
-        quantityLimits[20] = RarityLimits({maxFiveStar: 2, maxFourStar: 4, maxThreeStar: 7, maxTwoStar: 12});
-        quantityLimits[50] = RarityLimits({maxFiveStar: 2, maxFourStar: 6, maxThreeStar: 13, maxTwoStar: 25});
-    }
-    
-
 
     // === VRF 整合的鑄造函數 ===
     function mintFromWallet(uint256 _quantity) external payable nonReentrant whenNotPaused {
         require(_quantity > 0 && _quantity <= 50, "IQ");
-        require(userCommitments[msg.sender].blockNumber == 0 || userCommitments[msg.sender].fulfilled, "PM");
+        require(userRequests[msg.sender].quantity == 0 || userRequests[msg.sender].fulfilled, "PM");
         
         uint8 maxRarity = 5;
         
@@ -128,7 +95,7 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable, IVRFCallback {
         
         soulShardToken.safeTransferFrom(msg.sender, address(this), requiredAmount);
         
-        bytes32 commitment = keccak256(abi.encodePacked(msg.sender, block.number, _quantity));
+        bytes32 requestData = keccak256(abi.encodePacked(msg.sender, _quantity));
         
         if (vrfManager != address(0)) {
             // 請求 VRF（訂閱模式，無需支付）
@@ -136,26 +103,24 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable, IVRFCallback {
                 msg.sender,
                 _quantity,
                 maxRarity,
-                commitment
+                requestData
             );
         }
         
-        userCommitments[msg.sender] = MintCommitment({
-            blockNumber: block.number,
+        userRequests[msg.sender] = MintRequest({
             quantity: _quantity,
             payment: msg.value,
-            commitment: commitment,
             fulfilled: false,
             maxRarity: maxRarity,
             fromVault: false
         });
         
-        emit MintCommitted(msg.sender, _quantity, block.number, false);
+        emit MintRequested(msg.sender, _quantity, false);
     }
 
     function mintFromVault(uint256 _quantity) external payable nonReentrant whenNotPaused {
         require(_quantity > 0 && _quantity <= 50, "IQ");
-        require(userCommitments[msg.sender].blockNumber == 0 || userCommitments[msg.sender].fulfilled, "PM");
+        require(userRequests[msg.sender].quantity == 0 || userRequests[msg.sender].fulfilled, "PM");
         
         uint8 maxRarity = 5;
         
@@ -166,7 +131,7 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable, IVRFCallback {
         
         IPlayerVault(dungeonCore.playerVaultAddress()).spendForGame(msg.sender, requiredAmount);
         
-        bytes32 commitment = keccak256(abi.encodePacked(msg.sender, block.number, _quantity));
+        bytes32 requestData = keccak256(abi.encodePacked(msg.sender, _quantity));
         
         if (vrfManager != address(0)) {
             // 請求 VRF（訂閱模式，無需支付）
@@ -174,21 +139,19 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable, IVRFCallback {
                 msg.sender,
                 _quantity,
                 maxRarity,
-                commitment
+                requestData
             );
         }
         
-        userCommitments[msg.sender] = MintCommitment({
-            blockNumber: block.number,
+        userRequests[msg.sender] = MintRequest({
             quantity: _quantity,
             payment: msg.value,
-            commitment: commitment,
             fulfilled: false,
             maxRarity: maxRarity,
             fromVault: true
         });
         
-        emit MintCommitted(msg.sender, _quantity, block.number, true);
+        emit MintRequested(msg.sender, _quantity, true);
     }
 
     // === VRF 整合的揭示函數 ===
@@ -198,70 +161,39 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable, IVRFCallback {
     
     function revealMintFor(address user) external nonReentrant whenNotPaused {
         _revealMintFor(user);
-        
-        if (msg.sender != user) {
-            emit RevealedByProxy(user, msg.sender);
-        }
     }
     
     function _revealMintFor(address user) private {
-        MintCommitment storage commitment = userCommitments[user];
-        require(commitment.blockNumber > 0, "NP");
-        require(!commitment.fulfilled, "AR");
+        MintRequest storage request = userRequests[user];
+        require(request.quantity > 0, "NP");
+        require(!request.fulfilled, "AR");
+        require(vrfManager != address(0), "VRF not configured");
         
-        if (vrfManager != address(0)) {
-            (bool vrfFulfilled, uint256[] memory randomWords) = IVRFManager(vrfManager).getRandomForUser(user);
-            if (vrfFulfilled && randomWords.length > 0) {
-                _revealWithVRF(user, randomWords, commitment);
-                return;
-            }
-        }
+        // VRF-only 模式
+        (bool vrfFulfilled, uint256[] memory randomWords) = IVRFManager(vrfManager).getRandomForUser(user);
+        require(vrfFulfilled && randomWords.length > 0, "VRF not ready");
         
-        // 原有的區塊延遲檢查
-        require(block.number >= commitment.blockNumber + REVEAL_BLOCK_DELAY, "TE");
-        require(block.number <= commitment.blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW, "E");
-        
-        _executeReveal(user, false);
-    }
-
-    function forceRevealExpired(address user) external nonReentrant whenNotPaused {
-        MintCommitment storage commitment = userCommitments[user];
-        require(commitment.blockNumber > 0, "NP");
-        require(!commitment.fulfilled, "AR");
-        
-        uint256 expiredBlock = commitment.blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW;
-        require(block.number > expiredBlock, "N");
-        
-        _executeReveal(user, true);
-        
-        emit ForcedRevealExecuted(user, msg.sender, commitment.quantity);
+        _revealWithVRF(user, randomWords, request);
     }
 
     // === VRF 揭示函數 ===
     function _revealWithVRF(
         address user,
         uint256[] memory randomWords,
-        MintCommitment storage commitment
+        MintRequest storage request
     ) internal {
-        commitment.fulfilled = true;
+        request.fulfilled = true;
         
-        // 重置稀有度計數器
-        delete userRarityCount[user][1];
-        delete userRarityCount[user][2];
-        delete userRarityCount[user][3];
-        delete userRarityCount[user][4];
-        delete userRarityCount[user][5];
-        
-        uint256[] memory tokenIds = new uint256[](commitment.quantity);
+        uint256[] memory tokenIds = new uint256[](request.quantity);
         
         // 先鑄造為未揭示狀態，然後立即揭示
-        for (uint256 i = 0; i < commitment.quantity; i++) {
+        for (uint256 i = 0; i < request.quantity; i++) {
             uint256 tokenId = _nextTokenId++;
             tokenIds[i] = tokenId;
             
             // 使用 VRF 隨機數生成屬性（優化：用 tokenId + 基礎隨機數）
             uint256 uniqueSeed = uint256(keccak256(abi.encodePacked(randomWords[0], tokenId)));
-            uint8 rarity = _determineRarityFromSeed(uniqueSeed, user, commitment.quantity);
+            uint8 rarity = _determineRarityFromSeed(uniqueSeed, user, request.quantity);
             uint256 power = _generateHeroPowerByRarity(rarity, uniqueSeed);
             
             heroData[tokenId] = HeroData({
@@ -276,101 +208,13 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable, IVRFCallback {
             emit HeroRevealed(tokenId, user, rarity, power);
         }
         
-        emit BatchMintCompleted(user, commitment.quantity, commitment.maxRarity, tokenIds);
+        emit BatchMintCompleted(user, request.quantity, request.maxRarity, tokenIds);
         
         // 清理數據
-        delete userCommitments[user];
+        delete userRequests[user];
         delete userPendingTokens[user];
     }
 
-    function _executeReveal(address user, bool isForced) private {
-        MintCommitment storage commitment = userCommitments[user];
-        commitment.fulfilled = true;
-        
-        delete userRarityCount[user][1];
-        delete userRarityCount[user][2];
-        delete userRarityCount[user][3];
-        delete userRarityCount[user][4];
-        delete userRarityCount[user][5];
-        
-        if (isForced) {
-            _prepareForcedRevealSequence(commitment.quantity);
-        }
-        
-        uint256 revealBlockNumber = commitment.blockNumber + REVEAL_BLOCK_DELAY;
-        bytes32 blockHash = blockhash(revealBlockNumber);
-        if (blockHash == bytes32(0)) {
-            blockHash = blockhash(block.number - 1);
-        }
-        
-        uint256[] memory tokenIds = new uint256[](commitment.quantity);
-        
-        for (uint256 i = 0; i < commitment.quantity; i++) {
-            uint256 tokenId = _nextTokenId++;
-            tokenIds[i] = tokenId;
-            
-            heroData[tokenId] = HeroData({
-                rarity: 0,
-                power: 0,
-                isRevealed: false
-            });
-            
-            _safeMint(user, tokenId);
-            userPendingTokens[user].push(tokenId);
-        }
-        
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            if (isForced) {
-                _revealHeroForced(tokenIds[i], user, i);
-            } else {
-                _revealHero(tokenIds[i], i, blockHash, user);
-            }
-        }
-        
-        emit BatchMintCompleted(user, commitment.quantity, commitment.maxRarity, tokenIds);
-        
-        delete userCommitments[user];
-        delete userPendingTokens[user];
-    }
-
-    function _revealHero(uint256 _tokenId, uint256 _salt, bytes32 _blockHash, address _owner) private {
-        uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(
-            _blockHash,
-            _owner,
-            _salt,
-            _tokenId
-        )));
-        
-        MintCommitment memory commitment = userCommitments[_owner];
-        uint8 rarity = _determineRarityFromSeed(pseudoRandom, _owner, commitment.quantity);
-        uint256 power = _generateHeroPowerByRarity(rarity, pseudoRandom);
-        
-        heroData[_tokenId].rarity = rarity;
-        heroData[_tokenId].power = power;
-        heroData[_tokenId].isRevealed = true;
-                
-        emit HeroMinted(_tokenId, _owner, rarity, power);
-        emit HeroRevealed(_tokenId, _owner, rarity, power);
-    }
-
-    function _revealHeroForced(uint256 _tokenId, address _owner, uint256 _index) private {
-        uint8 rarity = forcedRevealSequence[_index];
-        uint256 power = _generateHeroPowerByRarity(rarity, uint256(keccak256(abi.encodePacked(_tokenId))));
-        
-        heroData[_tokenId].rarity = rarity;
-        heroData[_tokenId].power = power;
-        heroData[_tokenId].isRevealed = true;
-                
-        emit HeroMinted(_tokenId, _owner, rarity, power);
-        emit HeroRevealed(_tokenId, _owner, rarity, power);
-    }
-    
-    function _prepareForcedRevealSequence(uint256 _quantity) private {
-        delete forcedRevealSequence;
-        for (uint256 i = 0; i < _quantity; i++) {
-            forcedRevealSequence.push(1);
-        }
-    }
 
     // === VRF 稀有度計算 ===
     function _determineRarityFromSeed(uint256 randomValue, address user, uint256 quantity) internal returns (uint8) {
@@ -382,42 +226,6 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable, IVRFCallback {
         else if (rarityRoll < 94) rarity = 3;
         else if (rarityRoll < 99) rarity = 4;
         else rarity = 5;
-        
-        // 應用數量限制
-        RarityLimits memory limits = quantityLimits[quantity];
-        if (limits.maxFiveStar == 0) {
-            if (quantity < 5) limits = quantityLimits[1];
-            else if (quantity < 10) limits = quantityLimits[5];
-            else if (quantity < 20) limits = quantityLimits[10];
-            else if (quantity < 50) limits = quantityLimits[20];
-            else limits = quantityLimits[50];
-        }
-        
-        if (rarity == 5) {
-            if (userRarityCount[user][5] >= limits.maxFiveStar) {
-                rarity = 4;
-            }
-        }
-        
-        if (rarity == 4) {
-            if (userRarityCount[user][4] >= limits.maxFourStar) {
-                rarity = 3;
-            }
-        }
-        
-        if (rarity == 3) {
-            if (userRarityCount[user][3] >= limits.maxThreeStar) {
-                rarity = 2;
-            }
-        }
-        
-        if (rarity == 2) {
-            if (userRarityCount[user][2] >= limits.maxTwoStar) {
-                rarity = 1;
-            }
-        }
-        
-        userRarityCount[user][rarity]++;
         
         return rarity;
     }
@@ -448,8 +256,6 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable, IVRFCallback {
         _burn(_tokenId);
     }
 
-
-
     function _generateHeroPowerByRarity(uint8 _rarity, uint256 _randomNumber) private pure returns (uint256 power) {
         if (_rarity == 1) { power = 15 + (_randomNumber % (50 - 15 + 1)); }
         else if (_rarity == 2) { power = 50 + (_randomNumber % (100 - 50 + 1)); }
@@ -458,8 +264,6 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable, IVRFCallback {
         else if (_rarity == 5) { power = 200 + (_randomNumber % (255 - 200 + 1)); }
         else { revert("R"); }
     }
-
-
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         _requireOwned(tokenId);
@@ -486,40 +290,12 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable, IVRFCallback {
         return (data.rarity, data.power);
     }
 
-    function getUserCommitment(address _user) external view returns (MintCommitment memory) {
-        return userCommitments[_user];
+    function getUserRequest(address _user) external view returns (MintRequest memory) {
+        return userRequests[_user];
     }
     
     function getUserPendingTokens(address _user) external view returns (uint256[] memory) {
         return userPendingTokens[_user];
-    }
-    
-    function canReveal(address _user) external view returns (bool) {
-        MintCommitment memory commitment = userCommitments[_user];
-        
-        if (vrfManager != address(0)) {
-            (bool vrfFulfilled, ) = IVRFManager(vrfManager).getRandomForUser(_user);
-            if (vrfFulfilled) return true;
-        }
-        
-        return commitment.blockNumber > 0 && 
-               !commitment.fulfilled && 
-               block.number >= commitment.blockNumber + REVEAL_BLOCK_DELAY &&
-               block.number <= commitment.blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW;
-    }
-    
-    function canForceReveal(address _user) external view returns (bool) {
-        MintCommitment memory commitment = userCommitments[_user];
-        return commitment.blockNumber > 0 && 
-               !commitment.fulfilled && 
-               block.number > commitment.blockNumber + REVEAL_BLOCK_DELAY + MAX_REVEAL_WINDOW;
-    }
-    
-    function getRevealBlocksRemaining(address _user) external view returns (uint256) {
-        MintCommitment memory commitment = userCommitments[_user];
-        if (commitment.blockNumber == 0 || commitment.fulfilled) return 0;
-        if (block.number >= commitment.blockNumber + REVEAL_BLOCK_DELAY) return 0;
-        return (commitment.blockNumber + REVEAL_BLOCK_DELAY) - block.number;
     }
 
     // === VRF 管理函數 ===
@@ -597,11 +373,11 @@ contract Hero is ERC721, Ownable, ReentrancyGuard, Pausable, IVRFCallback {
         address user = IVRFManager(vrfManager).requestIdToUser(requestId);
         require(user != address(0), "IU");
         
-        MintCommitment storage commitment = userCommitments[user];
-        require(!commitment.fulfilled, "AF");
+        MintRequest storage request = userRequests[user];
+        require(!request.fulfilled, "AF");
         
         // 執行 VRF 揭示
-        _revealWithVRF(user, randomWords, commitment);
+        _revealWithVRF(user, randomWords, request);
     }
 
     receive() external payable {}
