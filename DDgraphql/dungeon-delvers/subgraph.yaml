@@ -150,8 +150,8 @@ dataSources:
         - name: DungeonMaster
           file: ./abis/DungeonMasterV8.json
       eventHandlers:
-        - event: ExpeditionCommitted(indexed address,uint256,uint256,uint256)
-          handler: handleExpeditionCommitted
+        - event: ExpeditionRequested(indexed address,uint256,uint256,uint256)
+          handler: handleExpeditionRequested
         - event: ExpeditionFulfilled(indexed address,indexed uint256,bool,uint256,uint256)
           handler: handleExpeditionFulfilled
       file: ./src/dungeon-master.ts
@@ -202,8 +202,8 @@ dataSources:
         - name: AltarOfAscension
           file: ./abis/AltarOfAscension.json
       eventHandlers:
-        - event: UpgradeCommitted(indexed address,address,uint8,uint256,uint256[])
-          handler: handleUpgradeCommitted
+        - event: UpgradeRequested(indexed address,address,uint8,uint256,uint256[])
+          handler: handleUpgradeRequested
         - event: UpgradeRevealed(indexed address,uint8,uint8)
           handler: handleUpgradeRevealed
       file: ./src/altar-of-ascension.ts

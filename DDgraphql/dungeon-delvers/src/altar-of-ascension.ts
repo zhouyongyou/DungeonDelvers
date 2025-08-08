@@ -1,6 +1,6 @@
 // DDgraphql/dungeondelvers/src/altar-of-ascension.ts (V25 Simplified Version)
 import { BigInt, log } from "@graphprotocol/graph-ts"
-import { UpgradeCommitted, UpgradeRevealed } from "../generated/AltarOfAscension/AltarOfAscension"
+import { UpgradeRequested, UpgradeRevealed } from "../generated/AltarOfAscension/AltarOfAscension"
 import { UpgradeAttempt, VRFCommitment } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { updateGlobalStats, updatePlayerStats, TOTAL_UPGRADE_ATTEMPTS, SUCCESSFUL_UPGRADES, TOTAL_UPGRADE_ATTEMPTS_PLAYER, SUCCESSFUL_UPGRADES_PLAYER } from "./stats"
@@ -46,10 +46,10 @@ export function handleUpgradeRevealed(event: UpgradeRevealed): void {
     }
 }
 
-// VRF UpgradeCommitted 事件處理器
-// ABI: UpgradeCommitted(indexed address user, uint256[] tokenIds)
-export function handleUpgradeCommitted(event: UpgradeCommitted): void {
-  log.info("=== UpgradeCommitted Event ===", [])
+// VRF UpgradeRequested 事件處理器
+// ABI: UpgradeRequested(indexed address user, uint256[] tokenIds)
+export function handleUpgradeRequested(event: UpgradeRequested): void {
+  log.info("=== UpgradeRequested Event ===", [])
   log.info("User: {}", [event.params.user.toHexString()])
   log.info("Token IDs length: {}", [event.params.tokenIds.length.toString()])
 
@@ -67,5 +67,5 @@ export function handleUpgradeCommitted(event: UpgradeCommitted): void {
   // Update player
   getOrCreatePlayer(event.params.user)
 
-  log.info("=== UpgradeCommitted Event Complete ===", [])
+  log.info("=== UpgradeRequested Event Complete ===", [])
 }

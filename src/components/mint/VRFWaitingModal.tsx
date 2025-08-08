@@ -18,7 +18,8 @@ export const VRFWaitingModal: React.FC<VRFWaitingModalProps> = ({
   onClose,
   quantity,
   type,
-  estimatedTime = 30
+  estimatedTime = 30,
+  partyId
 }) => {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [currentPhase, setCurrentPhase] = useState<'requesting' | 'processing' | 'finalizing' | 'completed'>('requesting');

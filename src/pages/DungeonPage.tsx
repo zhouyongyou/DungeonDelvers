@@ -42,6 +42,7 @@ import { generatePartySVG } from '../utils/svgGenerators';
 import { useNftDisplayPreference } from '../hooks/useNftDisplayPreference';
 import { LazyImage } from '../components/ui/LazyImage';
 import { usePlayerVaultV4 } from '../hooks/usePlayerVaultV4';
+import { VRFWaitingModal } from '../components/mint/VRFWaitingModal';
 
 // RewardClaimButton 已移至統一的 RewardClaimSection 組件
 
@@ -710,6 +711,8 @@ const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => 
 
     // 已移除儲備 Modal 狀態
     const [showProgressModal, setShowProgressModal] = useState(false);
+    const [showVRFWaitingModal, setShowVRFWaitingModal] = useState(false);
+    const [expeditionPartyId, setExpeditionPartyId] = useState<bigint | null>(null);
     // const [currentAction, setCurrentAction] = useState<'expedition' | 'rest'>('expedition'); // 已移除休息功能
 
     // ✅ 將所有Hooks調用移到組件頂部，在任何條件語句之前
@@ -807,11 +810,25 @@ const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => 
 
     // 交易進度 Hooks
     const { execute: executeExpedition, progress: expeditionProgress, reset: resetExpedition } = useTransactionWithProgress({
-        onSuccess: () => {
-            showToast('遠征請求已發送！隊伍正在前往地下城...', 'success');
+        onSuccess: (receipt) => {
+            console.log('[DungeonPage] 遠征交易成功，準備顯示 VRF 等待', receipt);
+            
+            // 設定 VRF 狀態追蹤（在顯示 Modal 之前）
+            queryClient.setQueryData(['vrfWaiting', 'dungeon', address], {
+                isWaiting: true,
+                partyId: expeditionPartyId,
+                timestamp: Date.now()
+            });
+            
+            // 顯示 VRF 等待 Modal
+            setShowVRFWaitingModal(true);
+            setTimeout(() => {
+                setShowProgressModal(false);
+            }, 800); // 延遲關閉，確保平滑過渡
+            
+            showToast('遠征請求已發送！VRF 正在生成結果...', 'info');
             queryClient.invalidateQueries({ queryKey: ['playerParties'] });
             setTimeout(() => refetchParties(), 3000);
-            setShowProgressModal(false);
             confirmExpeditionUpdate();
         },
         onError: () => {
@@ -881,6 +898,45 @@ const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => 
     
     const currentProgress = expeditionProgress; // 已移除休息功能
     const isTxPending = currentProgress.status !== 'idle' && currentProgress.status !== 'error';
+
+    // 🔥 監聽 VRF 狀態變化（Dungeon 專用）
+    React.useEffect(() => {
+        if (!showVRFWaitingModal || !address) return;
+        
+        const checkVrfStatus = () => {
+            const vrfState = queryClient.getQueryData(['vrfWaiting', 'dungeon', address]) as any;
+            
+            // 檢查 VRF 是否完成（isWaiting 為 false 表示完成）
+            if (vrfState && vrfState.isWaiting === false) {
+                console.log('[DungeonPage] VRF 完成！準備關閉等待 Modal');
+                
+                // 通知 VRFWaitingModal 顯示完成狀態
+                (window as any).vrfCompleted = true;
+                
+                // 延遲關閉 VRF Modal，讓用戶看到完成狀態
+                setTimeout(() => {
+                    setShowVRFWaitingModal(false);
+                    setExpeditionPartyId(null); // 清除隊伍 ID
+                    
+                    // 刷新相關數據
+                    queryClient.invalidateQueries({ queryKey: ['playerParties'] });
+                    queryClient.invalidateQueries({ queryKey: ['recentExpeditions'] });
+                    
+                    showToast(`🏰 遠征完成！結果已確定`, 'success');
+                    
+                    // 清除 VRF 狀態
+                    queryClient.removeQueries({ queryKey: ['vrfWaiting', 'dungeon', address] });
+                    (window as any).vrfCompleted = false;
+                }, 3000); // 讓用戶看到完成動畫 3 秒
+            }
+        };
+        
+        const interval = setInterval(checkVrfStatus, 1000); // 每秒檢查
+        
+        return () => {
+            clearInterval(interval);
+        };
+    }, [showVRFWaitingModal, address, queryClient, showToast]);
 
     // 獲取地城資訊的邏輯保持不變，因為這是全域數據
     const dungeonStorageContract = getContract('DUNGEONSTORAGE');
@@ -986,6 +1042,7 @@ const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => 
         if (!dungeonMasterContract) return;
         
         setCurrentPartyId(partyId);
+        setExpeditionPartyId(partyId); // 設置遠征隊伍 ID，供 VRF 等待狀態使用
         // setCurrentAction('expedition'); // 已移除休息功能
         setShowProgressModal(true);
         resetExpedition();
@@ -1100,6 +1157,14 @@ const DungeonPageContent = memo<DungeonPageContentProps>(({ setActivePage }) => 
                     onClose={() => setShowProgressModal(false)}
                     progress={currentProgress}
                     title={'遠征進度'} // 已移除休息功能
+                />
+                <VRFWaitingModal 
+                    isOpen={showVRFWaitingModal}
+                    onClose={() => setShowVRFWaitingModal(false)}
+                    quantity={1} // 地城遠征每次處理 1 個隊伍
+                    type="dungeon"
+                    estimatedTime={45}
+                    partyId={expeditionPartyId}
                 />
             {/* 金庫提醒 */}
             {withdrawableBalance && withdrawableBalance > 0n && (

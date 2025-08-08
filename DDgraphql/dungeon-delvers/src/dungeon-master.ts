@@ -1,6 +1,6 @@
 // DDgraphql/dungeondelvers/src/dungeon-master.ts (V25 簡化版)
 import { BigInt, log } from "@graphprotocol/graph-ts"
-import { ExpeditionCommitted, ExpeditionFulfilled, RewardsBanked } from "../generated/DungeonMaster/DungeonMaster"
+import { ExpeditionRequested, ExpeditionFulfilled, RewardsBanked } from "../generated/DungeonMaster/DungeonMaster"
 import { Expedition, PlayerProfile, VRFCommitment } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { updatePlayerStats, updatePlayerStatsBigInt, updateGlobalStats, TOTAL_EXPEDITIONS, SUCCESSFUL_EXPEDITIONS } from "./stats"
@@ -90,10 +90,10 @@ export function handleRewardsBanked(event: RewardsBanked): void {
   log.info("=== RewardsBanked Event Complete ===", [])
 }
 
-// VRF ExpeditionCommitted 事件處理器  
-// ABI: ExpeditionCommitted(indexed address player, uint256 partyId, uint256 dungeonId, uint256 blockNumber)
-export function handleExpeditionCommitted(event: ExpeditionCommitted): void {
-  log.info("=== ExpeditionCommitted Event ===", [])
+// VRF ExpeditionRequested 事件處理器  
+// ABI: ExpeditionRequested(indexed address player, uint256 partyId, uint256 dungeonId, uint256 blockNumber)
+export function handleExpeditionRequested(event: ExpeditionRequested): void {
+  log.info("=== ExpeditionRequested Event ===", [])
   log.info("Player: {}", [event.params.player.toHexString()])
   log.info("Party ID: {}", [event.params.partyId.toString()])
   log.info("Dungeon ID: {}", [event.params.dungeonId.toString()])
@@ -113,5 +113,5 @@ export function handleExpeditionCommitted(event: ExpeditionCommitted): void {
   // Update player
   getOrCreatePlayer(event.params.player)
 
-  log.info("=== ExpeditionCommitted Event Complete ===", [])
+  log.info("=== ExpeditionRequested Event Complete ===", [])
 }
