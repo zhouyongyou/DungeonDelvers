@@ -97,7 +97,7 @@ export function handleExpeditionRequested(event: ExpeditionRequested): void {
   log.info("Player: {}", [event.params.player.toHexString()])
   log.info("Party ID: {}", [event.params.partyId.toString()])
   log.info("Dungeon ID: {}", [event.params.dungeonId.toString()])
-  log.info("Block Number: {}", [event.params.blockNumber.toString()])
+  log.info("Block Number: {}", [event.block.number.toString()])
 
   let commitment = new VRFCommitment(event.transaction.hash.toHex() + "-" + event.logIndex.toString())
   commitment.player = event.params.player

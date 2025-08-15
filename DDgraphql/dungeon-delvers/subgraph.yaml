@@ -8,9 +8,9 @@ dataSources:
     name: Hero
     network: bsc
     source:
-      address: "0x671d937b171e2ba2c4dc23c133b07e4449f283ef"
+      address: "0x96Df76BfbB0C9832482Ec9231d8ff8951637f1C2"
       abi: Hero
-      startBlock: 56771885
+      startBlock: 56900000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -33,9 +33,9 @@ dataSources:
     name: Relic
     network: bsc
     source:
-      address: "0x42bf1bd8fc5a8dfdd0e97de131246ec0e3ec73da"
+      address: "0xC7E24bF50d6E7623866ebABfE0dC97fB585e363E"
       abi: Relic
-      startBlock: 56771885
+      startBlock: 56900000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -135,7 +135,7 @@ dataSources:
     name: DungeonMaster
     network: bsc
     source:
-      address: "0xc0bbae55cf9245f76628d2c5299cd6fa35cd102a"
+      address: "0x395358733F69572C5744b561Ba61F0e16F32A571"
       abi: DungeonMaster
       startBlock: 56771885
     mapping:
@@ -148,9 +148,9 @@ dataSources:
         - VRFCommitment
       abis:
         - name: DungeonMaster
-          file: ./abis/DungeonMasterV8.json
+          file: ./abis/DungeonMaster.json
       eventHandlers:
-        - event: ExpeditionRequested(indexed address,uint256,uint256,uint256)
+        - event: ExpeditionRequested(indexed address,uint256,uint256)
           handler: handleExpeditionRequested
         - event: ExpeditionFulfilled(indexed address,indexed uint256,bool,uint256,uint256)
           handler: handleExpeditionFulfilled
@@ -188,7 +188,7 @@ dataSources:
     name: AltarOfAscension
     network: bsc
     source:
-      address: "0xa86749237d4631ad92ba859d0b0df4770f6147ba"
+      address: "0xe8b35bCDb5155DEBC7aaEE300560e2331EBF026e"
       abi: AltarOfAscension
       startBlock: 56771885
     mapping:
@@ -202,7 +202,7 @@ dataSources:
         - name: AltarOfAscension
           file: ./abis/AltarOfAscension.json
       eventHandlers:
-        - event: UpgradeRequested(indexed address,address,uint8,uint256,uint256[])
+        - event: UpgradeRequested(indexed address,uint256[],uint256,uint256)
           handler: handleUpgradeRequested
         - event: UpgradeRevealed(indexed address,uint8,uint8)
           handler: handleUpgradeRevealed
