@@ -32,8 +32,6 @@ query GetPartyDetails($partyId: ID!) {
     totalPower
     totalCapacity
     partyRarity
-    provisionsRemaining
-    unclaimedRewards
     cooldownEndsAt
     
     # 出征記錄

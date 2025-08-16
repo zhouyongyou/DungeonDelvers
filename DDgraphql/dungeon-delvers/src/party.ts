@@ -39,9 +39,6 @@ export function handlePartyCreated(event: PartyCreated): void {
     party.totalPower = event.params.totalPower
     party.totalCapacity = event.params.totalCapacity
     party.partyRarity = event.params.partyRarity
-    // party.fatigueLevel = 0  // 已禁用疲勞度系統
-    party.provisionsRemaining = 0
-    party.unclaimedRewards = event.params.totalPower.times(event.params.totalCapacity)
     party.cooldownEndsAt = event.block.timestamp
     party.createdAt = event.block.timestamp
     party.isBurned = false
