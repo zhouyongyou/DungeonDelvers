@@ -101,21 +101,15 @@ export const UnifiedNftCard: React.FC<UnifiedNftCardProps> = ({
               {nft.name}
             </p>
           ))}
-          {/* 未揭示時不顯示屬性 */}
-          {!('isRevealed' in nft && nft.isRevealed === false) && (
-            <>
-              {nft.type === 'hero' && 'power' in nft && (
-                <p className="text-xs text-indigo-400">⚔️ {nft.power}</p>
-              )}
-              {nft.type === 'relic' && 'capacity' in nft && (
-                <p className="text-xs text-teal-400">📦 {nft.capacity}</p>
-              )}
-            </>
-          )}
-          {/* 未揭示標記 */}
-          {('isRevealed' in nft && nft.isRevealed === false) && (
-            <p className="text-xs text-orange-400">🎲 未揭示</p>
-          )}
+          {/* 顯示 NFT 屬性 */}
+          <>
+            {nft.type === 'hero' && 'power' in nft && (
+              <p className="text-xs text-indigo-400">⚔️ {nft.power}</p>
+            )}
+            {nft.type === 'relic' && 'capacity' in nft && (
+              <p className="text-xs text-teal-400">📦 {nft.capacity}</p>
+            )}
+          </>
         </div>
 
         {/* 選中標記 */}
@@ -154,15 +148,6 @@ export const UnifiedNftCard: React.FC<UnifiedNftCardProps> = ({
               lazy={true}
               showRetry={true} // 完整模式顯示重試按鈕
             />
-            {/* 未揭示標記 */}
-            {('isRevealed' in nft && nft.isRevealed === false) && (
-              <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center">
-                <div className="bg-orange-500/80 text-white px-3 py-1.5 rounded-full mb-2">
-                  <span className="text-sm font-medium">🎲 未揭示</span>
-                </div>
-                <p className="text-xs text-gray-300">需要揭示才能查看屬性</p>
-              </div>
-            )}
           </>,
           { aspectRatio: 'aspect-square' }
         )}
@@ -211,31 +196,24 @@ export const UnifiedNftCard: React.FC<UnifiedNftCardProps> = ({
 
         {/* 屬性列表 */}
         <div className="space-y-1">
-          {/* 未揭示時顯示特殊訊息 */}
-          {('isRevealed' in nft && nft.isRevealed === false) ? (
-            <div className="text-center py-2">
-              <p className="text-xs text-orange-400">🎲 此 NFT 尚未揭示</p>
-              <p className="text-xs text-gray-500">完成揭示程序後可查看屬性</p>
-            </div>
-          ) : (
-            <>
-              {nft.type === 'hero' && 'power' in nft && (
-                renderAttribute('戰力', nft.power)
-              )}
-              {nft.type === 'relic' && 'capacity' in nft && (
-                renderAttribute('容量', nft.capacity)
-              )}
-              {nft.type === 'party' && 'totalPower' in nft && (
-                <>
-                  {renderAttribute('總戰力', getPartyPowerSafe(nft))}
-                  {'partyRarity' in nft && renderAttribute('隊伍稀有度', nft.partyRarity)}
-                </>
-              )}
-              {nft.type === 'vip' && 'level' in nft && (
-                renderAttribute('等級', nft.level)
-              )}
-            </>
-          )}
+          {/* 顯示 NFT 屬性 */}
+          <>
+            {nft.type === 'hero' && 'power' in nft && (
+              renderAttribute('戰力', nft.power)
+            )}
+            {nft.type === 'relic' && 'capacity' in nft && (
+              renderAttribute('容量', nft.capacity)
+            )}
+            {nft.type === 'party' && 'totalPower' in nft && (
+              <>
+                {renderAttribute('總戰力', getPartyPowerSafe(nft))}
+                {'partyRarity' in nft && renderAttribute('隊伍稀有度', nft.partyRarity)}
+              </>
+            )}
+            {nft.type === 'vip' && 'level' in nft && (
+              renderAttribute('等級', nft.level)
+            )}
+          </>
         </div>
 
         {/* Token ID */}

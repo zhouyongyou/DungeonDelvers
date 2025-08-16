@@ -46,17 +46,19 @@ export function handleUpgradeRevealed(event: UpgradeRevealed): void {
     }
 }
 
-// VRF UpgradeRequested 事件處理器
-// ABI: UpgradeRequested(indexed address user, uint256[] tokenIds)
+// VRF UpgradeRequested 事件處理器  
+// 合約實際簽名: UpgradeRequested(address indexed player, address tokenContract, uint8 baseRarity, uint256[] burnedTokenIds)
 export function handleUpgradeRequested(event: UpgradeRequested): void {
   log.info("=== UpgradeRequested Event ===", [])
-  log.info("User: {}", [event.params.user.toHexString()])
-  log.info("Token IDs length: {}", [event.params.tokenIds.length.toString()])
+  log.info("Player: {}", [event.params.player.toHexString()])
+  log.info("Token Contract: {}", [event.params.tokenContract.toHexString()])
+  log.info("Base Rarity: {}", [event.params.baseRarity.toString()])
+  log.info("Burned Token IDs length: {}", [event.params.burnedTokenIds.length.toString()])
 
   let commitment = new VRFCommitment(event.transaction.hash.toHex() + "-" + event.logIndex.toString())
-  commitment.player = event.params.user
+  commitment.player = event.params.player
   commitment.targetId = BigInt.fromI32(0) // No specific target ID in this event
-  commitment.baseRarity = 0 // No rarity info in this event
+  commitment.baseRarity = event.params.baseRarity // Use actual baseRarity from event
   commitment.commitmentType = "UPGRADE"
   commitment.fulfilled = false
   commitment.timestamp = event.block.timestamp
@@ -65,7 +67,7 @@ export function handleUpgradeRequested(event: UpgradeRequested): void {
   commitment.save()
 
   // Update player
-  getOrCreatePlayer(event.params.user)
+  getOrCreatePlayer(event.params.player)
 
   log.info("=== UpgradeRequested Event Complete ===", [])
 }

@@ -1,4 +1,4 @@
-import { PartyMemberChanged } from "../generated/PartyV3/PartyV3"
+import { PartyMemberChanged } from "../generated/Party/Party"
 import { Party, PartyMemberChange } from "../generated/schema"
 import { createEntityId, getHeroContractAddress, getRelicContractAddress } from "./config"
 import { log, BigInt } from "@graphprotocol/graph-ts"

@@ -1,5 +1,5 @@
 // DDgraphql/dungeondelvers/src/relic.ts (修復版)
-import { RelicMinted, Transfer, RelicBurned, Paused, Unpaused } from "../generated/Relic/Relic"
+import { RelicMinted, Transfer, RelicBurned, Paused, Unpaused, MintRequested } from "../generated/Relic/Relic"
 import { Relic } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { log, ethereum, BigInt } from "@graphprotocol/graph-ts"
@@ -122,4 +122,18 @@ export function handlePaused(event: Paused): void {
 
 export function handleUnpaused(event: Unpaused): void {
     createUnpausedEvent(event.params.account, event, "Relic")
+}
+
+export function handleMintRequested(event: MintRequested): void {
+    // VRF 鑄造請求事件處理
+    const player = getOrCreatePlayer(event.params.player)
+    
+    log.info('Relic MintRequested: player={}, quantity={}, fromVault={}', [
+        event.params.player.toHexString(),
+        event.params.quantity.toString(),
+        event.params.fromVault.toString()
+    ])
+    
+    // 這個事件主要用於前端監聽，不需要創建實體
+    // 實際的 Relic 實體會在 RelicMinted 事件中創建
 }

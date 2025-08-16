@@ -6,7 +6,7 @@ import RelicArtifact from '../contracts/abi/Relic.json';
 import PartyArtifact from '../contracts/abi/Party.json';
 import DungeonMasterArtifact from '../contracts/abi/DungeonMaster.json';
 import DungeonStorageArtifact from '../contracts/abi/DungeonStorage.json';
-import AltarOfAscensionVRFArtifact from '../contracts/abi/AltarOfAscensionVRF.json';
+import AltarOfAscensionArtifact from '../contracts/abi/AltarOfAscension.json';
 import VRFConsumerV2PlusArtifact from '../contracts/abi/VRFConsumerV2Plus.json';
 import VIPStakingArtifact from '../contracts/abi/VIPStaking.json';
 import PlayerProfileArtifact from '../contracts/abi/PlayerProfile.json';
@@ -21,7 +21,7 @@ const RelicABI = RelicArtifact.abi || RelicArtifact;
 const PartyABI = PartyArtifact.abi || PartyArtifact;
 const DungeonMasterABI = DungeonMasterArtifact.abi || DungeonMasterArtifact;
 const DungeonStorageABI = DungeonStorageArtifact.abi || DungeonStorageArtifact;
-const AltarOfAscensionVRFABI = AltarOfAscensionVRFArtifact.abi || AltarOfAscensionVRFArtifact;
+const AltarOfAscensionABI = AltarOfAscensionArtifact.abi || AltarOfAscensionArtifact;
 const VRFConsumerV2PlusABI = VRFConsumerV2PlusArtifact.abi || VRFConsumerV2PlusArtifact;
 const VIPStakingABI = VIPStakingArtifact.abi || VIPStakingArtifact;
 const PlayerProfileABI = PlayerProfileArtifact.abi || PlayerProfileArtifact;
@@ -37,13 +37,13 @@ export interface ContractWithABI {
 
 export const CONTRACTS_WITH_ABI = {
   56: { // BSC Mainnet
-    // NFT Contracts - V25 Updated (8/7 PM6 deployment)
+    // NFT Contracts - V25 Updated (8/7 PM11:30 deployment)
     HERO: {
-      address: '0x671d937b171e2ba2c4dc23c133b07e4449f283ef',
+      address: '0x96Df76BfbB0C9832482Ec9231d8ff8951637f1C2',
       abi: HeroABI
     },
     RELIC: {
-      address: '0x42bf1bd8fc5a8dfdd0e97de131246ec0e3ec73da',
+      address: '0xC7E24bF50d6E7623866ebABfE0dC97fB585e363E',
       abi: RelicABI
     },
     PARTY: {
@@ -53,25 +53,25 @@ export const CONTRACTS_WITH_ABI = {
     
     // Game Contracts - V25 Updated
     DUNGEONMASTER: {
-      address: '0xc0bbae55cf9245f76628d2c5299cd6fa35cd102a',
+      address: '0x395358733F69572C5744b561Ba61F0e16F32A571',
       abi: DungeonMasterABI
     },
     DUNGEONSTORAGE: {
-      address: '0x539AC926C6daE898f2C843aF8C59Ff92B4b3B468',
+      address: '0x5D5D75a0bEF0Ce708d59749c0D9ba1a59fC24Cbb',
       abi: DungeonStorageABI
     },
     ALTAROFASCENSIONVRF: {
-      address: '0xa86749237d4631ad92ba859d0b0df4770f6147ba',
-      abi: AltarOfAscensionVRFABI
+      address: '0xe8b35bCDb5155DEBC7aaEE300560e2331EBF026e',
+      abi: AltarOfAscensionABI
     },
     ALTAROFASCENSION: {
-      address: '0xa86749237d4631ad92ba859d0b0df4770f6147ba',
-      abi: AltarOfAscensionVRFABI
+      address: '0xe8b35bCDb5155DEBC7aaEE300560e2331EBF026e',
+      abi: AltarOfAscensionABI
     },
     
     // VRF System - V25 Updated
     VRFCONSUMERV2PLUS: {
-      address: '0x980d224ec4d198d94f34a8af76a19c00dabe2436',
+      address: '0x662F0B22CBCD35f5a2e4Cb01dB9e0707b1AF4546',
       abi: VRFConsumerV2PlusABI
     },
     

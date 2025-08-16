@@ -1,11 +1,10 @@
-import { PartyCreated, Transfer, PartyMemberChanged, Paused, Unpaused } from "../generated/PartyV3/PartyV3"
+import { PartyCreated, Transfer, Paused, Unpaused } from "../generated/Party/Party"
 import { Party, Hero, Relic, PartyMemberChange } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { log } from "@graphprotocol/graph-ts"
 import { getHeroContractAddress, getRelicContractAddress, createEntityId } from "./config"
 import { updateGlobalStats, updatePlayerStats, TOTAL_PARTIES, TOTAL_PARTIES_CREATED } from "./stats"
 import { createPausedEvent, createUnpausedEvent } from "./pausable-handler"
-export { handlePartyMemberChanged } from "./party-member-changed"
 
 export function handlePartyCreated(event: PartyCreated): void {
     // 參數驗證

@@ -83,8 +83,8 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
       const contract = getContractWithABI(chainId, contractName as any);
       if (!contract) return;
 
-      // 嘗試不同的函數名稱
-      const functionNames = ['withdrawBNB', 'withdraw', 'withdrawETH', 'withdrawFunds'];
+      // 嘗試不同的函數名稱（新標準優先）
+      const functionNames = ['withdrawNative', 'withdrawBNB', 'withdrawNativeFunding', 'withdraw', 'withdrawETH', 'withdrawFunds'];
       let success = false;
 
       for (const funcName of functionNames) {

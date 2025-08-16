@@ -1,6 +1,6 @@
 // DDgraphql/dungeondelvers/src/dungeon-master.ts (V25 簡化版)
 import { BigInt, log } from "@graphprotocol/graph-ts"
-import { ExpeditionRequested, ExpeditionFulfilled, RewardsBanked } from "../generated/DungeonMaster/DungeonMaster"
+import { ExpeditionRequested, ExpeditionFulfilled } from "../generated/DungeonMaster/DungeonMaster"
 import { Expedition, PlayerProfile, VRFCommitment } from "../generated/schema"
 import { getOrCreatePlayer } from "./common"
 import { updatePlayerStats, updatePlayerStatsBigInt, updateGlobalStats, TOTAL_EXPEDITIONS, SUCCESSFUL_EXPEDITIONS } from "./stats"
@@ -74,21 +74,6 @@ export function handleExpeditionFulfilled(event: ExpeditionFulfilled): void {
   log.info("=== ExpeditionFulfilled Event Complete ===", [])
 }
 
-// V25 RewardsBanked 事件處理器
-// 事件參數：user, partyId, amount
-export function handleRewardsBanked(event: RewardsBanked): void {
-  log.info("=== RewardsBanked Event ===", [])
-  log.info("User: {}", [event.params.user.toHexString()])
-  log.info("Party ID: {}", [event.params.partyId.toString()])
-  log.info("Amount: {}", [event.params.amount.toString()])
-
-  // 更新玩家統計
-  const playerAddress = event.params.user
-  getOrCreatePlayer(playerAddress)
-  updatePlayerStatsBigInt(playerAddress, "totalRewardsClaimed", event.params.amount, event.block.timestamp)
-
-  log.info("=== RewardsBanked Event Complete ===", [])
-}
 
 // VRF ExpeditionRequested 事件處理器  
 // ABI: ExpeditionRequested(indexed address player, uint256 partyId, uint256 dungeonId, uint256 blockNumber)

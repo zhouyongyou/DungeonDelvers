@@ -67,3 +67,5 @@ export function handleReferralSet(event: ReferralSet): void {
     getOrCreatePlayer(event.params.user)
     getOrCreatePlayer(event.params.referrer)
 }
+
+// VirtualGameSpending event removed - not present in V25 contracts

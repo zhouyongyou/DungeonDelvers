@@ -1,4 +1,4 @@
-// PartyV3 ABI - V3 版本新增 getPartyPowerQuick 和 getPartyCapacityQuick
-import partyV3ABIJson from './partyV3.json';
+// Party ABI - V3 版本新增 getPartyPowerQuick 和 getPartyCapacityQuick
+import partyABIJson from './party.json';
 
-export const partyV3ABI = partyV3ABIJson as const;
+export const partyABI = partyABIJson as const;

@@ -28,6 +28,8 @@ dataSources:
           handler: handleHeroMinted
         - event: HeroBurned(indexed uint256,indexed address,uint8,uint256)
           handler: handleHeroBurned
+        - event: MintRequested(indexed address,uint256,bool)
+          handler: handleMintRequested
       file: ./src/hero.ts
   - kind: ethereum/contract
     name: Relic
@@ -53,13 +55,15 @@ dataSources:
           handler: handleRelicMinted
         - event: RelicBurned(indexed uint256,indexed address,uint8,uint8)
           handler: handleRelicBurned
+        - event: MintRequested(indexed address,uint256,bool)
+          handler: handleMintRequested
       file: ./src/relic.ts
   - kind: ethereum/contract
-    name: PartyV3
+    name: Party
     network: bsc
     source:
       address: "0x28A85D14e0F87d6eD04e21c30992Df8B3e9434E3"
-      abi: PartyV3
+      abi: Party
       startBlock: 56771885
     mapping:
       kind: ethereum/events
@@ -69,15 +73,13 @@ dataSources:
         - Party
         - Transfer
       abis:
-        - name: PartyV3
-          file: ./abis/PartyV3.json
+        - name: Party
+          file: ./abis/Party.json
       eventHandlers:
         - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleTransfer
         - event: PartyCreated(indexed uint256,indexed address,uint256[],uint256[],uint256,uint256,uint8)
           handler: handlePartyCreated
-        - event: PartyMemberChanged(indexed uint256,uint256[],uint256[])
-          handler: handlePartyMemberChanged
       file: ./src/party.ts
   - kind: ethereum/contract
     name: VIPStaking
@@ -202,7 +204,7 @@ dataSources:
         - name: AltarOfAscension
           file: ./abis/AltarOfAscension.json
       eventHandlers:
-        - event: UpgradeRequested(indexed address,uint256[],uint256,uint256)
+        - event: UpgradeRequested(indexed address,address,uint8,uint256[])
           handler: handleUpgradeRequested
         - event: UpgradeRevealed(indexed address,uint8,uint8)
           handler: handleUpgradeRevealed

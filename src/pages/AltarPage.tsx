@@ -8,7 +8,7 @@ import { formatEther, decodeEventLog } from 'viem';
 import type { Abi } from 'viem';
 import { fetchMetadata } from '../api/nfts';
 import { getContractWithABI } from '../config/contractsWithABI';
-import altarOfAscensionABI from '../contracts/abi/AltarOfAscensionVRF.json';
+import altarOfAscensionABI from '../contracts/abi/AltarOfAscension.json';
 import heroABI from '../contracts/abi/Hero.json';
 import relicABI from '../contracts/abi/Relic.json';
 import { NftCard } from '../components/ui/NftCard';

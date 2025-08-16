@@ -22,8 +22,8 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
   // 根據合約能力設定提取權限
   const contracts = [
     { name: 'dungeonMaster', label: '地城主', hasWithdraw: true },
-    { name: 'hero', label: '英雄合約', hasWithdraw: true }, // 支援 withdrawSoulShard 和 withdrawNativeFunding
-    { name: 'relic', label: '聖物合約', hasWithdraw: true }, // 支援 withdrawSoulShard 和 withdrawNativeFunding
+    { name: 'hero', label: '英雄合約', hasWithdraw: true }, // 支援 withdrawSoulShard 和 withdrawNative
+    { name: 'relic', label: '聖物合約', hasWithdraw: true }, // 支援 withdrawSoulShard 和 withdrawNative
     { name: 'party', label: '隊伍合約', hasWithdraw: true }, // 支援 withdrawNative
     { name: 'altarOfAscension', label: '升星祭壇', hasWithdraw: true }, // 支援 withdrawNative
     // 以下合約有部分管理員提取功能
@@ -180,7 +180,7 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
         case 'dungeonMaster':
         case 'hero':
         case 'relic':
-          functionName = 'withdrawNativeFunding';
+          functionName = 'withdrawNative';
           break;
         case 'party':
         case 'altarOfAscension':
@@ -285,7 +285,7 @@ const FundsWithdrawal: React.FC<FundsWithdrawalProps> = ({ chainId }) => {
               ⚠️ 注意：
             </p>
             <ul className="text-xs text-yellow-200 mt-1 space-y-1">
-              <li>• Hero/Relic/DungeonMaster：支援提取 SoulShard 和 BNB（使用 withdrawSoulShard 和 withdrawNativeFunding）</li>
+              <li>• Hero/Relic/DungeonMaster：支援提取 SoulShard 和 BNB（使用 withdrawSoulShard 和 withdrawNative）</li>
               <li>• Party/Altar：僅支援提取 BNB（使用 withdrawNative）</li>
               <li>• PlayerVault：支援提取 SoulShard（使用 withdrawGameRevenue(0) 提取全部）</li>
               <li>• VIPStaking：支援提取 SoulShard（使用 withdrawStakedTokens(0) 提取全部可用資金）</li>

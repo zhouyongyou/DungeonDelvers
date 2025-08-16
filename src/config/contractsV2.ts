@@ -8,7 +8,7 @@ const CONTRACT_NAME_MAP: { [key: string]: string } = {
   'hero': 'HERO',
   'relic': 'RELIC',
   'party': 'PARTY',
-  'partyV3': 'PARTY',
+  'party': 'PARTY',
   'dungeonCore': 'DUNGEONCORE',
   'dungeonMaster': 'DUNGEONMASTER',
   'dungeonMasterV8': 'DUNGEONMASTER',
